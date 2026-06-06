@@ -135,7 +135,10 @@
     ]);
 
     if(fbData)      { data = fbData; if(!data.playoff) data.playoff=[];
-                      localStorage.setItem('lrr_data2', JSON.stringify(data)); }
+                      localStorage.setItem('lrr_data2', JSON.stringify(data));
+                      // Recalcular posiciones y goleadores desde los partidos al cargar
+                      recalcularTodo();
+                      saveData(data); }
     if(fbIdentidad) { localStorage.setItem('lrr_identidad', JSON.stringify(fbIdentidad)); }
     if(fbFotos)     { localStorage.setItem('lrr_fotos',     JSON.stringify(fbFotos)); }
     if(fbNoticias)  { localStorage.setItem('lrr_noticias',  JSON.stringify(fbNoticias)); }
@@ -1867,13 +1870,13 @@ table.posiciones td:nth-child(2){text-align:left;}
       <!-- CONFIG -->
       <div class="admin-section" id="admin-config">
         <div class="admin-title">Configuración</div>
-        <div class="form-group"><label>Nueva contraseña</label><input type="password" id="conf-pass-nueva" placeholder="Nueva contraseña"/></div>
-        <div class="form-group"><label>Confirmar contraseña</label><input type="password" id="conf-pass-confirm" placeholder="Confirmar"/></div>
-        <button class="btn-primary" onclick="cambiarPassword()">Guardar contraseña</button>
-        <div id="conf-msg" style="margin-top:8px;font-size:12px;display:none;font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px"></div>
-        <hr style="margin:20px 0;border:none;border-top:1px solid rgba(255,255,255,.08)"/>
-        <p style="font-size:12px;color:var(--gris);margin-bottom:8px;font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px">Eliminar partidos con problemas (Agrario vs Independiente HDO y partido vacío)</p>
-        <button class="btn-danger" onclick="limpiarPartidosEspecificos()">🗑 Eliminar esos 2 partidos</button>
+        <div class="form-group">
+          <label>Contraseña del admin</label>
+          <p style="font-size:12px;color:var(--gris);font-family:'Rajdhani',sans-serif;letter-spacing:.4px;line-height:1.5">
+            La contraseña se gestiona desde <strong style="color:var(--dorado)">Firebase Console → Authentication → Users</strong>.<br>
+            Buscá tu correo y usá "Restablecer contraseña" para cambiarla.
+          </p>
+        </div>
         <hr style="margin:20px 0;border:none;border-top:1px solid rgba(255,255,255,.08)"/>
         <p style="font-size:12px;color:var(--gris);margin-bottom:8px;font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px">Eliminar todos los datos (reiniciar)</p>
         <button class="btn-danger" onclick="resetearDatos()">⚠ Eliminar todos los datos</button>
@@ -2107,6 +2110,7 @@ table.posiciones td:nth-child(2){text-align:left;}
 // ============================================================
 // STORAGE
 // ============================================================
+// PASS_KEY se mantiene por retrocompatibilidad pero ya no se usa (auth via Firebase)
 const PASS_KEY='lrr_pass';
 const DATA_KEY='lrr_data2';
 const ESCUDOS_KEY='lrr_escudos';
@@ -3887,7 +3891,7 @@ function agregarPartido(){
   else d.faseRes=document.getElementById('p-fase-res').value;
   if(!d.local||!d.visit){alert('Completá local y visitante');return;}
   data.partidos.push(d);
-  if(d.estado==='jugado') procesarPartidoJugado(d);
+  if(d.estado==='jugado') recalcularTodo();
   saveData(data);
   document.getElementById('p-goles-list').innerHTML='';
   document.getElementById('p-exp-list').innerHTML='';
@@ -4000,9 +4004,8 @@ function eliminar(tipo,id){
   const sid=String(id);
   pedirConfirmacion('¿Eliminar este elemento?',function(){
     if(tipo==='partidos'){
-      const partido=data.partidos.find(p=>String(p.id)===sid);
-      if(partido&&partido._procesado) revertirPartidoProcesado(partido);
       data.partidos=data.partidos.filter(p=>String(p.id)!==sid);
+      recalcularTodo();
     }
     else if(tipo==='posiciones')  data.posiciones =data.posiciones.filter(p=>String(p.id)!==sid);
     else if(tipo==='goleadores') data.goleadores =data.goleadores.filter(p=>String(p.id)!==sid);
@@ -4175,14 +4178,12 @@ function guardarEdicion(tipo,id){
     const arbs=[val('ed-arb1'),val('ed-arb2'),val('ed-arb3'),val('ed-arb4')].filter(Boolean);
     const divVal=val('ed-div');
     const partidoViejo=data.partidos[idx];
-    // Si ya estaba procesado, revertir sus estadísticas antes de aplicar los cambios
-    if(partidoViejo._procesado) revertirPartidoProcesado(partidoViejo);
-    const updated={...partidoViejo,div:divVal,fecha:val('ed-fecha'),dia:val('ed-dia'),local:val('ed-local'),visit:val('ed-visit'),hora:val('ed-hora'),estado:val('ed-estado'),resultado:val('ed-resultado'),periodo:val('ed-periodo')||'PT',arbitros:arbs,goles,expulsiones,_procesado:false};
+    const updated={...partidoViejo,div:divVal,fecha:val('ed-fecha'),dia:val('ed-dia'),local:val('ed-local'),visit:val('ed-visit'),hora:val('ed-hora'),estado:val('ed-estado'),resultado:val('ed-resultado'),periodo:val('ed-periodo')||'PT',arbitros:arbs,goles,expulsiones};
     if(divVal==='primera'){updated.torneo=val('ed-torneo');delete updated.faseRes;}
     else{updated.faseRes=val('ed-faseRes')||'fase1';delete updated.torneo;}
     data.partidos[idx]=updated;
-    // Si el nuevo estado es jugado, procesar automáticamente
-    if(updated.estado==='jugado') procesarPartidoJugado(data.partidos[idx]);
+    // Recalcular posiciones y goleadores desde todos los partidos jugados
+    recalcularTodo();
   } else if(tipo==='posiciones'){
     const idx=data.posiciones.findIndex(p=>String(p.id)===sid);if(idx<0)return;
     const divVal=val('ed-div');
@@ -4341,159 +4342,136 @@ function parsearResultado(resultado){
 }
 
 /**
- * Actualiza la tabla de posiciones de UN equipo en base a un partido jugado.
- * Si el registro no existe, lo crea con valores base 0.
+ * Recalcula TODA la tabla de posiciones y goleadores desde cero
+ * a partir de los partidos con estado "jugado".
+ *
+ * NO usa _procesado ni lógica incremental — simplemente borra y reconstruye.
+ * Esto evita duplicados, datos perdidos o inconsistencias entre sesiones.
+ *
+ * Los registros manuales (sin partido asociado) se pierden intencionalmente;
+ * la fuente de verdad son los partidos.
+ *
+ * Se llama al: agregar partido jugado, editar partido, eliminar partido.
  */
-function actualizarPosicionEquipo(equipo, div, clavesTorneo, golesF, golesC, esPrimera){
-  // Buscar registro existente
-  const idx = data.posiciones.findIndex(p => {
-    if(normalizar(p.equipo) !== normalizar(equipo) || p.div !== div) return false;
-    if(esPrimera) return (p.torneo||'apertura') === clavesTorneo.torneo;
-    return p.fase === clavesTorneo.fase && p.zona === clavesTorneo.zona;
-  });
+function recalcularTodo(){
+  // ── Reconstruir posiciones ──────────────────────────────────
+  const mapaPos = {}; // clave → registro
 
-  let reg;
-  if(idx >= 0){
-    reg = {...data.posiciones[idx]};
-  } else {
-    // Crear nuevo registro base
-    reg = {
-      id: String(Date.now()) + Math.floor(Math.random()*9999),
-      div, equipo,
-      pj:0, g:0, e:0, p:0, gf:0, gc:0, pts:0, dg:'+0'
-    };
-    if(esPrimera) reg.torneo = clavesTorneo.torneo;
-    else { reg.fase = clavesTorneo.fase; reg.zona = clavesTorneo.zona; }
-  }
+  data.partidos.forEach(p => {
+    if(p.estado !== 'jugado') return;
+    const res = parsearResultado(p.resultado);
+    if(!res) return;
 
-  // Sumar estadísticas
-  reg.pj = (reg.pj||0) + 1;
-  reg.gf = (reg.gf||0) + golesF;
-  reg.gc = (reg.gc||0) + golesC;
-  if(golesF > golesC)      { reg.g=(reg.g||0)+1; reg.pts=(reg.pts||0)+3; }
-  else if(golesF === golesC){ reg.e=(reg.e||0)+1; reg.pts=(reg.pts||0)+1; }
-  else                      { reg.p=(reg.p||0)+1; }
-  const dif = reg.gf - reg.gc;
-  reg.dg = (dif >= 0 ? '+' : '') + dif;
+    const esPrimera = p.div === 'primera';
+    const torneo    = p.torneo || 'apertura';
+    const fase      = p.faseRes || p.fase || 'fase1';
+    const zona      = p.zona || '';
 
-  if(idx >= 0) data.posiciones[idx] = reg;
-  else         data.posiciones.push(reg);
-}
-
-/**
- * Actualiza los goleadores a partir de los eventos de goles de un partido.
- * Suma goles al jugador si ya existe, o crea el registro.
- */
-function actualizarGoleadoresDesdePartido(partido, esPrimera, clavesTorneo){
-  const goles = partido.goles || [];
-  goles.forEach(gol => {
-    if(!gol.jugador) return;
-    const equipoNombre = gol.equipo === 'local' ? partido.local : partido.visit;
-    const idx = data.goleadores.findIndex(g => {
-      if(normalizar(g.nombre) !== normalizar(gol.jugador)) return false;
-      if(normalizar(g.equipo) !== normalizar(equipoNombre)) return false;
-      if(g.div !== partido.div) return false;
-      if(esPrimera) return (g.torneo||'apertura') === clavesTorneo.torneo;
-      return (g.faseGol||'fase1') === clavesTorneo.fase;
-    });
-    if(idx >= 0){
-      data.goleadores[idx].goles = (data.goleadores[idx].goles||0) + 1;
-    } else {
-      const nuevo = {
-        id: String(Date.now()) + Math.floor(Math.random()*9999),
-        div: partido.div,
-        nombre: gol.jugador,
-        equipo: equipoNombre,
-        goles: 1
-      };
-      if(esPrimera) nuevo.torneo = clavesTorneo.torneo;
-      else nuevo.faseGol = clavesTorneo.fase;
-      data.goleadores.push(nuevo);
+    function clavePosicion(equipo){
+      return esPrimera
+        ? `${p.div}|${normalizar(equipo)}|${torneo}`
+        : `${p.div}|${normalizar(equipo)}|${fase}|${zona}`;
     }
+    function getOrCreate(equipo){
+      const k = clavePosicion(equipo);
+      if(!mapaPos[k]){
+        const reg = {
+          id: 'auto_' + k,
+          div: p.div, equipo,
+          pj:0, g:0, e:0, p:0, gf:0, gc:0, pts:0, dg:'+0'
+        };
+        if(esPrimera) reg.torneo = torneo;
+        else { reg.fase = fase; reg.zona = zona; }
+        mapaPos[k] = reg;
+      }
+      return mapaPos[k];
+    }
+
+    const local = getOrCreate(p.local);
+    const visit = getOrCreate(p.visit);
+    const gl = res.golesLocal, gv = res.golesVisit;
+
+    local.pj++; local.gf+=gl; local.gc+=gv;
+    visit.pj++; visit.gf+=gv; visit.gc+=gl;
+
+    if(gl > gv)       { local.g++; local.pts+=3; visit.p++; }
+    else if(gl === gv) { local.e++; local.pts++;  visit.e++; visit.pts++; }
+    else               { local.p++; visit.g++;    visit.pts+=3; }
   });
-}
 
-/**
- * Función principal: dado un partido en estado "jugado",
- * actualiza posiciones y goleadores automáticamente.
- * Si el partido YA fue procesado antes (partidosProcesados), no lo vuelve a procesar.
- */
-function procesarPartidoJugado(partido){
-  if(!partido || partido.estado !== 'jugado') return;
-  const res = parsearResultado(partido.resultado);
-  if(!res) return; // sin resultado válido, no se puede procesar
-
-  const esPrimera = partido.div === 'primera';
-  const clavesTorneo = esPrimera
-    ? { torneo: partido.torneo || 'apertura' }
-    : { fase: partido.faseRes || partido.fase || 'fase1', zona: partido.zona || '' };
-
-  // Posiciones local
-  actualizarPosicionEquipo(partido.local, partido.div, clavesTorneo, res.golesLocal, res.golesVisit, esPrimera);
-  // Posiciones visitante
-  actualizarPosicionEquipo(partido.visit, partido.div, clavesTorneo, res.golesVisit, res.golesLocal, esPrimera);
-
-  // Goleadores
-  actualizarGoleadoresDesdePartido(partido, esPrimera, clavesTorneo);
-
-  // Marcar el partido como ya procesado
-  partido._procesado = true;
-}
-
-/**
- * Revierte las estadísticas de posiciones y goleadores de un partido
- * (usado cuando se edita un partido ya procesado para recalcular desde cero).
- */
-function revertirPartidoProcesado(partido){
-  if(!partido._procesado) return;
-  const res = parsearResultado(partido.resultado);
-  if(!res) return;
-
-  const esPrimera = partido.div === 'primera';
-  const clavesTorneo = esPrimera
-    ? { torneo: partido.torneo || 'apertura' }
-    : { fase: partido.faseRes || partido.fase || 'fase1', zona: partido.zona || '' };
-
-  function revertirEquipo(equipo, golesF, golesC){
-    const idx = data.posiciones.findIndex(p => {
-      if(normalizar(p.equipo) !== normalizar(equipo) || p.div !== partido.div) return false;
-      if(esPrimera) return (p.torneo||'apertura') === clavesTorneo.torneo;
-      return p.fase === clavesTorneo.fase && p.zona === clavesTorneo.zona;
-    });
-    if(idx < 0) return;
-    const reg = {...data.posiciones[idx]};
-    reg.pj = Math.max(0,(reg.pj||0)-1);
-    reg.gf = Math.max(0,(reg.gf||0)-golesF);
-    reg.gc = Math.max(0,(reg.gc||0)-golesC);
-    if(golesF > golesC)       reg.g=Math.max(0,(reg.g||0)-1), reg.pts=Math.max(0,(reg.pts||0)-3);
-    else if(golesF === golesC) reg.e=Math.max(0,(reg.e||0)-1), reg.pts=Math.max(0,(reg.pts||0)-1);
-    else                       reg.p=Math.max(0,(reg.p||0)-1);
+  // Calcular dg y preservar IDs de registros existentes (snapshot antes de modificar)
+  const snapshotPos = [...data.posiciones];
+  Object.values(mapaPos).forEach(reg => {
     const dif = reg.gf - reg.gc;
     reg.dg = (dif >= 0 ? '+' : '') + dif;
-    data.posiciones[idx] = reg;
-  }
-
-  revertirEquipo(partido.local, res.golesLocal, res.golesVisit);
-  revertirEquipo(partido.visit, res.golesVisit, res.golesLocal);
-
-  // Revertir goles
-  const goles = partido.goles || [];
-  goles.forEach(gol => {
-    if(!gol.jugador) return;
-    const equipoNombre = gol.equipo === 'local' ? partido.local : partido.visit;
-    const idx = data.goleadores.findIndex(g => {
-      if(normalizar(g.nombre) !== normalizar(gol.jugador)) return false;
-      if(normalizar(g.equipo) !== normalizar(equipoNombre)) return false;
-      if(g.div !== partido.div) return false;
-      if(esPrimera) return (g.torneo||'apertura') === clavesTorneo.torneo;
-      return (g.faseGol||'fase1') === clavesTorneo.fase;
+    // Reusar el ID del registro existente para no romper referencias
+    const existente = snapshotPos.find(p => {
+      if(normalizar(p.equipo) !== normalizar(reg.equipo) || p.div !== reg.div) return false;
+      if(reg.torneo) return (p.torneo||'apertura') === reg.torneo;
+      return p.fase === reg.fase && p.zona === reg.zona;
     });
-    if(idx >= 0){
-      data.goleadores[idx].goles = Math.max(0,(data.goleadores[idx].goles||1)-1);
-      if(data.goleadores[idx].goles === 0) data.goleadores.splice(idx,1);
-    }
+    if(existente) reg.id = existente.id;
   });
+
+  // Los IDs que serán cubiertos por recalculo automático
+  const idsAuto = new Set(Object.values(mapaPos).map(r => r.id));
+  // Preservar solo posiciones manuales que NO tienen partido asociado
+  const posicionesManual = snapshotPos.filter(p => !idsAuto.has(p.id) && !String(p.id).startsWith('auto_'));
+  data.posiciones = [...posicionesManual, ...Object.values(mapaPos)];
+
+  // ── Reconstruir goleadores ──────────────────────────────────
+  const mapaGol = {}; // clave → registro
+
+  data.partidos.forEach(p => {
+    if(p.estado !== 'jugado') return;
+    const esPrimera = p.div === 'primera';
+    const torneo    = p.torneo || 'apertura';
+    const fase      = p.faseRes || p.fase || 'fase1';
+
+    (p.goles || []).forEach(gol => {
+      if(!gol.jugador) return;
+      const equipo = gol.equipo === 'local' ? p.local : p.visit;
+      const k = esPrimera
+        ? `${p.div}|${normalizar(gol.jugador)}|${normalizar(equipo)}|${torneo}`
+        : `${p.div}|${normalizar(gol.jugador)}|${normalizar(equipo)}|${fase}`;
+
+      if(!mapaGol[k]){
+        const reg = {
+          id: 'auto_' + k,
+          div: p.div,
+          nombre: gol.jugador,
+          equipo,
+          goles: 0
+        };
+        if(esPrimera) reg.torneo = torneo;
+        else reg.faseGol = fase;
+        mapaGol[k] = reg;
+      }
+      mapaGol[k].goles++;
+    });
+  });
+
+  // Preservar IDs de goleadores existentes (snapshot antes de modificar)
+  const snapshotGol = [...data.goleadores];
+  Object.values(mapaGol).forEach(reg => {
+    const existente = snapshotGol.find(g => {
+      if(normalizar(g.nombre) !== normalizar(reg.nombre)) return false;
+      if(normalizar(g.equipo) !== normalizar(reg.equipo)) return false;
+      if(g.div !== reg.div) return false;
+      if(reg.torneo) return (g.torneo||'apertura') === reg.torneo;
+      return (g.faseGol||'fase1') === reg.faseGol;
+    });
+    if(existente) reg.id = existente.id;
+  });
+
+  const idsAutoGol = new Set(Object.values(mapaGol).map(r => r.id));
+  const goleadoresManual = snapshotGol.filter(g => !idsAutoGol.has(g.id) && !String(g.id).startsWith('auto_'));
+  data.goleadores = [...goleadoresManual, ...Object.values(mapaGol)];
 }
+
+// Alias para retrocompatibilidad con llamadas existentes
+function procesarPartidoJugado(){ recalcularTodo(); }
+function revertirPartidoProcesado(){ recalcularTodo(); }
 
 // ============================================================
 // RENDER LISTAS ADMIN
@@ -4666,14 +4644,9 @@ function switchAdminTab(tab,el){
   if(tab==='publicidad'){ updateAdminPubForm(); renderAdminListaPubs(); }
   if(tab==='deportemas'){ cargarFormDM(); }}
 function cambiarPassword(){
-  const n=document.getElementById('conf-pass-nueva').value;
-  const c=document.getElementById('conf-pass-confirm').value;
+  // La contraseña se gestiona desde Firebase Console → Authentication
   const msg=document.getElementById('conf-msg');
-  if(!n){msg.textContent='Ingresá una contraseña';msg.style.color='#e74c3c';msg.style.display='block';return;}
-  if(n!==c){msg.textContent='Las contraseñas no coinciden';msg.style.color='#e74c3c';msg.style.display='block';return;}
-  localStorage.setItem(PASS_KEY,n);
-  msg.textContent='✓ Contraseña actualizada';msg.style.color='var(--dorado)';msg.style.display='block';
-  document.getElementById('conf-pass-nueva').value='';document.getElementById('conf-pass-confirm').value='';
+  if(msg){ msg.textContent='Gestioná la contraseña desde Firebase Console → Authentication'; msg.style.color='var(--dorado)'; msg.style.display='block'; }
 }
 function resetearDatos(){
   pedirConfirmacion('⚠ Esto eliminará TODOS los datos. ¿Estás seguro?',function(){
