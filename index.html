@@ -15,12 +15,12 @@
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
   import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged }
     from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-  import { getFirestore, doc, getDoc, setDoc, onSnapshot }
+  import { getFirestore, doc, getDoc, setDoc, onSnapshot, deleteDoc, getDocs, collection }
     from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
   // ── PEGÁ AQUÍ TU CONFIGURACIÓN DE FIREBASE ──────────────────
   const firebaseConfig = {
-   apiKey: "AIzaSyC_4BA1BubBmSAg4SFbWspZHfoSK9tXxCs",
+    apiKey: "AIzaSyC_4BA1BubBmSAg4SFbWspZHfoSK9tXxCs",
   authDomain: "deportemas-abca3.firebaseapp.com",
   databaseURL: "https://deportemas-abca3-default-rtdb.firebaseio.com",
   projectId: "deportemas-abca3",
@@ -39,7 +39,7 @@
 
   // ── Exponer helpers al scope global (usado por el resto del JS) ──
   window._fb = {
-    // Lee un documento; devuelve {} si no existe
+    // Lee un documento; devuelve null si no existe
     async get(key){
       try{
         const snap = await getDoc(doc(db, COL, key));
@@ -52,12 +52,54 @@
         await setDoc(doc(db, COL, key), { value });
       }catch(e){ console.error('FB set error', key, e); }
     },
-    // Escucha cambios en tiempo real (para cronómetros y datos en vivo)
+    // Escucha cambios en tiempo real
     listen(key, cb){
       return onSnapshot(doc(db, COL, key), snap => {
         cb(snap.exists() ? snap.data().value : null);
       });
     },
+
+    // ── ESCUDOS: cada uno en su propio documento para evitar el límite de 1MB ──
+
+    // Guarda un escudo individual: /lrr/escudo_<nombreNorm>
+    async setEscudo(nombreNorm, base64){
+      try{
+        await setDoc(doc(db, COL, 'escudo_' + nombreNorm), { value: base64 });
+      }catch(e){ console.error('FB setEscudo error', nombreNorm, e); }
+    },
+    // Borra un escudo individual
+    async delEscudo(nombreNorm){
+      try{
+        await deleteDoc(doc(db, COL, 'escudo_' + nombreNorm));
+      }catch(e){ console.warn('FB delEscudo error', nombreNorm, e); }
+    },
+    // Lee todos los documentos escudo_* y reconstruye el objeto {nombreNorm: {ini,img}}
+    async getAllEscudos(){
+      try{
+        const snap = await getDocs(collection(db, COL));
+        const result = {};
+        snap.forEach(d => {
+          if(d.id.startsWith('escudo_')){
+            result[d.id.slice(7)] = d.data().value;
+          }
+        });
+        return Object.keys(result).length ? result : null;
+      }catch(e){ console.warn('FB getAllEscudos error', e); return null; }
+    },
+    // Migra escudos del formato viejo (doc único) al nuevo (docs individuales)
+    async migrarEscudos(escudosObj){
+      const entries = Object.entries(escudosObj||{});
+      if(!entries.length) return;
+      console.log(`Migrando ${entries.length} escudos a documentos individuales...`);
+      await Promise.all(entries.map(([k,v]) => window._fb.setEscudo(k, v)));
+      // Borrar el documento viejo
+      try{
+        const { deleteDoc: dd } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+        await dd(doc(db, COL, 'escudos'));
+        console.log('Migración completa. Documento viejo "escudos" eliminado.');
+      }catch(e){}
+    },
+
     auth, signInWithEmailAndPassword, signOut, onAuthStateChanged
   };
 
@@ -76,11 +118,12 @@
   // aquí lo sobreescribimos con los datos de Firestore.
   async function cargarDatosFirebase(){
     const [
-      fbData, fbEscudos, fbIdentidad, fbFotos,
-      fbNoticias, fbPubs, fbFichas, fbCronos, fbDM
+      fbData, fbEscudosViejo, fbIdentidad, fbFotos,
+      fbNoticias, fbPubs, fbFichas, fbCronos, fbDM,
+      fbEscudosNuevo
     ] = await Promise.all([
       window._fb.get('data'),
-      window._fb.get('escudos'),
+      window._fb.get('escudos'),      // doc viejo (puede existir en instalaciones previas)
       window._fb.get('identidad'),
       window._fb.get('fotos'),
       window._fb.get('noticias'),
@@ -88,12 +131,11 @@
       window._fb.get('fichas'),
       window._fb.get('cronos'),
       window._fb.get('deportemas'),
+      window._fb.getAllEscudos(),     // nuevo: docs individuales por escudo
     ]);
 
     if(fbData)      { data = fbData; if(!data.playoff) data.playoff=[];
                       localStorage.setItem('lrr_data2', JSON.stringify(data)); }
-    if(fbEscudos)   { escudos = fbEscudos;
-                      localStorage.setItem('lrr_escudos', JSON.stringify(fbEscudos)); }
     if(fbIdentidad) { localStorage.setItem('lrr_identidad', JSON.stringify(fbIdentidad)); }
     if(fbFotos)     { localStorage.setItem('lrr_fotos',     JSON.stringify(fbFotos)); }
     if(fbNoticias)  { localStorage.setItem('lrr_noticias',  JSON.stringify(fbNoticias)); }
@@ -101,6 +143,18 @@
     if(fbFichas)    { localStorage.setItem('lrr_fichas',    JSON.stringify(fbFichas)); }
     if(fbCronos)    { localStorage.setItem('lrr_cronos',    JSON.stringify(fbCronos)); }
     if(fbDM)        { localStorage.setItem('lrr_deportemas',JSON.stringify(fbDM)); }
+
+    // ── Escudos: prioridad al formato nuevo, fallback al viejo, migrar si aplica ──
+    if(fbEscudosNuevo && Object.keys(fbEscudosNuevo).length > 0){
+      // Ya están en el formato nuevo (docs individuales)
+      escudos = fbEscudosNuevo;
+      localStorage.setItem('lrr_escudos', JSON.stringify(fbEscudosNuevo));
+    } else if(fbEscudosViejo && Object.keys(fbEscudosViejo).length > 0){
+      // Formato viejo: migrar automáticamente a docs individuales
+      escudos = fbEscudosViejo;
+      localStorage.setItem('lrr_escudos', JSON.stringify(fbEscudosViejo));
+      window._fb.migrarEscudos(fbEscudosViejo); // migración en background, no bloquea
+    }
 
     // Re-aplicar identidad y re-renderizar (escudos ya actualizado)
     aplicarIdentidad();
@@ -122,17 +176,12 @@
       actualizarNavLive();
       renderSection(currentSection);
     });
-    // Suscribir cambios en tiempo real a escudos
-    window._fb.listen('escudos', fbVal => {
-      if(!fbVal) return;
-      escudos = fbVal;
-      localStorage.setItem('lrr_escudos', JSON.stringify(fbVal));
-      renderSection(currentSection);
-    });
     // Suscribir cambios en tiempo real a cronómetros
     window._fb.listen('cronos', fbVal => {
       if(fbVal) localStorage.setItem('lrr_cronos', JSON.stringify(fbVal));
     });
+    // NOTA: los escudos individuales no necesitan listener en tiempo real
+    // ya que solo el admin los modifica y la página re-renderiza tras cada guardado
   }
 
   // Esperar a que el JS principal esté listo antes de cargar desde Firebase
@@ -2068,7 +2117,20 @@ function getPass(){return localStorage.getItem(PASS_KEY)||'admin123';}
 function getData(){try{const d=JSON.parse(localStorage.getItem(DATA_KEY))||defData();if(!d.playoff)d.playoff=[];return d;}catch(e){return defData();}}
 function saveData(d){localStorage.setItem(DATA_KEY,JSON.stringify(d));if(window._fb)window._fb.set('data',d);}
 function getEscudos(){try{return JSON.parse(localStorage.getItem(ESCUDOS_KEY))||{};}catch(e){return {};}}
-function saveEscudos(e){localStorage.setItem(ESCUDOS_KEY,JSON.stringify(e));if(window._fb)window._fb.set('escudos',e);}
+function saveEscudos(nuevoEscudos, nombreModificado){
+  // Guardar siempre en localStorage completo (rápido, sin límite práctico para escudos)
+  localStorage.setItem(ESCUDOS_KEY, JSON.stringify(nuevoEscudos));
+  // En Firebase: guardar SOLO el escudo que cambió (doc individual), no todo el objeto
+  if(window._fb && nombreModificado !== undefined){
+    const val = nuevoEscudos[nombreModificado];
+    if(val){
+      window._fb.setEscudo(nombreModificado, val);
+    } else {
+      // Se borró el escudo: eliminar su documento
+      window._fb.delEscudo(nombreModificado);
+    }
+  }
+}
 function getIdentidad(){try{return JSON.parse(localStorage.getItem(ID_KEY))||{};}catch(e){return {};}}
 function saveIdentidad(i){localStorage.setItem(ID_KEY,JSON.stringify(i));if(window._fb)window._fb.set('identidad',i);}
 function getFotos(){try{return JSON.parse(localStorage.getItem(FOTOS_KEY))||[];}catch(e){return[];}}
@@ -3888,9 +3950,10 @@ function agregarEquipo(){
   const div=document.getElementById('eq-div').value;
   const ini=document.getElementById('eq-ini').value.toUpperCase()||(nombre.substr(0,3).toUpperCase());
   const e=getEscudos();
-  if(_escudoB64) e[normalizar(nombre)]={ini,img:_escudoB64};
-  else if(!e[normalizar(nombre)]) e[normalizar(nombre)]={ini};
-  saveEscudos(e);escudos=e;
+  const nombreNorm = normalizar(nombre);
+  if(_escudoB64) e[nombreNorm]={ini,img:_escudoB64};
+  else if(!e[nombreNorm]) e[nombreNorm]={ini};
+  saveEscudos(e, nombreNorm); escudos=e;
   const existing=data.equipos.findIndex(x=>normalizar(x.nombre)===normalizar(nombre)&&x.div===div);
   const nuevo={id:String(Date.now()),nombre,div,ini};
   if(existing>=0)data.equipos[existing]=nuevo;else data.equipos.push(nuevo);
@@ -3953,7 +4016,9 @@ function eliminar(tipo,id){
 
 function eliminarEscudo(nombre){
   pedirConfirmacion('¿Quitar el escudo de "'+nombre+'"?',function(){
-    const e=getEscudos();delete e[normalizar(nombre)];saveEscudos(e);escudos=e;
+    const nombreNorm = normalizar(nombre);
+    const e=getEscudos(); delete e[nombreNorm];
+    saveEscudos(e, nombreNorm); escudos=e;
     renderAdminListas();renderSection(currentSection);
   });
 }
@@ -4137,8 +4202,9 @@ function guardarEdicion(tipo,id){
     const e=getEscudos();const escViejo=e[normalizar(nombreViejo)]||{};
     if(_editEscudoB64)escViejo.img=_editEscudoB64;
     escViejo.ini=ini;
-    if(normalizar(nombreViejo)!==normalizar(nombreNuevo))delete e[normalizar(nombreViejo)];
-    e[normalizar(nombreNuevo)]=escViejo;saveEscudos(e);escudos=e;
+    const normViejo=normalizar(nombreViejo), normNuevo=normalizar(nombreNuevo);
+    if(normViejo!==normNuevo){ delete e[normViejo]; saveEscudos(e, normViejo); }
+    e[normNuevo]=escViejo; saveEscudos(e, normNuevo); escudos=e;
   } else if(tipo==='torneos'){
     const idx=data.torneos.findIndex(p=>String(p.id)===sid);if(idx<0)return;
     data.torneos[idx]={...data.torneos[idx],nombre:val('ed-nombre'),estado:val('ed-estado'),inicio:val('ed-inicio'),cierre:val('ed-cierre'),desc:val('ed-desc')};
