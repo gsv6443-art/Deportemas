@@ -20,7 +20,7 @@
 
   // ── PEGÁ AQUÍ TU CONFIGURACIÓN DE FIREBASE ──────────────────
   const firebaseConfig = {
-    apiKey: "AIzaSyC_4BA1BubBmSAg4SFbWspZHfoSK9tXxCs",
+   apiKey: "AIzaSyC_4BA1BubBmSAg4SFbWspZHfoSK9tXxCs",
   authDomain: "deportemas-abca3.firebaseapp.com",
   databaseURL: "https://deportemas-abca3-default-rtdb.firebaseio.com",
   projectId: "deportemas-abca3",
@@ -90,8 +90,10 @@
       window._fb.get('deportemas'),
     ]);
 
-    if(fbData)      { data = fbData; if(!data.playoff) data.playoff=[]; }
-    if(fbEscudos)   { escudos = fbEscudos; }
+    if(fbData)      { data = fbData; if(!data.playoff) data.playoff=[];
+                      localStorage.setItem('lrr_data2', JSON.stringify(data)); }
+    if(fbEscudos)   { escudos = fbEscudos;
+                      localStorage.setItem('lrr_escudos', JSON.stringify(fbEscudos)); }
     if(fbIdentidad) { localStorage.setItem('lrr_identidad', JSON.stringify(fbIdentidad)); }
     if(fbFotos)     { localStorage.setItem('lrr_fotos',     JSON.stringify(fbFotos)); }
     if(fbNoticias)  { localStorage.setItem('lrr_noticias',  JSON.stringify(fbNoticias)); }
@@ -100,19 +102,31 @@
     if(fbCronos)    { localStorage.setItem('lrr_cronos',    JSON.stringify(fbCronos)); }
     if(fbDM)        { localStorage.setItem('lrr_deportemas',JSON.stringify(fbDM)); }
 
-    // Re-aplicar identidad y re-renderizar con datos de Firebase
+    // Re-aplicar identidad y re-renderizar (escudos ya actualizado)
     aplicarIdentidad();
     renderFotosSidebar();
     renderTodasLasPubs();
     actualizarNavLive();
     renderSection(currentSection);
 
-    // Suscribir cambios en tiempo real al documento 'data' (partidos, posiciones, etc.)
+    // Ocultar splash ahora que los datos de Firebase ya están listos
+    if(window._splashFallback) clearTimeout(window._splashFallback);
+    if(window._ocultarSplash) window._ocultarSplash();
+
+    // Suscribir cambios en tiempo real a datos principales
     window._fb.listen('data', fbVal => {
       if(!fbVal) return;
       data = fbVal;
       if(!data.playoff) data.playoff=[];
+      localStorage.setItem('lrr_data2', JSON.stringify(data));
       actualizarNavLive();
+      renderSection(currentSection);
+    });
+    // Suscribir cambios en tiempo real a escudos
+    window._fb.listen('escudos', fbVal => {
+      if(!fbVal) return;
+      escudos = fbVal;
+      localStorage.setItem('lrr_escudos', JSON.stringify(fbVal));
       renderSection(currentSection);
     });
     // Suscribir cambios en tiempo real a cronómetros
@@ -618,15 +632,48 @@ table.posiciones td:nth-child(2){text-align:left;}
 @media(max-width:900px){
   .layout{grid-template-columns:200px 1fr;}
 }
+/* ── HAMBURGER ──────────────────────────────────────────── */
+.hamburger{
+  display:none;flex-direction:column;justify-content:center;gap:5px;
+  width:40px;height:40px;padding:6px;margin-left:auto;flex-shrink:0;
+  background:rgba(201,162,39,.1);border:1px solid rgba(201,162,39,.25);
+  border-radius:6px;cursor:pointer;
+}
+.hamburger span{
+  display:block;width:100%;height:2px;background:var(--dorado);border-radius:2px;
+  transition:transform .25s,opacity .25s;
+}
+.hamburger.open span:nth-child(1){transform:translateY(7px) rotate(45deg);}
+.hamburger.open span:nth-child(2){opacity:0;}
+.hamburger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg);}
+
 @media(max-width:760px){
   .layout{grid-template-columns:1fr;}
   .sidebar{display:none;}
   .partido{grid-template-columns:46px 1fr 58px 1fr 52px;padding:9px 12px;}
   .partido .equipo-local,.partido .equipo-visit{font-size:14px;}
   .container{padding:1rem 1.1rem;}
-  header{padding:0 1rem;height:64px;}
-  nav a{padding:6px 9px;font-size:11px;}
+  header{padding:0 1rem;height:64px;position:relative;}
   .logo-texto h1{font-size:20px;}
+
+  /* Ocultar nav horizontal, mostrar hamburger */
+  .hamburger{display:flex;}
+  nav#main-nav{
+    display:none;
+    position:absolute;top:64px;left:0;right:0;z-index:200;
+    flex-direction:column;gap:0;
+    background:var(--negro2);
+    border-bottom:2px solid var(--dorado);
+    box-shadow:0 8px 32px rgba(0,0,0,.7);
+    padding:8px 0 12px;
+  }
+  nav#main-nav.open{display:flex;}
+  nav#main-nav a{
+    padding:12px 20px;font-size:13px;border-radius:0;
+    border-bottom:1px solid rgba(255,255,255,.05);
+  }
+  nav#main-nav a:last-child{border-bottom:none;}
+  .btn-admin-nav{margin:8px 16px 0!important;border-radius:6px!important;text-align:center;}
 }
 
 /* ============================================================
@@ -1037,6 +1084,41 @@ table.posiciones td:nth-child(2){text-align:left;}
 .confirm-btns .btn-primary{padding:8px 24px;}
 .confirm-btns .btn-cancel{background:var(--negro4);color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.15);border-radius:4px;padding:8px 24px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px;}
 .confirm-btns .btn-cancel:hover{background:var(--negro3);color:var(--blanco);}
+
+/* ── COMPARTIR ───────────────────────────────────────────── */
+.btn-share{
+  display:inline-flex;align-items:center;gap:5px;
+  background:rgba(201,162,39,.1);color:var(--dorado);
+  border:1px solid rgba(201,162,39,.25);border-radius:4px;
+  padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;
+  font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px;
+  transition:background .15s,border-color .15s;white-space:nowrap;
+}
+.btn-share:hover{background:rgba(201,162,39,.22);border-color:var(--dorado);}
+.btn-share svg{width:13px;height:13px;flex-shrink:0;}
+#share-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:8000;align-items:center;justify-content:center;padding:1rem;}
+#share-modal.open{display:flex;}
+.share-box{background:var(--negro2);border:1px solid var(--dorado-border);border-radius:10px;width:460px;max-width:98vw;box-shadow:0 12px 60px rgba(0,0,0,.9);overflow:hidden;}
+.share-box-header{background:linear-gradient(90deg,var(--negro4),rgba(201,162,39,.15));border-bottom:1px solid var(--dorado-border);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;}
+.share-box-header span{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--dorado);letter-spacing:1.5px;}
+.share-box-close{background:none;border:none;color:rgba(255,255,255,.4);font-size:20px;cursor:pointer;line-height:1;padding:0;}
+.share-box-close:hover{color:var(--dorado);}
+.share-img-preview-wrap{margin:14px 16px 6px;border-radius:8px;overflow:hidden;border:1px solid rgba(201,162,39,.2);background:var(--negro3);display:flex;align-items:center;justify-content:center;min-height:100px;}
+.share-img-preview-wrap img{width:100%;display:block;border-radius:8px;}
+.share-img-loading{font-family:'Rajdhani',sans-serif;font-size:12px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.5px;padding:28px;display:flex;flex-direction:column;align-items:center;gap:8px;}
+.share-spinner{width:22px;height:22px;border:2px solid rgba(201,162,39,.2);border-top-color:var(--dorado);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.share-redes{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:4px 16px 16px;}
+.share-red-btn{display:flex;align-items:center;gap:8px;border:none;border-radius:6px;padding:10px 14px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;transition:filter .15s;}
+.share-red-btn:hover{filter:brightness(1.15);}
+.share-red-btn svg{width:18px;height:18px;flex-shrink:0;}
+.share-red-btn.whatsapp{background:#25d366;color:#fff;}
+.share-red-btn.twitter{background:#000;color:#fff;border:1px solid #333;}
+.share-red-btn.facebook{background:#1877f2;color:#fff;}
+.share-red-btn.instagram{background:linear-gradient(135deg,#f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%);color:#fff;}
+.share-red-btn.descargar{background:var(--negro4);color:var(--dorado);border:1px solid var(--dorado-border);grid-column:1/-1;}
+.share-note{text-align:center;font-family:'Rajdhani',sans-serif;font-size:11px;color:rgba(255,255,255,.25);letter-spacing:.4px;padding:0 16px 12px;line-height:1.5;}
+.share-card-row{display:flex;align-items:center;justify-content:flex-end;padding:6px 16px 2px;}
 </style>
 </head>
 <body>
@@ -1065,6 +1147,46 @@ table.posiciones td:nth-child(2){text-align:left;}
       <button class="btn-cancel" onclick="confirmarRespuesta(false)">Cancelar</button>
       <button class="btn-primary" style="background:#c0392b;color:#fff" onclick="confirmarRespuesta(true)">Eliminar</button>
     </div>
+  </div>
+</div>
+
+<!-- MODAL COMPARTIR -->
+<div id="share-modal">
+  <div class="share-box">
+    <div class="share-box-header">
+      <span>📤 Compartir</span>
+      <button class="share-box-close" onclick="cerrarShare()">✕</button>
+    </div>
+    <div class="share-img-preview-wrap" id="share-img-wrap">
+      <div class="share-img-loading" id="share-img-loading">
+        <div class="share-spinner"></div>
+        Generando imagen...
+      </div>
+      <img id="share-img-preview" src="" alt="" style="display:none"/>
+    </div>
+    <div class="share-redes">
+      <button class="share-red-btn whatsapp" onclick="compartirImgEn('whatsapp')">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347"/></svg>
+        WhatsApp
+      </button>
+      <button class="share-red-btn twitter" onclick="compartirImgEn('twitter')">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.737-8.835L1.254 2.25H8.08l4.259 5.631 5.905-5.631zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        X / Twitter
+      </button>
+      <button class="share-red-btn facebook" onclick="compartirImgEn('facebook')">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+        Facebook
+      </button>
+      <button class="share-red-btn instagram" onclick="compartirImgEn('instagram')">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
+        Instagram
+      </button>
+      <button class="share-red-btn descargar" onclick="descargarImagen()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Descargar imagen
+      </button>
+    </div>
+    <div class="share-note" id="share-note"></div>
   </div>
 </div>
 
@@ -1714,8 +1836,12 @@ table.posiciones td:nth-child(2){text-align:left;}
 
 <!-- HEADER -->
 <div id="splash" style="position:fixed;inset:0;background:#080808;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;transition:opacity .4s">
-  <div id="splash-logo" style="width:72px;height:72px;background:#c9a227;border-radius:12px;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:30px;color:#080808">LRR</div>
-  <div id="splash-nombre" style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:#c9a227;letter-spacing:3px;text-transform:uppercase">Liga Riotercerense</div>
+  <!-- Contenedor logo: muestra imagen si hay, o iniciales si no -->
+  <div id="splash-logo" style="width:80px;height:80px;border-radius:14px;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 0 28px rgba(201,162,39,.35)">
+    <img id="splash-logo-img" src="" alt="" style="width:100%;height:100%;object-fit:contain;display:none"/>
+    <div id="splash-logo-ini" style="width:100%;height:100%;background:#c9a227;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:30px;color:#080808">DM</div>
+  </div>
+  <div id="splash-nombre" style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:#c9a227;letter-spacing:4px;text-transform:uppercase">DEPORTEMAS</div>
   <div style="font-family:'Rajdhani',sans-serif;font-size:11px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:2px">Cargando...</div>
   <div style="width:140px;height:3px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden">
     <div style="height:100%;background:linear-gradient(90deg,#c9a227,#f0c040);border-radius:2px;animation:splash-load .6s ease forwards .1s;width:0%"></div>
@@ -1731,15 +1857,18 @@ table.posiciones td:nth-child(2){text-align:left;}
       <span id="header-subtitulo">Fútbol · Córdoba</span>
     </div>
   </div>
+  <button class="hamburger" id="hamburger-btn" onclick="toggleMenu()" aria-label="Menú">
+    <span></span><span></span><span></span>
+  </button>
   <nav id="main-nav">
-    <a href="#" data-sec="fixture" class="active" onclick="showSection('fixture');return false">Partidos<span id="nav-live-badge" class="nav-live-badge" style="display:none">● EN VIVO</span></a>
-    <a href="#" data-sec="posiciones" onclick="showSection('posiciones');return false">Posiciones</a>
-    <a href="#" data-sec="resultados" onclick="showSection('resultados');return false">Resultados</a>
-    <a href="#" data-sec="goleadores" onclick="showSection('goleadores');return false">Goleadores</a>
-    <a href="#" data-sec="equipos" onclick="showSection('equipos');return false">Equipos</a>
-    <a href="#" data-sec="torneos" onclick="showSection('torneos');return false">Torneos</a>
-    <a href="#" data-sec="noticias" onclick="showSection('noticias');return false">Noticias</a>
-    <a href="#" class="btn-admin-nav" onclick="abrirLogin();return false">⚙ Admin</a>
+    <a href="#" data-sec="fixture" class="active" onclick="showSection('fixture');cerrarMenu();return false">Partidos<span id="nav-live-badge" class="nav-live-badge" style="display:none">● EN VIVO</span></a>
+    <a href="#" data-sec="posiciones" onclick="showSection('posiciones');cerrarMenu();return false">Posiciones</a>
+    <a href="#" data-sec="resultados" onclick="showSection('resultados');cerrarMenu();return false">Resultados</a>
+    <a href="#" data-sec="goleadores" onclick="showSection('goleadores');cerrarMenu();return false">Goleadores</a>
+    <a href="#" data-sec="equipos" onclick="showSection('equipos');cerrarMenu();return false">Equipos</a>
+    <a href="#" data-sec="torneos" onclick="showSection('torneos');cerrarMenu();return false">Torneos</a>
+    <a href="#" data-sec="noticias" onclick="showSection('noticias');cerrarMenu();return false">Noticias</a>
+    <a href="#" class="btn-admin-nav" onclick="abrirLogin();cerrarMenu();return false">⚙ Admin</a>
   </nav>
 </header>
 
@@ -1985,6 +2114,27 @@ function aplicarIdentidad(){
   const id=getIdentidad();
   if(id.nombre){document.getElementById('header-nombre').textContent=id.nombre;document.title=id.nombre;}
   if(id.subtitulo) document.getElementById('header-subtitulo').textContent=id.subtitulo;
+
+  // ── Actualizar splash ────────────────────────────────────
+  const splashNombre = document.getElementById('splash-nombre');
+  const splashImg    = document.getElementById('splash-logo-img');
+  const splashIni    = document.getElementById('splash-logo-ini');
+  if(splashNombre && id.nombre) splashNombre.textContent = id.nombre;
+  if(splashImg && splashIni){
+    if(id.logo){
+      splashImg.src = id.logo;
+      splashImg.style.display = 'block';
+      splashIni.style.display = 'none';
+    } else {
+      splashImg.style.display = 'none';
+      splashIni.style.display = 'flex';
+      // iniciales desde el header
+      const ini = document.getElementById('logo-iniciales');
+      if(ini) splashIni.textContent = ini.textContent || 'DM';
+    }
+  }
+
+  // ── Actualizar header logo ───────────────────────────────
   if(id.logo){
     const img=document.getElementById('logo-img-header');
     img.src=id.logo;img.classList.add('show');
@@ -2241,6 +2391,13 @@ function partidoHTML(p,mostrarDetalle){
     </div>`;
   }
 
+  // Botón compartir solo para partidos jugados o en juego
+  const shareBtnHTML = (p.estado==='jugado'||p.estado==='en-juego')
+    ? `<div class="share-card-row"><button class="btn-share" onclick="abrirShare(()=>generarImagenPartido(data.partidos.find(x=>String(x.id)==='${String(p.id)}')))">
+        ${SVG_SHARE} Compartir
+      </button></div>`
+    : '';
+
   return `<div class="card-partido-wrap">
     ${diaHTML}
     <div class="partido">
@@ -2251,6 +2408,7 @@ function partidoHTML(p,mostrarDetalle){
       ${estadoBloque}
     </div>
     ${tieneDetalle?renderEventos(p):''}
+    ${shareBtnHTML}
   </div>`;
 }
 
@@ -2365,7 +2523,10 @@ function renderPosiciones(){
     el.innerHTML=`<div class="card">
       <div class="card-header">
         <span>⭐ Tabla General – Primera División</span>
-        <span class="div-badge" style="background:rgba(201,162,39,.2);color:var(--dorado);border:1px solid var(--dorado-border)">Apertura + Clausura</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="div-badge" style="background:rgba(201,162,39,.2);color:var(--dorado);border:1px solid var(--dorado-border)">Apertura + Clausura</span>
+          <button class="btn-share" onclick="abrirShare(generarImagenPosiciones)">${SVG_SHARE} Compartir</button>
+        </div>
       </div>
       <div class="tabla-wrap"><table class="posiciones">
         <thead><tr><th>#</th><th>Equipo</th><th>PTS</th><th>PJ</th><th>G</th><th>E</th><th>P</th><th>GF</th><th>GC</th><th>DG</th></tr></thead>
@@ -2409,7 +2570,10 @@ function renderPosiciones(){
       <span style="border-left:3px solid #3a9bd5;padding-left:6px">Clasifica a Cuartos de Final (2° al 7°)</span>`
     :`<span style="border-left:3px solid var(--verde-clasificacion);padding-left:6px">Zona clasificación</span>`;
   el.innerHTML=`<div class="card">
-    <div class="card-header"><span>Posiciones – ${torneoLabel(torneo)} / ${div==='primera'?'Primera':'Segunda'}</span></div>
+    <div class="card-header">
+      <span>Posiciones – ${torneoLabel(torneo)} / ${div==='primera'?'Primera':'Segunda'}</span>
+      <button class="btn-share" onclick="abrirShare(generarImagenPosiciones)">${SVG_SHARE} Compartir</button>
+    </div>
     <div class="tabla-wrap"><table class="posiciones">
       <thead><tr><th>#</th><th>Equipo</th><th>PTS</th><th>PJ</th><th>G</th><th>E</th><th>P</th><th>GF</th><th>GC</th><th>DG</th></tr></thead>
       <tbody>${rows}</tbody>
@@ -2444,7 +2608,7 @@ function tablaHTML(titulo,pos,clasifican,leyendaExtra){
     </tr>`;
   }).join('');
   const html=`<div class="card" style="margin-bottom:.8rem">
-    <div class="card-header"><span>${titulo}</span><span class="div-badge">2ª</span></div>
+    <div class="card-header"><span>${titulo}</span><div style="display:flex;align-items:center;gap:8px"><span class="div-badge">2ª</span><button class="btn-share" onclick="abrirShare(generarImagenPosiciones)">${SVG_SHARE} Compartir</button></div></div>
     <div class="tabla-wrap"><table class="posiciones">
       <thead><tr><th>#</th><th>Equipo</th><th>PTS</th><th>PJ</th><th>G</th><th>E</th><th>P</th><th>GF</th><th>GC</th><th>DG</th></tr></thead>
       <tbody>${rows}</tbody>
@@ -2515,7 +2679,7 @@ function renderGoleadores(){
       el.innerHTML=`<div class="card"><div class="card-header"><span>Goleadores – ${faseLabels[fase]}</span><span class="div-badge">2ª</span></div><div class="empty-msg">No hay goleadores para esta fase</div></div>`;
       return;
     }
-    el.innerHTML=`<div class="card"><div class="card-header"><span>Goleadores – ${faseLabels[fase]} / Segunda División</span><span class="div-badge">2ª</span></div>
+    el.innerHTML=`<div class="card"><div class="card-header"><span>Goleadores – ${faseLabels[fase]} / Segunda División</span><div style="display:flex;align-items:center;gap:8px"><span class="div-badge">2ª</span><button class="btn-share" onclick="abrirShare(generarImagenGoleadores)">${SVG_SHARE} Compartir</button></div></div>
       ${gs.map((g,i)=>filaGol(g,i)).join('')}</div>`;
     return;
   }
@@ -2527,7 +2691,7 @@ function renderGoleadores(){
     el.innerHTML=`<div class="card"><div class="card-header"><span>Goleadores – ${torneoLabel(torneo)}</span><span class="div-badge">1ª</span></div><div class="empty-msg">No hay goleadores para este torneo</div></div>`;
     return;
   }
-  el.innerHTML=`<div class="card"><div class="card-header"><span>Goleadores – ${torneoLabel(torneo)} / Primera División</span><span class="div-badge">1ª</span></div>
+  el.innerHTML=`<div class="card"><div class="card-header"><span>Goleadores – ${torneoLabel(torneo)} / Primera División</span><div style="display:flex;align-items:center;gap:8px"><span class="div-badge">1ª</span><button class="btn-share" onclick="abrirShare(generarImagenGoleadores)">${SVG_SHARE} Compartir</button></div></div>
     ${gs.map((g,i)=>filaGol(g,i)).join('')}</div>`;
 }
 
@@ -2827,7 +2991,7 @@ function renderFooter(){
   // --- COPYRIGHT ---
   const copyEl=document.getElementById('footer-copy');
   if(copyEl && (d.radioNombre||d.descripcion)){
-    copyEl.textContent=`© ${new Date().getFullYear()} ${d.radioNombre||'Deportemas'} · Liga Regional Riotercerense de Fútbol`;
+    copyEl.textContent=`© ${new Date().getFullYear()} ${d.radioNombre||'Deportemas'} · La Radio del Fútbol`;
   }
 }
 
@@ -4716,6 +4880,664 @@ function toggleFotosSidebar(seccion){
 }
 
 // ============================================================
+// COMPARTIR EN REDES SOCIALES  (imágenes via Canvas)
+// ============================================================
+let _shareCanvas = null;   // canvas con la imagen generada
+
+function cerrarShare(){
+  document.getElementById('share-modal').classList.remove('open');
+}
+document.addEventListener('keydown', e => { if(e.key==='Escape') cerrarShare(); });
+document.getElementById('share-modal').addEventListener('click', function(e){
+  if(e.target===this) cerrarShare();
+});
+
+// ── Helpers de dibujo Canvas ────────────────────────────────
+
+const C = {
+  NEG:    '#080808',
+  NEG2:   '#111113',
+  NEG3:   '#191920',
+  NEG4:   '#232330',
+  DORADO: '#c9a227',
+  DORADO2:'#f0c040',
+  BLANCO: '#f5f5f5',
+  GRIS:   '#888888',
+  VERDE:  '#1a6b2f',
+  ROJO:   '#c0392b',
+  AZUL:   '#3a9bd5',
+};
+
+function cvRoundRect(ctx, x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y); ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+  ctx.lineTo(x+w, y+h-r); ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+  ctx.lineTo(x+r, y+h); ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+  ctx.lineTo(x, y+r); ctx.quadraticCurveTo(x, y, x+r, y);
+  ctx.closePath();
+}
+
+function cvDrawLogo(ctx, logoSrc, x, y, size){
+  return new Promise(resolve => {
+    if(!logoSrc){ resolve(false); return; }
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(x + size/2, y + size/2, size/2, 0, Math.PI*2);
+      ctx.clip();
+      ctx.drawImage(img, x, y, size, size);
+      ctx.restore();
+      resolve(true);
+    };
+    img.onerror = () => resolve(false);
+    img.src = logoSrc;
+  });
+}
+
+// Dibuja un encabezado de liga con logo opcional
+async function cvHeader(ctx, W, id, yStart){
+  const liga = id.nombre || 'DEPORTEMAS';
+  const sub  = id.subtitulo || 'Fútbol · Córdoba';
+  const H = 64;
+
+  const grad = ctx.createLinearGradient(0, yStart, W, yStart);
+  grad.addColorStop(0, C.NEG4);
+  grad.addColorStop(1, 'rgba(201,162,39,0.15)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, yStart, W, H);
+  ctx.fillStyle = C.DORADO;
+  ctx.fillRect(0, yStart + H - 2, W, 2);
+
+  const logoSize = 40, logoX = 18, logoY = yStart + (H - logoSize) / 2;
+  const logoOk = await cvDrawLogo(ctx, id.logo, logoX, logoY, logoSize);
+  if(!logoOk){
+    cvRoundRect(ctx, logoX, logoY, logoSize, logoSize, 6);
+    ctx.fillStyle = C.DORADO; ctx.fill();
+    ctx.fillStyle = C.NEG;
+    ctx.font = 'bold 15px Arial, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText((liga.substr(0,2)).toUpperCase(), logoX + logoSize/2, logoY + logoSize/2);
+  }
+
+  const textX = logoX + logoSize + 12;
+  ctx.fillStyle = C.BLANCO;
+  ctx.font = '700 22px "Rajdhani", Arial, sans-serif';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  cvFillTextTrunc(ctx, liga.toUpperCase(), textX, yStart + 32, W - textX - 20);
+  ctx.fillStyle = 'rgba(201,162,39,0.55)';
+  ctx.font = '500 11px "Rajdhani", Arial, sans-serif';
+  cvFillTextTrunc(ctx, sub.toUpperCase(), textX, yStart + 50, W - textX - 20);
+
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  return yStart + H;
+}
+
+// Dibuja el footer de la imagen
+function cvFooter(ctx, W, yStart, ligaNombre){
+  const H = 34;
+  ctx.fillStyle = C.NEG4;
+  ctx.fillRect(0, yStart, W, H);
+  ctx.fillStyle = 'rgba(201,162,39,0.35)';
+  ctx.font = '600 11px "Rajdhani", Arial, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText((ligaNombre||'DEPORTEMAS').toUpperCase() + '  ·  deportemas.com.ar', W/2, yStart + H/2);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  return yStart + H;
+}
+
+// ── Generadores de imagen ────────────────────────────────────
+
+async function cvFuente(size, weight='700'){
+  // Esperar fuentes cargadas para que Rajdhani esté disponible en canvas
+  await document.fonts.ready;
+  return `${weight} ${size}px "Rajdhani", Arial, sans-serif`;
+}
+
+// Dibuja texto con truncado automático si no entra
+function cvFillTextTrunc(ctx, text, x, y, maxW){
+  if(!maxW){ ctx.fillText(text,x,y); return; }
+  let t = text;
+  while(ctx.measureText(t).width > maxW && t.length > 1) t = t.slice(0,-1);
+  if(t !== text) t = t.slice(0,-1)+'…';
+  ctx.fillText(t, x, y);
+}
+
+// Dibuja escudo (base64) en canvas con fallback a círculo con iniciales
+function cvDrawEscudo(ctx, nombre, x, y, size){
+  return new Promise(resolve => {
+    const src = escudos[nombre] || escudos[normalizar(nombre)];
+    if(!src){ cvEscudoFallback(ctx, nombre, x, y, size); resolve(); return; }
+    const img = new Image();
+    img.onload = () => {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(x+size/2, y+size/2, size/2, 0, Math.PI*2);
+      ctx.clip();
+      ctx.drawImage(img, x, y, size, size);
+      ctx.restore();
+      resolve();
+    };
+    img.onerror = () => { cvEscudoFallback(ctx, nombre, x, y, size); resolve(); };
+    img.src = src;
+  });
+}
+function cvEscudoFallback(ctx, nombre, x, y, size){
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(x+size/2, y+size/2, size/2, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(201,162,39,0.15)';
+  ctx.fill();
+  ctx.fillStyle = C.DORADO;
+  ctx.font = `700 ${Math.round(size*0.38)}px Arial`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText((nombre||'?').substring(0,2).toUpperCase(), x+size/2, y+size/2);
+  ctx.textBaseline = 'alphabetic';
+  ctx.restore();
+}
+
+async function generarImagenPartido(p){
+  await document.fonts.ready;
+  const id   = getIdentidad();
+  const liga = id.nombre || 'DEPORTEMAS';
+  const W    = 700;
+  const golesLocal = (p.goles||[]).filter(g=>g.equipo==='local');
+  const golesVisit = (p.goles||[]).filter(g=>g.equipo==='visit');
+  const exps       = p.expulsiones||[];
+  const tieneEventos = golesLocal.length||golesVisit.length||exps.length;
+  const evRows = Math.max(golesLocal.length, golesVisit.length) + exps.length;
+  const H = 64 + 220 + (tieneEventos ? 16 + evRows*30 + 16 : 0) + 34;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.textBaseline = 'alphabetic';
+
+  // Fondo
+  ctx.fillStyle = C.NEG2;
+  ctx.fillRect(0, 0, W, H);
+
+  let y = await cvHeader(ctx, W, id, 0);
+
+  // Zona resultado — gradiente sutil
+  const zH = 184;
+  const grad2 = ctx.createLinearGradient(0, y, 0, y+zH);
+  grad2.addColorStop(0, C.NEG3); grad2.addColorStop(1, C.NEG2);
+  ctx.fillStyle = grad2;
+  ctx.fillRect(0, y, W, zH);
+
+  // Subtítulo fecha/división
+  const divLabel = p.div==='primera'?'1ª División':'2ª División';
+  const tornLabel = p.torneo?' · '+torneoLabel(p.torneo):'';
+  ctx.fillStyle='rgba(201,162,39,0.6)';
+  ctx.font = '600 12px "Rajdhani", Arial, sans-serif';
+  ctx.textAlign='center';
+  ctx.fillText([(p.fecha||''),(p.dia||''),divLabel+tornLabel].filter(Boolean).join('  ·  '), W/2, y+20);
+
+  // Zona central: escudos + nombres + marcador
+  const midY = y + 110;
+  const ESCUDO = 52;
+  const MARGEN = 30;
+  const CENTRO_X = W/2;
+
+  // Marcador (caja dorada)
+  const mW=110, mH=50;
+  const mX=CENTRO_X-mW/2, mY=midY-mH/2;
+  cvRoundRect(ctx, mX, mY, mW, mH, 8);
+  const mGrad=ctx.createLinearGradient(mX,mY,mX+mW,mY+mH);
+  mGrad.addColorStop(0,C.DORADO); mGrad.addColorStop(1,C.DORADO2);
+  ctx.fillStyle=mGrad; ctx.fill();
+  ctx.fillStyle=C.NEG;
+  ctx.font='900 28px "Rajdhani", Arial, sans-serif';
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+  ctx.fillText(p.resultado||(p.estado==='en-juego'?'0-0':'VS'), CENTRO_X, midY+1);
+  ctx.textBaseline='alphabetic';
+
+  // Equipo local (derecha del escudo, izquierda del marcador)
+  const escLocalX = mX - MARGEN - ESCUDO;
+  const escLocalY = midY - ESCUDO/2;
+  await cvDrawEscudo(ctx, p.local, escLocalX, escLocalY, ESCUDO);
+  ctx.fillStyle=C.BLANCO;
+  ctx.font='700 18px "Rajdhani", Arial, sans-serif';
+  ctx.textAlign='right';
+  ctx.textBaseline='middle';
+  const maxNomW = escLocalX - 16;
+  cvFillTextTrunc(ctx, p.local.toUpperCase(), escLocalX-10, midY, escLocalX - 16);
+
+  // Equipo visit (izquierda del escudo, derecha del marcador)
+  const escVisitX = mX + mW + MARGEN;
+  const escVisitY = midY - ESCUDO/2;
+  await cvDrawEscudo(ctx, p.visit, escVisitX, escVisitY, ESCUDO);
+  ctx.fillStyle=C.BLANCO;
+  ctx.font='700 18px "Rajdhani", Arial, sans-serif';
+  ctx.textAlign='left';
+  cvFillTextTrunc(ctx, p.visit.toUpperCase(), escVisitX+ESCUDO+10, midY, W - escVisitX - ESCUDO - 16);
+  ctx.textBaseline='alphabetic';
+
+  // Badge estado
+  const estadoTxt = p.estado==='jugado'?'FINAL':p.estado==='en-juego'?'● EN VIVO':'PRÓXIMO';
+  const bCol = p.estado==='jugado'?'rgba(26,107,47,0.5)':p.estado==='en-juego'?'rgba(192,57,43,0.5)':'rgba(201,162,39,0.2)';
+  const bTxt = p.estado==='jugado'?'#4caf74':p.estado==='en-juego'?'#ff5555':C.DORADO;
+  ctx.font='700 11px "Rajdhani", Arial, sans-serif';
+  const bW=ctx.measureText(estadoTxt).width+20;
+  cvRoundRect(ctx, CENTRO_X-bW/2, midY+34, bW, 20, 4);
+  ctx.fillStyle=bCol; ctx.fill();
+  ctx.fillStyle=bTxt;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(estadoTxt, CENTRO_X, midY+44);
+  ctx.textBaseline='alphabetic';
+
+  y += zH;
+
+  // Eventos
+  if(tieneEventos){
+    ctx.fillStyle='rgba(255,255,255,0.06)';
+    ctx.fillRect(20, y, W-40, 1);
+    y += 16;
+    ctx.font='600 13px "Rajdhani", Arial, sans-serif';
+    const colL = W/2 - 16, colR = W/2 + 16;
+    const maxRows = Math.max(golesLocal.length, golesVisit.length);
+    for(let i=0;i<maxRows;i++){
+      const gl=golesLocal[i], gv=golesVisit[i];
+      if(gl){
+        ctx.fillStyle='rgba(255,255,255,0.82)';
+        ctx.textAlign='right';
+        cvFillTextTrunc(ctx,'⚽ '+gl.jugador+(gl.min?" '"+gl.min:''), colL, y+18, W/2-20);
+      }
+      if(gv){
+        ctx.fillStyle='rgba(255,255,255,0.82)';
+        ctx.textAlign='left';
+        cvFillTextTrunc(ctx,'⚽ '+gv.jugador+(gv.min?" '"+gv.min:''), colR, y+18, W/2-20);
+      }
+      y+=30;
+    }
+    exps.forEach(e=>{
+      const eq=e.equipo==='local'?p.local:p.visit;
+      ctx.fillStyle='#e05555';
+      if(e.equipo==='local'){
+        ctx.textAlign='right';
+        cvFillTextTrunc(ctx,'🟥 '+e.jugador+(e.min?" '"+e.min:'')+' ('+eq+')', colL, y+18, W/2-20);
+      } else {
+        ctx.textAlign='left';
+        cvFillTextTrunc(ctx,'🟥 '+e.jugador+(e.min?" '"+e.min:'')+' ('+eq+')', colR, y+18, W/2-20);
+      }
+      y+=30;
+    });
+    y+=16;
+  }
+
+  cvFooter(ctx, W, y, liga);
+  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+  return canvas;
+}
+
+async function generarImagenPosiciones(){
+  await document.fonts.ready;
+  const id    = getIdentidad();
+  const liga  = id.nombre||'DEPORTEMAS';
+  const W     = 700;
+  const torneo = currentTorneo.pos;
+  const div   = currentDivision;
+  let pos;
+
+  if(torneo==='general'&&div==='primera'){
+    const map={};
+    data.posiciones.filter(p=>p.div==='primera').forEach(p=>{
+      const k=normalizar(p.equipo);
+      if(!map[k])map[k]={equipo:p.equipo,pts:0,pj:0,g:0,e:0,p:0,gf:0,gc:0};
+      ['pts','pj','g','e','p','gf','gc'].forEach(f=>map[k][f]+=Number(p[f])||0);
+    });
+    pos=Object.values(map).sort((a,b)=>b.pts-a.pts||(b.gf-b.gc)-(a.gf-a.gc));
+  } else {
+    pos=[...data.posiciones.filter(p=>p.div===div&&(p.torneo||'apertura')===torneo)]
+      .sort((a,b)=>b.pts-a.pts);
+  }
+  if(!pos.length) return null;
+
+  const rows  = Math.min(pos.length,16);
+  const ROW_H = 38;
+  const HDR_H = 28;
+  const H = 64 + 46 + HDR_H + rows*ROW_H + 12 + 34;
+
+  const canvas = document.createElement('canvas');
+  canvas.width=W; canvas.height=H;
+  const ctx=canvas.getContext('2d');
+  ctx.textBaseline='alphabetic';
+
+  ctx.fillStyle=C.NEG2; ctx.fillRect(0,0,W,H);
+  let y = await cvHeader(ctx,W,id,0);
+
+  // Título
+  const tit = torneo==='general'?'TABLA GENERAL':'POSICIONES – '+torneoLabel(torneo).toUpperCase();
+  const divStr = div==='primera'?'PRIMERA DIVISIÓN':'SEGUNDA DIVISIÓN';
+  ctx.fillStyle=C.DORADO;
+  ctx.font='700 15px "Rajdhani", Arial, sans-serif';
+  ctx.textAlign='center';
+  ctx.fillText(tit+'  ·  '+divStr, W/2, y+30);
+  y+=46;
+
+  // Columnas: #(28) | escudo(32) | equipo(flex) | PTS | PJ | G | E | P | GF | GC | DG
+  const C1=8, C2=36, C3=72, EQMAX=200;
+  const numCols=[
+    {l:'PTS',x:C3+EQMAX+4,   w:42},
+    {l:'PJ', x:C3+EQMAX+50,  w:34},
+    {l:'G',  x:C3+EQMAX+88,  w:30},
+    {l:'E',  x:C3+EQMAX+122, w:30},
+    {l:'P',  x:C3+EQMAX+156, w:30},
+    {l:'GF', x:C3+EQMAX+190, w:30},
+    {l:'GC', x:C3+EQMAX+224, w:30},
+    {l:'DG', x:C3+EQMAX+258, w:38},
+  ];
+
+  // Header tabla
+  ctx.fillStyle='rgba(201,162,39,0.13)'; ctx.fillRect(0,y,W,HDR_H);
+  ctx.fillStyle=C.DORADO;
+  ctx.font='700 11px "Rajdhani", Arial, sans-serif';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('#', C1+14, y+HDR_H/2);
+  ctx.textAlign='left';
+  ctx.fillText('EQUIPO', C3, y+HDR_H/2);
+  numCols.forEach(c=>{ ctx.textAlign='center'; ctx.fillText(c.l, c.x+c.w/2, y+HDR_H/2); });
+  ctx.textBaseline='alphabetic';
+  y+=HDR_H;
+
+  // Cargar todos los escudos en paralelo antes de dibujar
+  const escudoImgs = {};
+  await Promise.all(pos.slice(0,16).map(p => new Promise(res=>{
+    const src=escudos[p.equipo]||escudos[normalizar(p.equipo)];
+    if(!src){res();return;}
+    const img=new Image();
+    img.onload=()=>{escudoImgs[p.equipo]=img;res();};
+    img.onerror=()=>res();
+    img.src=src;
+  })));
+
+  pos.slice(0,16).forEach((p,i)=>{
+    const fy = y + ROW_H/2;
+    ctx.fillStyle=i%2===0?'rgba(255,255,255,0.025)':'rgba(0,0,0,0.12)';
+    ctx.fillRect(0,y,W,ROW_H);
+
+    // Borde zona
+    const zc = div==='primera'
+      ? (i===0?C.DORADO:i<=6?C.AZUL:i===13?'#e67e22':i>=14?C.ROJO:null)
+      : (i<4?C.VERDE:null);
+    if(zc){ctx.fillStyle=zc;ctx.fillRect(0,y,3,ROW_H);}
+
+    // Número
+    ctx.fillStyle=i===0?C.DORADO:'rgba(255,255,255,0.5)';
+    ctx.font=(i===0?'700':'500')+' 13px "Rajdhani", Arial, sans-serif';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(i+1, C1+14, fy);
+
+    // Escudo
+    const eSize=24, eX=C2+4, eY=y+(ROW_H-eSize)/2;
+    const eImg=escudoImgs[p.equipo];
+    if(eImg){
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(eX+eSize/2,eY+eSize/2,eSize/2,0,Math.PI*2);
+      ctx.clip();
+      ctx.drawImage(eImg,eX,eY,eSize,eSize);
+      ctx.restore();
+    } else {
+      cvEscudoFallback(ctx,p.equipo,eX,eY,eSize);
+    }
+
+    // Nombre equipo
+    ctx.fillStyle=C.BLANCO;
+    ctx.font='700 13px "Rajdhani", Arial, sans-serif';
+    ctx.textAlign='left'; ctx.textBaseline='middle';
+    cvFillTextTrunc(ctx, p.equipo.toUpperCase(), C3, fy, EQMAX-4);
+
+    // PTS (destacado)
+    ctx.fillStyle=C.DORADO;
+    ctx.font='900 16px "Rajdhani", Arial, sans-serif';
+    ctx.textAlign='center';
+    ctx.fillText(p.pts!=null?p.pts:0, numCols[0].x+numCols[0].w/2, fy);
+
+    // Resto stats
+    ctx.fillStyle='rgba(255,255,255,0.65)';
+    ctx.font='500 12px "Rajdhani", Arial, sans-serif';
+    const dg=(p.gf||0)-(p.gc||0);
+    const dgStr=dg>0?'+'+dg:String(dg);
+    [p.pj,p.g,p.e,p.p,p.gf||0,p.gc||0,dgStr].forEach((v,ci)=>{
+      ctx.fillText(String(v), numCols[ci+1].x+numCols[ci+1].w/2, fy);
+    });
+
+    ctx.fillStyle='rgba(255,255,255,0.04)';
+    ctx.fillRect(0,y+ROW_H-1,W,1);
+    y+=ROW_H;
+  });
+
+  y+=12;
+  cvFooter(ctx,W,y,liga);
+  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+  return canvas;
+}
+
+async function generarImagenGoleadores(){
+  await document.fonts.ready;
+  const id    = getIdentidad();
+  const liga  = id.nombre||'DEPORTEMAS';
+  const W     = 700;
+  let gs, subtitulo;
+  if(currentDivision==='segunda'){
+    const fl={'fase1':'1ª Fase','fase2':'2ª Fase','fase3':'3ª Fase'};
+    gs=[...data.goleadores.filter(g=>g.div==='segunda'&&(g.faseGol||g.torneo||'fase1')===currentFaseGol)]
+      .sort((a,b)=>b.goles-a.goles);
+    subtitulo='SEGUNDA DIVISIÓN  ·  '+(fl[currentFaseGol]||'').toUpperCase();
+  } else {
+    const torneo=currentTorneo.gol;
+    gs=[...data.goleadores.filter(g=>g.div==='primera'&&(g.torneo||'apertura')===torneo)]
+      .sort((a,b)=>b.goles-a.goles);
+    subtitulo='PRIMERA DIVISIÓN  ·  '+torneoLabel(torneo).toUpperCase();
+  }
+  if(!gs.length) return null;
+
+  const TOP   = Math.min(gs.length,10);
+  const ROW_H = 56;
+  const H     = 64 + 46 + TOP*ROW_H + 12 + 34;
+
+  const canvas=document.createElement('canvas');
+  canvas.width=W; canvas.height=H;
+  const ctx=canvas.getContext('2d');
+  ctx.textBaseline='alphabetic';
+
+  ctx.fillStyle=C.NEG2; ctx.fillRect(0,0,W,H);
+  let y=await cvHeader(ctx,W,id,0);
+
+  ctx.fillStyle=C.DORADO;
+  ctx.font='700 15px "Rajdhani", Arial, sans-serif';
+  ctx.textAlign='center';
+  ctx.fillText('GOLEADORES  ·  '+subtitulo, W/2, y+30);
+  y+=46;
+
+  // Precargar escudos
+  const escudoImgs={};
+  await Promise.all(gs.slice(0,10).map(g=>new Promise(res=>{
+    const src=escudos[g.equipo]||escudos[normalizar(g.equipo)];
+    if(!src){res();return;}
+    const img=new Image();
+    img.onload=()=>{escudoImgs[g.equipo]=img;res();};
+    img.onerror=()=>res();
+    img.src=src;
+  })));
+
+  gs.slice(0,10).forEach((g,i)=>{
+    const fy=y+ROW_H/2;
+    ctx.fillStyle=i%2===0?'rgba(255,255,255,0.025)':'rgba(0,0,0,0.1)';
+    ctx.fillRect(0,y,W,ROW_H);
+
+    // Número / medalla
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    if(i<3){
+      ctx.font=`${Math.round(ROW_H*0.48)}px sans-serif`;
+      ctx.fillText(['🥇','🥈','🥉'][i], 28, fy);
+    } else {
+      ctx.fillStyle='rgba(255,255,255,0.4)';
+      ctx.font='700 14px "Rajdhani", Arial, sans-serif';
+      ctx.fillText(i+1, 28, fy);
+    }
+
+    // Escudo del equipo
+    const eSize=36, eX=52, eY=y+(ROW_H-eSize)/2;
+    const eImg=escudoImgs[g.equipo];
+    if(eImg){
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(eX+eSize/2,eY+eSize/2,eSize/2,0,Math.PI*2);
+      ctx.clip();
+      ctx.drawImage(eImg,eX,eY,eSize,eSize);
+      ctx.restore();
+    } else {
+      cvEscudoFallback(ctx,g.equipo,eX,eY,eSize);
+    }
+
+    // Nombre jugador
+    ctx.fillStyle=i===0?C.DORADO:C.BLANCO;
+    ctx.font='700 17px "Rajdhani", Arial, sans-serif';
+    ctx.textAlign='left'; ctx.textBaseline='middle';
+    cvFillTextTrunc(ctx,g.nombre.toUpperCase(), 100, fy-8, W-200);
+
+    // Equipo
+    ctx.fillStyle=C.GRIS;
+    ctx.font='500 12px "Rajdhani", Arial, sans-serif';
+    cvFillTextTrunc(ctx,g.equipo, 100, fy+12, W-200);
+
+    // Goles (derecha)
+    ctx.fillStyle=C.DORADO;
+    ctx.font='900 34px "Rajdhani", Arial, sans-serif';
+    ctx.textAlign='right';
+    ctx.fillText(g.goles, W-48, fy+12);
+    ctx.fillStyle='rgba(201,162,39,0.55)';
+    ctx.font='500 11px "Rajdhani", Arial, sans-serif';
+    ctx.fillText('GOL'+(g.goles!==1?'ES':''), W-20, fy-4);
+    ctx.textBaseline='alphabetic';
+
+    ctx.fillStyle='rgba(255,255,255,0.04)';
+    ctx.fillRect(0,y+ROW_H-1,W,1);
+    y+=ROW_H;
+  });
+
+  y+=12;
+  cvFooter(ctx,W,y,liga);
+  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+  return canvas;
+}
+
+// ── Apertura del modal ───────────────────────────────────────
+
+async function abrirShareCanvas(generadorFn){
+  _shareCanvas = null;
+  const imgEl  = document.getElementById('share-img-preview');
+  const loadEl = document.getElementById('share-img-loading');
+  const noteEl = document.getElementById('share-note');
+  imgEl.style.display  = 'none';
+  loadEl.style.display = 'flex';
+  noteEl.textContent   = '';
+
+  document.getElementById('share-modal').classList.add('open');
+
+  // Generar en el siguiente frame para que el spinner se vea
+  requestAnimationFrame(async () => {
+    try {
+      const canvas = await generadorFn();
+      if(!canvas){ cerrarShare(); return; }
+      _shareCanvas = canvas;
+      imgEl.src    = canvas.toDataURL('image/png');
+      imgEl.style.display  = 'block';
+      loadEl.style.display = 'none';
+
+      // Detectar si Web Share API soporta archivos
+      const tieneWebShare = navigator.canShare && navigator.canShare({files:[new File([''],'t.png',{type:'image/png'})]});
+      noteEl.textContent = tieneWebShare
+        ? 'En móvil podés compartir directamente. En PC, descargá y adjuntá la imagen.'
+        : 'Descargá la imagen y adjuntala al publicar.';
+    } catch(e) {
+      loadEl.textContent = 'Error al generar la imagen.';
+      console.error(e);
+    }
+  });
+}
+
+// Reemplaza abrirShare (llamado desde los botones de las cards)
+function abrirShare(generadorFn){
+  abrirShareCanvas(generadorFn);
+}
+
+// ── Compartir ────────────────────────────────────────────────
+
+async function compartirImgEn(red){
+  if(!_shareCanvas) return;
+  const dataUrl = _shareCanvas.toDataURL('image/png');
+  const id  = getIdentidad();
+  const nombre = id.nombre||'Deportemas';
+
+  // Intentar Web Share API con archivo (funciona en móvil)
+  if(red==='whatsapp'||red==='telegram'){
+    if(navigator.canShare){
+      try{
+        const res = await fetch(dataUrl);
+        const blob = await res.blob();
+        const file = new File([blob], 'deportemas-resultado.png', {type:'image/png'});
+        if(navigator.canShare({files:[file]})){
+          await navigator.share({ files:[file], title: nombre });
+          return;
+        }
+      }catch(e){}
+    }
+  }
+
+  // Fallback: abrir la red con texto + descarga automática
+  descargarImagen();
+  const texto = encodeURIComponent(nombre + ' – ¡Mirá el resultado! 📲');
+  const urls = {
+    whatsapp: 'https://wa.me/?text=' + texto,
+    twitter:  'https://twitter.com/intent/tweet?text=' + texto,
+    facebook: 'https://www.facebook.com/sharer/sharer.php?quote=' + texto + '&u=' + encodeURIComponent(window.location.href),
+    telegram: 'https://t.me/share/url?url=' + encodeURIComponent(window.location.href) + '&text=' + texto,
+  };
+  if(urls[red]) window.open(urls[red], '_blank', 'noopener,noreferrer');
+}
+
+function descargarImagen(){
+  if(!_shareCanvas) return;
+  const a = document.createElement('a');
+  a.href     = _shareCanvas.toDataURL('image/png');
+  a.download = 'deportemas-' + Date.now() + '.png';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+// ── Iconos SVG inline reutilizables ─────────────────────────
+const SVG_SHARE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>`;
+
+// ============================================================
+// MENÚ HAMBURGUESA (móvil)
+// ============================================================
+function toggleMenu(){
+  const nav = document.getElementById('main-nav');
+  const btn = document.getElementById('hamburger-btn');
+  const open = nav.classList.toggle('open');
+  btn.classList.toggle('open', open);
+}
+function cerrarMenu(){
+  document.getElementById('main-nav').classList.remove('open');
+  document.getElementById('hamburger-btn').classList.remove('open');
+}
+// Cerrar al tocar fuera del menú
+document.addEventListener('click', function(e){
+  const nav = document.getElementById('main-nav');
+  const btn = document.getElementById('hamburger-btn');
+  if(nav.classList.contains('open') && !nav.contains(e.target) && !btn.contains(e.target)){
+    cerrarMenu();
+  }
+});
+
+// ============================================================
 // ============================================================
 // INIT
 // ============================================================
@@ -4805,8 +5627,8 @@ renderSection('fixture');
 
   <!-- FOOTER BOTTOM -->
   <div class="footer-bottom">
-    <span id="footer-copy">© 2025 Deportemas · Liga Regional Riotercerense de Fútbol</span>
-    <span>Desarrollado con ❤ en Río Tercero, Córdoba</span>
+    <span id="footer-copy">© 2025 Deportemas · La Radio del Fútbol</span>
+    <span>Desarrollado en Río Tercero, Córdoba</span>
   </div>
 
 </footer>
@@ -4815,20 +5637,40 @@ renderSection('fixture');
 // Este script corre DESPUÉS del footer, cuando todos los elementos ya existen en el DOM
 renderFooter();
 
-// Actualizar textos del splash con la identidad cargada y ocultarlo
+// Actualizar splash con la identidad y ocultarlo
+// El splash espera a que Firebase haya cargado los datos antes de hacer fade-out
 (function(){
-  const ini = document.getElementById('logo-iniciales');
-  const splashLogo = document.getElementById('splash-logo');
-  if(splashLogo && ini) splashLogo.textContent = ini.textContent || 'LRR';
-  const headerNombre = document.getElementById('header-nombre');
+  // Aplicar identidad local inmediatamente (lo que haya en localStorage)
+  const id = getIdentidad();
   const splashNombre = document.getElementById('splash-nombre');
-  if(splashNombre && headerNombre) splashNombre.textContent = headerNombre.textContent;
+  const splashImg    = document.getElementById('splash-logo-img');
+  const splashIni    = document.getElementById('splash-logo-ini');
 
-  const splash = document.getElementById('splash');
-  if(!splash) return;
-  // Fade out y luego display:none
-  splash.style.opacity = '0';
-  setTimeout(function(){ splash.style.display = 'none'; }, 450);
+  if(splashNombre && id.nombre) splashNombre.textContent = id.nombre;
+  if(splashImg && splashIni){
+    if(id.logo){
+      splashImg.src = id.logo;
+      splashImg.style.display = 'block';
+      splashIni.style.display = 'none';
+    } else {
+      const ini = document.getElementById('logo-iniciales');
+      if(ini && splashIni) splashIni.textContent = ini.textContent || 'DM';
+    }
+  }
+
+  // Función que oculta el splash
+  window._ocultarSplash = function(){
+    const splash = document.getElementById('splash');
+    if(!splash || splash.style.display === 'none') return;
+    splash.style.opacity = '0';
+    setTimeout(function(){ splash.style.display = 'none'; }, 450);
+  };
+
+  // Ocultar splash una vez que Firebase haya terminado de cargar
+  // (Firebase llama a aplicarIdentidad() que ya actualiza el splash,
+  //  luego el módulo llama a window._ocultarSplash)
+  // Fallback: si Firebase no respondió en 4s, ocultarlo igual
+  window._splashFallback = setTimeout(window._ocultarSplash, 4000);
 })();
 </script>
 
