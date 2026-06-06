@@ -138,6 +138,8 @@
                       localStorage.setItem('lrr_data2', JSON.stringify(data));
                       // Recalcular posiciones y goleadores desde los partidos al cargar
                       recalcularTodo();
+                      // saveData sube el resultado recalculado y bloquea el listener
+                      // solo si hubo cambios reales (evitar escritura innecesaria)
                       saveData(data); }
     if(fbIdentidad) { localStorage.setItem('lrr_identidad', JSON.stringify(fbIdentidad)); }
     if(fbFotos)     { localStorage.setItem('lrr_fotos',     JSON.stringify(fbFotos)); }
@@ -171,10 +173,16 @@
     if(window._ocultarSplash) window._ocultarSplash();
 
     // Suscribir cambios en tiempo real a datos principales
+    // _fbEscribiendoData evita que el listener pise un guardado local en progreso
+    window._fbEscribiendoData = false;
     window._fb.listen('data', fbVal => {
       if(!fbVal) return;
+      // Si esta pestaña acaba de escribir, ignorar el echo de Firestore
+      if(window._fbEscribiendoData) return;
       data = fbVal;
       if(!data.playoff) data.playoff=[];
+      // Recalcular siempre al recibir datos (otro cliente puede haber subido sin recalcular)
+      recalcularTodo();
       localStorage.setItem('lrr_data2', JSON.stringify(data));
       actualizarNavLive();
       renderSection(currentSection);
@@ -2119,7 +2127,17 @@ const FOTOS_KEY='lrr_fotos';
 
 function getPass(){return localStorage.getItem(PASS_KEY)||'admin123';}
 function getData(){try{const d=JSON.parse(localStorage.getItem(DATA_KEY))||defData();if(!d.playoff)d.playoff=[];return d;}catch(e){return defData();}}
-function saveData(d){localStorage.setItem(DATA_KEY,JSON.stringify(d));if(window._fb)window._fb.set('data',d);}
+function saveData(d){
+  localStorage.setItem(DATA_KEY,JSON.stringify(d));
+  if(window._fb){
+    // Activar flag para que el listener ignore el echo de esta escritura
+    window._fbEscribiendoData = true;
+    window._fb.set('data', d).then(()=>{
+      // Dar tiempo a que Firestore envíe el snapshot de vuelta y lo ignoremos
+      setTimeout(()=>{ window._fbEscribiendoData = false; }, 3000);
+    }).catch(()=>{ window._fbEscribiendoData = false; });
+  }
+}
 function getEscudos(){try{return JSON.parse(localStorage.getItem(ESCUDOS_KEY))||{};}catch(e){return {};}}
 function saveEscudos(nuevoEscudos, nombreModificado){
   // Guardar siempre en localStorage completo (rápido, sin límite práctico para escudos)
@@ -2617,7 +2635,8 @@ function renderPosiciones(){
   }
 
   // ---- PRIMERA DIVISIÓN: por torneo ----
-  const pos=[...data.posiciones.filter(p=>p.div===div&&(p.torneo||'apertura')===torneo)].sort((a,b)=>b.pts-a.pts||(+b.dg||0)-(+a.dg||0));
+  const parseDG=s=>parseInt((s||'0').replace('+',''))||0;
+  const pos=[...data.posiciones.filter(p=>p.div===div&&(p.torneo||'apertura')===torneo)].sort((a,b)=>(b.pts-a.pts)||((b.gf||0)-(b.gc||0))-((a.gf||0)-(a.gc||0)));
   if(!pos.length){el.innerHTML=`<div class="card"><div class="card-header"><span>Posiciones – ${torneoLabel(torneo)}</span><span class="div-badge">${div==='primera'?'1ª':'2ª'}</span></div><div class="empty-msg">No hay posiciones cargadas para este torneo</div></div>`;return;}
   const rows=pos.map((p,i)=>{
     let cls='';
@@ -2695,7 +2714,7 @@ function applyGoldPts(){
 
 function renderPosicionesSegunda(){
   const el=document.getElementById('posiciones-content');
-  const filtrar=(fase,zona)=>[...data.posiciones.filter(p=>p.div==='segunda'&&p.fase===fase&&(zona?p.zona===zona:true))].sort((a,b)=>b.pts-a.pts||(+b.dg||0)-(+a.dg||0));
+  const filtrar=(fase,zona)=>[...data.posiciones.filter(p=>p.div==='segunda'&&p.fase===fase&&(zona?p.zona===zona:true))].sort((a,b)=>(b.pts-a.pts)||((b.gf||0)-(b.gc||0))-((a.gf||0)-(a.gc||0)));
 
   if(currentFase==='fase1'){
     if(currentZona==='sierra'){
@@ -3891,7 +3910,7 @@ function agregarPartido(){
   else d.faseRes=document.getElementById('p-fase-res').value;
   if(!d.local||!d.visit){alert('Completá local y visitante');return;}
   data.partidos.push(d);
-  if(d.estado==='jugado') recalcularTodo();
+  recalcularTodo();   // recalcular siempre: puede que haya partidos jugados anteriores
   saveData(data);
   document.getElementById('p-goles-list').innerHTML='';
   document.getElementById('p-exp-list').innerHTML='';
