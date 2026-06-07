@@ -20,7 +20,7 @@
 
   // ── PEGÁ AQUÍ TU CONFIGURACIÓN DE FIREBASE ──────────────────
   const firebaseConfig = {
-    apiKey: "AIzaSyC_4BA1BubBmSAg4SFbWspZHfoSK9tXxCs",
+   apiKey: "AIzaSyC_4BA1BubBmSAg4SFbWspZHfoSK9tXxCs",
   authDomain: "deportemas-abca3.firebaseapp.com",
   databaseURL: "https://deportemas-abca3-default-rtdb.firebaseio.com",
   projectId: "deportemas-abca3",
@@ -138,8 +138,9 @@
                       localStorage.setItem('lrr_data2', JSON.stringify(data));
                       // Recalcular posiciones y goleadores desde los partidos al cargar
                       recalcularTodo();
-                      // saveData sube el resultado recalculado y bloquea el listener
-                      // solo si hubo cambios reales (evitar escritura innecesaria)
+                      // ── Penalizaciones del tribunal disciplinario ────────────
+                      aplicarTodasLasPenalizaciones();
+                      // ──────────────────────────────────────────────────────────
                       saveData(data); }
     if(fbIdentidad) { localStorage.setItem('lrr_identidad', JSON.stringify(fbIdentidad)); }
     if(fbFotos)     { localStorage.setItem('lrr_fotos',     JSON.stringify(fbFotos)); }
@@ -183,6 +184,7 @@
       if(!data.playoff) data.playoff=[];
       // Recalcular siempre al recibir datos (otro cliente puede haber subido sin recalcular)
       recalcularTodo();
+      aplicarTodasLasPenalizaciones();
       localStorage.setItem('lrr_data2', JSON.stringify(data));
       actualizarNavLive();
       renderSection(currentSection);
@@ -1311,10 +1313,18 @@ table.posiciones td:nth-child(2){text-align:left;}
         </div>
         <!-- campo fase solo segunda -->
         <div id="p-fase-wrap" class="form-group" style="display:none"><label>Fase (Segunda División)</label>
-          <select id="p-fase-res">
+          <select id="p-fase-res" onchange="updateAdminZonaVis()">
             <option value="fase1">1ª Fase</option>
             <option value="fase2">2ª Fase</option>
             <option value="fase3">3ª Fase</option>
+          </select>
+        </div>
+        <!-- campo zona solo segunda fase1 -->
+        <div id="p-zona-wrap" class="form-group" style="display:none"><label>Zona (1ª Fase)</label>
+          <select id="p-zona">
+            <option value="sierra">Zona Sierra</option>
+            <option value="llano">Zona Llano</option>
+            <option value="">Sin zona</option>
           </select>
         </div>
         <div class="form-row">
@@ -2179,7 +2189,15 @@ let _editEscudoB64='';
 // ============================================================
 // HELPERS
 // ============================================================
-function normalizar(s){return(s||'').toLowerCase().trim();}
+function normalizar(s){
+  return (s||'')
+    .toLowerCase()
+    .trim()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')  // quitar tildes
+    .replace(/[\s]+/g,' ')                              // espacios múltiples → uno
+    .replace(/[().,'"\-_]/g,'')                         // quitar paréntesis, puntos, comas, guiones
+    .trim();
+}
 
 function getEscudoHTML(nombre,size){
   size=size||28;
@@ -2576,14 +2594,16 @@ function renderPosiciones(){
     const map={};
     data.posiciones.filter(p=>p.div==='primera').forEach(p=>{
       const k=normalizar(p.equipo);
-      if(!map[k]){map[k]={equipo:p.equipo,pts:0,pj:0,g:0,e:0,p:0,gf:0,gc:0};}
-      map[k].pts+=Number(p.pts)||0;
-      map[k].pj +=Number(p.pj)||0;
-      map[k].g  +=Number(p.g)||0;
-      map[k].e  +=Number(p.e)||0;
-      map[k].p  +=Number(p.p)||0;
-      map[k].gf +=Number(p.gf)||0;
-      map[k].gc +=Number(p.gc)||0;
+      if(!map[k]){map[k]={equipo:p.equipo,pts:0,pj:0,g:0,e:0,p:0,gf:0,gc:0,ptsDesc:0,ptsDescMotivo:''};}
+      map[k].pts   +=Number(p.pts)||0;
+      map[k].pj    +=Number(p.pj)||0;
+      map[k].g     +=Number(p.g)||0;
+      map[k].e     +=Number(p.e)||0;
+      map[k].p     +=Number(p.p)||0;
+      map[k].gf    +=Number(p.gf)||0;
+      map[k].gc    +=Number(p.gc)||0;
+      map[k].ptsDesc+=Number(p.ptsDesc)||0;
+      if(p.ptsDescMotivo) map[k].ptsDescMotivo=p.ptsDescMotivo;
     });
     const gen=Object.values(map).map(p=>({...p,dg:(p.gf-p.gc>=0?'+':'')+(p.gf-p.gc)}))
       .sort((a,b)=>b.pts-a.pts||(b.gf-b.gc)-(a.gf-a.gc));
@@ -2596,10 +2616,13 @@ function renderPosiciones(){
       let cls='';
       if(i===13) cls='zona-revalida';
       else if(i===14||i===15) cls='zona-descenso';
+      const descBadge = p.ptsDesc>0
+        ? `<span title="${p.ptsDescMotivo||'Descuento por tribunal'}" style="margin-left:4px;font-size:9px;font-weight:900;color:#e74c3c;background:rgba(192,57,43,.18);border:1px solid rgba(192,57,43,.35);border-radius:3px;padding:1px 4px;cursor:help">-${p.ptsDesc}</span>`
+        : '';
       return `<tr class="${cls}">
         <td class="pos-num">${i+1}</td>
         <td><div class="pos-equipo">${getEscudoHTML(p.equipo,28)} ${p.equipo}</div></td>
-        <td>${p.pts}</td>
+        <td>${p.pts}${descBadge}</td>
         <td>${p.pj}</td><td>${p.g}</td><td>${p.e}</td><td>${p.p}</td>
         <td>${p.gf}</td><td>${p.gc}</td><td>${p.dg}</td>
       </tr>`;
@@ -2642,10 +2665,13 @@ function renderPosiciones(){
     let cls='';
     if(div==='primera'){if(i===0)cls='zona-semifinal';else if(i>=1&&i<=6)cls='zona-cuartos';}
     else{if(i<4)cls='zona-clasificacion';}
+    const descBadge = p.ptsDesc>0
+      ? `<span title="${p.ptsDescMotivo||'Descuento por tribunal disciplinario'}" style="margin-left:4px;font-size:9px;font-weight:900;color:#e74c3c;background:rgba(192,57,43,.18);border:1px solid rgba(192,57,43,.35);border-radius:3px;padding:1px 4px;cursor:help;white-space:nowrap">-${p.ptsDesc}</span>`
+      : '';
     return `<tr class="${cls}">
       <td class="pos-num">${i+1}</td>
       <td><div class="pos-equipo">${getEscudoHTML(p.equipo,28)} ${p.equipo}</div></td>
-      <td>${p.pts!=null?p.pts:0}</td>
+      <td>${p.pts!=null?p.pts:0}${descBadge}</td>
       <td>${p.pj}</td><td>${p.g}</td><td>${p.e}</td><td>${p.p}</td>
       <td>${p.gf||0}</td><td>${p.gc||0}</td><td>${p.dg||'+0'}</td>
     </tr>`;
@@ -2684,10 +2710,13 @@ function tablaHTML(titulo,pos,clasifican,leyendaExtra){
   if(!pos.length) return `<div class="card"><div class="card-header"><span>${titulo}</span><span class="div-badge">2ª</span></div><div class="empty-msg">No hay posiciones cargadas</div></div>`;
   const rows=pos.map((p,i)=>{
     const cls=i<clasifican?'zona-clasificacion':'';
+    const descBadge = p.ptsDesc>0
+      ? `<span title="${p.ptsDescMotivo||'Descuento por tribunal'}" style="margin-left:4px;font-size:9px;font-weight:900;color:#e74c3c;background:rgba(192,57,43,.18);border:1px solid rgba(192,57,43,.35);border-radius:3px;padding:1px 4px;cursor:help">-${p.ptsDesc}</span>`
+      : '';
     return `<tr class="${cls}">
       <td class="pos-num">${i+1}</td>
       <td><div class="pos-equipo">${getEscudoHTML(p.equipo,28)} ${p.equipo}</div></td>
-      <td>${p.pts!=null?p.pts:0}</td>
+      <td>${p.pts!=null?p.pts:0}${descBadge}</td>
       <td>${p.pj}</td><td>${p.g}</td><td>${p.e}</td><td>${p.p}</td>
       <td>${p.gf||0}</td><td>${p.gc||0}</td><td>${p.dg||'+0'}</td>
     </tr>`;
@@ -2714,7 +2743,13 @@ function applyGoldPts(){
 
 function renderPosicionesSegunda(){
   const el=document.getElementById('posiciones-content');
-  const filtrar=(fase,zona)=>[...data.posiciones.filter(p=>p.div==='segunda'&&p.fase===fase&&(zona?p.zona===zona:true))].sort((a,b)=>(b.pts-a.pts)||((b.gf||0)-(b.gc||0))-((a.gf||0)-(a.gc||0)));
+  // zona===null → sin filtro de zona; zona==='' → acepta registros sin zona también
+  const filtrar=(fase,zona)=>[...data.posiciones.filter(p=>{
+    if(p.div!=='segunda'||p.fase!==fase) return false;
+    if(zona===null) return true;        // fase3: sin filtro de zona
+    if(!zona) return true;              // sin zona requerida: mostrar todos
+    return (p.zona||'')===(zona||'');   // matchear zona exacta
+  })].sort((a,b)=>(b.pts-a.pts)||((b.gf||0)-(b.gc||0))-((a.gf||0)-(a.gc||0)));
 
   if(currentFase==='fase1'){
     if(currentZona==='sierra'){
@@ -3879,6 +3914,13 @@ function updateAdminPartidoDiv(){
   const esPrimera=document.getElementById('p-div').value==='primera';
   document.getElementById('p-torneo-wrap').style.display=esPrimera?'':'none';
   document.getElementById('p-fase-wrap').style.display=esPrimera?'none':'';
+  updateAdminZonaVis();
+}
+function updateAdminZonaVis(){
+  const div=document.getElementById('p-div').value;
+  const fase=document.getElementById('p-fase-res').value;
+  const zonaWrap=document.getElementById('p-zona-wrap');
+  if(zonaWrap) zonaWrap.style.display=(div==='segunda'&&fase==='fase1')?'':'none';
 }
 
 // ============================================================
@@ -3907,10 +3949,14 @@ function agregarPartido(){
     arbitros,goles,expulsiones
   };
   if(div==='primera') d.torneo=document.getElementById('p-torneo-sel').value;
-  else d.faseRes=document.getElementById('p-fase-res').value;
+  else {
+    d.faseRes=document.getElementById('p-fase-res').value;
+    if(d.faseRes==='fase1') d.zona=document.getElementById('p-zona').value||'';
+  }
   if(!d.local||!d.visit){alert('Completá local y visitante');return;}
   data.partidos.push(d);
   recalcularTodo();   // recalcular siempre: puede que haya partidos jugados anteriores
+  aplicarTodasLasPenalizaciones();
   saveData(data);
   document.getElementById('p-goles-list').innerHTML='';
   document.getElementById('p-exp-list').innerHTML='';
@@ -4025,6 +4071,7 @@ function eliminar(tipo,id){
     if(tipo==='partidos'){
       data.partidos=data.partidos.filter(p=>String(p.id)!==sid);
       recalcularTodo();
+      aplicarTodasLasPenalizaciones();
     }
     else if(tipo==='posiciones')  data.posiciones =data.posiciones.filter(p=>String(p.id)!==sid);
     else if(tipo==='goleadores') data.goleadores =data.goleadores.filter(p=>String(p.id)!==sid);
@@ -4084,7 +4131,14 @@ function abrirModalEdicion(tipo,id){
       <div class="form-row"><div class="form-group"><label>División</label>${divSelect}</div>
         <div class="form-group"><label>Fecha / Jornada</label><input type="text" id="ed-fecha" value="${obj.fecha||''}"/></div></div>
       <div class="form-group" ${esPrimera?'':'style="display:none"'} id="ed-torneo-partido-wrap"><label>Torneo (Primera)</label>${torneoSelect}</div>
-      <div class="form-group" ${!esPrimera?'':'style="display:none"'} id="ed-faseRes-wrap"><label>Fase (Segunda)</label><select id="ed-faseRes">${faseResOpts}</select></div>
+      <div class="form-group" ${!esPrimera?'':'style="display:none"'} id="ed-faseRes-wrap"><label>Fase (Segunda)</label><select id="ed-faseRes" onchange="(function(){const f=document.getElementById('ed-faseRes').value;const d=document.getElementById('ed-div').value;const zw=document.getElementById('ed-zona-wrap');if(zw)zw.style.display=(d==='segunda'&&f==='fase1')?'':'none';})()">${faseResOpts}</select></div>
+      <div class="form-group" ${(!esPrimera&&(obj.faseRes||'fase1')==='fase1')?'':'style="display:none"'} id="ed-zona-wrap"><label>Zona (1ª Fase)</label>
+        <select id="ed-zona">
+          <option value="sierra" ${(obj.zona||'')==='sierra'?'selected':''}>Zona Sierra</option>
+          <option value="llano" ${(obj.zona||'')==='llano'?'selected':''}>Zona Llano</option>
+          <option value="" ${!(obj.zona)?'selected':''}>Sin zona</option>
+        </select>
+      </div>
       <div class="form-row"><div class="form-group"><label>Día del partido</label><input type="text" id="ed-dia" value="${obj.dia||''}"/></div>
         <div class="form-group"><label>Horario</label><input type="text" id="ed-hora" value="${obj.hora||''}"/></div></div>
       <div class="form-row"><div class="form-group"><label>Local</label><input type="text" id="ed-local" value="${obj.local||''}"/></div>
@@ -4137,7 +4191,11 @@ function abrirModalEdicion(tipo,id){
         <div class="form-group"><label>PTS</label><input type="number" id="ed-pts" value="${obj.pts||0}"/></div></div>
       <div class="form-row-3"><div class="form-group"><label>GF</label><input type="number" id="ed-gf" value="${obj.gf||0}"/></div>
         <div class="form-group"><label>GC</label><input type="number" id="ed-gc" value="${obj.gc||0}"/></div>
-        <div class="form-group"><label>DG</label><input type="text" id="ed-dg" value="${obj.dg||'+0'}"/></div></div>`;
+        <div class="form-group"><label>DG</label><input type="text" id="ed-dg" value="${obj.dg||'+0'}"/></div></div>
+      <div class="form-row" style="margin-top:4px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08)">
+        <div class="form-group"><label style="color:#e74c3c">⚠ Puntos descontados (tribunal)</label><input type="number" id="ed-pts-desc" value="${obj.ptsDesc||0}" min="0" placeholder="0"/></div>
+        <div class="form-group"><label style="color:rgba(255,255,255,.5)">Motivo</label><input type="text" id="ed-pts-desc-motivo" value="${obj.ptsDescMotivo||''}" placeholder="Ej: Resolución Tribunal N°12"/></div>
+      </div>`;
   } else if(tipo==='goleadores'){
     bodyHTML=`
       <div class="form-row"><div class="form-group"><label>Torneo</label>${torneoSelect}</div>
@@ -4198,15 +4256,23 @@ function guardarEdicion(tipo,id){
     const divVal=val('ed-div');
     const partidoViejo=data.partidos[idx];
     const updated={...partidoViejo,div:divVal,fecha:val('ed-fecha'),dia:val('ed-dia'),local:val('ed-local'),visit:val('ed-visit'),hora:val('ed-hora'),estado:val('ed-estado'),resultado:val('ed-resultado'),periodo:val('ed-periodo')||'PT',arbitros:arbs,goles,expulsiones};
-    if(divVal==='primera'){updated.torneo=val('ed-torneo');delete updated.faseRes;}
-    else{updated.faseRes=val('ed-faseRes')||'fase1';delete updated.torneo;}
+    if(divVal==='primera'){updated.torneo=val('ed-torneo');delete updated.faseRes;delete updated.zona;}
+    else{
+      updated.faseRes=val('ed-faseRes')||'fase1';
+      if(updated.faseRes==='fase1') updated.zona=val('ed-zona')||'';
+      else delete updated.zona;
+      delete updated.torneo;
+    }
     data.partidos[idx]=updated;
     // Recalcular posiciones y goleadores desde todos los partidos jugados
     recalcularTodo();
+    aplicarTodasLasPenalizaciones();
   } else if(tipo==='posiciones'){
     const idx=data.posiciones.findIndex(p=>String(p.id)===sid);if(idx<0)return;
     const divVal=val('ed-div');
-    const updated={...data.posiciones[idx],div:divVal,equipo:val('ed-equipo'),pj:num('ed-pj'),pts:num('ed-pts'),g:num('ed-g'),e:num('ed-e'),p:num('ed-p'),gf:num('ed-gf'),gc:num('ed-gc'),dg:val('ed-dg')};
+    const ptsDesc=Math.max(0,num('ed-pts-desc')||0);
+    const ptsDescMotivo=val('ed-pts-desc-motivo')||'';
+    const updated={...data.posiciones[idx],div:divVal,equipo:val('ed-equipo'),pj:num('ed-pj'),pts:num('ed-pts'),g:num('ed-g'),e:num('ed-e'),p:num('ed-p'),gf:num('ed-gf'),gc:num('ed-gc'),dg:val('ed-dg'),ptsDesc,ptsDescMotivo};
     if(divVal==='primera'){updated.torneo=val('ed-torneo');delete updated.fase;delete updated.zona;}
     else{updated.fase=val('ed-fase')||data.posiciones[idx].fase;updated.zona=val('ed-zona')||data.posiciones[idx].zona;delete updated.torneo;}
     data.posiciones[idx]=updated;
@@ -4418,18 +4484,26 @@ function recalcularTodo(){
     else               { local.p++; visit.g++;    visit.pts+=3; }
   });
 
-  // Calcular dg y preservar IDs de registros existentes (snapshot antes de modificar)
+  // Calcular dg y preservar IDs y penalizaciones de registros existentes (snapshot antes de modificar)
   const snapshotPos = [...data.posiciones];
   Object.values(mapaPos).forEach(reg => {
     const dif = reg.gf - reg.gc;
     reg.dg = (dif >= 0 ? '+' : '') + dif;
-    // Reusar el ID del registro existente para no romper referencias
+    // Reusar el ID y preservar ptsDesc del registro existente
     const existente = snapshotPos.find(p => {
       if(normalizar(p.equipo) !== normalizar(reg.equipo) || p.div !== reg.div) return false;
       if(reg.torneo) return (p.torneo||'apertura') === reg.torneo;
-      return p.fase === reg.fase && p.zona === reg.zona;
+      return p.fase === reg.fase && (p.zona||'') === (reg.zona||'');
     });
-    if(existente) reg.id = existente.id;
+    if(existente){
+      reg.id = existente.id;
+      // Preservar penalización de puntos por tribunal disciplinario
+      if(existente.ptsDesc && existente.ptsDesc > 0){
+        reg.ptsDesc = existente.ptsDesc;
+        reg.ptsDescMotivo = existente.ptsDescMotivo || '';
+        reg.pts = Math.max(0, reg.pts - reg.ptsDesc);
+      }
+    }
   });
 
   // Los IDs que serán cubiertos por recalculo automático
@@ -4491,6 +4565,39 @@ function recalcularTodo(){
 // Alias para retrocompatibilidad con llamadas existentes
 function procesarPartidoJugado(){ recalcularTodo(); }
 function revertirPartidoProcesado(){ recalcularTodo(); }
+
+/**
+ * Aplica una penalización de puntos a un equipo en una posición específica.
+ * Solo setea ptsDesc/ptsDescMotivo en el registro — recalcularTodo() ya se
+ * encarga de restar los puntos automáticamente al preservar esos campos.
+ * Como recalcularTodo ya corrió antes, aquí recalculamos manualmente solo ese registro.
+ */
+function aplicarPenalizacion(equipo, div, torneo, puntos, motivo){
+  const idx = data.posiciones.findIndex(p =>
+    normalizar(p.equipo) === normalizar(equipo) &&
+    p.div === div &&
+    (p.torneo||'apertura') === torneo
+  );
+  if(idx < 0) return;
+  const reg = data.posiciones[idx];
+  if(reg.ptsDesc === puntos && reg.ptsDescMotivo === motivo) return;
+  const ptsAntesDescuento = (reg.pts || 0) + (reg.ptsDesc || 0);
+  reg.ptsDesc = puntos;
+  reg.ptsDescMotivo = motivo;
+  reg.pts = Math.max(0, ptsAntesDescuento - puntos);
+}
+
+/**
+ * Aplica TODAS las penalizaciones vigentes del tribunal disciplinario.
+ * Llamar después de cada recalcularTodo().
+ */
+function aplicarTodasLasPenalizaciones(){
+  // ── PENALIZACIONES VIGENTES ──────────────────────────────────────
+  aplicarPenalizacion('ELENENSE', 'primera', 'apertura', 3, 'Quita de puntos por Tribunal Disciplinario');
+  // Agregar más penalizaciones aquí si el tribunal dicta nuevas resoluciones:
+  // aplicarPenalizacion('NOMBRE EQUIPO', 'primera'|'segunda', 'apertura'|'clausura', PUNTOS, 'Motivo');
+  // ────────────────────────────────────────────────────────────────
+}
 
 // ============================================================
 // RENDER LISTAS ADMIN
@@ -5063,10 +5170,12 @@ function cvFillTextTrunc(ctx, text, x, y, maxW){
   ctx.fillText(t, x, y);
 }
 
-// Dibuja escudo (base64) en canvas con fallback a círculo con iniciales
+// Dibuja escudo en canvas con fallback a círculo con iniciales
 function cvDrawEscudo(ctx, nombre, x, y, size){
   return new Promise(resolve => {
-    const src = escudos[nombre] || escudos[normalizar(nombre)];
+    // escudos[key] puede ser { ini, img } o directamente un string base64
+    const entry = escudos[nombre] || escudos[normalizar(nombre)];
+    const src = entry && typeof entry === 'object' ? entry.img : entry;
     if(!src){ cvEscudoFallback(ctx, nombre, x, y, size); resolve(); return; }
     const img = new Image();
     img.onload = () => {
@@ -5306,7 +5415,8 @@ async function generarImagenPosiciones(){
   // Cargar todos los escudos en paralelo antes de dibujar
   const escudoImgs = {};
   await Promise.all(pos.slice(0,16).map(p => new Promise(res=>{
-    const src=escudos[p.equipo]||escudos[normalizar(p.equipo)];
+    const entry=escudos[p.equipo]||escudos[normalizar(p.equipo)];
+    const src=entry&&typeof entry==='object'?entry.img:entry;
     if(!src){res();return;}
     const img=new Image();
     img.onload=()=>{escudoImgs[p.equipo]=img;res();};
@@ -5417,7 +5527,8 @@ async function generarImagenGoleadores(){
   // Precargar escudos
   const escudoImgs={};
   await Promise.all(gs.slice(0,10).map(g=>new Promise(res=>{
-    const src=escudos[g.equipo]||escudos[normalizar(g.equipo)];
+    const entry=escudos[g.equipo]||escudos[normalizar(g.equipo)];
+    const src=entry&&typeof entry==='object'?entry.img:entry;
     if(!src){res();return;}
     const img=new Image();
     img.onload=()=>{escudoImgs[g.equipo]=img;res();};
