@@ -20,7 +20,7 @@
 
   // ── PEGÁ AQUÍ TU CONFIGURACIÓN DE FIREBASE ──────────────────
   const firebaseConfig = {
-   apiKey: "AIzaSyC_4BA1BubBmSAg4SFbWspZHfoSK9tXxCs",
+    apiKey: "AIzaSyC_4BA1BubBmSAg4SFbWspZHfoSK9tXxCs",
   authDomain: "deportemas-abca3.firebaseapp.com",
   databaseURL: "https://deportemas-abca3-default-rtdb.firebaseio.com",
   projectId: "deportemas-abca3",
@@ -572,6 +572,11 @@ table.posiciones td:nth-child(2){text-align:left;}
 .pd-evento{display:flex;align-items:center;gap:5px;font-family:'Rajdhani',sans-serif;font-size:12px;color:rgba(255,255,255,.75);padding:2px 0;}
 .pd-evento .pd-min{color:var(--dorado);font-weight:700;min-width:28px;}
 .pd-evento .pd-icono{font-size:13px;}
+.pd-arbitros{margin-top:8px;border-top:1px solid rgba(255,255,255,.06);padding-top:6px;}
+.pd-arb-title{font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;}
+.pd-arb-row{display:flex;align-items:center;gap:6px;font-family:'Rajdhani',sans-serif;font-size:12px;color:rgba(255,255,255,.65);padding:1px 0;}
+.pd-arb-rol{color:rgba(255,255,255,.3);font-size:10px;min-width:120px;text-transform:uppercase;letter-spacing:.4px;}
+.pd-arb-nombre{color:rgba(255,255,255,.8);}
 .pd-toggle{
   background:none;border:none;cursor:pointer;
   color:rgba(255,255,255,.3);font-size:10px;
@@ -2432,7 +2437,8 @@ function renderSection(s){
 function renderEventos(p){
   const goles=p.goles||[];
   const exps=p.expulsiones||[];
-  if(!goles.length&&!exps.length) return '';
+  const arbitros=p.arbitros||[];
+  if(!goles.length&&!exps.length&&!arbitros.length) return '';
 
   // separar por equipo
   const golesLocal=goles.filter(g=>g.equipo==='local');
@@ -2448,11 +2454,21 @@ function renderEventos(p){
   const colLocal=[...golesLocal.map(e=>eventoHTML(e,'gol')),...expLocal.map(e=>eventoHTML(e,'exp'))].join('')||'<div class="pd-evento" style="color:rgba(255,255,255,.2)">–</div>';
   const colVisit=[...golesVisit.map(e=>eventoHTML(e,'gol')),...expVisit.map(e=>eventoHTML(e,'exp'))].join('')||'<div class="pd-evento" style="color:rgba(255,255,255,.2)">–</div>';
 
+  // Bloque árbitros
+  const rolesArb=['Árbitro principal','Asistente 1','Asistente 2','4° árbitro'];
+  const arbHTML=arbitros.length
+    ?`<div class="pd-arbitros">
+        <div class="pd-arb-title">🧑‍⚖️ Árbitros</div>
+        ${arbitros.map((a,i)=>a?`<div class="pd-arb-row"><span class="pd-arb-rol">${rolesArb[i]||'Árbitro'}</span><span class="pd-arb-nombre">${a}</span></div>`:'').filter(Boolean).join('')}
+      </div>`
+    :'';
+
   return `<div class="partido-detalle open">
     <div class="partido-detalle-cols">
       <div><div class="pd-col-title">${p.local}</div>${colLocal}</div>
       <div><div class="pd-col-title">${p.visit}</div>${colVisit}</div>
     </div>
+    ${arbHTML}
   </div>`;
 }
 
@@ -5350,8 +5366,28 @@ async function generarImagenPosiciones(){
   const torneo = currentTorneo.pos;
   const div   = currentDivision;
   let pos;
+  let tituloPosiciones;
 
-  if(torneo==='general'&&div==='primera'){
+  if(div==='segunda'){
+    // Segunda división: filtrar según fase y zona/grupo activos
+    const fase = currentFase;
+    let zona = null;
+    if(fase==='fase1')       zona = currentZona;       // 'sierra' | 'llano'
+    else if(fase==='fase2')  zona = currentGrupo;      // 'campeonato' | 'repechaje'
+    // fase3: sin zona
+
+    pos = [...data.posiciones.filter(p=>{
+      if(p.div!=='segunda'||p.fase!==fase) return false;
+      if(zona) return (p.zona||'')===(zona||'');
+      return true;
+    })].sort((a,b)=>(b.pts-a.pts)||((b.gf||0)-(b.gc||0))-((a.gf||0)-(a.gc||0)));
+
+    const faseLabel={'fase1':'1ª Fase','fase2':'2ª Fase','fase3':'3ª Fase'}[fase]||fase;
+    let zonaLabel='';
+    if(fase==='fase1') zonaLabel = zona==='sierra'?' · ZONA SIERRA':' · ZONA LLANO';
+    else if(fase==='fase2') zonaLabel = zona==='campeonato'?' · CAMPEONATO':' · REPECHAJE';
+    tituloPosiciones = faseLabel.toUpperCase()+zonaLabel+'  ·  SEGUNDA DIVISIÓN';
+  } else if(torneo==='general'){
     const map={};
     data.posiciones.filter(p=>p.div==='primera').forEach(p=>{
       const k=normalizar(p.equipo);
@@ -5359,9 +5395,11 @@ async function generarImagenPosiciones(){
       ['pts','pj','g','e','p','gf','gc'].forEach(f=>map[k][f]+=Number(p[f])||0);
     });
     pos=Object.values(map).sort((a,b)=>b.pts-a.pts||(b.gf-b.gc)-(a.gf-a.gc));
+    tituloPosiciones='TABLA GENERAL  ·  PRIMERA DIVISIÓN';
   } else {
     pos=[...data.posiciones.filter(p=>p.div===div&&(p.torneo||'apertura')===torneo)]
       .sort((a,b)=>b.pts-a.pts);
+    tituloPosiciones='POSICIONES – '+torneoLabel(torneo).toUpperCase()+'  ·  PRIMERA DIVISIÓN';
   }
   if(!pos.length) return null;
 
@@ -5379,12 +5417,10 @@ async function generarImagenPosiciones(){
   let y = await cvHeader(ctx,W,id,0);
 
   // Título
-  const tit = torneo==='general'?'TABLA GENERAL':'POSICIONES – '+torneoLabel(torneo).toUpperCase();
-  const divStr = div==='primera'?'PRIMERA DIVISIÓN':'SEGUNDA DIVISIÓN';
   ctx.fillStyle=C.DORADO;
   ctx.font='700 15px "Rajdhani", Arial, sans-serif';
   ctx.textAlign='center';
-  ctx.fillText(tit+'  ·  '+divStr, W/2, y+30);
+  ctx.fillText(tituloPosiciones, W/2, y+30);
   y+=46;
 
   // Columnas: #(28) | escudo(32) | equipo(flex) | PTS | PJ | G | E | P | GF | GC | DG
