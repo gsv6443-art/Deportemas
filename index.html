@@ -367,44 +367,62 @@ nav a:hover,nav a.active{color:var(--dorado);background:rgba(201,162,39,.1);}
 .estado.en-juego{background:rgba(192,57,43,.25);color:#e74c3c;border:1px solid rgba(192,57,43,.3);animation:blink 1.2s infinite;}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.45}}
 
-/* ── ANIMACIONES MARCADOR EN VIVO ── */
-@keyframes marcador-gol{
-  0%{transform:scale(1);box-shadow:0 0 12px rgba(201,162,39,.3);}
-  15%{transform:scale(1.45);box-shadow:0 0 40px rgba(201,162,39,1),0 0 80px rgba(201,162,39,.6);}
-  35%{transform:scale(1.3);box-shadow:0 0 30px rgba(201,162,39,.8);}
-  55%{transform:scale(1.4);box-shadow:0 0 36px rgba(201,162,39,.9);}
-  75%{transform:scale(1.2);box-shadow:0 0 20px rgba(201,162,39,.5);}
-  100%{transform:scale(1);box-shadow:0 0 12px rgba(201,162,39,.3);}
+/* ── OVERLAY DE EVENTOS EN VIVO ── */
+/* Entrada del overlay */
+@keyframes ev-in{
+  0%  {opacity:0;transform:translateY(-18px) scale(.88);}
+  60% {opacity:1;transform:translateY(4px) scale(1.04);}
+  100%{opacity:1;transform:translateY(0) scale(1);}
 }
-@keyframes marcador-roja{
-  0%{transform:scale(1);box-shadow:0 0 8px rgba(192,57,43,.3);}
-  20%{transform:scale(1.3);box-shadow:0 0 36px rgba(192,57,43,1),0 0 70px rgba(192,57,43,.5);}
-  50%{transform:scale(1.15);background:rgba(192,57,43,.95);}
-  100%{transform:scale(1);box-shadow:0 0 8px rgba(192,57,43,.3);}
+/* Salida del overlay */
+@keyframes ev-out{
+  0%  {opacity:1;transform:scale(1);}
+  100%{opacity:0;transform:scale(.92);}
 }
-@keyframes marcador-inicio{
-  0%{transform:scale(1);opacity:.7;}
-  25%{transform:scale(1.25);opacity:1;box-shadow:0 0 30px rgba(76,175,116,.8);}
-  60%{transform:scale(1.12);}
-  100%{transform:scale(1);opacity:1;}
+/* Pulso del ícono */
+@keyframes ev-icon-pulse{
+  0%,100%{transform:scale(1);}
+  40%    {transform:scale(1.35);}
+  70%    {transform:scale(.9);}
 }
-@keyframes marcador-periodo{
-  0%{transform:scale(1);}
-  30%{transform:scale(1.18);box-shadow:0 0 24px rgba(255,255,255,.5);}
-  65%{transform:scale(1.08);}
-  100%{transform:scale(1);}
+
+.marcador-overlay{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:6px;
+  border-radius:var(--radius);
+  pointer-events:none;
+  z-index:50;
+  animation:ev-in .38s cubic-bezier(.22,.68,0,1.2) forwards;
 }
-@keyframes marcador-fin{
-  0%{transform:scale(1);}
-  20%{transform:scale(1.2);box-shadow:0 0 28px rgba(76,175,116,.9);}
-  50%{transform:scale(1.08);}
-  100%{transform:scale(1);}
+.marcador-overlay.saliendo{
+  animation:ev-out .35s ease forwards;
 }
-.marcador-anim-gol{animation:marcador-gol .9s cubic-bezier(.36,.07,.19,.97) both;}
-.marcador-anim-roja{animation:marcador-roja .8s ease both;}
-.marcador-anim-inicio{animation:marcador-inicio .7s ease both;}
-.marcador-anim-periodo{animation:marcador-periodo .6s ease both;}
-.marcador-anim-fin{animation:marcador-fin .7s ease both;}
+.marcador-overlay-icono{
+  font-size:44px;line-height:1;
+  animation:ev-icon-pulse .5s ease .15s both;
+  filter:drop-shadow(0 0 12px currentColor);
+}
+.marcador-overlay-texto{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:28px;letter-spacing:4px;
+  line-height:1;
+  text-shadow:0 2px 18px rgba(0,0,0,.8);
+}
+
+/* Variantes por tipo */
+.marcador-overlay.tipo-inicio{background:linear-gradient(135deg,rgba(26,107,47,.92),rgba(18,80,35,.95));}
+.marcador-overlay.tipo-inicio .marcador-overlay-texto{color:#4cdf84;}
+.marcador-overlay.tipo-entretiempo{background:linear-gradient(135deg,rgba(52,73,140,.92),rgba(30,50,110,.95));}
+.marcador-overlay.tipo-entretiempo .marcador-overlay-texto{color:#7fb3ff;}
+.marcador-overlay.tipo-reanudacion{background:linear-gradient(135deg,rgba(26,107,47,.92),rgba(18,80,35,.95));}
+.marcador-overlay.tipo-reanudacion .marcador-overlay-texto{color:#4cdf84;}
+.marcador-overlay.tipo-fin{background:linear-gradient(135deg,rgba(20,20,28,.95),rgba(36,36,50,.97));border:2px solid rgba(201,162,39,.5);}
+.marcador-overlay.tipo-fin .marcador-overlay-texto{color:var(--dorado);}
+.marcador-overlay.tipo-gol{background:linear-gradient(135deg,rgba(140,100,0,.95),rgba(100,70,0,.97));}
+.marcador-overlay.tipo-gol .marcador-overlay-texto{color:#f0c040;}
+.marcador-overlay.tipo-roja{background:linear-gradient(135deg,rgba(160,30,20,.95),rgba(110,15,10,.97));}
+.marcador-overlay.tipo-roja .marcador-overlay-texto{color:#ff6b5b;}
 
 /* CRONÓMETRO EN VIVO */
 .crono-wrap{display:flex;flex-direction:column;align-items:center;gap:3px;}
@@ -607,7 +625,7 @@ table.posiciones td:nth-child(2){text-align:left;}
 .fecha-acordeon-body.open{display:block;}
 
 /* card partido wrap */
-.card-partido-wrap{border-bottom:1px solid rgba(255,255,255,.04);}
+.card-partido-wrap{position:relative;border-bottom:1px solid rgba(255,255,255,.04);}
 .card-partido-wrap:last-child{border-bottom:none;}
 
 /* PARTIDO DETALLE */
@@ -4314,29 +4332,47 @@ function cerrarModalEdicion(){document.getElementById('edit-modal').style.displa
 // ANIMACIÓN MARCADOR EN VIVO
 // ============================================================
 function dispararAnimacionMarcador(pid, tipo){
-  // tipo: 'gol' | 'roja' | 'inicio' | 'periodo' | 'fin'
-  const claseMap={
-    gol:     'marcador-anim-gol',
-    roja:    'marcador-anim-roja',
-    inicio:  'marcador-anim-inicio',
-    periodo: 'marcador-anim-periodo',
-    fin:     'marcador-anim-fin',
+  // tipo: 'gol' | 'roja' | 'inicio' | 'entretiempo' | 'reanudacion' | 'fin'
+  const config = {
+    inicio:       {icono:'🟢', texto:'INICIO',       clase:'tipo-inicio'},
+    entretiempo:  {icono:'⏸',  texto:'ENTRETIEMPO',  clase:'tipo-entretiempo'},
+    reanudacion:  {icono:'▶',  texto:'REANUDACIÓN',  clase:'tipo-reanudacion'},
+    fin:          {icono:'🏁', texto:'FINAL',         clase:'tipo-fin'},
+    gol:          {icono:'⚽', texto:'GOL',           clase:'tipo-gol'},
+    roja:         {icono:'🟥', texto:'EXPULSIÓN',     clase:'tipo-roja'},
   };
-  const clase = claseMap[tipo];
-  if(!clase) return;
+  const cfg = config[tipo];
+  if(!cfg) return;
 
-  // Esperar al siguiente frame para que el re-render ya haya insertado el elemento
+  // Esperar al siguiente frame para que el re-render ya haya insertado el wrap
   requestAnimationFrame(()=>{
     requestAnimationFrame(()=>{
-      const el = document.getElementById('marcador-'+pid);
-      if(!el) return;
-      // Quitar todas las clases de animación anteriores
-      Object.values(claseMap).forEach(c=>el.classList.remove(c));
-      // Forzar reflow para reiniciar la animación si ya estaba corriendo
-      void el.offsetWidth;
-      el.classList.add(clase);
-      // Limpiar clase una vez terminada para que pueda re-dispararse
-      el.addEventListener('animationend', ()=>el.classList.remove(clase), {once:true});
+      // El overlay va sobre el card-partido-wrap que contiene el marcador
+      const marcador = document.getElementById('marcador-'+pid);
+      if(!marcador) return;
+      const wrap = marcador.closest('.card-partido-wrap');
+      if(!wrap) return;
+
+      // Eliminar overlay previo si existía
+      const anterior = wrap.querySelector('.marcador-overlay');
+      if(anterior) anterior.remove();
+
+      // Crear overlay
+      const overlay = document.createElement('div');
+      overlay.className = 'marcador-overlay ' + cfg.clase;
+      overlay.innerHTML = `
+        <div class="marcador-overlay-icono">${cfg.icono}</div>
+        <div class="marcador-overlay-texto">${cfg.texto}</div>
+      `;
+      wrap.appendChild(overlay);
+
+      // Duración visible: 2.4s, luego animación de salida y remoción
+      const DUR_VISIBLE = 2400;
+      const DUR_OUT     = 350;
+      setTimeout(()=>{
+        overlay.classList.add('saliendo');
+        setTimeout(()=>overlay.remove(), DUR_OUT);
+      }, DUR_VISIBLE);
     });
   });
 }
@@ -4344,12 +4380,16 @@ function dispararAnimacionMarcador(pid, tipo){
 function detectarEventoPartido(viejo, nuevo){
   if(!viejo) return null;
   // Inicio de partido
-  if(viejo.estado!=='en-juego' && nuevo.estado==='en-juego') return 'inicio';
+  if(viejo.estado!=='en-juego' && nuevo.estado==='en-juego'){
+    // Si viene de ET (entretiempo) → es reanudación del segundo tiempo
+    if(viejo.periodo==='ET' || nuevo.periodo==='ST') return 'reanudacion';
+    return 'inicio';
+  }
   // Fin de partido
   if(viejo.estado==='en-juego' && nuevo.estado==='jugado') return 'fin';
-  // Cambio de período (ET o ST)
+  // Cambios mientras está en juego
   if(viejo.estado==='en-juego' && nuevo.estado==='en-juego'){
-    // Gol: comparar cantidad de goles
+    // Gol: comparar cantidad de goles (tiene prioridad sobre cambio de período)
     const golesViejos = (viejo.goles||[]).length;
     const golesNuevos = (nuevo.goles||[]).length;
     if(golesNuevos > golesViejos) return 'gol';
@@ -4357,8 +4397,11 @@ function detectarEventoPartido(viejo, nuevo){
     const rojasViejas = (viejo.expulsiones||[]).length;
     const rojasNuevas = (nuevo.expulsiones||[]).length;
     if(rojasNuevas > rojasViejas) return 'roja';
-    // Período
-    if(viejo.periodo !== nuevo.periodo) return 'periodo';
+    // Cambio de período
+    if(viejo.periodo !== nuevo.periodo){
+      if(nuevo.periodo==='ET') return 'entretiempo';
+      if(nuevo.periodo==='ST') return 'reanudacion';
+    }
   }
   return null;
 }
