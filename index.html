@@ -368,16 +368,16 @@ nav a:hover,nav a.active{color:var(--dorado);background:rgba(201,162,39,.1);}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.45}}
 
 /* ── OVERLAY DE EVENTOS EN VIVO ── */
-/* Entrada del overlay */
+/* Entrada del overlay: desliza de izquierda a derecha */
 @keyframes ev-in{
-  0%  {opacity:0;transform:translateY(-18px) scale(.88);}
-  60% {opacity:1;transform:translateY(4px) scale(1.04);}
-  100%{opacity:1;transform:translateY(0) scale(1);}
+  0%  {opacity:0;transform:translateX(-100%);}
+  60% {opacity:1;transform:translateX(6px);}
+  100%{opacity:1;transform:translateX(0);}
 }
-/* Salida del overlay */
+/* Salida del overlay: desliza hacia la derecha */
 @keyframes ev-out{
-  0%  {opacity:1;transform:scale(1);}
-  100%{opacity:0;transform:scale(.92);}
+  0%  {opacity:1;transform:translateX(0);}
+  100%{opacity:0;transform:translateX(100%);}
 }
 /* Pulso del ícono */
 @keyframes ev-icon-pulse{
@@ -4334,46 +4334,44 @@ function cerrarModalEdicion(){document.getElementById('edit-modal').style.displa
 function dispararAnimacionMarcador(pid, tipo){
   // tipo: 'gol' | 'roja' | 'inicio' | 'entretiempo' | 'reanudacion' | 'fin'
   const config = {
-    inicio:       {icono:'🟢', texto:'INICIO',       clase:'tipo-inicio'},
-    entretiempo:  {icono:'⏸',  texto:'ENTRETIEMPO',  clase:'tipo-entretiempo'},
-    reanudacion:  {icono:'▶',  texto:'REANUDACIÓN',  clase:'tipo-reanudacion'},
-    fin:          {icono:'🏁', texto:'FINAL',         clase:'tipo-fin'},
-    gol:          {icono:'⚽', texto:'GOL',           clase:'tipo-gol'},
-    roja:         {icono:'🟥', texto:'EXPULSIÓN',     clase:'tipo-roja'},
+    inicio:       {icono:'📣',  texto:'INICIO',       clase:'tipo-inicio'},
+    entretiempo:  {icono:'📣',  texto:'ENTRETIEMPO',  clase:'tipo-entretiempo'},
+    reanudacion:  {icono:'📣',  texto:'REANUDACIÓN',  clase:'tipo-reanudacion'},
+    fin:          {icono:'🏁',  texto:'FINAL',        clase:'tipo-fin'},
+    gol:          {icono:'⚽',  texto:'GOOOOL',       clase:'tipo-gol'},
+    roja:         {icono:'🟥',  texto:'EXPULSIÓN',    clase:'tipo-roja'},
   };
   const cfg = config[tipo];
   if(!cfg) return;
 
-  // Esperar al siguiente frame para que el re-render ya haya insertado el wrap
+  // El elemento ya existe en el DOM (renderSection ya corrió); un frame es suficiente
   requestAnimationFrame(()=>{
-    requestAnimationFrame(()=>{
-      // El overlay va sobre el card-partido-wrap que contiene el marcador
-      const marcador = document.getElementById('marcador-'+pid);
-      if(!marcador) return;
-      const wrap = marcador.closest('.card-partido-wrap');
-      if(!wrap) return;
+    // El overlay va sobre el card-partido-wrap que contiene el marcador
+    const marcador = document.getElementById('marcador-'+pid);
+    if(!marcador) return;
+    const wrap = marcador.closest('.card-partido-wrap');
+    if(!wrap) return;
 
-      // Eliminar overlay previo si existía
-      const anterior = wrap.querySelector('.marcador-overlay');
-      if(anterior) anterior.remove();
+    // Eliminar overlay previo si existía
+    const anterior = wrap.querySelector('.marcador-overlay');
+    if(anterior) anterior.remove();
 
-      // Crear overlay
-      const overlay = document.createElement('div');
-      overlay.className = 'marcador-overlay ' + cfg.clase;
-      overlay.innerHTML = `
-        <div class="marcador-overlay-icono">${cfg.icono}</div>
-        <div class="marcador-overlay-texto">${cfg.texto}</div>
-      `;
-      wrap.appendChild(overlay);
+    // Crear overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'marcador-overlay ' + cfg.clase;
+    overlay.innerHTML = `
+      <div class="marcador-overlay-icono">${cfg.icono}</div>
+      <div class="marcador-overlay-texto">${cfg.texto}</div>
+    `;
+    wrap.appendChild(overlay);
 
-      // Duración visible: 2.4s, luego animación de salida y remoción
-      const DUR_VISIBLE = 2400;
-      const DUR_OUT     = 350;
-      setTimeout(()=>{
-        overlay.classList.add('saliendo');
-        setTimeout(()=>overlay.remove(), DUR_OUT);
-      }, DUR_VISIBLE);
-    });
+    // Duración visible: 2.4s, luego animación de salida y remoción
+    const DUR_VISIBLE = 2400;
+    const DUR_OUT     = 400;
+    setTimeout(()=>{
+      overlay.classList.add('saliendo');
+      setTimeout(()=>overlay.remove(), DUR_OUT);
+    }, DUR_VISIBLE);
   });
 }
 
@@ -4431,9 +4429,8 @@ function guardarEdicion(tipo,id){
     // Recalcular posiciones y goleadores desde todos los partidos jugados
     recalcularTodo();
     aplicarTodasLasPenalizaciones();
-    // Detectar qué cambió y disparar animación en el marcador
-    const tipoAnim = detectarEventoPartido(partidoViejo, updated);
-    if(tipoAnim) dispararAnimacionMarcador(updated.id, tipoAnim);
+    // Guardar el evento detectado para disparar la animación DESPUÉS del re-render
+    window._animPendiente = { pid: updated.id, tipo: detectarEventoPartido(partidoViejo, updated) };
   } else if(tipo==='posiciones'){
     const idx=data.posiciones.findIndex(p=>String(p.id)===sid);if(idx<0)return;
     const divVal=val('ed-div');
@@ -4463,6 +4460,12 @@ function guardarEdicion(tipo,id){
     data.torneos[idx]={...data.torneos[idx],nombre:val('ed-nombre'),estado:val('ed-estado'),inicio:val('ed-inicio'),cierre:val('ed-cierre'),desc:val('ed-desc')};
   }
   saveData(data);cerrarModalEdicion();renderAdminListas();renderSection(currentSection);
+  // Disparar animación pendiente DESPUÉS del re-render
+  if(window._animPendiente){
+    const {pid,tipo} = window._animPendiente;
+    window._animPendiente = null;
+    if(tipo) dispararAnimacionMarcador(pid, tipo);
+  }
 }
 
 
