@@ -176,18 +176,28 @@
     // Suscribir cambios en tiempo real a datos principales
     // _fbEscribiendoData evita que el listener pise un guardado local en progreso
     window._fbEscribiendoData = false;
+    // Guardar snapshot previo para detectar cambios en tiempo real
+    window._fbDataAnterior = null;
     window._fb.listen('data', fbVal => {
       if(!fbVal) return;
       // Si esta pestaña acaba de escribir, ignorar el echo de Firestore
       if(window._fbEscribiendoData) return;
+      // Detectar animaciones comparando partidos anteriores vs nuevos
+      const partidosAnteriores = window._fbDataAnterior ? (window._fbDataAnterior.partidos||[]) : [];
       data = fbVal;
       if(!data.playoff) data.playoff=[];
-      // Recalcular siempre al recibir datos (otro cliente puede haber subido sin recalcular)
       recalcularTodo();
       aplicarTodasLasPenalizaciones();
       localStorage.setItem('lrr_data2', JSON.stringify(data));
       actualizarNavLive();
       renderSection(currentSection);
+      // Disparar animaciones para partidos que cambiaron
+      (data.partidos||[]).forEach(pNuevo=>{
+        const pViejo = partidosAnteriores.find(x=>String(x.id)===String(pNuevo.id));
+        const tipoAnim = detectarEventoPartido(pViejo||null, pNuevo);
+        if(tipoAnim) dispararAnimacionMarcador(pNuevo.id, tipoAnim);
+      });
+      window._fbDataAnterior = JSON.parse(JSON.stringify(fbVal));
     });
     // Suscribir cambios en tiempo real a cronómetros
     window._fb.listen('cronos', fbVal => {
@@ -356,6 +366,45 @@ nav a:hover,nav a.active{color:var(--dorado);background:rgba(201,162,39,.1);}
 .estado.jugado{background:rgba(26,107,47,.25);color:#4caf74;border:1px solid rgba(26,107,47,.3);}
 .estado.en-juego{background:rgba(192,57,43,.25);color:#e74c3c;border:1px solid rgba(192,57,43,.3);animation:blink 1.2s infinite;}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.45}}
+
+/* ── ANIMACIONES MARCADOR EN VIVO ── */
+@keyframes marcador-gol{
+  0%{transform:scale(1);box-shadow:0 0 12px rgba(201,162,39,.3);}
+  15%{transform:scale(1.45);box-shadow:0 0 40px rgba(201,162,39,1),0 0 80px rgba(201,162,39,.6);}
+  35%{transform:scale(1.3);box-shadow:0 0 30px rgba(201,162,39,.8);}
+  55%{transform:scale(1.4);box-shadow:0 0 36px rgba(201,162,39,.9);}
+  75%{transform:scale(1.2);box-shadow:0 0 20px rgba(201,162,39,.5);}
+  100%{transform:scale(1);box-shadow:0 0 12px rgba(201,162,39,.3);}
+}
+@keyframes marcador-roja{
+  0%{transform:scale(1);box-shadow:0 0 8px rgba(192,57,43,.3);}
+  20%{transform:scale(1.3);box-shadow:0 0 36px rgba(192,57,43,1),0 0 70px rgba(192,57,43,.5);}
+  50%{transform:scale(1.15);background:rgba(192,57,43,.95);}
+  100%{transform:scale(1);box-shadow:0 0 8px rgba(192,57,43,.3);}
+}
+@keyframes marcador-inicio{
+  0%{transform:scale(1);opacity:.7;}
+  25%{transform:scale(1.25);opacity:1;box-shadow:0 0 30px rgba(76,175,116,.8);}
+  60%{transform:scale(1.12);}
+  100%{transform:scale(1);opacity:1;}
+}
+@keyframes marcador-periodo{
+  0%{transform:scale(1);}
+  30%{transform:scale(1.18);box-shadow:0 0 24px rgba(255,255,255,.5);}
+  65%{transform:scale(1.08);}
+  100%{transform:scale(1);}
+}
+@keyframes marcador-fin{
+  0%{transform:scale(1);}
+  20%{transform:scale(1.2);box-shadow:0 0 28px rgba(76,175,116,.9);}
+  50%{transform:scale(1.08);}
+  100%{transform:scale(1);}
+}
+.marcador-anim-gol{animation:marcador-gol .9s cubic-bezier(.36,.07,.19,.97) both;}
+.marcador-anim-roja{animation:marcador-roja .8s ease both;}
+.marcador-anim-inicio{animation:marcador-inicio .7s ease both;}
+.marcador-anim-periodo{animation:marcador-periodo .6s ease both;}
+.marcador-anim-fin{animation:marcador-fin .7s ease both;}
 
 /* CRONÓMETRO EN VIVO */
 .crono-wrap{display:flex;flex-direction:column;align-items:center;gap:3px;}
@@ -2482,10 +2531,10 @@ function toggleDetalle(btn){
 function partidoHTML(p,mostrarDetalle){
   const tieneDetalle=(p.goles&&p.goles.length)||(p.expulsiones&&p.expulsiones.length)||(p.dia)||(p.arbitros&&p.arbitros.length);
   const vsHTML=p.estado==='jugado'
-    ?`<div class="vs resultado">${p.resultado||'–'}</div>`
+    ?`<div class="vs resultado" id="marcador-${p.id}">${p.resultado||'–'}</div>`
     :p.estado==='en-juego'
-      ?`<div class="vs resultado" style="background:rgba(192,57,43,.85);color:#fff;font-size:16px">${p.resultado||'0-0'}</div>`
-      :`<div class="vs">VS</div>`;
+      ?`<div class="vs resultado" id="marcador-${p.id}" style="background:rgba(192,57,43,.85);color:#fff;font-size:16px">${p.resultado||'0-0'}</div>`
+      :`<div class="vs" id="marcador-${p.id}">VS</div>`;
   const estadoLabel=p.estado==='en-juego'?'EN VIVO':p.estado==='jugado'?'Jugado':'PRÓXIMO';
   const toggleBtn=tieneDetalle?`<button class="pd-toggle" onclick="toggleDetalle(this)">▼ Detalle</button>`:'';
 
@@ -3977,6 +4026,8 @@ function agregarPartido(){
   document.getElementById('p-goles-list').innerHTML='';
   document.getElementById('p-exp-list').innerHTML='';
   renderAdminListas();renderSection(currentSection);
+  // Si el partido fue cargado directamente como "en juego", animar inicio
+  if(d.estado==='en-juego') dispararAnimacionMarcador(d.id, 'inicio');
 }
 
 function agregarPosicion(){
@@ -4259,6 +4310,59 @@ function editPreviewEscudo(input){
 
 function cerrarModalEdicion(){document.getElementById('edit-modal').style.display='none';_editEscudoB64='';}
 
+// ============================================================
+// ANIMACIÓN MARCADOR EN VIVO
+// ============================================================
+function dispararAnimacionMarcador(pid, tipo){
+  // tipo: 'gol' | 'roja' | 'inicio' | 'periodo' | 'fin'
+  const claseMap={
+    gol:     'marcador-anim-gol',
+    roja:    'marcador-anim-roja',
+    inicio:  'marcador-anim-inicio',
+    periodo: 'marcador-anim-periodo',
+    fin:     'marcador-anim-fin',
+  };
+  const clase = claseMap[tipo];
+  if(!clase) return;
+
+  // Esperar al siguiente frame para que el re-render ya haya insertado el elemento
+  requestAnimationFrame(()=>{
+    requestAnimationFrame(()=>{
+      const el = document.getElementById('marcador-'+pid);
+      if(!el) return;
+      // Quitar todas las clases de animación anteriores
+      Object.values(claseMap).forEach(c=>el.classList.remove(c));
+      // Forzar reflow para reiniciar la animación si ya estaba corriendo
+      void el.offsetWidth;
+      el.classList.add(clase);
+      // Limpiar clase una vez terminada para que pueda re-dispararse
+      el.addEventListener('animationend', ()=>el.classList.remove(clase), {once:true});
+    });
+  });
+}
+
+function detectarEventoPartido(viejo, nuevo){
+  if(!viejo) return null;
+  // Inicio de partido
+  if(viejo.estado!=='en-juego' && nuevo.estado==='en-juego') return 'inicio';
+  // Fin de partido
+  if(viejo.estado==='en-juego' && nuevo.estado==='jugado') return 'fin';
+  // Cambio de período (ET o ST)
+  if(viejo.estado==='en-juego' && nuevo.estado==='en-juego'){
+    // Gol: comparar cantidad de goles
+    const golesViejos = (viejo.goles||[]).length;
+    const golesNuevos = (nuevo.goles||[]).length;
+    if(golesNuevos > golesViejos) return 'gol';
+    // Roja: comparar expulsiones
+    const rojasViejas = (viejo.expulsiones||[]).length;
+    const rojasNuevas = (nuevo.expulsiones||[]).length;
+    if(rojasNuevas > rojasViejas) return 'roja';
+    // Período
+    if(viejo.periodo !== nuevo.periodo) return 'periodo';
+  }
+  return null;
+}
+
 function guardarEdicion(tipo,id){
   const sid=String(id);
   const val=id=>{const el=document.getElementById(id);return el?el.value:'';};
@@ -4270,8 +4374,9 @@ function guardarEdicion(tipo,id){
     const expulsiones=leerEventos('ed-exp-list','exp');
     const arbs=[val('ed-arb1'),val('ed-arb2'),val('ed-arb3'),val('ed-arb4')].filter(Boolean);
     const divVal=val('ed-div');
-    const partidoViejo=data.partidos[idx];
-    const updated={...partidoViejo,div:divVal,fecha:val('ed-fecha'),dia:val('ed-dia'),local:val('ed-local'),visit:val('ed-visit'),hora:val('ed-hora'),estado:val('ed-estado'),resultado:val('ed-resultado'),periodo:val('ed-periodo')||'PT',arbitros:arbs,goles,expulsiones};
+    // Guardar copia del partido anterior para detectar el tipo de evento
+    const partidoViejo={...data.partidos[idx], goles:[...(data.partidos[idx].goles||[])], expulsiones:[...(data.partidos[idx].expulsiones||[])]};
+    const updated={...data.partidos[idx],div:divVal,fecha:val('ed-fecha'),dia:val('ed-dia'),local:val('ed-local'),visit:val('ed-visit'),hora:val('ed-hora'),estado:val('ed-estado'),resultado:val('ed-resultado'),periodo:val('ed-periodo')||'PT',arbitros:arbs,goles,expulsiones};
     if(divVal==='primera'){updated.torneo=val('ed-torneo');delete updated.faseRes;delete updated.zona;}
     else{
       updated.faseRes=val('ed-faseRes')||'fase1';
@@ -4283,6 +4388,9 @@ function guardarEdicion(tipo,id){
     // Recalcular posiciones y goleadores desde todos los partidos jugados
     recalcularTodo();
     aplicarTodasLasPenalizaciones();
+    // Detectar qué cambió y disparar animación en el marcador
+    const tipoAnim = detectarEventoPartido(partidoViejo, updated);
+    if(tipoAnim) dispararAnimacionMarcador(updated.id, tipoAnim);
   } else if(tipo==='posiciones'){
     const idx=data.posiciones.findIndex(p=>String(p.id)===sid);if(idx<0)return;
     const divVal=val('ed-div');
