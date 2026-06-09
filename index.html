@@ -400,67 +400,196 @@ nav a:hover,nav a.active{color:var(--dorado);background:rgba(201,162,39,.1);}
 .estado.en-juego{background:rgba(192,57,43,.25);color:#e74c3c;border:1px solid rgba(192,57,43,.3);animation:blink 1.2s infinite;}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.45}}
 
-/* ── OVERLAY DE EVENTOS EN VIVO ── */
-/* Entrada del overlay: desliza de izquierda a derecha */
+/* ══════════════════════════════════════════════════════
+   OVERLAY DE EVENTOS EN VIVO — REDISEÑO COMPLETO
+══════════════════════════════════════════════════════ */
+
+/* ── Keyframes de entrada / salida ── */
 @keyframes ev-in{
-  0%  {opacity:0;transform:translateX(-100%);}
-  60% {opacity:1;transform:translateX(6px);}
-  100%{opacity:1;transform:translateX(0);}
+  0%  {opacity:0; transform:scale(.82) translateY(8px);}
+  55% {opacity:1; transform:scale(1.04) translateY(-3px);}
+  75% {transform:scale(.98) translateY(1px);}
+  100%{opacity:1; transform:scale(1) translateY(0);}
 }
-/* Salida del overlay: desliza hacia la derecha */
 @keyframes ev-out{
-  0%  {opacity:1;transform:translateX(0);}
-  100%{opacity:0;transform:translateX(100%);}
-}
-/* Pulso del ícono */
-@keyframes ev-icon-pulse{
-  0%,100%{transform:scale(1);}
-  40%    {transform:scale(1.35);}
-  70%    {transform:scale(.9);}
+  0%  {opacity:1; transform:scale(1);}
+  100%{opacity:0; transform:scale(1.06) translateY(-6px);}
 }
 
+/* ── Shimmer horizontal sobre el overlay ── */
+@keyframes ev-shimmer{
+  0%  {background-position:-200% center;}
+  100%{background-position: 200% center;}
+}
+
+/* ── Pulso del ícono ── */
+@keyframes ev-icon-bounce{
+  0%  {transform:scale(0)   rotate(-15deg);}
+  55% {transform:scale(1.3) rotate(6deg);}
+  75% {transform:scale(.9)  rotate(-3deg);}
+  100%{transform:scale(1)   rotate(0);}
+}
+
+/* ── Texto: aparece letra a letra desde abajo ── */
+@keyframes ev-txt-in{
+  0%  {opacity:0; transform:translateY(14px) scaleY(.7);}
+  60% {opacity:1; transform:translateY(-3px) scaleY(1.05);}
+  100%{opacity:1; transform:translateY(0) scaleY(1);}
+}
+
+/* ── Pulso de borde (gol) ── */
+@keyframes ev-border-pulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(240,192,64,.0), inset 0 0 40px rgba(240,192,64,.08);}
+  50%    {box-shadow:0 0 0 6px rgba(240,192,64,.18), inset 0 0 60px rgba(240,192,64,.22);}
+}
+
+/* ── Parpadeo rojo (expulsión) ── */
+@keyframes ev-roja-flash{
+  0%,100%{background-color:transparent;}
+  30%    {background-color:rgba(192,30,20,.25);}
+  60%    {background-color:transparent;}
+  80%    {background-color:rgba(192,30,20,.18);}
+}
+
+/* ── Contenedor base del overlay ── */
 .marcador-overlay{
   position:absolute;inset:0;
-  display:flex;flex-direction:row;align-items:center;justify-content:center;
-  gap:10px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:6px;
   border-radius:var(--radius);
+  overflow:hidden;
   pointer-events:none;
   z-index:50;
-  animation:ev-in .42s cubic-bezier(.22,.68,0,1.2) forwards;
+  backdrop-filter:blur(3px);
+  animation:ev-in .48s cubic-bezier(.22,.68,0,1.1) forwards;
+}
+/* Línea shimmer superpuesta */
+.marcador-overlay::after{
+  content:'';
+  position:absolute;inset:0;
+  background:linear-gradient(105deg,
+    transparent 35%,
+    rgba(255,255,255,.10) 50%,
+    transparent 65%);
+  background-size:200% 100%;
+  animation:ev-shimmer 1.8s linear .3s infinite;
+  pointer-events:none;
+  border-radius:inherit;
 }
 .marcador-overlay.saliendo{
-  animation:ev-out .38s ease forwards;
-}
-.marcador-overlay-icono{
-  font-size:36px;line-height:1;
-  animation:ev-icon-pulse .5s ease .2s both;
-  filter:drop-shadow(0 0 8px currentColor);
-  flex-shrink:0;
-}
-.marcador-overlay-icono-svg{
-  display:flex;align-items:center;
-}
-.marcador-overlay-texto{
-  font-family:'Bebas Neue',sans-serif;
-  font-size:32px;letter-spacing:5px;
-  line-height:1;
-  text-shadow:0 2px 18px rgba(0,0,0,.8);
-  white-space:nowrap;
+  animation:ev-out .38s ease-in forwards;
 }
 
-/* Variantes por tipo */
-.marcador-overlay.tipo-inicio{background:linear-gradient(135deg,rgba(26,107,47,.92),rgba(18,80,35,.95));}
-.marcador-overlay.tipo-inicio .marcador-overlay-texto{color:#4cdf84;}
-.marcador-overlay.tipo-entretiempo{background:linear-gradient(135deg,rgba(52,73,140,.92),rgba(30,50,110,.95));}
-.marcador-overlay.tipo-entretiempo .marcador-overlay-texto{color:#7fb3ff;}
-.marcador-overlay.tipo-reanudacion{background:linear-gradient(135deg,rgba(26,107,47,.92),rgba(18,80,35,.95));}
-.marcador-overlay.tipo-reanudacion .marcador-overlay-texto{color:#4cdf84;}
-.marcador-overlay.tipo-fin{background:linear-gradient(135deg,rgba(20,20,28,.95),rgba(36,36,50,.97));border:2px solid rgba(201,162,39,.5);}
-.marcador-overlay.tipo-fin .marcador-overlay-texto{color:var(--dorado);}
-.marcador-overlay.tipo-gol{background:linear-gradient(135deg,rgba(140,100,0,.95),rgba(100,70,0,.97));}
-.marcador-overlay.tipo-gol .marcador-overlay-texto{color:#f0c040;}
-.marcador-overlay.tipo-roja{background:linear-gradient(135deg,rgba(160,30,20,.95),rgba(110,15,10,.97));}
-.marcador-overlay.tipo-roja .marcador-overlay-texto{color:#ff6b5b;}
+/* ── Ícono ── */
+.marcador-overlay-icono{
+  font-size:42px;
+  line-height:1;
+  animation:ev-icon-bounce .55s cubic-bezier(.22,.68,0,1.3) .05s both;
+  filter:drop-shadow(0 0 12px currentColor);
+  flex-shrink:0;
+  position:relative;
+  z-index:2;
+}
+.marcador-overlay-icono-svg{
+  display:flex;align-items:center;justify-content:center;
+}
+
+/* ── Texto ── */
+.marcador-overlay-texto{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:38px;
+  letter-spacing:7px;
+  line-height:1;
+  text-shadow:0 3px 24px rgba(0,0,0,.9), 0 0 40px currentColor;
+  white-space:nowrap;
+  animation:ev-txt-in .4s cubic-bezier(.22,.68,0,1.1) .12s both;
+  position:relative;
+  z-index:2;
+}
+
+/* ── Subtexto opcional ── */
+.marcador-overlay-sub{
+  font-family:'Rajdhani',sans-serif;
+  font-size:11px;font-weight:700;
+  letter-spacing:3px;text-transform:uppercase;
+  opacity:.65;
+  animation:ev-txt-in .4s ease .22s both;
+  position:relative;z-index:2;
+}
+
+/* ══ VARIANTES POR TIPO ══ */
+
+/* GOL — dorado explosivo */
+.marcador-overlay.tipo-gol{
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 40%, rgba(220,160,0,.55) 0%, transparent 75%),
+    linear-gradient(160deg, rgba(120,80,0,.98) 0%, rgba(60,38,0,.99) 100%);
+  border:1.5px solid rgba(240,192,64,.55);
+  animation:ev-in .48s cubic-bezier(.22,.68,0,1.1) forwards,
+            ev-border-pulse 1.1s ease .5s infinite;
+}
+.marcador-overlay.tipo-gol .marcador-overlay-texto{
+  color:#ffe066;
+  font-size:44px;
+  letter-spacing:4px;
+  text-shadow:0 0 30px rgba(255,200,0,.9), 0 4px 24px rgba(0,0,0,.9);
+}
+.marcador-overlay.tipo-gol .marcador-overlay-icono{
+  font-size:48px;
+}
+
+/* INICIO — verde césped */
+.marcador-overlay.tipo-inicio{
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 35%, rgba(30,160,70,.45) 0%, transparent 70%),
+    linear-gradient(155deg, rgba(18,90,38,.98) 0%, rgba(8,44,18,.99) 100%);
+  border:1.5px solid rgba(76,223,132,.35);
+}
+.marcador-overlay.tipo-inicio .marcador-overlay-texto{color:#6fffaa;}
+.marcador-overlay.tipo-inicio .marcador-overlay-icono{color:#6fffaa;}
+
+/* ENTRETIEMPO — azul frío */
+.marcador-overlay.tipo-entretiempo{
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 35%, rgba(40,80,200,.4) 0%, transparent 70%),
+    linear-gradient(155deg, rgba(24,48,130,.98) 0%, rgba(10,22,68,.99) 100%);
+  border:1.5px solid rgba(100,160,255,.35);
+}
+.marcador-overlay.tipo-entretiempo .marcador-overlay-texto{color:#8cc8ff;}
+.marcador-overlay.tipo-entretiempo .marcador-overlay-icono{color:#8cc8ff;}
+
+/* REANUDACIÓN — verde (igual que inicio pero texto diferente) */
+.marcador-overlay.tipo-reanudacion{
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 35%, rgba(30,160,70,.45) 0%, transparent 70%),
+    linear-gradient(155deg, rgba(18,90,38,.98) 0%, rgba(8,44,18,.99) 100%);
+  border:1.5px solid rgba(76,223,132,.35);
+}
+.marcador-overlay.tipo-reanudacion .marcador-overlay-texto{color:#6fffaa;}
+.marcador-overlay.tipo-reanudacion .marcador-overlay-icono{color:#6fffaa;}
+
+/* FINAL — dorado oscuro, borde elegante */
+.marcador-overlay.tipo-fin{
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 35%, rgba(160,120,0,.35) 0%, transparent 70%),
+    linear-gradient(155deg, rgba(22,22,30,.99) 0%, rgba(12,12,18,.99) 100%);
+  border:2px solid rgba(201,162,39,.65);
+  box-shadow:inset 0 0 60px rgba(201,162,39,.1);
+}
+.marcador-overlay.tipo-fin .marcador-overlay-texto{color:#f0c040;}
+.marcador-overlay.tipo-fin .marcador-overlay-icono{color:#f0c040;}
+
+/* EXPULSIÓN — rojo con flash */
+.marcador-overlay.tipo-roja{
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 35%, rgba(200,30,20,.5) 0%, transparent 70%),
+    linear-gradient(155deg, rgba(110,12,8,.98) 0%, rgba(55,4,4,.99) 100%);
+  border:1.5px solid rgba(255,80,60,.4);
+  animation:ev-in .48s cubic-bezier(.22,.68,0,1.1) forwards,
+            ev-roja-flash .9s ease .45s 2;
+}
+.marcador-overlay.tipo-roja .marcador-overlay-texto{color:#ff7060;}
+.marcador-overlay.tipo-roja .marcador-overlay-icono{font-size:46px;}
 
 /* CRONÓMETRO EN VIVO */
 .crono-wrap{display:flex;flex-direction:column;align-items:center;gap:3px;}
@@ -1330,12 +1459,14 @@ table.posiciones td:nth-child(2){text-align:left;}
 .pwa-banner-close:hover{color:rgba(255,255,255,.7);}
 
 /* Modal instrucciones iOS */
-#pwa-ios-modal{
+#pwa-ios-modal,
+#pwa-desktop-modal{
   display:none;position:fixed;inset:0;
   background:rgba(0,0,0,.85);z-index:9200;
   align-items:flex-end;justify-content:center;padding:0 0 env(safe-area-inset-bottom);
 }
-#pwa-ios-modal.open{display:flex;}
+#pwa-ios-modal.open,
+#pwa-desktop-modal.open{display:flex;}
 .pwa-ios-box{
   background:var(--negro2);border:1px solid var(--dorado-border);
   border-radius:16px 16px 0 0;
@@ -2721,15 +2852,24 @@ function partidoHTML(p,mostrarDetalle){
 // ============================================================
 // RENDER FIXTURE
 // ============================================================
+// Mapa temporal para pasar arrays de IDs a generarImagenProximos sin romper el HTML
+window._fixtureMapa = {};
+
 function renderFixture(){
   const div=currentDivision;
   const ps=data.partidos.filter(p=>p.div===div&&p.estado!=='jugado');
   const el=document.getElementById('fixture-content');
   if(!ps.length){el.innerHTML=`<div class="card"><div class="card-header"><span>Próximos Partidos</span><span class="div-badge">${div==='primera'?'1ª':'2ª'}</span></div><div class="empty-msg">No hay partidos programados para esta división</div></div>`;return;}
   const byF={};ps.forEach(p=>{if(!byF[p.fecha])byF[p.fecha]=[];byF[p.fecha].push(p);});
-  el.innerHTML=Object.entries(byF).map(([fecha,arr])=>`
-    <div class="card"><div class="card-header"><span>${fecha}</span><div style="display:flex;align-items:center;gap:8px"><span class="div-badge">${div==='primera'?'PRIMERA':'SEGUNDA'}</span><button class="btn-share" onclick="abrirShare(()=>generarImagenProximos(${JSON.stringify(arr.map(p=>String(p.id)))}))">${SVG_SHARE} Compartir</button></div></div>
-    ${arr.map(p=>partidoHTML(p,false)).join('')}</div>`).join('');
+  // Limpiar mapa y cargar IDs de esta renderización
+  window._fixtureMapa = {};
+  el.innerHTML=Object.entries(byF).map(([fecha,arr],idx)=>{
+    const mapaKey = 'fx_' + idx;
+    window._fixtureMapa[mapaKey] = arr.map(p=>String(p.id));
+    return `
+    <div class="card"><div class="card-header"><span>${fecha}</span><div style="display:flex;align-items:center;gap:8px"><span class="div-badge">${div==='primera'?'PRIMERA':'SEGUNDA'}</span><button class="btn-share" onclick="abrirShare(()=>generarImagenProximos(window._fixtureMapa['${mapaKey}']))">${SVG_SHARE} Compartir</button></div></div>
+    ${arr.map(p=>partidoHTML(p,false)).join('')}</div>`;
+  }).join('');
 }
 
 // ============================================================
@@ -4460,50 +4600,79 @@ function cerrarModalEdicion(){document.getElementById('edit-modal').style.displa
 // ============================================================
 function dispararAnimacionMarcador(pid, tipo){
   // tipo: 'gol' | 'roja' | 'inicio' | 'entretiempo' | 'reanudacion' | 'fin'
-  const SVG_ARBITRO = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 72' fill='currentColor' style='width:32px;height:48px;display:block;filter:drop-shadow(0 0 6px currentColor)'><circle cx='24' cy='7' r='6'/><path d='M18 14 Q15 28 16 40 L22 40 Q22 32 24 26 Q26 32 26 40 L32 40 Q33 28 30 14 Z'/><path d='M30 16 Q38 10 46 6 Q48 5 47 8 Q40 13 33 20 Z'/><path d='M18 16 Q14 22 12 28 L15 29 Q17 24 20 19 Z'/><path d='M20 40 Q18 54 17 64 L21 64 Q23 52 24 44 Q25 52 27 64 L31 64 Q30 54 28 40 Z'/></svg>`;
+
+  // ── Árbitro SVG: figura con uniforme negro, brazos en V levantados ──
+  const SVG_ARBITRO = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 96' style='width:38px;height:57px;display:block'>
+    <!-- cabeza -->
+    <circle cx='32' cy='10' r='8' fill='#f5c9a0'/>
+    <!-- cuello -->
+    <rect x='29' y='17' width='6' height='5' fill='#f5c9a0'/>
+    <!-- cuerpo (camiseta negra con franja amarilla) -->
+    <path d='M18 22 Q32 19 46 22 L44 52 Q32 55 20 52 Z' fill='#1a1a1a'/>
+    <rect x='29' y='22' width='6' height='30' fill='#c9a227' opacity='.7'/>
+    <!-- pantalon negro -->
+    <path d='M20 52 L22 68 L30 68 L32 58 L34 68 L42 68 L44 52 Z' fill='#111'/>
+    <!-- brazo izquierdo levantado (señalando inicio) -->
+    <path d='M18 26 Q8 16 6 8' stroke='#1a1a1a' stroke-width='5' stroke-linecap='round' fill='none'/>
+    <circle cx='6' cy='7' r='4' fill='#f5c9a0'/>
+    <!-- brazo derecho levantado -->
+    <path d='M46 26 Q56 16 58 8' stroke='#1a1a1a' stroke-width='5' stroke-linecap='round' fill='none'/>
+    <circle cx='58' cy='7' r='4' fill='#f5c9a0'/>
+    <!-- pierna izquierda -->
+    <path d='M22 68 L20 82 L25 82 L28 74 L30 82 L35 82 L32 68 Z' fill='#111'/>
+    <!-- pierna derecha -->
+    <path d='M34 68 L32 82 L37 82 L40 74 L42 82 L47 82 L44 68 Z' fill='#111'/>
+    <!-- zapatos -->
+    <ellipse cx='22' cy='83' rx='5' ry='3' fill='#222'/>
+    <ellipse cx='42' cy='83' rx='5' ry='3' fill='#222'/>
+    <!-- silbato -->
+    <rect x='4' y='6' width='8' height='3' rx='1.5' fill='#c9a227'/>
+  </svg>`;
+
   const config = {
-    inicio:       {icono:SVG_ARBITRO, texto:'INICIO',       clase:'tipo-inicio',      svg:true},
-    entretiempo:  {icono:SVG_ARBITRO, texto:'ENTRETIEMPO',  clase:'tipo-entretiempo', svg:true},
-    reanudacion:  {icono:SVG_ARBITRO, texto:'REANUDACIÓN',  clase:'tipo-reanudacion', svg:true},
-    fin:          {icono:'🏁',        texto:'FINAL',        clase:'tipo-fin',         svg:false},
-    gol:          {icono:'⚽',        texto:'GOOOOL',       clase:'tipo-gol',         svg:false},
-    roja:         {icono:'🟥',        texto:'EXPULSIÓN',    clase:'tipo-roja',        svg:false},
+    inicio:      {icono:SVG_ARBITRO, texto:'INICIO',      sub:'¡Comienza el partido!', clase:'tipo-inicio',      svg:true,  dur:3200},
+    entretiempo: {icono:SVG_ARBITRO, texto:'ENTRETIEMPO', sub:'Fin del primer tiempo',  clase:'tipo-entretiempo', svg:true,  dur:3200},
+    reanudacion: {icono:SVG_ARBITRO, texto:'REANUDACIÓN', sub:'Comienza el 2° tiempo',  clase:'tipo-reanudacion', svg:true,  dur:3200},
+    fin:         {icono:'🏁',        texto:'FINAL',       sub:'Fin del partido',        clase:'tipo-fin',         svg:false, dur:3600},
+    gol:         {icono:'⚽',        texto:'GOOOOOOOL',   sub:'',                       clase:'tipo-gol',         svg:false, dur:3800},
+    roja:        {icono:'🟥',        texto:'EXPULSIÓN',   sub:'Jugador expulsado',      clase:'tipo-roja',        svg:false, dur:3200},
   };
   const cfg = config[tipo];
   if(!cfg) return;
 
-  // Función interna que busca el elemento y muestra el overlay
   function _mostrarOverlay(){
     const marcador = document.getElementById('marcador-'+pid);
     if(!marcador) return false;
     const wrap = marcador.closest('.card-partido-wrap');
     if(!wrap) return false;
 
-    // Eliminar overlay previo si existía
     const anterior = wrap.querySelector('.marcador-overlay');
     if(anterior) anterior.remove();
 
-    // Crear overlay
     const overlay = document.createElement('div');
     overlay.className = 'marcador-overlay ' + cfg.clase;
-    overlay.innerHTML = cfg.svg
-      ? `<div class="marcador-overlay-texto">${cfg.texto}</div>
-         <div class="marcador-overlay-icono marcador-overlay-icono-svg">${cfg.icono}</div>`
-      : `<div class="marcador-overlay-texto">${cfg.texto}</div>
-         <div class="marcador-overlay-icono">${cfg.icono}</div>`;
+
+    const iconoHTML = cfg.svg
+      ? `<div class="marcador-overlay-icono marcador-overlay-icono-svg">${cfg.icono}</div>`
+      : `<div class="marcador-overlay-icono">${cfg.icono}</div>`;
+    const subHTML = cfg.sub
+      ? `<div class="marcador-overlay-sub">${cfg.sub}</div>`
+      : '';
+
+    overlay.innerHTML = `${iconoHTML}
+      <div class="marcador-overlay-texto">${cfg.texto}</div>
+      ${subHTML}`;
+
     wrap.appendChild(overlay);
 
-    // Duración visible: 2.4s, luego animación de salida y remoción
-    const DUR_VISIBLE = 2400;
-    const DUR_OUT     = 400;
+    const DUR_OUT = 420;
     setTimeout(()=>{
       overlay.classList.add('saliendo');
       setTimeout(()=>overlay.remove(), DUR_OUT);
-    }, DUR_VISIBLE);
+    }, cfg.dur);
     return true;
   }
 
-  // Intentar en el siguiente frame; si el elemento todavía no está, reintentar a 80ms
   requestAnimationFrame(()=>{
     if(!_mostrarOverlay()){
       setTimeout(()=>{ _mostrarOverlay(); }, 80);
@@ -5163,7 +5332,10 @@ function renderPlayoff(torneo,contenedorId){
   if(!cont) return;
   cont.innerHTML=`
     <div class="playoff-section">
-      <div class="playoff-title">🏆 Play Off – ${torneoLabel(torneo)}</div>
+      <div class="playoff-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <span>🏆 Play Off – ${torneoLabel(torneo)}</span>
+        <button class="btn-share" onclick="abrirShare(()=>generarImagenPlayoff('${torneo}'))">${SVG_SHARE} Compartir</button>
+      </div>
       <div class="playoff-etapa">
         <div class="playoff-etapa-header">Cuartos de Final <span style="color:rgba(255,255,255,.3);font-size:10px">· Partido único en cancha del mejor clasificado</span></div>
         <div class="playoff-cruces">${cuartosHTML}</div>
@@ -6198,6 +6370,132 @@ async function generarImagenTorneo(torneoId){
   return canvas;
 }
 
+// ── Generador: Play Off ───────────────────────────────────────
+async function generarImagenPlayoff(torneo){
+  await document.fonts.ready;
+  const id   = getIdentidad();
+  const liga = id.nombre||'DEPORTEMAS';
+  const W    = 700;
+
+  const playoff = data.playoff.filter(c=>c.torneo===torneo);
+  if(!playoff.length) return null;
+
+  const etapas = [
+    { label:'CUARTOS DE FINAL', cruces: playoff.filter(c=>c.etapa==='cuartos').sort((a,b)=>a.cruce-b.cruce) },
+    { label:'SEMIFINALES',      cruces: playoff.filter(c=>c.etapa==='semifinal').sort((a,b)=>a.cruce-b.cruce) },
+    { label:'FINAL',            cruces: playoff.filter(c=>c.etapa==='final') },
+  ].filter(e=>e.cruces.length);
+
+  // Calcular altura: por cada cruce = 54px, header etapa = 34px, separador = 12px
+  const totalCruces = etapas.reduce((a,e)=>a+e.cruces.length, 0);
+  const H = 64 + 50 + etapas.length*(34+12) + totalCruces*54 + 12 + 34;
+
+  const canvas = document.createElement('canvas');
+  canvas.width=W; canvas.height=H;
+  const ctx=canvas.getContext('2d');
+  ctx.textBaseline='alphabetic';
+
+  ctx.fillStyle=C.NEG2; ctx.fillRect(0,0,W,H);
+  let y = await cvHeader(ctx,W,id,0);
+
+  // Título
+  ctx.fillStyle=C.DORADO;
+  ctx.font='700 16px "Rajdhani", Arial, sans-serif';
+  ctx.textAlign='center';
+  ctx.fillText('PLAY OFF  ·  '+torneoLabel(torneo).toUpperCase()+'  ·  PRIMERA DIVISIÓN', W/2, y+32);
+  y+=50;
+
+  // Precargar escudos de todos los equipos involucrados
+  const equiposSet = new Set(playoff.flatMap(c=>[c.local,c.visit].filter(Boolean)));
+  const escudoImgs={};
+  await Promise.all([...equiposSet].map(nombre=>new Promise(res=>{
+    const entry=escudos[nombre]||escudos[normalizar(nombre)];
+    const src=entry&&typeof entry==='object'?entry.img:entry;
+    if(!src){res();return;}
+    const img=new Image();
+    img.onload=()=>{escudoImgs[nombre]=img;res();}; img.onerror=()=>res(); img.src=src;
+  })));
+
+  const ECSIZE = 26;
+  const CX = W/2;
+
+  for(const etapa of etapas){
+    // Header etapa
+    ctx.fillStyle='rgba(201,162,39,0.12)';
+    ctx.fillRect(0,y,W,28);
+    ctx.fillStyle=C.DORADO;
+    ctx.font='700 12px "Rajdhani", Arial, sans-serif';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(etapa.label, CX, y+14);
+    ctx.textBaseline='alphabetic';
+    y+=34;
+
+    for(const c of etapa.cruces){
+      const ROW=54;
+      const fy=y+ROW/2;
+
+      ctx.fillStyle='rgba(255,255,255,0.02)';
+      ctx.fillRect(0,y,W,ROW);
+
+      // Local
+      const eImgL=escudoImgs[c.local||''];
+      const escLX=CX-22-14-ECSIZE;
+      const escLY=y+(ROW-ECSIZE)/2;
+      if(eImgL){
+        ctx.save(); ctx.beginPath(); ctx.arc(escLX+ECSIZE/2,escLY+ECSIZE/2,ECSIZE/2,0,Math.PI*2); ctx.clip();
+        ctx.drawImage(eImgL,escLX,escLY,ECSIZE,ECSIZE); ctx.restore();
+      } else if(c.local){ cvEscudoFallback(ctx,c.local,escLX,escLY,ECSIZE); }
+      ctx.fillStyle=C.BLANCO; ctx.font='700 13px "Rajdhani", Arial, sans-serif';
+      ctx.textAlign='right'; ctx.textBaseline='middle';
+      cvFillTextTrunc(ctx,(c.local||'–').toUpperCase(), escLX-8, fy, escLX-16);
+
+      // Visitante
+      const eImgV=escudoImgs[c.visit||''];
+      const escVX=CX+22+14;
+      const escVY=y+(ROW-ECSIZE)/2;
+      if(eImgV){
+        ctx.save(); ctx.beginPath(); ctx.arc(escVX+ECSIZE/2,escVY+ECSIZE/2,ECSIZE/2,0,Math.PI*2); ctx.clip();
+        ctx.drawImage(eImgV,escVX,escVY,ECSIZE,ECSIZE); ctx.restore();
+      } else if(c.visit){ cvEscudoFallback(ctx,c.visit,escVX,escVY,ECSIZE); }
+      ctx.fillStyle=C.BLANCO; ctx.font='700 13px "Rajdhani", Arial, sans-serif';
+      ctx.textAlign='left'; ctx.textBaseline='middle';
+      cvFillTextTrunc(ctx,(c.visit||'–').toUpperCase(), escVX+ECSIZE+8, fy, W-escVX-ECSIZE-16);
+
+      // Marcador / VS (centro)
+      const marcTxt = c.idavuelta
+        ? (c.global||'IDA/VTA')
+        : (c.resultado||'VS');
+      const estadoCls = c.estado||'pendiente';
+      const mBg = estadoCls==='jugado'?'rgba(26,107,47,0.7)':estadoCls==='en-juego'?'rgba(192,57,43,0.7)':'rgba(35,35,48,0.9)';
+      const mTxt= estadoCls==='jugado'?'#4caf74':estadoCls==='en-juego'?'#ff6655':C.DORADO;
+      const mW=60, mH=28;
+      cvRoundRect(ctx,CX-mW/2,fy-mH/2,mW,mH,5);
+      ctx.fillStyle=mBg; ctx.fill();
+      ctx.fillStyle=mTxt; ctx.font='700 13px "Rajdhani", Arial, sans-serif';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(marcTxt,CX,fy);
+      ctx.textBaseline='alphabetic';
+
+      // Ganador (si lo hay)
+      if(c.ganador){
+        ctx.fillStyle='rgba(201,162,39,0.5)';
+        ctx.font='500 10px "Rajdhani", Arial, sans-serif';
+        ctx.textAlign='center';
+        ctx.fillText('✓ '+c.ganador.toUpperCase(), CX, fy+20);
+      }
+
+      ctx.fillStyle='rgba(255,255,255,0.04)';
+      ctx.fillRect(0,y+ROW-1,W,1);
+      y+=ROW;
+    }
+    y+=12;
+  }
+
+  cvFooter(ctx,W,y,liga);
+  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+  return canvas;
+}
+
 // ── Apertura del modal ───────────────────────────────────────
 
 async function abrirShareCanvas(generadorFn){
@@ -6459,6 +6757,41 @@ renderFooter();
 </div>
 
 <!-- Modal instrucciones iOS/Safari -->
+<!-- MODAL INSTALAR – ESCRITORIO -->
+<div id="pwa-desktop-modal">
+  <div class="pwa-ios-box" style="border-radius:12px">
+    <div class="pwa-ios-title">📥 Instalar aplicación</div>
+    <div class="pwa-ios-sub">Seguí estos pasos según tu navegador</div>
+    <div class="pwa-ios-steps">
+      <div class="pwa-ios-step">
+        <div class="pwa-ios-step-num" style="font-size:13px;width:32px;height:32px">
+          <svg viewBox="0 0 24 24" fill="currentColor" style="width:16px;height:16px"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/></svg>
+        </div>
+        <div class="pwa-ios-step-text"><strong>Chrome / Edge (Windows/Mac)</strong><br>Menú <strong>⋮</strong> → <strong>"Instalar aplicación"</strong> o <strong>"Instalar DEPORTEMAS"</strong></div>
+      </div>
+      <div class="pwa-ios-step">
+        <div class="pwa-ios-step-num" style="font-size:13px;width:32px;height:32px">
+          <svg viewBox="0 0 24 24" fill="currentColor" style="width:16px;height:16px"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/></svg>
+        </div>
+        <div class="pwa-ios-step-text"><strong>Chrome (Android)</strong><br>Menú <strong>⋮</strong> → <strong>"Agregar a pantalla de inicio"</strong></div>
+      </div>
+      <div class="pwa-ios-step">
+        <div class="pwa-ios-step-num" style="font-size:13px;width:32px;height:32px">
+          <svg viewBox="0 0 24 24" fill="currentColor" style="width:16px;height:16px"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/></svg>
+        </div>
+        <div class="pwa-ios-step-text"><strong>Samsung Internet</strong><br>Menú → <strong>"Agregar página a"</strong> → <strong>"Pantalla de inicio"</strong></div>
+      </div>
+      <div class="pwa-ios-step">
+        <div class="pwa-ios-step-num" style="font-size:13px;width:32px;height:32px;opacity:.4">
+          <svg viewBox="0 0 24 24" fill="currentColor" style="width:16px;height:16px"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/></svg>
+        </div>
+        <div class="pwa-ios-step-text" style="opacity:.5"><strong>Firefox</strong><br>No soporta instalación nativa de PWA</div>
+      </div>
+    </div>
+    <button class="pwa-ios-close" onclick="document.getElementById('pwa-desktop-modal').classList.remove('open')">Entendido</button>
+  </div>
+</div>
+
 <div id="pwa-ios-modal">
   <div class="pwa-ios-box">
     <div class="pwa-ios-title">Agregar a inicio</div>
@@ -6596,7 +6929,7 @@ async function pwaInstalar(){
     modal.classList.add('open');
   } else {
     cerrarPWABanner();
-    alert('Para agregar el acceso directo:\n\n• Chrome / Edge: Menú (⋮) → "Instalar aplicación"\n• Samsung Internet: Menú → "Agregar página a" → "Pantalla de inicio"\n• Firefox: no soportado nativamente');
+    document.getElementById('pwa-desktop-modal').classList.add('open');
   }
 }
 
