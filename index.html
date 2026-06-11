@@ -29,7 +29,7 @@
 
   // ── PEGÁ AQUÍ TU CONFIGURACIÓN DE FIREBASE ──────────────────
   const firebaseConfig = {
-    apiKey: "AIzaSyC_4BA1BubBmSAg4SFbWspZHfoSK9tXxCs",
+   apiKey: "AIzaSyC_4BA1BubBmSAg4SFbWspZHfoSK9tXxCs",
   authDomain: "deportemas-abca3.firebaseapp.com",
   databaseURL: "https://deportemas-abca3-default-rtdb.firebaseio.com",
   projectId: "deportemas-abca3",
@@ -229,8 +229,37 @@
   --dorado-bg:rgba(201,162,39,0.08);--dorado-border:rgba(201,162,39,0.3);
   --blanco:#f5f5f5;--gris:#888;--gris-claro:#bbb;
   --rojo:#c0392b;--verde-clasificacion:#1a6b2f;
-  --radius:6px;--shadow:0 4px 24px rgba(0,0,0,.5);
+  --r-sm:4px;--r-md:8px;--r-lg:12px;
+  --radius:var(--r-md);
+  --shadow:0 4px 24px rgba(0,0,0,.5);
+  /* Canvas compartir */
+  --cv-neg2:#111113;--cv-neg3:#191920;--cv-neg4:#232330;
+  --cv-blanco:#f5f5f5;--cv-gris:#888;
 }
+
+/* ── MODO CLARO ─────────────────────────────────────────────── */
+body.light{
+  --negro:#f0ede8;--negro2:#ffffff;--negro3:#f5f2ee;--negro4:#ece9e4;
+  --blanco:#1a1a1a;--gris:#666;--gris-claro:#444;
+  --dorado:#8a6500;--dorado-light:#b08a00;--dorado-dark:#5a4200;
+  --dorado-bg:rgba(138,101,0,0.08);--dorado-border:rgba(138,101,0,0.25);
+  --shadow:0 4px 24px rgba(0,0,0,.12);
+  /* Canvas compartir (siempre oscuro para que se vea bien en redes) */
+  --cv-neg2:#111113;--cv-neg3:#191920;--cv-neg4:#232330;
+  --cv-blanco:#f5f5f5;--cv-gris:#888;
+}
+
+/* Transición suave al cambiar de modo */
+body,header,.card,.side-block,nav,input,select,textarea,
+.modal-overlay,.edit-modal,.admin-panel,
+.torneo-card,.equipo-card,.noticia-card,.noticia-destacada,
+.partido,.marcador,.card-header,.card-partido-wrap,
+.posiciones thead th,.posiciones tbody tr,
+.playoff-section,.playoff-etapa,
+table,th,td{
+  transition:background-color .3s ease, color .3s ease, border-color .3s ease !important;
+}
+
 *{margin:0;padding:0;box-sizing:border-box;}
 html{scroll-behavior:smooth;}
 body{
@@ -239,6 +268,11 @@ body{
     radial-gradient(ellipse at 15% 10%,rgba(201,162,39,.06) 0%,transparent 55%),
     radial-gradient(ellipse at 85% 90%,rgba(201,162,39,.04) 0%,transparent 55%);
   -webkit-font-smoothing:antialiased;
+}
+body.light{
+  background-image:
+    radial-gradient(ellipse at 15% 10%,rgba(138,101,0,.05) 0%,transparent 55%),
+    radial-gradient(ellipse at 85% 90%,rgba(138,101,0,.03) 0%,transparent 55%);
 }
 
 /* ── TIPOGRAFÍA GLOBAL ──
@@ -258,10 +292,10 @@ header{
   box-shadow:0 2px 20px rgba(0,0,0,.6);
 }
 .logo-wrap{display:flex;align-items:center;gap:12px;flex-shrink:0;}
-#logo-img-header{height:50px;width:50px;object-fit:contain;border-radius:6px;display:none;}
+#logo-img-header{height:50px;width:50px;object-fit:contain;border-radius:var(--r-md);display:none;}
 #logo-img-header.show{display:block;}
 .logo-iniciales{
-  width:50px;height:50px;background:var(--dorado);border-radius:6px;
+  width:50px;height:50px;background:var(--dorado);border-radius:var(--r-md);
   display:flex;align-items:center;justify-content:center;
   font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--negro);flex-shrink:0;
   box-shadow:0 0 16px rgba(201,162,39,.35);
@@ -279,13 +313,13 @@ header{
 nav{display:flex;gap:2px;margin-left:auto;flex-wrap:wrap;align-items:center;}
 nav a{
   color:rgba(255,255,255,.65);text-decoration:none;font-size:12px;font-weight:700;
-  padding:7px 13px;border-radius:4px;transition:all .18s;
+  padding:7px 13px;border-radius:var(--r-sm);transition:all .18s;
   letter-spacing:.6px;text-transform:uppercase;font-family:'Rajdhani',sans-serif;
 }
 nav a:hover,nav a.active{color:var(--dorado);background:rgba(201,162,39,.1);}
 .btn-admin-nav{
   background:var(--dorado)!important;color:var(--negro)!important;
-  font-weight:900!important;margin-left:8px;border-radius:4px!important;
+  font-weight:900!important;margin-left:8px;border-radius:var(--r-sm)!important;
   box-shadow:0 0 12px rgba(201,162,39,.3)!important;
 }
 .btn-admin-nav:hover{background:var(--dorado-light)!important;}
@@ -294,18 +328,39 @@ nav a:hover,nav a.active{color:var(--dorado);background:rgba(201,162,39,.1);}
   background:rgba(201,162,39,.12)!important;
   color:var(--dorado)!important;
   border:1px solid var(--dorado-border)!important;
-  font-weight:700!important;margin-left:8px;border-radius:4px!important;
+  font-weight:700!important;margin-left:8px;border-radius:var(--r-sm)!important;
   font-size:12px;letter-spacing:.3px;padding:4px 10px;cursor:pointer;
   font-family:inherit;transition:background .15s;
 }
 .btn-instalar-nav.visible{display:flex;}
 .btn-instalar-nav:hover{background:rgba(201,162,39,.22)!important;}
 .btn-instalar-nav svg{width:13px;height:13px;flex-shrink:0;}
+
+/* ── Toggle modo claro/oscuro ─────────────────────────────── */
+.btn-tema{
+  width:36px;height:36px;border-radius:50%;
+  border:1px solid var(--dorado-border);
+  background:var(--dorado-bg);
+  color:var(--dorado);
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .2s,border-color .2s,transform .18s;
+  flex-shrink:0;
+  margin-left:4px;
+}
+.btn-tema:hover{background:rgba(201,162,39,.2);transform:rotate(20deg);}
+body.light .btn-tema:hover{background:rgba(138,101,0,.15);}
+.btn-tema svg{width:17px;height:17px;stroke:var(--dorado);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:opacity .2s;}
+/* Íconos: mostrar sol en oscuro, luna en claro */
+.btn-tema .ico-luna{display:block;}
+.btn-tema .ico-sol{display:none;}
+body.light .btn-tema .ico-luna{display:none;}
+body.light .btn-tema .ico-sol{display:block;}
 /* Sidebar install block */
 .side-install-btn{
   display:none;width:100%;align-items:center;justify-content:center;gap:7px;
   background:rgba(201,162,39,.1);border:1px solid var(--dorado-border);
-  border-radius:7px;padding:10px 14px;cursor:pointer;
+  border-radius:var(--r-md);padding:10px 14px;cursor:pointer;
   font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;
   color:var(--dorado);letter-spacing:.5px;text-transform:uppercase;
   transition:background .15s;margin-top:4px;
@@ -336,16 +391,54 @@ nav a:hover,nav a.active{color:var(--dorado);background:rgba(201,162,39,.1);}
   border-bottom:1px solid rgba(255,255,255,.04);transition:all .14s;
   text-transform:uppercase;font-family:'Rajdhani',sans-serif;
 }
+body.light .side-menu a{color:rgba(0,0,0,.6);border-bottom-color:rgba(0,0,0,.06);}
 .side-menu a:last-child{border-bottom:none;}
 .side-menu a:hover,.side-menu a.active{
   background:var(--dorado-bg);color:var(--dorado);
   border-left:3px solid var(--dorado);padding-left:13px;
 }
 
+/* Modo claro: ajustes de contraste para textos con opacidad fija sobre blanco */
+body.light nav a{color:rgba(0,0,0,.6);}
+body.light nav a:hover,body.light nav a.active{color:var(--dorado);background:rgba(138,101,0,.08);}
+body.light .card-header{background:linear-gradient(90deg,var(--negro4),rgba(138,101,0,.10));}
+body.light .partido .equipo-nombre,
+body.light .equipo-nombre{color:var(--blanco);}
+body.light .modal-overlay{background:rgba(0,0,0,.55);}
+body.light header{box-shadow:0 2px 20px rgba(0,0,0,.1);}
+body.light .edit-modal,body.light .admin-panel{background:var(--negro2);}
+body.light input,body.light select,body.light textarea{background:var(--negro3);color:var(--blanco);border-color:var(--dorado-border);}
+body.light .torneo-tab{border-color:rgba(0,0,0,.15);color:rgba(0,0,0,.5);}
+body.light .torneo-tab.active{background:rgba(0,0,0,.08);color:var(--blanco);border-color:rgba(0,0,0,.25);}
+body.light .div-tab{background:var(--negro3);color:rgba(0,0,0,.5);}
+body.light .side-block-header{color:var(--negro);}
+body.light .partido{background:var(--negro2);}
+body.light .partido .estado.pendiente{background:rgba(138,101,0,.08);}
+
 /* MAIN */
 .main{display:flex;flex-direction:column;gap:1rem;}
-.section{display:none;}
-.section.visible{display:block;}
+/* ── Secciones: fade suave al navegar ── */
+@keyframes sec-in{
+  from{ opacity:0; transform:translateY(6px); }
+  to  { opacity:1; transform:translateY(0);   }
+}
+@keyframes sec-out{
+  from{ opacity:1; }
+  to  { opacity:0; }
+}
+
+.section{
+  display:none;
+  animation:sec-in .22s ease both;
+}
+.section.visible{
+  display:block;
+}
+.section.saliendo{
+  display:block;
+  animation:sec-out .16s ease forwards;
+  pointer-events:none;
+}
 
 /* CARD */
 .card{
@@ -359,19 +452,19 @@ nav a:hover,nav a.active{color:var(--dorado);background:rgba(201,162,39,.1);}
   padding:12px 18px;display:flex;align-items:center;justify-content:space-between;
 }
 .card-header span{
-  font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--dorado);
-  letter-spacing:1.5px;text-transform:uppercase;
+  font-family:'Rajdhani',sans-serif;font-weight:700;font-size:15px;color:var(--dorado);
+  letter-spacing:1.2px;text-transform:uppercase;
 }
 .div-badge{
   background:var(--dorado);color:var(--negro);font-size:11px;font-weight:900;
-  padding:2px 10px;border-radius:3px;letter-spacing:1px;font-family:'Rajdhani',sans-serif;
+  padding:2px 10px;border-radius:var(--r-sm);letter-spacing:1px;font-family:'Rajdhani',sans-serif;
 }
 
 /* TABS */
 .tabs-row{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;}
 .div-tab{
   padding:8px 20px;font-size:12px;font-weight:700;
-  border:1px solid var(--dorado-border);border-radius:4px;cursor:pointer;
+  border:1px solid var(--dorado-border);border-radius:var(--r-sm);cursor:pointer;
   background:var(--negro2);color:rgba(255,255,255,.55);
   transition:all .16s;font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.6px;
 }
@@ -385,19 +478,153 @@ nav a:hover,nav a.active{color:var(--dorado);background:rgba(201,162,39,.1);}
 }
 .torneo-tab.active{background:rgba(255,255,255,.1);color:var(--blanco);border-color:rgba(255,255,255,.35);}
 
-/* PARTIDO */
-.partido{display:grid;grid-template-columns:68px 1fr 88px 1fr 76px;align-items:center;padding:12px 18px;border-bottom:1px solid rgba(255,255,255,.04);transition:background .14s;}
+/* ══════════════════════════════════════════════════════
+   CARDS DE PARTIDO — JERARQUÍA VISUAL POR ESTADO
+══════════════════════════════════════════════════════ */
+
+/* ── Wrapper base ── */
+.card-partido-wrap{
+  position:relative;overflow:hidden;
+  border-bottom:1px solid rgba(255,255,255,.045);
+  border-left:3px solid transparent;
+  transition:background .18s, border-color .18s;
+}
+.card-partido-wrap:last-child{border-bottom:none;}
+
+/* ── EN JUEGO: protagonista de la pantalla ── */
+@keyframes live-border-pulse{
+  0%,100%{ border-color:rgba(231,76,60,.55); box-shadow:inset 3px 0 18px rgba(231,76,60,.06); }
+  50%    { border-color:rgba(231,76,60,1);   box-shadow:inset 3px 0 28px rgba(231,76,60,.14); }
+}
+.card-partido-wrap[data-estado="en-juego"]{
+  background:linear-gradient(
+    100deg,
+    rgba(192,57,43,.10) 0%,
+    rgba(192,57,43,.04) 38%,
+    transparent 65%
+  );
+  border-left-color:rgba(231,76,60,.7);
+  animation:live-border-pulse 2s ease-in-out infinite;
+}
+.card-partido-wrap[data-estado="en-juego"]:hover{
+  background:linear-gradient(
+    100deg,
+    rgba(192,57,43,.16) 0%,
+    rgba(192,57,43,.07) 38%,
+    rgba(201,162,39,.04) 65%
+  );
+}
+/* Nombre de equipos más brillante en live */
+.card-partido-wrap[data-estado="en-juego"] .equipo-local,
+.card-partido-wrap[data-estado="en-juego"] .equipo-visit{
+  color:var(--blanco);
+  letter-spacing:.7px;
+}
+/* Hora en rojo cuando está en vivo */
+.card-partido-wrap[data-estado="en-juego"] .hora{
+  color:#e74c3c;
+}
+
+/* ── JUGADO: segundo plano, el dato ya es histórico ── */
+.card-partido-wrap[data-estado="jugado"]{
+  background:transparent;
+  border-left-color:rgba(201,162,39,.18);
+}
+.card-partido-wrap[data-estado="jugado"]:hover{
+  background:rgba(201,162,39,.04);
+}
+/* Equipos más apagados — el resultado es el dato importante */
+.card-partido-wrap[data-estado="jugado"] .equipo-local,
+.card-partido-wrap[data-estado="jugado"] .equipo-visit{
+  opacity:.52;
+}
+/* Hora apagada */
+.card-partido-wrap[data-estado="jugado"] .hora{
+  opacity:.4;
+}
+
+/* ── PENDIENTE: neutro, expectante ── */
+.card-partido-wrap[data-estado="pendiente"]{
+  background:transparent;
+  border-left-color:transparent;
+}
+.card-partido-wrap[data-estado="pendiente"]:hover{
+  background:rgba(201,162,39,.04);
+  border-left-color:rgba(201,162,39,.25);
+}
+
+/* ── Fila interior del partido ── */
+.partido{
+  display:grid;
+  grid-template-columns:68px 1fr 88px 1fr 76px;
+  align-items:center;
+  padding:14px 18px;      /* ↑ de 12 a 14 — más respiración */
+  transition:background .14s;
+}
 .partido:last-child{border-bottom:none;}
-.partido:hover{background:rgba(201,162,39,.06);}
-.partido .hora{font-size:13px;font-weight:700;color:var(--dorado);text-align:center;font-family:'Rajdhani',sans-serif;}
-.partido .equipo-local{text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:8px;font-family:'Bebas Neue',sans-serif;font-size:16px;text-transform:uppercase;letter-spacing:.5px;}
-.partido .equipo-visit{text-align:left;display:flex;align-items:center;gap:8px;font-family:'Bebas Neue',sans-serif;font-size:16px;text-transform:uppercase;letter-spacing:.5px;}
-.partido .vs{text-align:center;font-family:'Bebas Neue',sans-serif;font-size:22px;color:rgba(255,255,255,.25);}
-.partido .vs.resultado{font-size:19px;font-family:'Bebas Neue',sans-serif;background:linear-gradient(135deg,var(--dorado),var(--dorado-light));color:var(--negro);border-radius:4px;padding:3px 10px;display:inline-block;box-shadow:0 0 12px rgba(201,162,39,.3);}
-.estado{text-align:center;font-size:10px;font-weight:700;padding:4px 9px;border-radius:3px;text-transform:uppercase;letter-spacing:.5px;font-family:'Rajdhani',sans-serif;}
-.estado.pendiente{background:rgba(201,162,39,.12);color:var(--dorado);border:1px solid rgba(201,162,39,.2);}
-.estado.jugado{background:rgba(26,107,47,.25);color:#4caf74;border:1px solid rgba(26,107,47,.3);}
-.estado.en-juego{background:rgba(192,57,43,.25);color:#e74c3c;border:1px solid rgba(192,57,43,.3);animation:blink 1.2s infinite;}
+
+/* ── Columnas del partido ── */
+.partido .hora{
+  font-size:13px;font-weight:700;
+  color:var(--dorado);
+  text-align:center;
+  font-family:'Rajdhani',sans-serif;
+  transition:color .18s, opacity .18s;
+}
+.partido .equipo-local{
+  text-align:right;display:flex;align-items:center;
+  justify-content:flex-end;gap:8px;
+  font-family:'Bebas Neue',sans-serif;font-size:16px;
+  text-transform:uppercase;letter-spacing:.5px;
+  transition:opacity .18s;
+}
+.partido .equipo-visit{
+  text-align:left;display:flex;align-items:center;gap:8px;
+  font-family:'Bebas Neue',sans-serif;font-size:16px;
+  text-transform:uppercase;letter-spacing:.5px;
+  transition:opacity .18s;
+}
+/* Marcador VS pendiente */
+.partido .vs{
+  text-align:center;
+  font-family:'Bebas Neue',sans-serif;font-size:22px;
+  color:rgba(255,255,255,.22);
+}
+/* Marcador resultado (jugado) */
+.partido .vs.resultado{
+  font-size:19px;
+  font-family:'Bebas Neue',sans-serif;
+  background:linear-gradient(135deg,var(--dorado),var(--dorado-light));
+  color:var(--negro);
+  border-radius:var(--r-sm);
+  padding:3px 10px;
+  display:inline-block;
+  box-shadow:0 0 12px rgba(201,162,39,.3);
+}
+
+/* ── Badge de estado ── */
+.estado{
+  text-align:center;font-size:10px;font-weight:700;
+  padding:4px 9px;border-radius:var(--r-sm);
+  text-transform:uppercase;letter-spacing:.5px;
+  font-family:'Rajdhani',sans-serif;
+}
+.estado.pendiente{
+  background:rgba(201,162,39,.10);
+  color:rgba(201,162,39,.7);
+  border:1px solid rgba(201,162,39,.16);
+}
+.estado.jugado{
+  background:rgba(26,107,47,.18);
+  color:rgba(76,175,116,.75);
+  border:1px solid rgba(26,107,47,.22);
+}
+.estado.en-juego{
+  background:rgba(192,57,43,.25);
+  color:#e74c3c;
+  border:1px solid rgba(192,57,43,.35);
+  animation:blink 1.2s infinite;
+}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.45}}
 
 /* ══════════════════════════════════════════════════════
@@ -591,7 +818,26 @@ nav a:hover,nav a.active{color:var(--dorado);background:rgba(201,162,39,.1);}
 .marcador-overlay.tipo-roja .marcador-overlay-texto{color:#ff7060;}
 .marcador-overlay.tipo-roja .marcador-overlay-icono{font-size:46px;}
 
-/* CRONÓMETRO EN VIVO */
+/* Marcador en vivo: rojo pulsante */
+.partido .vs.resultado.en-vivo{
+  background:rgba(192,57,43,.88);
+  color:#fff;
+  font-size:17px;
+  box-shadow:0 0 14px rgba(192,57,43,.45);
+  animation:live-marcador-pulse 1.6s ease-in-out infinite;
+}
+@keyframes live-marcador-pulse{
+  0%,100%{ box-shadow:0 0 8px rgba(192,57,43,.35); }
+  50%    { box-shadow:0 0 20px rgba(192,57,43,.65); }
+}
+
+/* Modo claro: ajustes de contraste */
+body.light .card-partido-wrap[data-estado="jugado"] .equipo-local,
+body.light .card-partido-wrap[data-estado="jugado"] .equipo-visit{ opacity:.45; }
+body.light .card-partido-wrap[data-estado="jugado"] .hora{ opacity:.38; }
+body.light .card-partido-wrap[data-estado="en-juego"]{
+  background:linear-gradient(100deg,rgba(192,57,43,.08) 0%,rgba(192,57,43,.03) 38%,transparent 65%);
+}
 .crono-wrap{display:flex;flex-direction:column;align-items:center;gap:3px;}
 .crono-tiempo{
   font-family:'Bebas Neue',sans-serif;font-weight:400;font-size:22px;
@@ -616,7 +862,7 @@ nav a:hover,nav a.active{color:var(--dorado);background:rgba(201,162,39,.1);}
 }
 .btn-crono{
   background:rgba(192,57,43,.15);color:#e74c3c;border:1px solid rgba(192,57,43,.4);
-  border-radius:3px;padding:3px 9px;font-size:10px;font-weight:700;cursor:pointer;
+  border-radius:var(--r-sm);padding:3px 9px;font-size:10px;font-weight:700;cursor:pointer;
   font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px;
   transition:background .15s;white-space:nowrap;
 }
@@ -624,7 +870,7 @@ nav a:hover,nav a.active{color:var(--dorado);background:rgba(201,162,39,.1);}
 .btn-crono.activo{background:rgba(192,57,43,.4);border-color:#e74c3c;}
 .btn-crono-periodo{
   background:rgba(201,162,39,.12);color:var(--dorado);border:1px solid rgba(201,162,39,.3);
-  border-radius:3px;padding:3px 9px;font-size:10px;font-weight:700;cursor:pointer;
+  border-radius:var(--r-sm);padding:3px 9px;font-size:10px;font-weight:700;cursor:pointer;
   font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px;
   transition:background .15s;
 }
@@ -633,34 +879,293 @@ nav a:hover,nav a.active{color:var(--dorado);background:rgba(201,162,39,.1);}
 
 /* TABLA POSICIONES */
 .tabla-wrap{overflow-x:auto;}
-table.posiciones{width:100%;border-collapse:collapse;font-size:13px;}
-table.posiciones thead th{background:rgba(201,162,39,.12);color:var(--dorado);padding:10px 12px;font-family:'Rajdhani',sans-serif;font-weight:900;font-size:12px;text-align:center;letter-spacing:1px;text-transform:uppercase;border-bottom:2px solid var(--dorado-border);}
-table.posiciones thead th:nth-child(2){text-align:left;}
-table.posiciones tbody tr{border-bottom:1px solid rgba(255,255,255,.04);}
-table.posiciones tbody tr:hover{background:rgba(201,162,39,.05);}
-table.posiciones td{padding:10px 12px;text-align:center;font-family:'Rajdhani',sans-serif;font-size:14px;}
-table.posiciones td:nth-child(2){text-align:left;}
-.pos-num{color:rgba(255,255,255,.4);font-weight:700;font-size:12px;}
-.pos-equipo{display:flex;align-items:center;gap:9px;font-family:'Bebas Neue',sans-serif;font-size:16px;text-transform:uppercase;letter-spacing:.5px;}
-.zona-semifinal td:first-child{border-left:3px solid var(--dorado);}
-.zona-cuartos td:first-child{border-left:3px solid #3a9bd5;}
+
+table.posiciones{
+  width:100%;border-collapse:collapse;
+  font-size:13px;
+}
+
+/* ── Encabezado ── */
+table.posiciones thead th{
+  background:rgba(201,162,39,.10);
+  color:var(--dorado);
+  padding:11px 10px;
+  font-family:'Rajdhani',sans-serif;font-weight:900;font-size:11px;
+  text-align:center;letter-spacing:1.2px;text-transform:uppercase;
+  border-bottom:2px solid var(--dorado-border);
+  white-space:nowrap;
+}
+table.posiciones thead th:first-child{ /* # */
+  padding-left:14px;width:36px;
+}
+table.posiciones thead th:nth-child(2){ /* Equipo */
+  text-align:left;padding-left:12px;
+}
+/* Separador visual antes de grupos de columnas */
+table.posiciones thead th:nth-child(4),  /* G (empieza grupo G/E/P) */
+table.posiciones thead th:nth-child(8){  /* GF (empieza grupo GF/GC/DG) */
+  border-left:1px solid rgba(201,162,39,.18);
+}
+
+/* ── Filas del cuerpo ── */
+table.posiciones tbody tr{
+  border-bottom:1px solid rgba(255,255,255,.045);
+  transition:background .14s;
+}
+table.posiciones tbody tr:last-child{border-bottom:none;}
+
+/* Filas alternas — tono muy sutil para no pelear con los colores de zona */
+table.posiciones tbody tr:nth-child(even){
+  background:rgba(255,255,255,.022);
+}
+table.posiciones tbody tr:hover{
+  background:rgba(201,162,39,.07) !important;
+}
+
+/* ── Celdas ── */
+table.posiciones td{
+  padding:13px 10px;
+  text-align:center;
+  font-family:'Rajdhani',sans-serif;font-size:14px;
+  vertical-align:middle;
+}
+table.posiciones td:first-child{padding-left:14px;}
+table.posiciones td:nth-child(2){text-align:left;padding-left:12px;}
+table.posiciones td:last-child{padding-right:14px;}
+
+/* Separadores verticales entre grupos de columnas */
+table.posiciones td:nth-child(4),   /* G */
+table.posiciones td:nth-child(8){   /* GF */
+  border-left:1px solid rgba(255,255,255,.06);
+}
+
+/* ── Número de posición ── */
+.pos-num{
+  color:rgba(255,255,255,.5);
+  font-weight:900;font-size:13px;
+  font-family:'Rajdhani',sans-serif;
+  min-width:20px;
+}
+
+/* ── Nombre de equipo ── */
+.pos-equipo{
+  display:flex;align-items:center;gap:9px;
+  font-family:'Bebas Neue',sans-serif;font-size:16px;
+  text-transform:uppercase;letter-spacing:.5px;
+}
+
+/* ── Zonas: borde izquierdo + fondo tenue ── */
+.zona-semifinal td:first-child  {border-left:3px solid var(--dorado);}
+.zona-semifinal                  {background:rgba(201,162,39,.04);}
+
+.zona-cuartos td:first-child    {border-left:3px solid #3a9bd5;}
+.zona-cuartos                    {background:rgba(58,155,213,.03);}
+
 .zona-clasificacion td:first-child{border-left:3px solid var(--verde-clasificacion);}
-.zona-descenso td:first-child{border-left:3px solid var(--rojo);}
-.zona-revalida td:first-child{border-left:3px solid #e67e22;}
+.zona-clasificacion               {background:rgba(26,107,47,.04);}
+
+.zona-revalida td:first-child   {border-left:3px solid #e67e22;}
+.zona-revalida                   {background:rgba(230,126,34,.03);}
+
+.zona-descenso td:first-child   {border-left:3px solid var(--rojo);}
+.zona-descenso                   {background:rgba(192,57,43,.05);}
+
+/* Modo claro: ajustar fondos de zonas y alternas */
+body.light table.posiciones tbody tr:nth-child(even){background:rgba(0,0,0,.025);}
+body.light table.posiciones tbody tr:hover{background:rgba(138,101,0,.07) !important;}
+body.light .zona-semifinal  {background:rgba(201,162,39,.06);}
+body.light .zona-cuartos    {background:rgba(58,155,213,.05);}
+body.light .zona-clasificacion{background:rgba(26,107,47,.05);}
+body.light .zona-revalida   {background:rgba(230,126,34,.05);}
+body.light .zona-descenso   {background:rgba(192,57,43,.06);}
+body.light table.posiciones td:nth-child(4),
+body.light table.posiciones td:nth-child(8){border-left-color:rgba(0,0,0,.08);}
+body.light table.posiciones thead th:nth-child(4),
+body.light table.posiciones thead th:nth-child(8){border-left-color:rgba(138,101,0,.2);}
 
 /* ESCUDO MINI */
 .escudo-mini{width:30px;height:30px;border-radius:50%;background:var(--negro4);display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-weight:900;font-size:9px;color:var(--dorado);border:1px solid var(--dorado-border);flex-shrink:0;overflow:hidden;}
 .escudo-mini img{width:100%;height:100%;object-fit:contain;}
 
-/* GOLEADORES */
-.goleador-row{display:flex;align-items:center;gap:14px;padding:11px 18px;border-bottom:1px solid rgba(255,255,255,.04);}
-.goleador-row:last-child{border-bottom:none;}
-.goleador-row:hover{background:rgba(201,162,39,.05);}
-.gol-pos{width:30px;height:30px;border-radius:50%;background:var(--negro4);border:1px solid var(--dorado-border);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:rgba(255,255,255,.55);font-family:'Rajdhani',sans-serif;flex-shrink:0;}
-.gol-pos.top1{background:linear-gradient(135deg,var(--dorado),var(--dorado-light));color:var(--negro);box-shadow:0 0 10px rgba(201,162,39,.4);}
-.gol-nombre{flex:1;font-family:'Bebas Neue',sans-serif;font-size:16px;text-transform:uppercase;letter-spacing:.5px;}
-.gol-equipo{font-size:11px;color:var(--gris);margin-top:2px;font-family:'Rajdhani',sans-serif;}
-.gol-goles{font-family:'Bebas Neue',sans-serif;font-size:30px;color:var(--dorado);min-width:36px;text-align:center;line-height:1;}
+/* ══════════════════════════════════════════════════════
+   GOLEADORES — REDISEÑO COMPLETO
+══════════════════════════════════════════════════════ */
+
+/* ── Podio (1°–3°) ── */
+.gol-podio{
+  display:grid;
+  grid-template-columns:1fr 1.18fr 1fr;
+  gap:10px;
+  padding:18px 16px 10px;
+  align-items:end;
+}
+/* Orden visual: 2° izquierda, 1° centro, 3° derecha */
+.gol-podio-item{
+  display:flex;flex-direction:column;align-items:center;
+  text-align:center;gap:6px;
+  padding:14px 10px 16px;
+  border-radius:var(--r-md);
+  position:relative;
+  transition:transform .18s;
+}
+.gol-podio-item:hover{ transform:translateY(-3px); }
+
+/* 1° — Dorado */
+.gol-podio-item.p1{
+  background:linear-gradient(160deg,rgba(201,162,39,.18) 0%,rgba(201,162,39,.06) 100%);
+  border:1px solid rgba(201,162,39,.35);
+  box-shadow:0 0 28px rgba(201,162,39,.12), inset 0 1px 0 rgba(201,162,39,.2);
+  padding-top:20px;
+}
+/* 2° — Plata */
+.gol-podio-item.p2{
+  background:linear-gradient(160deg,rgba(180,180,200,.12) 0%,rgba(180,180,200,.04) 100%);
+  border:1px solid rgba(180,180,200,.22);
+}
+/* 3° — Bronce */
+.gol-podio-item.p3{
+  background:linear-gradient(160deg,rgba(176,120,70,.12) 0%,rgba(176,120,70,.04) 100%);
+  border:1px solid rgba(176,120,70,.22);
+}
+
+/* Medalla / corona encima */
+.gol-podio-medal{
+  font-size:22px;line-height:1;
+  position:absolute;top:-13px;left:50%;transform:translateX(-50%);
+  filter:drop-shadow(0 2px 6px rgba(0,0,0,.5));
+}
+
+/* Escudo grande en el podio */
+.gol-podio-escudo{
+  width:54px;height:54px;border-radius:50%;
+  background:var(--negro4);
+  border:2px solid rgba(255,255,255,.1);
+  display:flex;align-items:center;justify-content:center;
+  overflow:hidden;flex-shrink:0;
+  font-family:'Rajdhani',sans-serif;font-weight:900;font-size:15px;color:var(--dorado);
+}
+.gol-podio-escudo img{ width:100%;height:100%;object-fit:contain; }
+.gol-podio-item.p1 .gol-podio-escudo{
+  width:64px;height:64px;font-size:18px;
+  border-color:rgba(201,162,39,.5);
+  box-shadow:0 0 16px rgba(201,162,39,.25);
+}
+.gol-podio-item.p2 .gol-podio-escudo{ border-color:rgba(180,180,200,.35); }
+.gol-podio-item.p3 .gol-podio-escudo{ border-color:rgba(176,120,70,.35); }
+
+/* Posición numérica grande */
+.gol-podio-pos{
+  font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:1px;
+  opacity:.5;line-height:1;
+}
+.gol-podio-item.p1 .gol-podio-pos{ font-size:14px;color:var(--dorado);opacity:.8; }
+.gol-podio-item.p2 .gol-podio-pos{ color:#c8c8d8; }
+.gol-podio-item.p3 .gol-podio-pos{ color:#b87848; }
+
+/* Nombre */
+.gol-podio-nombre{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:17px;letter-spacing:.8px;text-transform:uppercase;
+  line-height:1.1;
+}
+.gol-podio-item.p1 .gol-podio-nombre{ font-size:21px;color:var(--blanco); }
+
+/* Equipo */
+.gol-podio-equipo{
+  font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:600;
+  color:var(--gris);text-transform:uppercase;letter-spacing:.4px;
+}
+
+/* Goles — el número grande */
+.gol-podio-goles{
+  display:flex;align-items:baseline;gap:3px;margin-top:2px;
+}
+.gol-podio-num{
+  font-family:'Bebas Neue',sans-serif;font-size:42px;line-height:1;
+}
+.gol-podio-item.p1 .gol-podio-num{ font-size:52px;color:var(--dorado); }
+.gol-podio-item.p2 .gol-podio-num{ font-size:42px;color:#b0b0c4; }
+.gol-podio-item.p3 .gol-podio-num{ font-size:38px;color:#9a7450; }
+.gol-podio-ico{ font-size:14px;opacity:.6; }
+.gol-podio-item.p1 .gol-podio-ico{ font-size:17px;opacity:.8; }
+
+/* ── Separador entre podio y lista ── */
+.gol-lista-header{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 18px 6px;
+  font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;
+  color:var(--gris);text-transform:uppercase;letter-spacing:.8px;
+}
+.gol-lista-header::before,.gol-lista-header::after{
+  content:'';flex:1;height:1px;background:rgba(255,255,255,.07);
+}
+
+/* ── Filas 4°+ con barra de progreso ── */
+.goleador-row{
+  display:grid;
+  grid-template-columns:36px 36px 1fr auto;
+  align-items:center;
+  gap:0 12px;
+  padding:0 18px;
+  border-bottom:1px solid rgba(255,255,255,.04);
+  transition:background .14s;
+  position:relative;
+}
+.goleador-row:last-child{ border-bottom:none; }
+.goleador-row:hover{ background:rgba(201,162,39,.05); }
+
+.gol-row-inner{
+  display:flex;flex-direction:column;
+  padding:10px 0 8px;
+  gap:5px;
+}
+/* Nombre + equipo */
+.gol-nombre{
+  font-family:'Bebas Neue',sans-serif;font-size:15px;
+  text-transform:uppercase;letter-spacing:.5px;line-height:1;
+}
+.gol-equipo{
+  font-size:10px;color:var(--gris);
+  font-family:'Rajdhani',sans-serif;font-weight:600;
+  text-transform:uppercase;letter-spacing:.3px;
+}
+
+/* Barra de progreso */
+.gol-barra-wrap{
+  height:3px;border-radius:2px;
+  background:rgba(255,255,255,.06);
+  overflow:hidden;
+}
+.gol-barra-fill{
+  height:100%;border-radius:2px;
+  transition:width .6s cubic-bezier(.22,.68,0,1.1);
+}
+
+/* Número de posición (4°+) */
+.gol-pos{
+  width:30px;height:30px;border-radius:50%;
+  background:var(--negro4);border:1px solid var(--dorado-border);
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:900;color:rgba(255,255,255,.45);
+  font-family:'Rajdhani',sans-serif;flex-shrink:0;
+}
+
+/* Goles a la derecha (4°+) */
+.gol-count{
+  display:flex;align-items:baseline;gap:3px;
+  justify-content:flex-end;
+}
+.gol-count-num{
+  font-family:'Bebas Neue',sans-serif;font-size:26px;
+  color:var(--dorado);line-height:1;
+}
+.gol-count-ico{ font-size:12px;opacity:.55; }
+
+/* Modo claro */
+body.light .gol-podio-item.p1{ background:linear-gradient(160deg,rgba(138,101,0,.12),rgba(138,101,0,.04)); }
+body.light .gol-podio-item.p2{ background:linear-gradient(160deg,rgba(120,120,140,.08),rgba(120,120,140,.02)); }
+body.light .gol-podio-item.p3{ background:linear-gradient(160deg,rgba(140,90,40,.08),rgba(140,90,40,.02)); }
+body.light .gol-barra-wrap{ background:rgba(0,0,0,.07); }
 
 /* EQUIPOS */
 .equipos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:12px;padding:16px;}
@@ -673,7 +1178,7 @@ table.posiciones td:nth-child(2){text-align:left;}
 .equipo-div{font-size:10px;color:var(--gris);margin-top:3px;font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.3px;}
 
 /* TORNEOS */
-.torneo-card{background:var(--negro2);border:1px solid var(--dorado-border);border-radius:6px;overflow:hidden;margin-bottom:1rem;}
+.torneo-card{background:var(--negro2);border:1px solid var(--dorado-border);border-radius:var(--r-md);overflow:hidden;margin-bottom:1rem;}
 .torneo-header{background:linear-gradient(90deg,var(--negro4),rgba(201,162,39,.2));padding:14px 18px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--dorado-border);}
 .torneo-icon{font-size:26px;}
 .torneo-header h3{color:var(--dorado);font-family:'Rajdhani',sans-serif;font-weight:900;font-size:18px;text-transform:uppercase;letter-spacing:1px;}
@@ -693,12 +1198,12 @@ table.posiciones td:nth-child(2){text-align:left;}
 /* PLAYOFF */
 .playoff-section{margin-top:1rem;}
 .playoff-title{
-  font-family:'Bebas Neue',sans-serif;font-weight:400;font-size:22px;
-  color:var(--dorado);text-transform:uppercase;letter-spacing:3px;
+  font-family:'Rajdhani',sans-serif;font-weight:900;font-size:17px;
+  color:var(--dorado);text-transform:uppercase;letter-spacing:2px;
   display:flex;align-items:center;gap:10px;margin-bottom:12px;
   padding:10px 16px;
   background:linear-gradient(90deg,rgba(201,162,39,.15),transparent);
-  border-left:4px solid var(--dorado);border-radius:0 4px 4px 0;
+  border-left:4px solid var(--dorado);border-radius:0 var(--r-sm) var(--r-sm) 0;
 }
 .playoff-etapa{margin-bottom:1rem;}
 .playoff-etapa-header{
@@ -710,7 +1215,7 @@ table.posiciones td:nth-child(2){text-align:left;}
 .playoff-cruces{display:flex;flex-direction:column;gap:6px;padding:0 0 4px;}
 .cruce-card{
   background:var(--negro3);border:1px solid rgba(201,162,39,.2);
-  border-radius:6px;overflow:hidden;
+  border-radius:var(--r-md);overflow:hidden;
 }
 .cruce-header{
   display:flex;align-items:center;justify-content:space-between;
@@ -735,7 +1240,7 @@ table.posiciones td:nth-child(2){text-align:left;}
 .cruce-marcador{
   font-family:'Bebas Neue',sans-serif;font-weight:400;font-size:22px;
   background:var(--negro4);border:1px solid rgba(201,162,39,.3);
-  border-radius:4px;padding:4px 12px;text-align:center;white-space:nowrap;
+  border-radius:var(--r-sm);padding:4px 12px;text-align:center;white-space:nowrap;
   min-width:70px;
 }
 .cruce-marcador.pendiente{color:rgba(255,255,255,.3);font-size:14px;letter-spacing:2px;font-family:'Rajdhani',sans-serif;}
@@ -746,7 +1251,7 @@ table.posiciones td:nth-child(2){text-align:left;}
   border-top:1px solid rgba(255,255,255,.05);padding-top:8px;
 }
 .cruce-partido-mini{
-  background:rgba(0,0,0,.2);border-radius:4px;padding:5px 10px;
+  background:rgba(0,0,0,.2);border-radius:var(--r-sm);padding:5px 10px;
   font-family:'Rajdhani',sans-serif;font-size:11px;
   display:flex;align-items:center;justify-content:space-between;gap:8px;
 }
@@ -777,8 +1282,8 @@ table.posiciones td:nth-child(2){text-align:left;}
 .fecha-acordeon-header:hover{background:linear-gradient(90deg,var(--negro4),rgba(201,162,39,.2));}
 .fecha-acordeon-header.open{border-bottom-color:rgba(201,162,39,.2);}
 .fecha-acordeon-title{
-  font-family:'Bebas Neue',sans-serif;font-size:19px;
-  color:var(--blanco);text-transform:uppercase;letter-spacing:1.5px;
+  font-family:'Rajdhani',sans-serif;font-weight:800;font-size:16px;
+  color:var(--blanco);text-transform:uppercase;letter-spacing:1px;
   display:flex;align-items:center;gap:10px;
 }
 .fecha-acordeon-meta{
@@ -822,9 +1327,9 @@ table.posiciones td:nth-child(2){text-align:left;}
 /* mini evento input rows en admin */
 .evento-list{margin-top:6px;}
 .evento-row{display:flex;gap:6px;align-items:center;margin-bottom:5px;}
-.evento-row input,.evento-row select{flex:1;padding:5px 8px;background:var(--negro4);border:1px solid rgba(201,162,39,.25);border-radius:3px;font-size:12px;color:var(--blanco);font-family:'DM Sans',sans-serif;}
+.evento-row input,.evento-row select{flex:1;padding:5px 8px;background:var(--negro4);border:1px solid rgba(201,162,39,.25);border-radius:var(--r-sm);font-size:12px;color:var(--blanco);font-family:'DM Sans',sans-serif;}
 .evento-row input:focus,.evento-row select:focus{outline:none;border-color:var(--dorado);}
-.btn-add-evento{background:rgba(201,162,39,.12);color:var(--dorado);border:1px solid rgba(201,162,39,.3);border-radius:3px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Rajdhani',sans-serif;text-transform:uppercase;margin-top:4px;}
+.btn-add-evento{background:rgba(201,162,39,.12);color:var(--dorado);border:1px solid rgba(201,162,39,.3);border-radius:var(--r-sm);padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Rajdhani',sans-serif;text-transform:uppercase;margin-top:4px;}
 .btn-add-evento:hover{background:rgba(201,162,39,.25);}
 .btn-rm-evento{background:none;border:none;color:rgba(192,57,43,.8);cursor:pointer;font-size:14px;padding:0 2px;flex-shrink:0;}
 .seccion-label{font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;color:var(--dorado);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 4px;}
@@ -832,9 +1337,9 @@ table.posiciones td:nth-child(2){text-align:left;}
 /* ADMIN OVERLAY */
 #admin-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.8);z-index:999;align-items:flex-start;justify-content:center;padding-top:2rem;overflow-y:auto;}
 #admin-overlay.open{display:flex;}
-.admin-panel{background:var(--negro2);border:1px solid var(--dorado-border);border-radius:10px;width:860px;max-width:96vw;box-shadow:0 12px 80px rgba(0,0,0,.85);margin-bottom:2rem;overflow:hidden;}
+.admin-panel{background:var(--negro2);border:1px solid var(--dorado-border);border-radius:var(--r-lg);width:860px;max-width:96vw;box-shadow:0 12px 80px rgba(0,0,0,.85);margin-bottom:2rem;overflow:hidden;}
 .admin-header{background:linear-gradient(90deg,var(--negro4),rgba(201,162,39,.22));border-bottom:2px solid var(--dorado);padding:14px 22px;display:flex;align-items:center;justify-content:space-between;}
-.admin-header h2{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--dorado);letter-spacing:2px;text-transform:uppercase;}
+.admin-header h2{font-family:'Rajdhani',sans-serif;font-weight:900;font-size:18px;color:var(--dorado);letter-spacing:1.5px;text-transform:uppercase;}
 .admin-close{background:none;border:none;color:rgba(255,255,255,.4);font-size:22px;cursor:pointer;line-height:1;transition:color .15s;}
 .admin-close:hover{color:var(--dorado);}
 .admin-tabs{display:flex;background:var(--negro3);border-bottom:1px solid rgba(201,162,39,.2);overflow-x:auto;}
@@ -844,62 +1349,62 @@ table.posiciones td:nth-child(2){text-align:left;}
 .admin-body{padding:20px 22px;}
 .admin-section{display:none;}
 .admin-section.visible{display:block;}
-.admin-title{font-family:'Bebas Neue',sans-serif;font-size:19px;color:var(--dorado);letter-spacing:1px;text-transform:uppercase;margin-bottom:16px;}
+.admin-title{font-family:'Rajdhani',sans-serif;font-weight:900;font-size:15px;color:var(--dorado);letter-spacing:1px;text-transform:uppercase;margin-bottom:16px;}
 
 /* FORMS */
 .form-group{margin-bottom:13px;}
 .form-group label{display:block;font-size:11px;font-weight:700;color:rgba(255,255,255,.45);margin-bottom:5px;text-transform:uppercase;letter-spacing:.6px;}
-.form-group input,.form-group select,.form-group textarea{width:100%;padding:9px 12px;background:var(--negro3);border:1px solid rgba(201,162,39,.25);border-radius:5px;font-size:13px;font-family:'DM Sans',sans-serif;color:var(--blanco);transition:border-color .16s,box-shadow .16s;}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:9px 12px;background:var(--negro3);border:1px solid rgba(201,162,39,.25);border-radius:var(--r-md);font-size:13px;font-family:'DM Sans',sans-serif;color:var(--blanco);transition:border-color .16s,box-shadow .16s;}
 .form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:var(--dorado);box-shadow:0 0 0 3px rgba(201,162,39,.1);}
 .form-group select option{background:var(--negro3);}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 .form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
 .form-row-4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;}
-.btn-primary{background:linear-gradient(135deg,var(--dorado),var(--dorado-light));color:var(--negro);border:none;border-radius:5px;padding:10px 22px;font-size:13px;font-weight:900;cursor:pointer;transition:all .16s;font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.6px;box-shadow:0 2px 10px rgba(201,162,39,.2);}
+.btn-primary{background:linear-gradient(135deg,var(--dorado),var(--dorado-light));color:var(--negro);border:none;border-radius:var(--r-md);padding:10px 22px;font-size:13px;font-weight:900;cursor:pointer;transition:all .16s;font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.6px;box-shadow:0 2px 10px rgba(201,162,39,.2);}
 .btn-primary:hover{background:linear-gradient(135deg,var(--dorado-light),var(--dorado));box-shadow:0 4px 16px rgba(201,162,39,.35);}
-.btn-danger{background:rgba(192,57,43,.15);color:#e74c3c;border:1px solid rgba(192,57,43,.35);border-radius:4px;padding:5px 11px;font-size:11px;font-weight:700;cursor:pointer;transition:all .16s;font-family:'Rajdhani',sans-serif;white-space:nowrap;}
+.btn-danger{background:rgba(192,57,43,.15);color:#e74c3c;border:1px solid rgba(192,57,43,.35);border-radius:var(--r-sm);padding:5px 11px;font-size:11px;font-weight:700;cursor:pointer;transition:all .16s;font-family:'Rajdhani',sans-serif;white-space:nowrap;}
 .btn-danger:hover{background:rgba(192,57,43,.35);border-color:#e74c3c;}
-.btn-edit{background:rgba(201,162,39,.12);color:var(--dorado);border:1px solid rgba(201,162,39,.35);border-radius:4px;padding:5px 11px;font-size:11px;font-weight:700;cursor:pointer;transition:all .16s;font-family:'Rajdhani',sans-serif;white-space:nowrap;}
+.btn-edit{background:rgba(201,162,39,.12);color:var(--dorado);border:1px solid rgba(201,162,39,.35);border-radius:var(--r-sm);padding:5px 11px;font-size:11px;font-weight:700;cursor:pointer;transition:all .16s;font-family:'Rajdhani',sans-serif;white-space:nowrap;}
 .btn-edit:hover{background:rgba(201,162,39,.28);}
 .admin-empty{font-size:11px;color:rgba(255,255,255,.25);margin-top:10px;font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px;}
 .admin-list{margin-top:14px;}
-.admin-list-item{display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--negro3);border:1px solid rgba(255,255,255,.05);border-radius:5px;margin-bottom:6px;font-size:12px;font-family:'Rajdhani',sans-serif;transition:border-color .14s;}
+.admin-list-item{display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--negro3);border:1px solid rgba(255,255,255,.05);border-radius:var(--r-md);margin-bottom:6px;font-size:12px;font-family:'Rajdhani',sans-serif;transition:border-color .14s;}
 .admin-list-item:hover{border-color:rgba(201,162,39,.2);}
 .admin-list-item span{flex:1;color:rgba(255,255,255,.75);}
 .mini-escudo-preview{width:24px;height:24px;border-radius:50%;overflow:hidden;background:var(--negro4);border:1px solid var(--dorado-border);display:flex;align-items:center;justify-content:center;font-size:8px;color:var(--dorado);font-weight:900;flex-shrink:0;}
 .mini-escudo-preview img{width:100%;height:100%;object-fit:contain;}
 
 /* UPLOAD AREA */
-.upload-area{border:2px dashed var(--dorado-border);border-radius:6px;padding:20px;text-align:center;cursor:pointer;transition:border-color .15s;background:var(--negro3);position:relative;}
+.upload-area{border:2px dashed var(--dorado-border);border-radius:var(--r-md);padding:20px;text-align:center;cursor:pointer;transition:border-color .15s;background:var(--negro3);position:relative;}
 .upload-area:hover{border-color:var(--dorado);}
 .upload-area input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
 .upload-area p{color:var(--gris);font-size:12px;pointer-events:none;}
 .upload-area .icon{font-size:28px;margin-bottom:6px;display:block;}
-.preview-img{max-width:100%;max-height:80px;margin-top:8px;border-radius:4px;border:1px solid var(--dorado-border);display:none;}
+.preview-img{max-width:100%;max-height:80px;margin-top:8px;border-radius:var(--r-sm);border:1px solid var(--dorado-border);display:none;}
 .preview-wrap{display:none;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap;}
 .preview-wrap.visible{display:flex;}
-.preview-wrap img{max-height:72px;max-width:160px;border-radius:4px;border:1px solid var(--dorado-border);object-fit:contain;}
-.btn-quitar-img{background:rgba(192,57,43,.15);color:#e74c3c;border:1px solid rgba(192,57,43,.35);border-radius:4px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;transition:background .15s;}
+.preview-wrap img{max-height:72px;max-width:160px;border-radius:var(--r-sm);border:1px solid var(--dorado-border);object-fit:contain;}
+.btn-quitar-img{background:rgba(192,57,43,.15);color:#e74c3c;border:1px solid rgba(192,57,43,.35);border-radius:var(--r-sm);padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;transition:background .15s;}
 .btn-quitar-img:hover{background:rgba(192,57,43,.35);}
 
 /* EDIT MODAL */
 #edit-modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);z-index:2000;align-items:flex-start;justify-content:center;padding-top:3rem;overflow-y:auto;}
 #edit-modal.open{display:flex;}
-.edit-modal-box{background:var(--negro2);border:1px solid var(--dorado);border-radius:8px;width:680px;max-width:95vw;box-shadow:0 8px 60px rgba(0,0,0,.8);margin-bottom:2rem;overflow:hidden;}
+.edit-modal-box{background:var(--negro2);border:1px solid var(--dorado);border-radius:var(--r-md);width:680px;max-width:95vw;box-shadow:0 8px 60px rgba(0,0,0,.8);margin-bottom:2rem;overflow:hidden;}
 .edit-modal-header{background:linear-gradient(90deg,var(--negro4),rgba(201,162,39,.25));border-bottom:2px solid var(--dorado);padding:12px 18px;display:flex;align-items:center;justify-content:space-between;}
-.edit-modal-header h3{font-family:'Bebas Neue',sans-serif;font-weight:400;font-size:17px;color:var(--dorado);letter-spacing:1px;text-transform:uppercase;}
+.edit-modal-header h3{font-family:'Rajdhani',sans-serif;font-weight:900;font-size:15px;color:var(--dorado);letter-spacing:1px;text-transform:uppercase;}
 .edit-modal-body{padding:18px 20px;}
 .edit-modal-footer{padding:12px 20px;border-top:1px solid rgba(201,162,39,.2);display:flex;gap:10px;justify-content:flex-end;background:var(--negro3);}
 
 /* LOGIN */
 #login-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);z-index:1000;align-items:center;justify-content:center;}
 #login-overlay.open{display:flex;}
-.login-box{background:var(--negro2);border:1px solid var(--dorado-border);border-radius:8px;padding:32px;width:320px;text-align:center;box-shadow:0 8px 60px rgba(0,0,0,.7);}
-.login-logo{width:56px;height:56px;background:var(--dorado);border-radius:6px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-family:'Rajdhani',sans-serif;font-weight:900;font-size:20px;color:var(--negro);overflow:hidden;}
+.login-box{background:var(--negro2);border:1px solid var(--dorado-border);border-radius:var(--r-md);padding:32px;width:320px;text-align:center;box-shadow:0 8px 60px rgba(0,0,0,.7);}
+.login-logo{width:56px;height:56px;background:var(--dorado);border-radius:var(--r-md);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-family:'Rajdhani',sans-serif;font-weight:900;font-size:20px;color:var(--negro);overflow:hidden;}
 .login-logo img{width:100%;height:100%;object-fit:contain;}
-.login-box h2{font-family:'Bebas Neue',sans-serif;font-weight:400;font-size:22px;color:var(--dorado);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;}
+.login-box h2{font-family:'Rajdhani',sans-serif;font-weight:900;font-size:20px;color:var(--dorado);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;}
 .login-box p{font-size:12px;color:var(--gris);margin-bottom:18px;}
-.login-box input{width:100%;padding:10px 12px;background:var(--negro3);border:1px solid var(--dorado-border);border-radius:5px;font-size:14px;margin-bottom:10px;font-family:'DM Sans',sans-serif;color:var(--blanco);}
+.login-box input{width:100%;padding:10px 12px;background:var(--negro3);border:1px solid var(--dorado-border);border-radius:var(--r-md);font-size:14px;margin-bottom:10px;font-family:'DM Sans',sans-serif;color:var(--blanco);}
 .login-box input:focus{outline:none;border-color:var(--dorado);}
 .login-error{color:#e74c3c;font-size:12px;margin-bottom:8px;display:none;font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px;}
 .login-cancel{background:none;border:none;color:var(--gris);font-size:12px;cursor:pointer;margin-top:8px;text-decoration:underline;}
@@ -938,7 +1443,7 @@ table.posiciones td:nth-child(2){text-align:left;}
   display:none;flex-direction:column;justify-content:center;gap:5px;
   width:40px;height:40px;padding:6px;margin-left:auto;flex-shrink:0;
   background:rgba(201,162,39,.1);border:1px solid rgba(201,162,39,.25);
-  border-radius:6px;cursor:pointer;
+  border-radius:var(--r-md);cursor:pointer;
 }
 .hamburger span{
   display:block;width:100%;height:2px;background:var(--dorado);border-radius:2px;
@@ -974,7 +1479,7 @@ table.posiciones td:nth-child(2){text-align:left;}
     border-bottom:1px solid rgba(255,255,255,.05);
   }
   nav#main-nav a:last-child{border-bottom:none;}
-  .btn-admin-nav{margin:8px 16px 0!important;border-radius:6px!important;text-align:center;}
+  .btn-admin-nav{margin:8px 16px 0!important;border-radius:var(--r-md)!important;text-align:center;}
 }
 
 /* ============================================================
@@ -993,7 +1498,7 @@ table.posiciones td:nth-child(2){text-align:left;}
   box-shadow:0 4px 24px rgba(0,0,0,.5);
 }
 .radio-bar-logo{display:flex;align-items:center;gap:12px;flex-shrink:0;}
-.radio-bar-logo img{height:38px;width:auto;object-fit:contain;border-radius:4px;}
+.radio-bar-logo img{height:38px;width:auto;object-fit:contain;border-radius:var(--r-sm);}
 .radio-bar-nombre{
   font-family:'Bebas Neue',sans-serif;font-size:20px;
   color:var(--dorado);letter-spacing:2px;text-transform:uppercase;line-height:1;
@@ -1007,7 +1512,7 @@ table.posiciones td:nth-child(2){text-align:left;}
   display:flex;align-items:center;gap:5px;flex-shrink:0;
   font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:900;
   background:rgba(192,57,43,.2);border:1px solid rgba(192,57,43,.4);
-  color:#e74c3c;border-radius:3px;padding:3px 9px;
+  color:#e74c3c;border-radius:var(--r-sm);padding:3px 9px;
   text-transform:uppercase;letter-spacing:1.5px;
   animation:blink 1.4s infinite;
 }
@@ -1110,11 +1615,11 @@ table.posiciones td:nth-child(2){text-align:left;}
 .footer-redes{display:flex;flex-direction:column;gap:8px;}
 .footer-red-link{
   display:flex;align-items:center;gap:10px;text-decoration:none;
-  padding:7px 10px;border-radius:4px;border:1px solid rgba(255,255,255,.07);
+  padding:7px 10px;border-radius:var(--r-sm);border:1px solid rgba(255,255,255,.07);
   background:rgba(255,255,255,.03);transition:border-color .15s,background .15s;
 }
 .footer-red-link:hover{border-color:var(--dorado);background:rgba(201,162,39,.08);}
-.footer-red-icon{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff;}
+.footer-red-icon{width:28px;height:28px;border-radius:var(--r-md);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff;}
 .footer-red-info{flex:1;min-width:0;}
 .footer-red-name{font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;color:var(--blanco);line-height:1;}
 .footer-red-handle{font-family:'Rajdhani',sans-serif;font-size:11px;color:rgba(255,255,255,.35);text-transform:lowercase;}
@@ -1154,11 +1659,11 @@ table.posiciones td:nth-child(2){text-align:left;}
   color:rgba(255,255,255,.18);text-transform:uppercase;letter-spacing:1px;
 }
 .pub-banner-top a,.pub-banner-top div{max-width:100%;display:flex;align-items:center;justify-content:center;}
-.pub-banner-top img{max-height:68px;max-width:100%;object-fit:contain;border-radius:3px;}
+.pub-banner-top img{max-height:68px;max-width:100%;object-fit:contain;border-radius:var(--r-sm);}
 
 /* Publicidad en sidebar */
 .pub-sidebar{
-  background:var(--negro2);border:1px solid rgba(201,162,39,.2);border-radius:6px;
+  background:var(--negro2);border:1px solid rgba(201,162,39,.2);border-radius:var(--r-md);
   overflow:hidden;position:relative;
 }
 .pub-sidebar .pub-label{
@@ -1180,13 +1685,13 @@ table.posiciones td:nth-child(2){text-align:left;}
   display:inline-block;background:var(--dorado);color:var(--negro);
   font-family:'Rajdhani',sans-serif;font-weight:900;font-size:11px;
   text-transform:uppercase;letter-spacing:1px;text-decoration:none;
-  padding:5px 16px;border-radius:3px;transition:background .15s;
+  padding:5px 16px;border-radius:var(--r-sm);transition:background .15s;
 }
 .pub-sidebar .pub-cta:hover{background:var(--dorado-light);}
 
 /* Publicidad inline – entre secciones */
 .pub-inline{
-  background:var(--negro2);border:1px solid rgba(201,162,39,.15);border-radius:6px;
+  background:var(--negro2);border:1px solid rgba(201,162,39,.15);border-radius:var(--r-md);
   padding:14px 18px;margin:6px 0 10px;display:flex;align-items:center;gap:16px;
   position:relative;transition:border-color .15s;
 }
@@ -1196,7 +1701,7 @@ table.posiciones td:nth-child(2){text-align:left;}
   font-family:'Rajdhani',sans-serif;font-size:9px;font-weight:700;
   color:rgba(255,255,255,.18);text-transform:uppercase;letter-spacing:1px;
 }
-.pub-inline img{height:56px;width:auto;max-width:110px;object-fit:contain;border-radius:3px;flex-shrink:0;}
+.pub-inline img{height:56px;width:auto;max-width:110px;object-fit:contain;border-radius:var(--r-sm);flex-shrink:0;}
 .pub-inline-texto{flex:1;min-width:0;}
 .pub-inline-titulo{font-family:'Rajdhani',sans-serif;font-weight:900;font-size:16px;color:var(--blanco);text-transform:uppercase;letter-spacing:.5px;line-height:1.2;margin-bottom:3px;}
 .pub-inline-desc{font-family:'DM Sans',sans-serif;font-size:12px;color:rgba(255,255,255,.5);line-height:1.4;}
@@ -1204,16 +1709,16 @@ table.posiciones td:nth-child(2){text-align:left;}
   display:inline-block;background:var(--dorado);color:var(--negro);
   font-family:'Rajdhani',sans-serif;font-weight:900;font-size:11px;
   text-transform:uppercase;letter-spacing:1px;text-decoration:none;
-  padding:5px 16px;border-radius:3px;white-space:nowrap;flex-shrink:0;
+  padding:5px 16px;border-radius:var(--r-sm);white-space:nowrap;flex-shrink:0;
 }
 .pub-inline a.pub-cta:hover{background:var(--dorado-light);}
 
 /* Admin publicidades */
-.pub-admin-item{background:var(--negro3);border:1px solid rgba(255,255,255,.07);border-radius:5px;padding:10px 14px;margin-bottom:7px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+.pub-admin-item{background:var(--negro3);border:1px solid rgba(255,255,255,.07);border-radius:var(--r-md);padding:10px 14px;margin-bottom:7px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
 .pub-admin-item-info{flex:1;min-width:0;}
 .pub-admin-item-titulo{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:14px;color:var(--blanco);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .pub-admin-item-meta{font-family:'Rajdhani',sans-serif;font-size:11px;color:var(--gris);text-transform:uppercase;letter-spacing:.5px;}
-.pub-admin-item-thumb{width:48px;height:36px;object-fit:cover;border-radius:3px;flex-shrink:0;border:1px solid rgba(255,255,255,.1);}
+.pub-admin-item-thumb{width:48px;height:36px;object-fit:cover;border-radius:var(--r-sm);flex-shrink:0;border:1px solid rgba(255,255,255,.1);}
 
 .noticias-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:18px;}
 .noticia-card{
@@ -1256,7 +1761,7 @@ table.posiciones td:nth-child(2){text-align:left;}
 /* MODAL NOTICIA */
 #noticia-modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.92);z-index:3500;align-items:flex-start;justify-content:center;padding:2rem 1rem;overflow-y:auto;}
 #noticia-modal.open{display:flex;}
-.noticia-modal-box{background:var(--negro2);border:1px solid var(--dorado-border);border-radius:10px;width:760px;max-width:98vw;margin-bottom:2rem;overflow:hidden;position:relative;}
+.noticia-modal-box{background:var(--negro2);border:1px solid var(--dorado-border);border-radius:var(--r-lg);width:760px;max-width:98vw;margin-bottom:2rem;overflow:hidden;position:relative;}
 .noticia-modal-close{position:absolute;top:14px;right:16px;background:none;border:none;color:rgba(255,255,255,.4);font-size:22px;cursor:pointer;z-index:2;}
 .noticia-modal-close:hover{color:var(--dorado);}
 .noticia-modal-img{width:100%;max-height:400px;object-fit:cover;display:block;}
@@ -1267,16 +1772,16 @@ table.posiciones td:nth-child(2){text-align:left;}
 .noticia-modal-body{padding:0 28px 24px;}
 .noticia-modal-cuerpo{font-family:'DM Sans',sans-serif;font-size:14px;color:rgba(255,255,255,.82);line-height:1.8;white-space:pre-wrap;margin-bottom:18px;}
 .noticia-modal-galeria{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:18px;}
-.noticia-modal-galeria img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:4px;cursor:pointer;border:1px solid rgba(255,255,255,.07);transition:border-color .15s;}
+.noticia-modal-galeria img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:var(--r-sm);cursor:pointer;border:1px solid rgba(255,255,255,.07);transition:border-color .15s;}
 .noticia-modal-galeria img:hover{border-color:var(--dorado);}
 .noticia-media-section{margin-bottom:14px;}
 .noticia-media-label{font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:900;letter-spacing:1.5px;text-transform:uppercase;color:var(--gris);margin-bottom:8px;}
-.noticia-audio{width:100%;height:36px;border-radius:4px;accent-color:var(--dorado);}
-.noticia-video{width:100%;border-radius:6px;max-height:380px;background:#000;}
+.noticia-audio{width:100%;height:36px;border-radius:var(--r-sm);accent-color:var(--dorado);}
+.noticia-video{width:100%;border-radius:var(--r-md);max-height:380px;background:#000;}
 .noticia-archivo-link{
   display:inline-flex;align-items:center;gap:8px;
   background:rgba(201,162,39,.1);border:1px solid var(--dorado-border);
-  border-radius:4px;padding:8px 14px;
+  border-radius:var(--r-sm);padding:8px 14px;
   font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;color:var(--dorado);
   text-decoration:none;transition:background .15s;
 }
@@ -1285,17 +1790,17 @@ table.posiciones td:nth-child(2){text-align:left;}
 /* Lightbox imagen */
 #img-lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.97);z-index:9000;align-items:center;justify-content:center;cursor:zoom-out;}
 #img-lightbox.open{display:flex;}
-#img-lightbox img{max-width:92vw;max-height:92vh;object-fit:contain;border-radius:4px;}
+#img-lightbox img{max-width:92vw;max-height:92vh;object-fit:contain;border-radius:var(--r-sm);}
 
 /* Admin noticias */
-.noticia-admin-item{background:var(--negro3);border:1px solid rgba(255,255,255,.07);border-radius:5px;padding:10px 14px;margin-bottom:7px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+.noticia-admin-item{background:var(--negro3);border:1px solid rgba(255,255,255,.07);border-radius:var(--r-md);padding:10px 14px;margin-bottom:7px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
 .noticia-admin-item-info{flex:1;min-width:0;}
 .noticia-admin-item-titulo{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:14px;color:var(--blanco);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .noticia-admin-item-meta{font-family:'Rajdhani',sans-serif;font-size:11px;color:var(--gris);text-transform:uppercase;letter-spacing:.5px;}
 
 #club-modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.88);z-index:3000;align-items:flex-start;justify-content:center;padding:2rem 1rem;overflow-y:auto;}
 #club-modal.open{display:flex;}
-.club-modal-box{background:var(--negro2);border:1px solid var(--dorado-border);border-radius:10px;width:720px;max-width:98vw;box-shadow:0 12px 80px rgba(0,0,0,.9);margin-bottom:2rem;overflow:hidden;position:relative;}
+.club-modal-box{background:var(--negro2);border:1px solid var(--dorado-border);border-radius:var(--r-lg);width:720px;max-width:98vw;box-shadow:0 12px 80px rgba(0,0,0,.9);margin-bottom:2rem;overflow:hidden;position:relative;}
 .club-modal-hero{
   background:linear-gradient(135deg,var(--negro4) 0%,rgba(201,162,39,.18) 100%);
   border-bottom:2px solid var(--dorado);
@@ -1336,7 +1841,7 @@ table.posiciones td:nth-child(2){text-align:left;}
 .club-modal-close:hover{color:var(--dorado);}
 .club-modal-body{padding:22px 28px;}
 .club-section-title{
-  font-family:'Bebas Neue',sans-serif;font-weight:400;font-size:16px;color:var(--dorado);
+  font-family:'Rajdhani',sans-serif;font-weight:900;font-size:13px;color:var(--dorado);
   letter-spacing:1.5px;text-transform:uppercase;margin:18px 0 8px;
   padding-bottom:5px;border-bottom:1px solid rgba(201,162,39,.2);
   display:flex;align-items:center;gap:8px;
@@ -1348,20 +1853,20 @@ table.posiciones td:nth-child(2){text-align:left;}
 }
 .club-datos-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 @media(max-width:480px){.club-datos-grid{grid-template-columns:1fr;}}
-.club-dato{background:var(--negro3);border:1px solid rgba(255,255,255,.07);border-radius:5px;padding:10px 14px;}
+.club-dato{background:var(--negro3);border:1px solid rgba(255,255,255,.07);border-radius:var(--r-md);padding:10px 14px;}
 .club-dato label{display:block;font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;color:var(--gris);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;}
 .club-dato span{font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;color:var(--blanco);}
 .club-titulos-lista{display:flex;flex-wrap:wrap;gap:7px;margin-top:4px;}
 .club-titulo-badge{
   background:rgba(201,162,39,.15);border:1px solid var(--dorado-border);
-  border-radius:3px;padding:4px 12px;
+  border-radius:var(--r-sm);padding:4px 12px;
   font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;color:var(--dorado);
   text-transform:uppercase;letter-spacing:.5px;
 }
 .club-jugadores-lista{display:flex;flex-direction:column;gap:4px;}
 .club-jugador-row{
   display:flex;align-items:center;justify-content:space-between;
-  padding:6px 10px;background:var(--negro3);border-radius:4px;
+  padding:6px 10px;background:var(--negro3);border-radius:var(--r-sm);
   font-family:'Rajdhani',sans-serif;font-size:13px;
 }
 .club-jugador-nombre{color:var(--blanco);font-weight:700;}
@@ -1373,24 +1878,24 @@ table.posiciones td:nth-child(2){text-align:left;}
 .equipo-card:hover{border-color:var(--dorado);transform:translateY(-2px);transition:transform .15s,border-color .15s;}
 
 /* Admin: ficha club */
-.fichas-admin-item{display:flex;flex-direction:column;gap:6px;padding:10px;background:var(--negro3);border:1px solid rgba(255,255,255,.07);border-radius:5px;margin-bottom:6px;}
+.fichas-admin-item{display:flex;flex-direction:column;gap:6px;padding:10px;background:var(--negro3);border:1px solid rgba(255,255,255,.07);border-radius:var(--r-md);margin-bottom:6px;}
 .fichas-admin-item-header{display:flex;align-items:center;justify-content:space-between;gap:8px;}
 
 #confirm-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.75);z-index:9999;align-items:center;justify-content:center;}
 #confirm-overlay.open{display:flex;}
-.confirm-box{background:var(--negro2);border:1px solid rgba(192,57,43,.6);border-radius:8px;padding:28px 28px 22px;width:340px;max-width:92vw;box-shadow:0 8px 60px rgba(0,0,0,.8);text-align:center;}
+.confirm-box{background:var(--negro2);border:1px solid rgba(192,57,43,.6);border-radius:var(--r-md);padding:28px 28px 22px;width:340px;max-width:92vw;box-shadow:0 8px 60px rgba(0,0,0,.8);text-align:center;}
 .confirm-icon{font-size:32px;margin-bottom:10px;}
 .confirm-msg{font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:600;color:var(--blanco);margin-bottom:20px;line-height:1.4;}
 .confirm-btns{display:flex;gap:10px;justify-content:center;}
 .confirm-btns .btn-primary{padding:8px 24px;}
-.confirm-btns .btn-cancel{background:var(--negro4);color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.15);border-radius:4px;padding:8px 24px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px;}
+.confirm-btns .btn-cancel{background:var(--negro4);color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.15);border-radius:var(--r-sm);padding:8px 24px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px;}
 .confirm-btns .btn-cancel:hover{background:var(--negro3);color:var(--blanco);}
 
 /* ── COMPARTIR ───────────────────────────────────────────── */
 .btn-share{
   display:inline-flex;align-items:center;gap:5px;
   background:rgba(201,162,39,.1);color:var(--dorado);
-  border:1px solid rgba(201,162,39,.25);border-radius:4px;
+  border:1px solid rgba(201,162,39,.25);border-radius:var(--r-sm);
   padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;
   font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px;
   transition:background .15s,border-color .15s;white-space:nowrap;
@@ -1399,18 +1904,18 @@ table.posiciones td:nth-child(2){text-align:left;}
 .btn-share svg{width:13px;height:13px;flex-shrink:0;}
 #share-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:8000;align-items:center;justify-content:center;padding:1rem;}
 #share-modal.open{display:flex;}
-.share-box{background:var(--negro2);border:1px solid var(--dorado-border);border-radius:10px;width:460px;max-width:98vw;box-shadow:0 12px 60px rgba(0,0,0,.9);overflow:hidden;}
+.share-box{background:var(--negro2);border:1px solid var(--dorado-border);border-radius:var(--r-lg);width:460px;max-width:98vw;box-shadow:0 12px 60px rgba(0,0,0,.9);overflow:hidden;}
 .share-box-header{background:linear-gradient(90deg,var(--negro4),rgba(201,162,39,.15));border-bottom:1px solid var(--dorado-border);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;}
-.share-box-header span{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--dorado);letter-spacing:1.5px;}
+.share-box-header span{font-family:'Rajdhani',sans-serif;font-weight:900;font-size:16px;color:var(--dorado);letter-spacing:1.2px;}
 .share-box-close{background:none;border:none;color:rgba(255,255,255,.4);font-size:20px;cursor:pointer;line-height:1;padding:0;}
 .share-box-close:hover{color:var(--dorado);}
-.share-img-preview-wrap{margin:14px 16px 6px;border-radius:8px;overflow:hidden;border:1px solid rgba(201,162,39,.2);background:var(--negro3);display:flex;align-items:center;justify-content:center;min-height:100px;}
-.share-img-preview-wrap img{width:100%;display:block;border-radius:8px;}
+.share-img-preview-wrap{margin:14px 16px 6px;border-radius:var(--r-md);overflow:hidden;border:1px solid rgba(201,162,39,.2);background:var(--negro3);display:flex;align-items:center;justify-content:center;min-height:100px;}
+.share-img-preview-wrap img{width:100%;display:block;border-radius:var(--r-md);}
 .share-img-loading{font-family:'Rajdhani',sans-serif;font-size:12px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.5px;padding:28px;display:flex;flex-direction:column;align-items:center;gap:8px;}
 .share-spinner{width:22px;height:22px;border:2px solid rgba(201,162,39,.2);border-top-color:var(--dorado);border-radius:50%;animation:spin .7s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg)}}
 .share-redes{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:4px 16px 16px;}
-.share-red-btn{display:flex;align-items:center;gap:8px;border:none;border-radius:6px;padding:10px 14px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;transition:filter .15s;}
+.share-red-btn{display:flex;align-items:center;gap:8px;border:none;border-radius:var(--r-md);padding:10px 14px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;transition:filter .15s;}
 .share-red-btn:hover{filter:brightness(1.15);}
 .share-red-btn svg{width:18px;height:18px;flex-shrink:0;}
 .share-red-btn.whatsapp{background:#25d366;color:#fff;}
@@ -1434,20 +1939,20 @@ table.posiciones td:nth-child(2){text-align:left;}
 }
 #pwa-banner.visible{display:flex;}
 .pwa-banner-icon{
-  width:44px;height:44px;border-radius:10px;
+  width:44px;height:44px;border-radius:var(--r-lg);
   background:var(--negro3);border:1px solid var(--dorado-border);
   display:flex;align-items:center;justify-content:center;
   flex-shrink:0;overflow:hidden;
 }
 .pwa-banner-icon img{width:100%;height:100%;object-fit:contain;}
-.pwa-banner-icon-placeholder{font-family:'Bebas Neue',sans-serif;font-size:14px;color:var(--dorado);}
+.pwa-banner-icon-placeholder{font-family:'Rajdhani',sans-serif;font-weight:900;font-size:12px;color:var(--dorado);}
 .pwa-banner-info{flex:1;min-width:0;}
-.pwa-banner-titulo{font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--blanco);letter-spacing:.5px;line-height:1;}
+.pwa-banner-titulo{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:14px;color:var(--blanco);letter-spacing:.3px;line-height:1;}
 .pwa-banner-sub{font-family:'Rajdhani',sans-serif;font-size:11px;color:rgba(255,255,255,.4);margin-top:1px;}
 .pwa-banner-btn{
   background:var(--dorado);color:#000;
-  border:none;border-radius:6px;
-  font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:.5px;
+  border:none;border-radius:var(--r-md);
+  font-family:'Rajdhani',sans-serif;font-weight:900;font-size:13px;letter-spacing:.5px;
   padding:8px 14px;cursor:pointer;flex-shrink:0;
   transition:filter .15s;
 }
@@ -1469,13 +1974,13 @@ table.posiciones td:nth-child(2){text-align:left;}
 #pwa-desktop-modal.open{display:flex;}
 .pwa-ios-box{
   background:var(--negro2);border:1px solid var(--dorado-border);
-  border-radius:16px 16px 0 0;
+  border-radius:var(--r-lg) var(--r-lg) 0 0;
   padding:24px 20px 32px;width:100%;max-width:480px;
   box-shadow:0 -8px 40px rgba(0,0,0,.8);
 }
 .pwa-ios-title{
-  font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--dorado);
-  letter-spacing:1px;margin-bottom:4px;
+  font-family:'Rajdhani',sans-serif;font-weight:900;font-size:19px;color:var(--dorado);
+  letter-spacing:.8px;margin-bottom:4px;
 }
 .pwa-ios-sub{
   font-family:'Rajdhani',sans-serif;font-size:13px;color:rgba(255,255,255,.5);
@@ -1486,15 +1991,15 @@ table.posiciones td:nth-child(2){text-align:left;}
 .pwa-ios-step-num{
   width:28px;height:28px;border-radius:50%;
   background:rgba(201,162,39,.15);border:1px solid var(--dorado-border);
-  font-family:'Bebas Neue',sans-serif;font-size:15px;color:var(--dorado);
+  font-family:'Rajdhani',sans-serif;font-weight:900;font-size:13px;color:var(--dorado);
   display:flex;align-items:center;justify-content:center;flex-shrink:0;
 }
 .pwa-ios-step-text{font-family:'Rajdhani',sans-serif;font-size:13px;color:rgba(255,255,255,.75);line-height:1.4;}
 .pwa-ios-step-text strong{color:var(--blanco);}
 .pwa-ios-close{
-  width:100%;padding:12px;border:1px solid var(--dorado-border);border-radius:8px;
-  background:none;color:var(--dorado);font-family:'Bebas Neue',sans-serif;
-  font-size:16px;letter-spacing:.5px;cursor:pointer;
+  width:100%;padding:12px;border:1px solid var(--dorado-border);border-radius:var(--r-md);
+  background:none;color:var(--dorado);font-family:'Rajdhani',sans-serif;
+  font-weight:700;font-size:14px;letter-spacing:.5px;cursor:pointer;
 }
 .pwa-ios-close:hover{background:rgba(201,162,39,.1);}
 </style>
@@ -2223,7 +2728,7 @@ table.posiciones td:nth-child(2){text-align:left;}
 <!-- HEADER -->
 <div id="splash" style="position:fixed;inset:0;background:#080808;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;transition:opacity .4s">
   <!-- Contenedor logo: muestra imagen si hay, o iniciales si no -->
-  <div id="splash-logo" style="width:80px;height:80px;border-radius:14px;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 0 28px rgba(201,162,39,.35)">
+  <div id="splash-logo" style="width:80px;height:80px;border-radius:var(--r-lg);display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 0 28px rgba(201,162,39,.35)">
     <img id="splash-logo-img" src="" alt="" style="width:100%;height:100%;object-fit:contain;display:none"/>
     <div id="splash-logo-ini" style="width:100%;height:100%;background:#c9a227;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:30px;color:#080808">DM</div>
   </div>
@@ -2257,6 +2762,12 @@ table.posiciones td:nth-child(2){text-align:left;}
     <button class="btn-instalar-nav" id="nav-install-btn" onclick="pwaInstalar()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3v13M7 11l5 5 5-5"/><path d="M5 19h14"/></svg>
       Instalar app
+    </button>
+    <button class="btn-tema" id="btn-tema" onclick="toggleTema()" title="Cambiar modo claro/oscuro" aria-label="Cambiar modo claro/oscuro">
+      <!-- Luna: visible en modo oscuro -->
+      <svg class="ico-luna" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>
+      <!-- Sol: visible en modo claro -->
+      <svg class="ico-sol" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
     </button>
     <a href="#" class="btn-admin-nav" onclick="abrirLogin();cerrarMenu();return false">⚙ Admin</a>
   </nav>
@@ -2594,21 +3105,27 @@ function borrarLogo(){
 // NAVEGACIÓN
 // ============================================================
 function showSection(sec){
-  document.querySelectorAll('.section').forEach(s=>s.classList.remove('visible'));
-  document.getElementById('section-'+sec).classList.add('visible');
-  currentSection=sec;
-  // Nav activo: header + sidebar
+  if(sec === currentSection) return;
+
+  const saliente = document.getElementById('section-' + currentSection);
+  const entrante = document.getElementById('section-' + sec);
+  if(!entrante) return;
+
+  // Actualizar estado y nav de inmediato
+  currentSection = sec;
   document.querySelectorAll('[data-sec]').forEach(a=>{
-    a.classList.toggle('active', a.dataset.sec===sec);
+    a.classList.toggle('active', a.dataset.sec === sec);
   });
-  // Scroll al tope suave
-  window.scrollTo({top:0,behavior:'smooth'});
-  const firstDivTab=document.querySelector('#section-'+sec+' .div-tab');
+
+  // Tabs de división: resetear al cambiar de sección
+  const firstDivTab = document.querySelector('#section-' + sec + ' .div-tab');
   if(firstDivTab){
-    document.querySelectorAll('#section-'+sec+' .div-tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('#section-' + sec + ' .div-tab').forEach(t=>t.classList.remove('active'));
     firstDivTab.classList.add('active');
-    currentDivision='primera';
+    currentDivision = 'primera';
   }
+
+  // Controles específicos por sección
   if(sec==='posiciones'){
     document.getElementById('pos-torneo-tabs').style.display='flex';
     document.getElementById('pos-fase-tabs').style.display='none';
@@ -2628,7 +3145,28 @@ function showSection(sec){
     currentFaseGol='fase1';
   }
   toggleFotosSidebar(sec);
-  renderSection(sec);
+
+  // ── Swap animado ──────────────────────────────────────────────
+  const FADE_OUT = 160; // ms — duración del fade-out
+
+  function _swap(){
+    // Ocultar la sección saliente (si existe y es distinta)
+    if(saliente && saliente !== entrante){
+      saliente.classList.add('saliendo');
+      setTimeout(()=>{
+        saliente.classList.remove('visible','saliendo');
+      }, FADE_OUT);
+    }
+
+    // Mostrar la entrante después del fade-out
+    setTimeout(()=>{
+      entrante.classList.add('visible');
+      window.scrollTo({top:0,behavior:'smooth'});
+      renderSection(sec);
+    }, saliente && saliente !== entrante ? FADE_OUT : 0);
+  }
+
+  _swap();
 }
 
 function switchDivTab(div,el){
@@ -2803,7 +3341,7 @@ function partidoHTML(p,mostrarDetalle){
   const vsHTML=p.estado==='jugado'
     ?`<div class="vs resultado" id="marcador-${p.id}">${p.resultado||'–'}</div>`
     :p.estado==='en-juego'
-      ?`<div class="vs resultado" id="marcador-${p.id}" style="background:rgba(192,57,43,.85);color:#fff;font-size:16px">${p.resultado||'0-0'}</div>`
+      ?`<div class="vs resultado en-vivo" id="marcador-${p.id}">${p.resultado||'0-0'}</div>`
       :`<div class="vs" id="marcador-${p.id}">VS</div>`;
   const estadoLabel=p.estado==='en-juego'?'EN VIVO':p.estado==='jugado'?'Jugado':'PRÓXIMO';
   const toggleBtn=tieneDetalle?`<button class="pd-toggle" onclick="toggleDetalle(this)">▼ Detalle</button>`:'';
@@ -2835,7 +3373,7 @@ function partidoHTML(p,mostrarDetalle){
       </button></div>`
     : '';
 
-  return `<div class="card-partido-wrap">
+  return `<div class="card-partido-wrap" data-estado="${p.estado}">
     ${diaHTML}
     <div class="partido">
       <div class="hora">${p.hora}</div>
@@ -2927,6 +3465,144 @@ function renderResultados(){
 // ============================================================
 // RENDER POSICIONES (filtrado por torneo)
 // ============================================================
+// ============================================================
+// DESEMPATE – 7 criterios en cascada
+// ============================================================
+/**
+ * Ordena un array de registros de posiciones aplicando los 7 criterios
+ * de desempate cuando dos o más equipos igualan en puntos.
+ *
+ * Criterios (en orden):
+ *  1. Mayor puntaje en partidos ENTRE SÍ (los empatados en pts)
+ *  2. Mayor puntaje en partidos contra equipos clasificados (todos en el grupo)
+ *  3. Mayor GF en partidos entre sí
+ *  4. Menor GC en partidos entre sí
+ *  5. Menor GC en el campeonato completo
+ *  6. Mayor GF en el campeonato completo
+ *  7. Menor expulsados en el campeonato completo
+ *
+ * @param {Array}  posArr   - registros de posiciones ya calculados
+ * @param {Array}  partidos - data.partidos filtrados al torneo/fase correcto
+ * @returns {Array} posArr ordenado
+ */
+function ordenarConDesempate(posArr, partidos){
+  if(posArr.length <= 1) return posArr;
+
+  // ── helpers ──────────────────────────────────────────────────
+  // Partidos jugados entre un subconjunto de equipos (nombres normalizados)
+  function partidosEntre(norms, ps){
+    return ps.filter(p =>
+      p.estado === 'jugado' &&
+      norms.has(normalizar(p.local)) &&
+      norms.has(normalizar(p.visit))
+    );
+  }
+
+  // Puntaje obtenido por un equipo en un subconjunto de partidos
+  function puntosEquipo(equipoNorm, ps){
+    let pts = 0;
+    ps.forEach(p => {
+      const res = parsearResultado(p.resultado);
+      if(!res) return;
+      const esLocal = normalizar(p.local) === equipoNorm;
+      const esVisit = normalizar(p.visit) === equipoNorm;
+      if(!esLocal && !esVisit) return;
+      const gl = res.golesLocal, gv = res.golesVisit;
+      if(esLocal)  pts += gl > gv ? 3 : gl === gv ? 1 : 0;
+      if(esVisit)  pts += gv > gl ? 3 : gl === gv ? 1 : 0;
+    });
+    return pts;
+  }
+
+  // GF y GC de un equipo en un subconjunto de partidos
+  function gfgcEquipo(equipoNorm, ps){
+    let gf = 0, gc = 0;
+    ps.forEach(p => {
+      const res = parsearResultado(p.resultado);
+      if(!res) return;
+      if(normalizar(p.local) === equipoNorm){ gf += res.golesLocal;  gc += res.golesVisit; }
+      if(normalizar(p.visit) === equipoNorm){ gf += res.golesVisit; gc += res.golesLocal;  }
+    });
+    return { gf, gc };
+  }
+
+  // Expulsados totales de un equipo en todos los partidos del contexto
+  function expulsadosEquipo(equipoNorm, ps){
+    let total = 0;
+    ps.forEach(p => {
+      const exps = p.expulsiones || [];
+      exps.forEach(e => {
+        if(normalizar(e.equipo || '') === equipoNorm ||
+           normalizar(p.local) === equipoNorm && e.equipo === 'local' ||
+           normalizar(p.visit) === equipoNorm && e.equipo === 'visit'){
+          total++;
+        }
+      });
+    });
+    return total;
+  }
+
+  // ── Función comparadora para dos equipos con igual pts ───────
+  function compararPorDesempate(a, b, grupoNorms, todosNorms, todosPs){
+    const aN = normalizar(a.equipo);
+    const bN = normalizar(b.equipo);
+    const pareNorms = new Set([aN, bN]);
+
+    // ── Criterio 1: puntos entre sí ──────────────────────────
+    const entreAmbosParts = partidosEntre(pareNorms, todosPs);
+    const c1 = puntosEquipo(bN, entreAmbosParts) - puntosEquipo(aN, entreAmbosParts);
+    if(c1 !== 0) return c1;
+
+    // ── Criterio 2: puntos vs todos los clasificados del grupo ─
+    const c2 = puntosEquipo(bN, todosPs.filter(p =>
+        p.estado === 'jugado' &&
+        (normalizar(p.local) === bN && todosNorms.has(normalizar(p.visit)) ||
+         normalizar(p.visit) === bN && todosNorms.has(normalizar(p.local)))
+      )) -
+      puntosEquipo(aN, todosPs.filter(p =>
+        p.estado === 'jugado' &&
+        (normalizar(p.local) === aN && todosNorms.has(normalizar(p.visit)) ||
+         normalizar(p.visit) === aN && todosNorms.has(normalizar(p.local)))
+      ));
+    if(c2 !== 0) return c2;
+
+    // ── Criterio 3: GF entre sí ──────────────────────────────
+    const gfgcA3 = gfgcEquipo(aN, entreAmbosParts);
+    const gfgcB3 = gfgcEquipo(bN, entreAmbosParts);
+    const c3 = gfgcB3.gf - gfgcA3.gf;
+    if(c3 !== 0) return c3;
+
+    // ── Criterio 4: menor GC entre sí ───────────────────────
+    const c4 = gfgcA3.gc - gfgcB3.gc;
+    if(c4 !== 0) return c4;
+
+    // ── Criterio 5: menor GC total ───────────────────────────
+    const c5 = (a.gc || 0) - (b.gc || 0);
+    if(c5 !== 0) return c5;
+
+    // ── Criterio 6: mayor GF total ───────────────────────────
+    const c6 = (b.gf || 0) - (a.gf || 0);
+    if(c6 !== 0) return c6;
+
+    // ── Criterio 7: menor expulsados totales ─────────────────
+    const c7 = expulsadosEquipo(aN, todosPs) - expulsadosEquipo(bN, todosPs);
+    return c7;
+  }
+
+  // ── Ordenamiento completo ────────────────────────────────────
+  // Primero ordenar por pts descendente para identificar grupos empatados
+  const todosNorms = new Set(posArr.map(p => normalizar(p.equipo)));
+
+  // Usamos sort estable con función que aplica desempate cuando pts son iguales
+  return [...posArr].sort((a, b) => {
+    // Diferencia de puntos primero
+    const dPts = (b.pts || 0) - (a.pts || 0);
+    if(dPts !== 0) return dPts;
+    // Mismos puntos → desempate
+    return compararPorDesempate(a, b, todosNorms, todosNorms, partidos);
+  });
+}
+
 function renderPosiciones(){
   const div=currentDivision;
   const torneo=currentTorneo.pos;
@@ -2949,8 +3625,10 @@ function renderPosiciones(){
       map[k].ptsDesc+=Number(p.ptsDesc)||0;
       if(p.ptsDescMotivo) map[k].ptsDescMotivo=p.ptsDescMotivo;
     });
-    const gen=Object.values(map).map(p=>({...p,dg:(p.gf-p.gc>=0?'+':'')+(p.gf-p.gc)}))
-      .sort((a,b)=>b.pts-a.pts||(b.gf-b.gc)-(a.gf-a.gc));
+    const gen = ordenarConDesempate(
+      Object.values(map).map(p=>({...p, dg:(p.gf-p.gc>=0?'+':'')+(p.gf-p.gc)})),
+      data.partidos.filter(p=>p.div==='primera')
+    );
 
     if(!gen.length){
       el.innerHTML=`<div class="card"><div class="card-header"><span>⭐ Tabla General – Primera División</span></div><div class="empty-msg">No hay datos cargados aún</div></div>`;
@@ -2961,7 +3639,7 @@ function renderPosiciones(){
       if(i===13) cls='zona-revalida';
       else if(i===14||i===15) cls='zona-descenso';
       const descBadge = p.ptsDesc>0
-        ? `<span title="${p.ptsDescMotivo||'Descuento por tribunal'}" style="margin-left:4px;font-size:9px;font-weight:900;color:#e74c3c;background:rgba(192,57,43,.18);border:1px solid rgba(192,57,43,.35);border-radius:3px;padding:1px 4px;cursor:help">-${p.ptsDesc}</span>`
+        ? `<span title="${p.ptsDescMotivo||'Descuento por tribunal'}" style="margin-left:4px;font-size:9px;font-weight:900;color:#e74c3c;background:rgba(192,57,43,.18);border:1px solid rgba(192,57,43,.35);border-radius:var(--r-sm);padding:1px 4px;cursor:help">-${p.ptsDesc}</span>`
         : '';
       return `<tr class="${cls}">
         <td class="pos-num">${i+1}</td>
@@ -3002,15 +3680,18 @@ function renderPosiciones(){
   }
 
   // ---- PRIMERA DIVISIÓN: por torneo ----
-  const parseDG=s=>parseInt((s||'0').replace('+',''))||0;
-  const pos=[...data.posiciones.filter(p=>p.div===div&&(p.torneo||'apertura')===torneo)].sort((a,b)=>(b.pts-a.pts)||((b.gf||0)-(b.gc||0))-((a.gf||0)-(a.gc||0)));
+  const partsTorneo = data.partidos.filter(p=>p.div===div&&(p.torneo||'apertura')===torneo&&p.estado==='jugado');
+  const pos = ordenarConDesempate(
+    [...data.posiciones.filter(p=>p.div===div&&(p.torneo||'apertura')===torneo)],
+    partsTorneo
+  );
   if(!pos.length){el.innerHTML=`<div class="card"><div class="card-header"><span>Posiciones – ${torneoLabel(torneo)}</span><span class="div-badge">${div==='primera'?'1ª':'2ª'}</span></div><div class="empty-msg">No hay posiciones cargadas para este torneo</div></div>`;return;}
   const rows=pos.map((p,i)=>{
     let cls='';
     if(div==='primera'){if(i===0)cls='zona-semifinal';else if(i>=1&&i<=6)cls='zona-cuartos';}
     else{if(i<4)cls='zona-clasificacion';}
     const descBadge = p.ptsDesc>0
-      ? `<span title="${p.ptsDescMotivo||'Descuento por tribunal disciplinario'}" style="margin-left:4px;font-size:9px;font-weight:900;color:#e74c3c;background:rgba(192,57,43,.18);border:1px solid rgba(192,57,43,.35);border-radius:3px;padding:1px 4px;cursor:help;white-space:nowrap">-${p.ptsDesc}</span>`
+      ? `<span title="${p.ptsDescMotivo||'Descuento por tribunal disciplinario'}" style="margin-left:4px;font-size:9px;font-weight:900;color:#e74c3c;background:rgba(192,57,43,.18);border:1px solid rgba(192,57,43,.35);border-radius:var(--r-sm);padding:1px 4px;cursor:help;white-space:nowrap">-${p.ptsDesc}</span>`
       : '';
     return `<tr class="${cls}">
       <td class="pos-num">${i+1}</td>
@@ -3055,7 +3736,7 @@ function tablaHTML(titulo,pos,clasifican,leyendaExtra){
   const rows=pos.map((p,i)=>{
     const cls=i<clasifican?'zona-clasificacion':'';
     const descBadge = p.ptsDesc>0
-      ? `<span title="${p.ptsDescMotivo||'Descuento por tribunal'}" style="margin-left:4px;font-size:9px;font-weight:900;color:#e74c3c;background:rgba(192,57,43,.18);border:1px solid rgba(192,57,43,.35);border-radius:3px;padding:1px 4px;cursor:help">-${p.ptsDesc}</span>`
+      ? `<span title="${p.ptsDescMotivo||'Descuento por tribunal'}" style="margin-left:4px;font-size:9px;font-weight:900;color:#e74c3c;background:rgba(192,57,43,.18);border:1px solid rgba(192,57,43,.35);border-radius:var(--r-sm);padding:1px 4px;cursor:help">-${p.ptsDesc}</span>`
       : '';
     return `<tr class="${cls}">
       <td class="pos-num">${i+1}</td>
@@ -3088,12 +3769,21 @@ function applyGoldPts(){
 function renderPosicionesSegunda(){
   const el=document.getElementById('posiciones-content');
   // zona===null → sin filtro de zona; zona==='' → acepta registros sin zona también
-  const filtrar=(fase,zona)=>[...data.posiciones.filter(p=>{
-    if(p.div!=='segunda'||p.fase!==fase) return false;
-    if(zona===null) return true;        // fase3: sin filtro de zona
-    if(!zona) return true;              // sin zona requerida: mostrar todos
-    return (p.zona||'')===(zona||'');   // matchear zona exacta
-  })].sort((a,b)=>(b.pts-a.pts)||((b.gf||0)-(b.gc||0))-((a.gf||0)-(a.gc||0)));
+  const filtrar=(fase,zona)=>{
+    const registros=[...data.posiciones.filter(p=>{
+      if(p.div!=='segunda'||p.fase!==fase) return false;
+      if(zona===null) return true;
+      if(!zona) return true;
+      return (p.zona||'')===(zona||'');
+    })];
+    const parts=data.partidos.filter(p=>{
+      if(p.div!=='segunda'||p.estado!=='jugado') return false;
+      if(zona===null) return (p.faseRes||p.fase||'fase1')===fase;
+      if(!zona) return (p.faseRes||p.fase||'fase1')===fase;
+      return (p.faseRes||p.fase||'fase1')===fase && (p.zona||'')===(zona||'');
+    });
+    return ordenarConDesempate(registros, parts);
+  };
 
   if(currentFase==='fase1'){
     if(currentZona==='sierra'){
@@ -3356,7 +4046,7 @@ function renderRedAdminLista(){
   el.innerHTML=_dmRedes.map(r=>{
     const m=redMeta[r.tipo]||redMeta.otra;
     return `<div class="pub-admin-item" style="margin-bottom:5px">
-      <div class="footer-red-icon ${m.colorClass}" style="width:28px;height:28px;border-radius:5px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff">${m.svg}</div>
+      <div class="footer-red-icon ${m.colorClass}" style="width:28px;height:28px;border-radius:var(--r-md);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff">${m.svg}</div>
       <div class="pub-admin-item-info">
         <div class="pub-admin-item-titulo">${m.label}${r.handle?' · '+r.handle:''}</div>
         <div class="pub-admin-item-meta" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.url}</div>
@@ -3406,7 +4096,7 @@ function renderFooter(){
     const logoWrap=document.getElementById('radio-logo-wrap');
     if(logoWrap){
       if(d.radioLogo){
-        logoWrap.innerHTML=`<img src="${d.radioLogo}" style="height:36px;width:auto;object-fit:contain;border-radius:4px"/>`;
+        logoWrap.innerHTML=`<img src="${d.radioLogo}" style="height:36px;width:auto;object-fit:contain;border-radius:var(--r-sm)"/>`;
       } else {
         logoWrap.innerHTML='<span style="font-size:24px">📻</span>';
       }
@@ -3483,7 +4173,7 @@ function pubPreviewVideo(input){
   const r=new FileReader(); r.onload=e=>{
     _pubVideoB64=e.target.result;
     const prev=document.getElementById('pub-video-preview');
-    prev.innerHTML=`<video src="${_pubVideoB64}" controls muted style="max-width:100%;max-height:120px;border-radius:4px;border:1px solid rgba(255,255,255,.1)"></video>
+    prev.innerHTML=`<video src="${_pubVideoB64}" controls muted style="max-width:100%;max-height:120px;border-radius:var(--r-sm);border:1px solid rgba(255,255,255,.1)"></video>
       <div style="font-size:11px;color:var(--gris);font-family:'Rajdhani',sans-serif;margin-top:4px">🎬 ${file.name}</div>`;
   }; r.readAsDataURL(file);
 }
@@ -3558,7 +4248,7 @@ function renderAdminListaPubs(){
   el.innerHTML=pubs.map(p=>`
     <div class="pub-admin-item">
       ${p.video
-        ? `<video src="${p.video}" muted style="width:48px;height:36px;object-fit:cover;border-radius:3px;flex-shrink:0;border:1px solid rgba(255,255,255,.1)"></video>`
+        ? `<video src="${p.video}" muted style="width:48px;height:36px;object-fit:cover;border-radius:var(--r-sm);flex-shrink:0;border:1px solid rgba(255,255,255,.1)"></video>`
         : p.img?`<img class="pub-admin-item-thumb" src="${p.img}" alt=""/>`:''}
       <div class="pub-admin-item-info">
         <div class="pub-admin-item-titulo">${p.titulo}${p.video?' 🎬':''}</div>
@@ -3584,8 +4274,8 @@ function pubHTML(p){
 
   if(p.posicion==='banner'){
     const media = p.video
-      ? `<video src="${p.video}" autoplay muted loop playsinline style="max-height:64px;max-width:220px;object-fit:cover;border-radius:3px;flex-shrink:0"></video>`
-      : p.img ? mediaImg(p.img, p.titulo, 'max-height:60px;max-width:280px;object-fit:contain;border-radius:3px') : '';
+      ? `<video src="${p.video}" autoplay muted loop playsinline style="max-height:64px;max-width:220px;object-fit:cover;border-radius:var(--r-sm);flex-shrink:0"></video>`
+      : p.img ? mediaImg(p.img, p.titulo, 'max-height:60px;max-width:280px;object-fit:contain;border-radius:var(--r-sm)') : '';
     return `<div class="pub-banner-top">
       <span class="pub-label">Publicidad</span>
       <${Tag} ${wrap} style="display:flex;align-items:center;gap:14px;text-decoration:none;padding:0 12px">
@@ -3616,8 +4306,8 @@ function pubHTML(p){
 
   // inline
   const mediaInline = p.video
-    ? `<video src="${p.video}" autoplay muted loop playsinline style="height:60px;width:100px;object-fit:cover;border-radius:3px;flex-shrink:0"></video>`
-    : p.img ? mediaImg(p.img, p.titulo, 'height:56px;width:auto;max-width:110px;object-fit:contain;border-radius:3px;flex-shrink:0') : '';
+    ? `<video src="${p.video}" autoplay muted loop playsinline style="height:60px;width:100px;object-fit:cover;border-radius:var(--r-sm);flex-shrink:0"></video>`
+    : p.img ? mediaImg(p.img, p.titulo, 'height:56px;width:auto;max-width:110px;object-fit:contain;border-radius:var(--r-sm);flex-shrink:0') : '';
   return `<div class="pub-inline">
     <span class="pub-label">Publicidad</span>
     ${mediaInline}
@@ -3682,7 +4372,7 @@ function noPreviewGaleria(input){
       loaded++;
       const img=document.createElement('img');
       img.src=e.target.result;
-      img.style.cssText='width:60px;height:60px;object-fit:cover;border-radius:4px;border:1px solid rgba(255,255,255,.1)';
+      img.style.cssText='width:60px;height:60px;object-fit:cover;border-radius:var(--r-sm);border:1px solid rgba(255,255,255,.1)';
       prev.appendChild(img);
     }; r.readAsDataURL(file);
   });
@@ -3837,7 +4527,7 @@ function renderNoticias(){
     </div>`;
 
   let out=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:6px">
-    <span style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--dorado);letter-spacing:1.5px">📰 Noticias</span>
+    <span style="font-family:'Rajdhani',sans-serif;font-weight:800;font-size:17px;color:var(--dorado);letter-spacing:1.2px">📰 Noticias</span>
     <div style="display:flex;align-items:center;gap:10px">
       <span style="font-family:'Rajdhani',sans-serif;font-size:11px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.5px">${noticias.length} publicación${noticias.length!==1?'es':''}</span>
       <button class="btn-share" onclick="abrirShare(()=>generarImagenNoticia('${principal.id}'))">${SVG_SHARE} Compartir</button>
@@ -4557,7 +5247,7 @@ function abrirModalEdicion(tipo,id){
       <div class="form-group" style="max-width:120px"><label>Goles</label><input type="number" id="ed-goles" value="${obj.goles||0}" min="0"/></div>`;
   } else if(tipo==='equipos'){
     const esc=escudos[normalizar(obj.nombre)];
-    const curImg=esc&&esc.img?`<img id="ed-escudo-preview" src="${esc.img}" style="max-height:60px;margin-top:6px;border-radius:4px;border:1px solid var(--dorado-border);display:block"/>`:`<img id="ed-escudo-preview" style="display:none;max-height:60px;margin-top:6px"/>`;
+    const curImg=esc&&esc.img?`<img id="ed-escudo-preview" src="${esc.img}" style="max-height:60px;margin-top:6px;border-radius:var(--r-sm);border:1px solid var(--dorado-border);display:block"/>`:`<img id="ed-escudo-preview" style="display:none;max-height:60px;margin-top:6px"/>`;
     bodyHTML=`
       <div class="form-row"><div class="form-group"><label>Nombre</label><input type="text" id="ed-nombre" value="${obj.nombre||''}"/></div>
         <div class="form-group"><label>División</label>${divSelect}</div></div>
@@ -5278,7 +5968,7 @@ function renderPlayoff(torneo,contenedorId){
       const vueltaHTML=vueltaRes
         ?`<div class="cruce-partido-mini"><span class="cpm-label">Vuelta ${c.fechaVuelta?'· '+c.fechaVuelta:''}</span><span class="cpm-res">${vueltaRes}</span></div>`
         :`<div class="cruce-partido-mini"><span class="cpm-label">Vuelta</span><span style="color:rgba(255,255,255,.2);font-family:'Rajdhani',sans-serif">Pendiente</span></div>`;
-      const globalBadge=global?`<span style="background:rgba(201,162,39,.15);border:1px solid var(--dorado-border);border-radius:3px;padding:2px 8px;font-size:12px;color:var(--dorado);font-weight:700">Global: ${global}</span>`:'';
+      const globalBadge=global?`<span style="background:rgba(201,162,39,.15);border:1px solid var(--dorado-border);border-radius:var(--r-sm);padding:2px 8px;font-size:12px;color:var(--dorado);font-weight:700">Global: ${global}</span>`:'';
       const ganadorBadge=ganador?`<span style="color:rgba(255,255,255,.5);font-size:11px">Clasifica: <b style="color:var(--dorado)">${ganador}</b></span>`:'';
       return `<div class="cruce-ida-vuelta">${idaHTML}${vueltaHTML}</div>
         ${global||ganador?`<div class="cruce-ganador" style="display:flex;gap:12px;align-items:center">${globalBadge}${ganadorBadge}</div>`:''}`;
@@ -5493,7 +6183,7 @@ function renderAdminListaFotos(){
   el.innerHTML=fotos.map(f=>`
     <div class="admin-list-item" style="flex-direction:column;align-items:stretch;gap:6px;">
       <div style="display:flex;align-items:center;gap:10px">
-        <img src="${f.img}" style="width:60px;height:44px;object-fit:cover;border-radius:4px;border:1px solid rgba(255,255,255,.1);flex-shrink:0"/>
+        <img src="${f.img}" style="width:60px;height:44px;object-fit:cover;border-radius:var(--r-sm);border:1px solid rgba(255,255,255,.1);flex-shrink:0"/>
         <span style="flex:1">${f.caption||'<em style="opacity:.5">Sin epígrafe</em>'}</span>
         <button class="btn-danger" onclick="eliminarFoto('${f.id}')">✕ Eliminar</button>
       </div>
@@ -6585,6 +7275,21 @@ const SVG_SHARE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
 // ============================================================
 // MENÚ HAMBURGUESA (móvil)
 // ============================================================
+// ── Modo claro / oscuro ──────────────────────────────────────
+function toggleTema(){
+  const esClaro = document.body.classList.toggle('light');
+  localStorage.setItem('tema', esClaro ? 'light' : 'dark');
+}
+function initTema(){
+  const guardado = localStorage.getItem('tema');
+  // Si no hay preferencia guardada, respetar preferencia del sistema
+  const prefSistema = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  const tema = guardado || prefSistema;
+  if(tema === 'light') document.body.classList.add('light');
+}
+// Aplicar antes de que se pinte la página
+initTema();
+
 function toggleMenu(){
   const nav = document.getElementById('main-nav');
   const btn = document.getElementById('hamburger-btn');
@@ -6759,7 +7464,7 @@ renderFooter();
 <!-- Modal instrucciones iOS/Safari -->
 <!-- MODAL INSTALAR – ESCRITORIO -->
 <div id="pwa-desktop-modal">
-  <div class="pwa-ios-box" style="border-radius:12px">
+  <div class="pwa-ios-box" style="border-radius:var(--r-lg)">
     <div class="pwa-ios-title">📥 Instalar aplicación</div>
     <div class="pwa-ios-sub">Seguí estos pasos según tu navegador</div>
     <div class="pwa-ios-steps">
