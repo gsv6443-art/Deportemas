@@ -29,7 +29,7 @@
 
   // ── PEGÁ AQUÍ TU CONFIGURACIÓN DE FIREBASE ──────────────────
   const firebaseConfig = {
-   apiKey: "AIzaSyC_4BA1BubBmSAg4SFbWspZHfoSK9tXxCs",
+    apiKey: "AIzaSyC_4BA1BubBmSAg4SFbWspZHfoSK9tXxCs",
   authDomain: "deportemas-abca3.firebaseapp.com",
   databaseURL: "https://deportemas-abca3-default-rtdb.firebaseio.com",
   projectId: "deportemas-abca3",
@@ -212,6 +212,25 @@
     window._fb.listen('cronos', fbVal => {
       if(fbVal) localStorage.setItem('lrr_cronos', JSON.stringify(fbVal));
     });
+    // Suscribir cambios en tiempo real a publicidades
+    window._fb.listen('pubs', fbVal => {
+      if(!fbVal) return;
+      localStorage.setItem('lrr_publicidad', JSON.stringify(fbVal));
+      renderTodasLasPubs();
+      if(document.getElementById('lista-publicidad'))
+        renderAdminListaPubs();
+    });
+    // Suscribir cambios en tiempo real a noticias
+    window._fb.listen('noticias', fbVal => {
+      if(!fbVal) return;
+      localStorage.setItem('lrr_noticias', JSON.stringify(fbVal));
+      if(currentSection==='noticias') renderNoticias();
+    });
+    // Suscribir cambios en tiempo real a fichas
+    window._fb.listen('fichas', fbVal => {
+      if(!fbVal) return;
+      localStorage.setItem('lrr_fichas', JSON.stringify(fbVal));
+    });
     // NOTA: los escudos individuales no necesitan listener en tiempo real
     // ya que solo el admin los modifica y la página re-renderiza tras cada guardado
   }
@@ -238,16 +257,6 @@
 }
 
 /* ── MODO CLARO ─────────────────────────────────────────────── */
-body.light{
-  --negro:#f0ede8;--negro2:#ffffff;--negro3:#f5f2ee;--negro4:#ece9e4;
-  --blanco:#1a1a1a;--gris:#666;--gris-claro:#444;
-  --dorado:#8a6500;--dorado-light:#b08a00;--dorado-dark:#5a4200;
-  --dorado-bg:rgba(138,101,0,0.08);--dorado-border:rgba(138,101,0,0.25);
-  --shadow:0 4px 24px rgba(0,0,0,.12);
-  /* Canvas compartir (siempre oscuro para que se vea bien en redes) */
-  --cv-neg2:#111113;--cv-neg3:#191920;--cv-neg4:#232330;
-  --cv-blanco:#f5f5f5;--cv-gris:#888;
-}
 
 /* Transición suave al cambiar de modo */
 body,header,.card,.side-block,nav,input,select,textarea,
@@ -268,11 +277,6 @@ body{
     radial-gradient(ellipse at 15% 10%,rgba(201,162,39,.06) 0%,transparent 55%),
     radial-gradient(ellipse at 85% 90%,rgba(201,162,39,.04) 0%,transparent 55%);
   -webkit-font-smoothing:antialiased;
-}
-body.light{
-  background-image:
-    radial-gradient(ellipse at 15% 10%,rgba(138,101,0,.05) 0%,transparent 55%),
-    radial-gradient(ellipse at 85% 90%,rgba(138,101,0,.03) 0%,transparent 55%);
 }
 
 /* ── TIPOGRAFÍA GLOBAL ──
@@ -332,30 +336,15 @@ nav a:hover,nav a.active{color:var(--dorado);background:rgba(201,162,39,.1);}
   font-size:12px;letter-spacing:.3px;padding:4px 10px;cursor:pointer;
   font-family:inherit;transition:background .15s;
 }
+/* Solo mostrar el botón instalar en dispositivos móviles/táctiles */
+@media (hover:hover) and (pointer:fine){
+  .btn-instalar-nav.visible{ display:none !important; }
+}
 .btn-instalar-nav.visible{display:flex;}
 .btn-instalar-nav:hover{background:rgba(201,162,39,.22)!important;}
 .btn-instalar-nav svg{width:13px;height:13px;flex-shrink:0;}
 
-/* ── Toggle modo claro/oscuro ─────────────────────────────── */
-.btn-tema{
-  width:36px;height:36px;border-radius:50%;
-  border:1px solid var(--dorado-border);
-  background:var(--dorado-bg);
-  color:var(--dorado);
-  cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-  transition:background .2s,border-color .2s,transform .18s;
-  flex-shrink:0;
-  margin-left:4px;
-}
-.btn-tema:hover{background:rgba(201,162,39,.2);transform:rotate(20deg);}
-body.light .btn-tema:hover{background:rgba(138,101,0,.15);}
-.btn-tema svg{width:17px;height:17px;stroke:var(--dorado);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:opacity .2s;}
 /* Íconos: mostrar sol en oscuro, luna en claro */
-.btn-tema .ico-luna{display:block;}
-.btn-tema .ico-sol{display:none;}
-body.light .btn-tema .ico-luna{display:none;}
-body.light .btn-tema .ico-sol{display:block;}
 /* Sidebar install block */
 .side-install-btn{
   display:none;width:100%;align-items:center;justify-content:center;gap:7px;
@@ -364,6 +353,10 @@ body.light .btn-tema .ico-sol{display:block;}
   font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;
   color:var(--dorado);letter-spacing:.5px;text-transform:uppercase;
   transition:background .15s;margin-top:4px;
+}
+/* Solo mostrar el botón instalar en dispositivos móviles/táctiles */
+@media (hover:hover) and (pointer:fine){
+  .side-install-btn.visible{ display:none !important; }
 }
 .side-install-btn.visible{display:flex;}
 .side-install-btn:hover{background:rgba(201,162,39,.2);}
@@ -391,29 +384,11 @@ body.light .btn-tema .ico-sol{display:block;}
   border-bottom:1px solid rgba(255,255,255,.04);transition:all .14s;
   text-transform:uppercase;font-family:'Rajdhani',sans-serif;
 }
-body.light .side-menu a{color:rgba(0,0,0,.6);border-bottom-color:rgba(0,0,0,.06);}
 .side-menu a:last-child{border-bottom:none;}
 .side-menu a:hover,.side-menu a.active{
   background:var(--dorado-bg);color:var(--dorado);
   border-left:3px solid var(--dorado);padding-left:13px;
 }
-
-/* Modo claro: ajustes de contraste para textos con opacidad fija sobre blanco */
-body.light nav a{color:rgba(0,0,0,.6);}
-body.light nav a:hover,body.light nav a.active{color:var(--dorado);background:rgba(138,101,0,.08);}
-body.light .card-header{background:linear-gradient(90deg,var(--negro4),rgba(138,101,0,.10));}
-body.light .partido .equipo-nombre,
-body.light .equipo-nombre{color:var(--blanco);}
-body.light .modal-overlay{background:rgba(0,0,0,.55);}
-body.light header{box-shadow:0 2px 20px rgba(0,0,0,.1);}
-body.light .edit-modal,body.light .admin-panel{background:var(--negro2);}
-body.light input,body.light select,body.light textarea{background:var(--negro3);color:var(--blanco);border-color:var(--dorado-border);}
-body.light .torneo-tab{border-color:rgba(0,0,0,.15);color:rgba(0,0,0,.5);}
-body.light .torneo-tab.active{background:rgba(0,0,0,.08);color:var(--blanco);border-color:rgba(0,0,0,.25);}
-body.light .div-tab{background:var(--negro3);color:rgba(0,0,0,.5);}
-body.light .side-block-header{color:var(--negro);}
-body.light .partido{background:var(--negro2);}
-body.light .partido .estado.pendiente{background:rgba(138,101,0,.08);}
 
 /* MAIN */
 .main{display:flex;flex-direction:column;gap:1rem;}
@@ -831,13 +806,6 @@ body.light .partido .estado.pendiente{background:rgba(138,101,0,.08);}
   50%    { box-shadow:0 0 20px rgba(192,57,43,.65); }
 }
 
-/* Modo claro: ajustes de contraste */
-body.light .card-partido-wrap[data-estado="jugado"] .equipo-local,
-body.light .card-partido-wrap[data-estado="jugado"] .equipo-visit{ opacity:.45; }
-body.light .card-partido-wrap[data-estado="jugado"] .hora{ opacity:.38; }
-body.light .card-partido-wrap[data-estado="en-juego"]{
-  background:linear-gradient(100deg,rgba(192,57,43,.08) 0%,rgba(192,57,43,.03) 38%,transparent 65%);
-}
 .crono-wrap{display:flex;flex-direction:column;align-items:center;gap:3px;}
 .crono-tiempo{
   font-family:'Bebas Neue',sans-serif;font-weight:400;font-size:22px;
@@ -970,202 +938,19 @@ table.posiciones td:nth-child(8){   /* GF */
 .zona-descenso td:first-child   {border-left:3px solid var(--rojo);}
 .zona-descenso                   {background:rgba(192,57,43,.05);}
 
-/* Modo claro: ajustar fondos de zonas y alternas */
-body.light table.posiciones tbody tr:nth-child(even){background:rgba(0,0,0,.025);}
-body.light table.posiciones tbody tr:hover{background:rgba(138,101,0,.07) !important;}
-body.light .zona-semifinal  {background:rgba(201,162,39,.06);}
-body.light .zona-cuartos    {background:rgba(58,155,213,.05);}
-body.light .zona-clasificacion{background:rgba(26,107,47,.05);}
-body.light .zona-revalida   {background:rgba(230,126,34,.05);}
-body.light .zona-descenso   {background:rgba(192,57,43,.06);}
-body.light table.posiciones td:nth-child(4),
-body.light table.posiciones td:nth-child(8){border-left-color:rgba(0,0,0,.08);}
-body.light table.posiciones thead th:nth-child(4),
-body.light table.posiciones thead th:nth-child(8){border-left-color:rgba(138,101,0,.2);}
-
 /* ESCUDO MINI */
 .escudo-mini{width:30px;height:30px;border-radius:50%;background:var(--negro4);display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-weight:900;font-size:9px;color:var(--dorado);border:1px solid var(--dorado-border);flex-shrink:0;overflow:hidden;}
 .escudo-mini img{width:100%;height:100%;object-fit:contain;}
 
-/* ══════════════════════════════════════════════════════
-   GOLEADORES — REDISEÑO COMPLETO
-══════════════════════════════════════════════════════ */
-
-/* ── Podio (1°–3°) ── */
-.gol-podio{
-  display:grid;
-  grid-template-columns:1fr 1.18fr 1fr;
-  gap:10px;
-  padding:18px 16px 10px;
-  align-items:end;
-}
-/* Orden visual: 2° izquierda, 1° centro, 3° derecha */
-.gol-podio-item{
-  display:flex;flex-direction:column;align-items:center;
-  text-align:center;gap:6px;
-  padding:14px 10px 16px;
-  border-radius:var(--r-md);
-  position:relative;
-  transition:transform .18s;
-}
-.gol-podio-item:hover{ transform:translateY(-3px); }
-
-/* 1° — Dorado */
-.gol-podio-item.p1{
-  background:linear-gradient(160deg,rgba(201,162,39,.18) 0%,rgba(201,162,39,.06) 100%);
-  border:1px solid rgba(201,162,39,.35);
-  box-shadow:0 0 28px rgba(201,162,39,.12), inset 0 1px 0 rgba(201,162,39,.2);
-  padding-top:20px;
-}
-/* 2° — Plata */
-.gol-podio-item.p2{
-  background:linear-gradient(160deg,rgba(180,180,200,.12) 0%,rgba(180,180,200,.04) 100%);
-  border:1px solid rgba(180,180,200,.22);
-}
-/* 3° — Bronce */
-.gol-podio-item.p3{
-  background:linear-gradient(160deg,rgba(176,120,70,.12) 0%,rgba(176,120,70,.04) 100%);
-  border:1px solid rgba(176,120,70,.22);
-}
-
-/* Medalla / corona encima */
-.gol-podio-medal{
-  font-size:22px;line-height:1;
-  position:absolute;top:-13px;left:50%;transform:translateX(-50%);
-  filter:drop-shadow(0 2px 6px rgba(0,0,0,.5));
-}
-
-/* Escudo grande en el podio */
-.gol-podio-escudo{
-  width:54px;height:54px;border-radius:50%;
-  background:var(--negro4);
-  border:2px solid rgba(255,255,255,.1);
-  display:flex;align-items:center;justify-content:center;
-  overflow:hidden;flex-shrink:0;
-  font-family:'Rajdhani',sans-serif;font-weight:900;font-size:15px;color:var(--dorado);
-}
-.gol-podio-escudo img{ width:100%;height:100%;object-fit:contain; }
-.gol-podio-item.p1 .gol-podio-escudo{
-  width:64px;height:64px;font-size:18px;
-  border-color:rgba(201,162,39,.5);
-  box-shadow:0 0 16px rgba(201,162,39,.25);
-}
-.gol-podio-item.p2 .gol-podio-escudo{ border-color:rgba(180,180,200,.35); }
-.gol-podio-item.p3 .gol-podio-escudo{ border-color:rgba(176,120,70,.35); }
-
-/* Posición numérica grande */
-.gol-podio-pos{
-  font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:1px;
-  opacity:.5;line-height:1;
-}
-.gol-podio-item.p1 .gol-podio-pos{ font-size:14px;color:var(--dorado);opacity:.8; }
-.gol-podio-item.p2 .gol-podio-pos{ color:#c8c8d8; }
-.gol-podio-item.p3 .gol-podio-pos{ color:#b87848; }
-
-/* Nombre */
-.gol-podio-nombre{
-  font-family:'Bebas Neue',sans-serif;
-  font-size:17px;letter-spacing:.8px;text-transform:uppercase;
-  line-height:1.1;
-}
-.gol-podio-item.p1 .gol-podio-nombre{ font-size:21px;color:var(--blanco); }
-
-/* Equipo */
-.gol-podio-equipo{
-  font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:600;
-  color:var(--gris);text-transform:uppercase;letter-spacing:.4px;
-}
-
-/* Goles — el número grande */
-.gol-podio-goles{
-  display:flex;align-items:baseline;gap:3px;margin-top:2px;
-}
-.gol-podio-num{
-  font-family:'Bebas Neue',sans-serif;font-size:42px;line-height:1;
-}
-.gol-podio-item.p1 .gol-podio-num{ font-size:52px;color:var(--dorado); }
-.gol-podio-item.p2 .gol-podio-num{ font-size:42px;color:#b0b0c4; }
-.gol-podio-item.p3 .gol-podio-num{ font-size:38px;color:#9a7450; }
-.gol-podio-ico{ font-size:14px;opacity:.6; }
-.gol-podio-item.p1 .gol-podio-ico{ font-size:17px;opacity:.8; }
-
-/* ── Separador entre podio y lista ── */
-.gol-lista-header{
-  display:flex;align-items:center;gap:10px;
-  padding:8px 18px 6px;
-  font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;
-  color:var(--gris);text-transform:uppercase;letter-spacing:.8px;
-}
-.gol-lista-header::before,.gol-lista-header::after{
-  content:'';flex:1;height:1px;background:rgba(255,255,255,.07);
-}
-
-/* ── Filas 4°+ con barra de progreso ── */
-.goleador-row{
-  display:grid;
-  grid-template-columns:36px 36px 1fr auto;
-  align-items:center;
-  gap:0 12px;
-  padding:0 18px;
-  border-bottom:1px solid rgba(255,255,255,.04);
-  transition:background .14s;
-  position:relative;
-}
-.goleador-row:last-child{ border-bottom:none; }
-.goleador-row:hover{ background:rgba(201,162,39,.05); }
-
-.gol-row-inner{
-  display:flex;flex-direction:column;
-  padding:10px 0 8px;
-  gap:5px;
-}
-/* Nombre + equipo */
-.gol-nombre{
-  font-family:'Bebas Neue',sans-serif;font-size:15px;
-  text-transform:uppercase;letter-spacing:.5px;line-height:1;
-}
-.gol-equipo{
-  font-size:10px;color:var(--gris);
-  font-family:'Rajdhani',sans-serif;font-weight:600;
-  text-transform:uppercase;letter-spacing:.3px;
-}
-
-/* Barra de progreso */
-.gol-barra-wrap{
-  height:3px;border-radius:2px;
-  background:rgba(255,255,255,.06);
-  overflow:hidden;
-}
-.gol-barra-fill{
-  height:100%;border-radius:2px;
-  transition:width .6s cubic-bezier(.22,.68,0,1.1);
-}
-
-/* Número de posición (4°+) */
-.gol-pos{
-  width:30px;height:30px;border-radius:50%;
-  background:var(--negro4);border:1px solid var(--dorado-border);
-  display:flex;align-items:center;justify-content:center;
-  font-size:12px;font-weight:900;color:rgba(255,255,255,.45);
-  font-family:'Rajdhani',sans-serif;flex-shrink:0;
-}
-
-/* Goles a la derecha (4°+) */
-.gol-count{
-  display:flex;align-items:baseline;gap:3px;
-  justify-content:flex-end;
-}
-.gol-count-num{
-  font-family:'Bebas Neue',sans-serif;font-size:26px;
-  color:var(--dorado);line-height:1;
-}
-.gol-count-ico{ font-size:12px;opacity:.55; }
-
-/* Modo claro */
-body.light .gol-podio-item.p1{ background:linear-gradient(160deg,rgba(138,101,0,.12),rgba(138,101,0,.04)); }
-body.light .gol-podio-item.p2{ background:linear-gradient(160deg,rgba(120,120,140,.08),rgba(120,120,140,.02)); }
-body.light .gol-podio-item.p3{ background:linear-gradient(160deg,rgba(140,90,40,.08),rgba(140,90,40,.02)); }
-body.light .gol-barra-wrap{ background:rgba(0,0,0,.07); }
+/* GOLEADORES */
+.goleador-row{display:flex;align-items:center;gap:14px;padding:11px 18px;border-bottom:1px solid rgba(255,255,255,.04);}
+.goleador-row:last-child{border-bottom:none;}
+.goleador-row:hover{background:rgba(201,162,39,.05);}
+.gol-pos{width:30px;height:30px;border-radius:50%;background:var(--negro4);border:1px solid var(--dorado-border);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:rgba(255,255,255,.55);font-family:'Rajdhani',sans-serif;flex-shrink:0;}
+.gol-pos.top1{background:linear-gradient(135deg,var(--dorado),var(--dorado-light));color:var(--negro);box-shadow:0 0 10px rgba(201,162,39,.4);}
+.gol-nombre{flex:1;font-family:'Bebas Neue',sans-serif;font-size:16px;text-transform:uppercase;letter-spacing:.5px;}
+.gol-equipo{font-size:11px;color:var(--gris);margin-top:2px;font-family:'Rajdhani',sans-serif;}
+.gol-goles{font-family:'Bebas Neue',sans-serif;font-size:30px;color:var(--dorado);min-width:36px;text-align:center;line-height:1;}
 
 /* EQUIPOS */
 .equipos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:12px;padding:16px;}
@@ -1350,6 +1135,23 @@ body.light .gol-barra-wrap{ background:rgba(0,0,0,.07); }
 .admin-section{display:none;}
 .admin-section.visible{display:block;}
 .admin-title{font-family:'Rajdhani',sans-serif;font-weight:900;font-size:15px;color:var(--dorado);letter-spacing:1px;text-transform:uppercase;margin-bottom:16px;}
+
+/* ── ESTADÍSTICAS ── */
+.stats-kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:18px;}
+.stats-kpi{background:var(--negro3);border:1px solid var(--dorado-border);border-radius:var(--r-md);padding:14px 16px;text-align:center;}
+.stats-kpi-val{font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--dorado);line-height:1;}
+.stats-kpi-label{font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;color:rgba(255,255,255,.4);letter-spacing:1px;text-transform:uppercase;margin-top:4px;}
+.stats-block{background:var(--negro3);border:1px solid rgba(255,255,255,.06);border-radius:var(--r-md);padding:14px 16px;margin-bottom:12px;}
+.stats-block-title{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;color:rgba(255,255,255,.5);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px;}
+.stats-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.stats-bar-label{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:600;color:var(--blanco);width:100px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.stats-bar-track{flex:1;background:rgba(255,255,255,.07);border-radius:4px;height:10px;overflow:hidden;}
+.stats-bar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--dorado),var(--dorado-light));transition:width .5s ease;}
+.stats-bar-num{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;color:rgba(255,255,255,.5);width:36px;text-align:right;flex-shrink:0;}
+.stats-day-row{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;align-items:end;height:80px;margin-bottom:6px;}
+.stats-day-col{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;}
+.stats-day-bar{width:100%;border-radius:3px 3px 0 0;background:linear-gradient(180deg,var(--dorado),var(--dorado-dark));min-height:3px;transition:height .4s ease;}
+.stats-day-label{font-family:'Rajdhani',sans-serif;font-size:9px;color:rgba(255,255,255,.3);margin-top:4px;text-transform:uppercase;letter-spacing:.5px;}
 
 /* FORMS */
 .form-group{margin-bottom:13px;}
@@ -1587,6 +1389,147 @@ body.light .gol-barra-wrap{ background:rgba(0,0,0,.07); }
 /* audio oculto */
 #radio-player{display:none;}
 
+/* ── Radio responsive en mobile ── */
+/* ══════════════════════════════════════════════════════
+   BOTTOM NAV — solo mobile (≤760px)
+══════════════════════════════════════════════════════ */
+.bottom-nav{
+  display:none; /* oculta en desktop */
+}
+
+@media(max-width:760px){
+  /* Mostrar la barra */
+  .bottom-nav{
+    display:flex;
+    position:fixed;bottom:0;left:0;right:0;
+    height:58px;
+    background:var(--negro2);
+    border-top:1px solid rgba(201,162,39,.18);
+    z-index:500;
+    align-items:stretch;
+    padding-bottom:env(safe-area-inset-bottom); /* notch de iPhone */
+    box-shadow:0 -4px 20px rgba(0,0,0,.4);
+  }
+
+  /* Empujar el contenido para que no quede tapado */
+  main{ padding-bottom:calc(64px + env(safe-area-inset-bottom)); }
+  .site-footer{ padding-bottom:calc(64px + env(safe-area-inset-bottom)); }
+
+  /* Cada ítem */
+  .bn-item{
+    flex:1;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:3px;
+    text-decoration:none;
+    color:rgba(255,255,255,.38);
+    font-family:'Rajdhani',sans-serif;font-size:9px;font-weight:700;
+    text-transform:uppercase;letter-spacing:.6px;
+    position:relative;
+    transition:color .15s;
+    -webkit-tap-highlight-color:transparent;
+    border:none;background:none;cursor:pointer;padding:0;
+  }
+
+  /* Ícono SVG */
+  .bn-item svg{
+    width:22px;height:22px;
+    stroke:currentColor;fill:none;
+    stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;
+    transition:stroke .15s, transform .18s;
+    flex-shrink:0;
+  }
+
+  /* Estado activo */
+  .bn-item.active{
+    color:var(--dorado);
+  }
+  .bn-item.active svg{
+    transform:scale(1.12) translateY(-1px);
+    stroke:var(--dorado);
+    filter:drop-shadow(0 0 6px rgba(201,162,39,.5));
+  }
+
+  /* Línea indicadora arriba del ítem activo */
+  .bn-item.active::before{
+    content:'';
+    position:absolute;top:0;left:20%;right:20%;
+    height:2px;border-radius:0 0 2px 2px;
+    background:var(--dorado);
+    box-shadow:0 0 8px rgba(201,162,39,.6);
+  }
+
+  /* Tap feedback */
+  .bn-item:active svg{ transform:scale(.92); }
+
+  /* Badge EN VIVO encima del ícono de Partidos */
+  .bn-live-dot{
+    position:absolute;top:6px;right:calc(50% - 18px);
+    width:7px;height:7px;border-radius:50%;
+    background:#e74c3c;
+    border:1.5px solid var(--negro2);
+    display:none;
+    animation:blink 1.2s infinite;
+  }
+  .bn-live-dot.visible{ display:block; }
+}
+
+/* ── Radio responsive en mobile ── */
+@media(max-width:760px){
+  .radio-bar{
+    padding:10px 14px;
+    gap:10px;
+    flex-wrap:nowrap;
+    align-items:center;
+  }
+    align-items:center;
+  }
+  /* Logo más pequeño */
+  .radio-bar-logo img{ height:28px; }
+  .radio-bar-logo span{ font-size:18px !important; }
+  .radio-bar-nombre{ font-size:14px;letter-spacing:1px; }
+  .radio-bar-slogan{ display:none; }
+  /* Badge EN VIVO: más compacto */
+  .radio-on-air{
+    font-size:8px;padding:2px 6px;letter-spacing:1px;
+    flex-shrink:0;
+  }
+  /* Player: sin min-width para que no rompa la fila */
+  .radio-player-wrap{
+    flex:1;min-width:0;gap:8px;
+  }
+  /* Botón play más pequeño */
+  .radio-btn-play{ width:36px;height:36px;font-size:15px; }
+  /* Estado más compacto */
+  .radio-status-text{ font-size:9px;margin-bottom:3px; }
+  /* Ocultar volumen en mobile — ocupa mucho espacio */
+  .radio-vol-wrap{ display:none; }
+}
+
+/* ── Slot de pubs del sidebar en mobile ── */
+/* En desktop se oculta (las pubs van al sidebar normal) */
+#pub-mobile-sidebar-wrap{ display:none; }
+@media(max-width:760px){
+  #pub-mobile-sidebar-wrap{
+    display:block;
+    /* va debajo del banner global, antes del contenido */
+  }
+  /* En mobile el pub-sidebar se muestra como inline (horizontal) */
+  #pub-mobile-sidebar-wrap .pub-sidebar{
+    display:flex;align-items:center;
+    border-radius:0;border-left:none;border-right:none;border-top:none;
+    padding:8px 14px;gap:12px;
+  }
+  #pub-mobile-sidebar-wrap .pub-sidebar img{
+    width:auto;height:52px;max-width:90px;object-fit:contain;
+  }
+  #pub-mobile-sidebar-wrap .pub-sidebar .pub-texto-wrap{
+    text-align:left;padding:0;flex:1;
+  }
+  #pub-mobile-sidebar-wrap .pub-sidebar .pub-texto-titulo{ font-size:13px; }
+  #pub-mobile-sidebar-wrap .pub-sidebar video{
+    width:90px;height:52px;object-fit:cover;border-radius:var(--r-sm);flex-shrink:0;
+  }
+}
 
 /* FOOTER BODY */
 .footer-body{
@@ -1644,7 +1587,6 @@ body.light .gol-barra-wrap{ background:rgba(0,0,0,.07); }
 }
 .footer-bottom a{color:rgba(201,162,39,.5);text-decoration:none;}
 .footer-bottom a:hover{color:var(--dorado);}
-
 
 /* Banner superior – debajo del header, ancho completo */
 .pub-banner-top{
@@ -1713,7 +1655,50 @@ body.light .gol-barra-wrap{ background:rgba(0,0,0,.07); }
 }
 .pub-inline a.pub-cta:hover{background:var(--dorado-light);}
 
-/* Admin publicidades */
+/* ── Carrusel de publicidades ────────────────────────── */
+.pub-carrusel{position:relative;overflow:hidden;}
+.pub-carrusel-track{position:relative;}
+/* Cada slide */
+.pub-slide{
+  position:absolute;inset:0;
+  opacity:0;
+  transition:opacity .55s ease;
+  pointer-events:none;
+}
+.pub-slide.activo{
+  position:relative;
+  opacity:1;
+  pointer-events:auto;
+}
+/* Dots indicadores */
+.pub-dots{
+  display:flex;align-items:center;justify-content:center;
+  gap:5px;padding:5px 0 2px;
+}
+.pub-dot{
+  width:5px;height:5px;border-radius:50%;
+  background:rgba(255,255,255,.22);
+  transition:background .2s, transform .2s;
+  cursor:pointer;flex-shrink:0;
+}
+.pub-dot.activo{
+  background:var(--dorado);
+  transform:scale(1.3);
+}
+/* Contador de tiempo (barra de progreso fina debajo del banner) */
+.pub-progreso{
+  height:2px;background:rgba(255,255,255,.07);
+  position:relative;overflow:hidden;
+}
+.pub-progreso-fill{
+  position:absolute;left:0;top:0;bottom:0;
+  background:var(--dorado);
+  width:0%;
+  transition:none;
+}
+.pub-progreso-fill.animando{
+  transition:width linear;
+}
 .pub-admin-item{background:var(--negro3);border:1px solid rgba(255,255,255,.07);border-radius:var(--r-md);padding:10px 14px;margin-bottom:7px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
 .pub-admin-item-info{flex:1;min-width:0;}
 .pub-admin-item-titulo{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:14px;color:var(--blanco);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -2110,6 +2095,7 @@ body.light .gol-barra-wrap{ background:rgba(0,0,0,.07); }
       <button class="admin-tab" onclick="switchAdminTab('fotos',this)">Fotos</button>
       <button class="admin-tab" onclick="switchAdminTab('playoff',this)">Play Off</button>
       <button class="admin-tab" onclick="switchAdminTab('config',this)">Config</button>
+      <button class="admin-tab" onclick="switchAdminTab('estadisticas',this)">📊 Estadisticas</button>
     </div>
     <div class="admin-body">
 
@@ -2423,17 +2409,18 @@ body.light .gol-barra-wrap{ background:rgba(0,0,0,.07); }
       <!-- PUBLICIDAD ADMIN -->
       <div class="admin-section" id="admin-publicidad">
         <div class="admin-title">Publicidad</div>
-        <p style="font-size:11px;color:var(--gris);margin-bottom:16px;font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px">Cargá anuncios para 3 posiciones: Banner superior (toda la página), Sidebar (panel lateral) y Sección inline (dentro de cada sección).</p>
+        <p style="font-size:11px;color:var(--gris);margin-bottom:16px;font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px">4 posiciones disponibles. Si hay varias pubs activas en el mismo lugar, rotan automáticamente.</p>
 
         <div class="form-row">
           <div class="form-group"><label>Posición</label>
             <select id="pub-posicion" onchange="updateAdminPubForm()">
-              <option value="banner">🔝 Banner superior (ancho completo)</option>
+              <option value="banner">🔝 Banner global (todas las secciones)</option>
+              <option value="banner-seccion">📌 Banner por sección</option>
               <option value="sidebar">◀ Sidebar (panel lateral)</option>
               <option value="inline">📄 Inline en sección</option>
             </select>
           </div>
-          <div class="form-group" id="pub-seccion-wrap"><label>Sección</label>
+          <div class="form-group" id="pub-seccion-wrap" style="display:none"><label>Sección</label>
             <select id="pub-seccion">
               <option value="fixture">Partidos</option>
               <option value="posiciones">Posiciones</option>
@@ -2442,6 +2429,7 @@ body.light .gol-barra-wrap{ background:rgba(0,0,0,.07); }
               <option value="equipos">Equipos</option>
               <option value="torneos">Torneos</option>
               <option value="noticias">Noticias</option>
+              <option value="playoff">Play Off</option>
             </select>
           </div>
         </div>
@@ -2484,6 +2472,9 @@ body.light .gol-barra-wrap{ background:rgba(0,0,0,.07); }
           </div>
           <div class="form-group"><label>Orden / Prioridad</label>
             <input type="number" id="pub-orden" value="0" min="0" placeholder="0"/>
+          </div>
+          <div class="form-group"><label>Duración rotación <span style="color:var(--gris);font-size:10px">(seg, si hay varias)</span></label>
+            <input type="number" id="pub-duracion" value="5" min="2" max="60" placeholder="5"/>
           </div>
         </div>
         <button class="btn-primary" onclick="guardarPublicidad()">💾 Guardar Publicidad</button>
@@ -2721,6 +2712,35 @@ body.light .gol-barra-wrap{ background:rgba(0,0,0,.07); }
         <button class="btn-danger" onclick="resetearDatos()">⚠ Eliminar todos los datos</button>
       </div>
 
+      <!-- ESTADISTICAS DE USO -->
+      <div class="admin-section" id="admin-estadisticas">
+        <div class="admin-title">📊 Estadisticas de Uso</div>
+        <div id="stats-loading" style="text-align:center;padding:32px;font-family:'Rajdhani',sans-serif;font-size:13px;color:rgba(255,255,255,.35);letter-spacing:.5px;text-transform:uppercase">Cargando estadisticas...</div>
+        <div id="stats-content" style="display:none">
+          <div class="stats-kpi-row" id="stats-kpi-row"></div>
+          <div class="stats-block">
+            <div class="stats-block-title">Secciones mas visitadas</div>
+            <div id="stats-secciones-chart"></div>
+          </div>
+          <div class="stats-block">
+            <div class="stats-block-title">Tipo de dispositivo</div>
+            <div id="stats-dispositivos-chart"></div>
+          </div>
+          <div class="stats-block">
+            <div class="stats-block-title">Visitas ultimos 7 dias</div>
+            <div id="stats-dias-chart"></div>
+          </div>
+          <div class="stats-block">
+            <div class="stats-block-title">Contenido compartido</div>
+            <div id="stats-shares-chart"></div>
+          </div>
+        </div>
+        <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn-primary" onclick="renderEstadisticas()">🔄 Actualizar</button>
+          <button class="btn-danger" onclick="resetearEstadisticas()">🗑 Limpiar estadisticas</button>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -2763,18 +2783,14 @@ body.light .gol-barra-wrap{ background:rgba(0,0,0,.07); }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3v13M7 11l5 5 5-5"/><path d="M5 19h14"/></svg>
       Instalar app
     </button>
-    <button class="btn-tema" id="btn-tema" onclick="toggleTema()" title="Cambiar modo claro/oscuro" aria-label="Cambiar modo claro/oscuro">
-      <!-- Luna: visible en modo oscuro -->
-      <svg class="ico-luna" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>
-      <!-- Sol: visible en modo claro -->
-      <svg class="ico-sol" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-    </button>
     <a href="#" class="btn-admin-nav" onclick="abrirLogin();cerrarMenu();return false">⚙ Admin</a>
   </nav>
 </header>
 
 <!-- BANNER PUBLICITARIO SUPERIOR -->
 <div id="pub-banner-top-wrap"></div>
+<!-- PUBLICIDAD SIDEBAR — solo visible en mobile -->
+<div id="pub-mobile-sidebar-wrap"></div>
 
 <div class="container">
   <div class="layout">
@@ -2821,6 +2837,7 @@ body.light .gol-barra-wrap{ background:rgba(0,0,0,.07); }
           <button class="div-tab active" onclick="switchDivTab('primera',this)">Primera División</button>
           <button class="div-tab" onclick="switchDivTab('segunda',this)">Segunda División</button>
         </div>
+        <div id="pub-banner-seccion-fixture"></div>
         <div id="pub-inline-fixture"></div>
         <div id="fixture-content"></div>
       </section>
@@ -2853,6 +2870,7 @@ body.light .gol-barra-wrap{ background:rgba(0,0,0,.07); }
           <button class="torneo-tab active" onclick="switchGrupoTab('campeonato',this)" style="font-size:10px">Campeonato</button>
           <button class="torneo-tab" onclick="switchGrupoTab('repechaje',this)" style="font-size:10px">Repechaje</button>
         </div>
+        <div id="pub-banner-seccion-posiciones"></div>
         <div id="pub-inline-posiciones"></div>
         <div id="posiciones-content"></div>
       </section>
@@ -2874,6 +2892,7 @@ body.light .gol-barra-wrap{ background:rgba(0,0,0,.07); }
           <button class="torneo-tab" onclick="switchFaseResTab('fase2',this)">2ª Fase</button>
           <button class="torneo-tab" onclick="switchFaseResTab('fase3',this)">3ª Fase</button>
         </div>
+        <div id="pub-banner-seccion-resultados"></div>
         <div id="pub-inline-resultados"></div>
         <div id="resultados-content"></div>
       </section>
@@ -2895,6 +2914,7 @@ body.light .gol-barra-wrap{ background:rgba(0,0,0,.07); }
           <button class="torneo-tab" onclick="switchFaseGolTab('fase2',this)">2ª Fase</button>
           <button class="torneo-tab" onclick="switchFaseGolTab('fase3',this)">3ª Fase</button>
         </div>
+        <div id="pub-banner-seccion-goleadores"></div>
         <div id="pub-inline-goleadores"></div>
         <div id="goleadores-content"></div>
       </section>
@@ -2905,18 +2925,21 @@ body.light .gol-barra-wrap{ background:rgba(0,0,0,.07); }
           <button class="div-tab active" onclick="switchDivTab('primera',this)">Primera División</button>
           <button class="div-tab" onclick="switchDivTab('segunda',this)">Segunda División</button>
         </div>
+        <div id="pub-banner-seccion-equipos"></div>
         <div id="pub-inline-equipos"></div>
         <div id="equipos-content" class="equipos-grid"></div>
       </section>
 
       <!-- TORNEOS -->
       <section class="section" id="section-torneos">
+        <div id="pub-banner-seccion-torneos"></div>
         <div id="pub-inline-torneos"></div>
         <div id="torneos-content"></div>
       </section>
 
       <!-- NOTICIAS -->
       <section class="section" id="section-noticias">
+        <div id="pub-banner-seccion-noticias"></div>
         <div id="pub-inline-noticias"></div>
         <div id="noticias-content"></div>
       </section>
@@ -3111,7 +3134,7 @@ function showSection(sec){
   const entrante = document.getElementById('section-' + sec);
   if(!entrante) return;
 
-  // Actualizar estado y nav de inmediato
+  // Actualizar estado y nav de inmediato — header nav + bottom nav
   currentSection = sec;
   document.querySelectorAll('[data-sec]').forEach(a=>{
     a.classList.toggle('active', a.dataset.sec === sec);
@@ -3275,6 +3298,9 @@ function actualizarNavLive(){
   const hayEnJuego = data.partidos.some(p=>p.estado==='en-juego');
   const badge = document.getElementById('nav-live-badge');
   if(badge) badge.style.display = hayEnJuego ? 'inline-flex' : 'none';
+  // Sincronizar el punto rojo de la bottom nav
+  const bnDot = document.getElementById('bn-live-dot');
+  if(bnDot) bnDot.classList.toggle('visible', hayEnJuego);
 }
 
 function renderSection(s){
@@ -4180,34 +4206,57 @@ function pubPreviewVideo(input){
 
 function updateAdminPubForm(){
   const pos=document.getElementById('pub-posicion').value;
-  const wrap=document.getElementById('pub-seccion-wrap');
-  if(wrap) wrap.style.display = pos==='inline' ? '' : 'none';
+  const secWrap=document.getElementById('pub-seccion-wrap');
+  if(secWrap) secWrap.style.display=(pos==='inline'||pos==='banner-seccion')?'':'none';
 }
 
 function guardarPublicidad(){
   const titulo=document.getElementById('pub-titulo').value.trim();
   if(!titulo){ alert('Completá el nombre del anunciante'); return; }
   const pos=document.getElementById('pub-posicion').value;
+
   const pub={
-    id: String(Date.now()),
+    id: window._pubEditandoId || String(Date.now()),
     posicion: pos,
-    seccion: pos==='inline' ? document.getElementById('pub-seccion').value : '',
+    seccion: (pos==='inline'||pos==='banner-seccion') ? document.getElementById('pub-seccion').value : '',
     titulo,
-    desc:    document.getElementById('pub-desc').value.trim(),
-    url:     document.getElementById('pub-url').value.trim(),
-    cta:     document.getElementById('pub-cta').value.trim(),
-    img:     _pubImgB64,
-    video:   _pubVideoB64,
-    estado:  document.getElementById('pub-estado').value,
-    orden:   parseInt(document.getElementById('pub-orden').value)||0,
+    desc:     document.getElementById('pub-desc').value.trim(),
+    url:      document.getElementById('pub-url').value.trim(),
+    cta:      document.getElementById('pub-cta').value.trim(),
+    img:      _pubImgB64 || (window._pubImgActual||''),
+    video:    _pubVideoB64 || (window._pubVideoActual||''),
+    estado:   document.getElementById('pub-estado').value,
+    orden:    parseInt(document.getElementById('pub-orden').value)||0,
+    duracion: parseInt(document.getElementById('pub-duracion').value)||5,
   };
-  const pubs=getPubs();
-  pubs.push(pub);
+
+  // Leer siempre el array más fresco (el listener lo mantiene actualizado)
+  let pubs = getPubs();
+
+  if(window._pubEditandoId){
+    // Modo edición: reemplazar el existente
+    const idx = pubs.findIndex(p=>p.id===window._pubEditandoId);
+    if(idx>=0) pubs[idx]=pub; else pubs.push(pub);
+    window._pubEditandoId = null;
+    window._pubImgActual = '';
+    window._pubVideoActual = '';
+    // Restaurar botón
+    const btn = document.querySelector('#admin-publicidad .btn-primary');
+    if(btn) btn.textContent = '💾 Guardar Publicidad';
+    const cancelBtn = document.getElementById('pub-cancel-edit');
+    if(cancelBtn) cancelBtn.style.display='none';
+  } else {
+    // Modo creación
+    pubs.push(pub);
+  }
+
   pubs.sort((a,b)=>a.orden-b.orden);
   savePubs(pubs);
-  // reset
+
+  // Reset formulario
   ['pub-titulo','pub-desc','pub-url','pub-cta'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('pub-orden').value='0';
+  document.getElementById('pub-duracion').value='5';
   document.getElementById('pub-estado').value='activo';
   _pubImgB64=''; _pubVideoB64='';
   const p=document.getElementById('pub-img-preview'); if(p){ p.src=''; }
@@ -4215,6 +4264,7 @@ function guardarPublicidad(){
   const vp=document.getElementById('pub-video-preview'); if(vp) vp.innerHTML='';
   const pf=document.getElementById('pub-img-file'); if(pf) pf.value='';
   const pvf=document.getElementById('pub-video-file'); if(pvf) pvf.value='';
+
   const msg=document.getElementById('pub-msg');
   msg.textContent='✓ Publicidad guardada'; msg.style.color='var(--dorado)'; msg.style.display='block';
   setTimeout(()=>msg.style.display='none',2500);
@@ -4239,12 +4289,85 @@ function eliminarPub(id){
   });
 }
 
+function editarPublicidad(id){
+  const pubs=getPubs();
+  const p=pubs.find(x=>x.id===id); if(!p) return;
+
+  // Guardar contexto de edición
+  window._pubEditandoId = id;
+  window._pubImgActual  = p.img||'';
+  window._pubVideoActual= p.video||'';
+
+  // Rellenar formulario
+  document.getElementById('pub-posicion').value = p.posicion||'banner';
+  updateAdminPubForm();
+  if(p.posicion==='inline')
+    document.getElementById('pub-seccion').value = p.seccion||'fixture';
+  document.getElementById('pub-titulo').value  = p.titulo||'';
+  document.getElementById('pub-desc').value    = p.desc||'';
+  document.getElementById('pub-url').value     = p.url||'';
+  document.getElementById('pub-cta').value     = p.cta||'';
+  document.getElementById('pub-estado').value  = p.estado||'activo';
+  document.getElementById('pub-estado').value  = p.estado||'activo';
+  document.getElementById('pub-orden').value   = p.orden||0;
+  document.getElementById('pub-duracion').value = p.duracion||5;
+  // Mostrar imagen actual si existe
+  _pubImgB64=''; _pubVideoB64='';
+  const prev=document.getElementById('pub-img-preview');
+  const wrap=document.getElementById('pub-img-wrap');
+  if(p.img && prev && wrap){ prev.src=p.img; wrap.classList.add('visible'); }
+  else if(wrap) wrap.classList.remove('visible');
+
+  // Mostrar video actual si existe
+  const vp=document.getElementById('pub-video-preview');
+  if(p.video && vp){
+    vp.innerHTML=`<video src="${p.video}" muted style="max-height:80px;border-radius:var(--r-sm)"></video>
+      <p style="font-size:10px;color:var(--gris);margin-top:4px;font-family:'Rajdhani',sans-serif">Video actual — subí uno nuevo para reemplazarlo</p>`;
+  } else if(vp) vp.innerHTML='';
+
+  // Cambiar botón a "Actualizar" y mostrar Cancelar
+  const btn=document.querySelector('#admin-publicidad .btn-primary');
+  if(btn) btn.textContent='💾 Actualizar Publicidad';
+  let cancelBtn=document.getElementById('pub-cancel-edit');
+  if(!cancelBtn){
+    cancelBtn=document.createElement('button');
+    cancelBtn.id='pub-cancel-edit';
+    cancelBtn.className='btn-danger';
+    cancelBtn.style.cssText='margin-left:8px;font-size:12px;';
+    cancelBtn.textContent='✕ Cancelar edición';
+    cancelBtn.onclick=cancelarEdicionPub;
+    btn.parentNode.insertBefore(cancelBtn, btn.nextSibling);
+  }
+  cancelBtn.style.display='';
+
+  // Scroll al formulario
+  document.getElementById('admin-publicidad').scrollIntoView({behavior:'smooth'});
+}
+
+function cancelarEdicionPub(){
+  window._pubEditandoId=null;
+  window._pubImgActual='';
+  window._pubVideoActual='';
+  _pubImgB64=''; _pubVideoB64='';
+  ['pub-titulo','pub-desc','pub-url','pub-cta'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('pub-orden').value='0';
+  document.getElementById('pub-duracion').value='5';
+  document.getElementById('pub-estado').value='activo';
+  const prev=document.getElementById('pub-img-preview'); if(prev) prev.src='';
+  const wrap=document.getElementById('pub-img-wrap'); if(wrap) wrap.classList.remove('visible');
+  const vp=document.getElementById('pub-video-preview'); if(vp) vp.innerHTML='';
+  const btn=document.querySelector('#admin-publicidad .btn-primary');
+  if(btn) btn.textContent='💾 Guardar Publicidad';
+  const cancelBtn=document.getElementById('pub-cancel-edit');
+  if(cancelBtn) cancelBtn.style.display='none';
+}
+
 function renderAdminListaPubs(){
   const el=document.getElementById('lista-publicidad'); if(!el) return;
   const pubs=getPubs();
   if(!pubs.length){ el.innerHTML='<p class="admin-empty">Sin publicidades cargadas</p>'; return; }
-  const posLabel={banner:'Banner superior',sidebar:'Sidebar',inline:'Inline'};
-  const secLabel={fixture:'Partidos',posiciones:'Posiciones',resultados:'Resultados',goleadores:'Goleadores',equipos:'Equipos',torneos:'Torneos',noticias:'Noticias'};
+  const posLabel={banner:'Banner global',sidebar:'Sidebar','banner-seccion':'Banner sección',inline:'Inline'};
+  const secLabel={fixture:'Partidos',posiciones:'Posiciones',resultados:'Resultados',goleadores:'Goleadores',equipos:'Equipos',torneos:'Torneos',noticias:'Noticias',playoff:'Play Off'};
   el.innerHTML=pubs.map(p=>`
     <div class="pub-admin-item">
       ${p.video
@@ -4252,11 +4375,12 @@ function renderAdminListaPubs(){
         : p.img?`<img class="pub-admin-item-thumb" src="${p.img}" alt=""/>`:''}
       <div class="pub-admin-item-info">
         <div class="pub-admin-item-titulo">${p.titulo}${p.video?' 🎬':''}</div>
-        <div class="pub-admin-item-meta">${posLabel[p.posicion]||p.posicion}${p.seccion?' · '+secLabel[p.seccion]:''} · <span style="color:${p.estado==='activo'?'#4caf74':'var(--gris)'}">${p.estado==='activo'?'Activo':'Pausado'}</span></div>
+        <div class="pub-admin-item-meta">${posLabel[p.posicion]||p.posicion}${p.seccion?' · '+secLabel[p.seccion]:''} · <span style="color:${p.estado==='activo'?'#4caf74':'var(--gris)'}">${p.estado==='activo'?'Activo':'Pausado'}</span> · ${p.duracion||5}s</div>
       </div>
       <div style="display:flex;gap:4px;flex-shrink:0">
-        <button class="btn-edit" onclick="togglePubEstado('${p.id}')" style="font-size:10px">${p.estado==='activo'?'⏸':'▶'}</button>
-        <button class="btn-danger" onclick="eliminarPub('${p.id}')">✕</button>
+        <button class="btn-edit" onclick="editarPublicidad('${p.id}')" title="Editar">✏</button>
+        <button class="btn-edit" onclick="togglePubEstado('${p.id}')" style="font-size:10px" title="${p.estado==='activo'?'Pausar':'Activar'}">${p.estado==='activo'?'⏸':'▶'}</button>
+        <button class="btn-danger" onclick="eliminarPub('${p.id}')" title="Eliminar">✕</button>
       </div>
     </div>`).join('');
 }
@@ -4319,26 +4443,157 @@ function pubHTML(p){
   </div>`;
 }
 
-/** Renderiza todas las posiciones publicitarias */
+// ── Motor de carrusel de publicidades ────────────────────────
+// Guarda los intervalos activos por slotId para poder destruirlos
+window._pubCarruseles = window._pubCarruseles || {};
+
+/**
+ * Monta un carrusel en un contenedor DOM dado un array de pubs activas.
+ * Si solo hay 1 pub, la muestra directamente sin carrusel.
+ * @param {HTMLElement} el  - contenedor destino
+ * @param {Array}       pubs - array de publicidades a rotar
+ * @param {string}      slotId - identificador único del slot (para el intervalo)
+ */
+function montarCarrusel(el, pubs, slotId){
+  // Destruir carrusel anterior si existía
+  if(window._pubCarruseles[slotId]){
+    clearInterval(window._pubCarruseles[slotId]);
+    delete window._pubCarruseles[slotId];
+  }
+  if(!el) return;
+  if(!pubs.length){ el.innerHTML=''; return; }
+
+  // Una sola pub: sin carrusel
+  if(pubs.length===1){ el.innerHTML=pubHTML(pubs[0]); return; }
+
+  // Duración de rotación: usar la del primer anuncio (o 5s)
+  const durSeg = Math.max(2, pubs[0].duracion||5);
+  const durMs  = durSeg * 1000;
+
+  // Construir markup del carrusel
+  const slidesHTML = pubs.map((p,i)=>
+    `<div class="pub-slide${i===0?' activo':''}" data-idx="${i}">${pubHTML(p)}</div>`
+  ).join('');
+  const dotsHTML = pubs.map((_,i)=>
+    `<span class="pub-dot${i===0?' activo':''}" data-idx="${i}" onclick="pubCarruselIr('${slotId}',${i})"></span>`
+  ).join('');
+
+  el.innerHTML = `
+    <div class="pub-carrusel" data-slot="${slotId}">
+      <div class="pub-carrusel-track">${slidesHTML}</div>
+      <div class="pub-dots">${dotsHTML}</div>
+      <div class="pub-progreso"><div class="pub-progreso-fill" id="pub-prog-${slotId}"></div></div>
+    </div>`;
+
+  let actual = 0;
+
+  // Función de ir a un slide
+  function irA(idx){
+    const slides = el.querySelectorAll('.pub-slide');
+    const dots   = el.querySelectorAll('.pub-dot');
+    slides.forEach((s,i)=>s.classList.toggle('activo', i===idx));
+    dots.forEach((d,i)=>d.classList.toggle('activo',   i===idx));
+    actual = idx;
+    reiniciarBarra();
+  }
+
+  // Barra de progreso animada
+  function reiniciarBarra(){
+    const fill = document.getElementById('pub-prog-'+slotId);
+    if(!fill) return;
+    fill.classList.remove('animando');
+    fill.style.width='0%';
+    // Forzar reflow para resetear la animación
+    void fill.offsetWidth;
+    fill.classList.add('animando');
+    fill.style.transition=`width ${durMs}ms linear`;
+    fill.style.width='100%';
+  }
+
+  // Exponer para los dots onclick
+  window._pubCarruselIrFns = window._pubCarruselIrFns||{};
+  window._pubCarruselIrFns[slotId] = irA;
+
+  // Arrancar
+  reiniciarBarra();
+  const intervalo = setInterval(()=>{
+    irA((actual+1) % pubs.length);
+  }, durMs);
+  window._pubCarruseles[slotId] = intervalo;
+}
+
+// Llamado desde el onclick de los dots
+function pubCarruselIr(slotId, idx){
+  // Reiniciar el intervalo para que no corte a mitad
+  const pubs = getPubs().filter(p=>p.estado==='activo');
+  // Reconstruir contexto del slot para reiniciar timer
+  if(window._pubCarruseles[slotId]){
+    clearInterval(window._pubCarruseles[slotId]);
+    delete window._pubCarruseles[slotId];
+  }
+  const fn = window._pubCarruselIrFns&&window._pubCarruselIrFns[slotId];
+  if(fn) fn(idx);
+  // Re-armar el intervalo
+  const el = document.querySelector(`.pub-carrusel[data-slot="${slotId}"]`);
+  if(!el) return;
+  const slotPubs = _pubsParaSlot(pubs, slotId);
+  if(slotPubs.length>1){
+    const durMs = Math.max(2, slotPubs[0].duracion||5)*1000;
+    window._pubCarruseles[slotId] = setInterval(()=>{
+      const actual = [...el.querySelectorAll('.pub-slide')].findIndex(s=>s.classList.contains('activo'));
+      if(window._pubCarruselIrFns[slotId])
+        window._pubCarruselIrFns[slotId]((actual+1)%slotPubs.length);
+    }, durMs);
+  }
+}
+
+// Helper: obtener pubs para un slot dado su ID
+function _pubsParaSlot(activas, slotId){
+  if(slotId==='banner')  return activas.filter(p=>p.posicion==='banner');
+  if(slotId==='sidebar') return activas.filter(p=>p.posicion==='sidebar');
+  if(slotId.startsWith('inline-'))  return activas.filter(p=>p.posicion==='inline'&&p.seccion===slotId.slice(7));
+  if(slotId.startsWith('banner-s-'))return activas.filter(p=>p.posicion==='banner-seccion'&&p.seccion===slotId.slice(9));
+  return [];
+}
+
+/** Renderiza todas las posiciones publicitarias con soporte de carrusel */
 function renderTodasLasPubs(){
-  const activas=getPubs().filter(p=>p.estado==='activo');
+  const activas = getPubs().filter(p=>p.estado==='activo');
+  const SECCIONES = ['fixture','posiciones','resultados','goleadores','equipos','torneos','noticias'];
 
-  // Banner superior
-  const banners=activas.filter(p=>p.posicion==='banner');
-  const bannerWrap=document.getElementById('pub-banner-top-wrap');
-  if(bannerWrap) bannerWrap.innerHTML=banners.map(pubHTML).join('');
+  // Banner global (todas las secciones)
+  montarCarrusel(
+    document.getElementById('pub-banner-top-wrap'),
+    activas.filter(p=>p.posicion==='banner'),
+    'banner'
+  );
 
-  // Sidebar
-  const sidebars=activas.filter(p=>p.posicion==='sidebar');
-  const sideWrap=document.getElementById('pub-sidebar-wrap');
-  if(sideWrap) sideWrap.innerHTML=sidebars.map(pubHTML).join('');
+  // Sidebar (desktop)
+  const sidebarPubs = activas.filter(p=>p.posicion==='sidebar');
+  montarCarrusel(
+    document.getElementById('pub-sidebar-wrap'),
+    sidebarPubs,
+    'sidebar'
+  );
+  // Sidebar (mobile) — mismo contenido, slot separado que CSS muestra solo en <760px
+  montarCarrusel(
+    document.getElementById('pub-mobile-sidebar-wrap'),
+    sidebarPubs,
+    'sidebar-mobile'
+  );
 
-  // Inline por sección
-  ['fixture','posiciones','resultados','goleadores','equipos','torneos','noticias'].forEach(sec=>{
-    const el=document.getElementById('pub-inline-'+sec);
-    if(!el) return;
-    const inlines=activas.filter(p=>p.posicion==='inline'&&p.seccion===sec);
-    el.innerHTML=inlines.map(pubHTML).join('');
+  // Banner por sección + Inline por sección
+  SECCIONES.forEach(sec=>{
+    montarCarrusel(
+      document.getElementById('pub-banner-seccion-'+sec),
+      activas.filter(p=>p.posicion==='banner-seccion'&&p.seccion===sec),
+      'banner-s-'+sec
+    );
+    montarCarrusel(
+      document.getElementById('pub-inline-'+sec),
+      activas.filter(p=>p.posicion==='inline'&&p.seccion===sec),
+      'inline-'+sec
+    );
   });
 }
 
@@ -5463,7 +5718,6 @@ function guardarEdicion(tipo,id){
   }
 }
 
-
 // ============================================================
 // QUITAR IMAGEN – función genérica
 // ============================================================
@@ -5933,7 +6187,8 @@ function switchAdminTab(tab,el){
   if(tab==='fichas'){ poblarSelectFichas(); renderAdminListaFichas(); }
   if(tab==='noticias') renderAdminListaNoticias();
   if(tab==='publicidad'){ updateAdminPubForm(); renderAdminListaPubs(); }
-  if(tab==='deportemas'){ cargarFormDM(); }}
+  if(tab==='deportemas'){ cargarFormDM(); }
+  if(tab==='estadisticas'){ renderEstadisticas(); }}
 function cambiarPassword(){
   // La contraseña se gestiona desde Firebase Console → Authentication
   const msg=document.getElementById('conf-msg');
@@ -7210,10 +7465,13 @@ async function abrirShareCanvas(generadorFn){
       loadEl.style.display = 'none';
 
       // Detectar si Web Share API soporta archivos
-      const tieneWebShare = navigator.canShare && navigator.canShare({files:[new File([''],'t.png',{type:'image/png'})]});
+      const tieneWebShare = navigator.share && navigator.canShare && navigator.canShare({files:[new File([''],'t.png',{type:'image/png'})]});
+      const esMovil = /android|iphone|ipad|ipod/i.test(navigator.userAgent);
       noteEl.textContent = tieneWebShare
-        ? 'En móvil podés compartir directamente. En PC, descargá y adjuntá la imagen.'
-        : 'Descargá la imagen y adjuntala al publicar.';
+        ? 'Tocá una red social para compartir la imagen directamente.'
+        : esMovil
+          ? 'Seleccioná una red para compartir. Si no funciona, descargá la imagen y adjuntala.'
+          : 'En PC: se descarga la imagen automáticamente. Luego adjuntala en la red social.';
     } catch(e) {
       loadEl.textContent = 'Error al generar la imagen.';
       console.error(e);
@@ -7233,31 +7491,42 @@ async function compartirImgEn(red){
   const dataUrl = _shareCanvas.toDataURL('image/png');
   const id  = getIdentidad();
   const nombre = id.nombre||'Deportemas';
+  const texto = nombre + ' \u2013 \u00a1Mir\u00e1 el resultado! \ud83d\udcf2';
 
-  // Intentar Web Share API con archivo (funciona en móvil)
-  if(red==='whatsapp'||red==='telegram'){
-    if(navigator.canShare){
-      try{
-        const res = await fetch(dataUrl);
-        const blob = await res.blob();
-        const file = new File([blob], 'deportemas-resultado.png', {type:'image/png'});
-        if(navigator.canShare({files:[file]})){
-          await navigator.share({ files:[file], title: nombre });
-          return;
-        }
-      }catch(e){}
+  // Intentar Web Share API nativa con archivo (funciona en m\u00f3vil: Android Chrome, iOS Safari)
+  // Para Instagram, WhatsApp, Telegram \u2192 compartir imagen directamente via Web Share API
+  if(red==='instagram'||red==='whatsapp'||red==='telegram'||red==='twitter'){
+    try{
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const file = new File([blob], 'deportemas-resultado.png', {type:'image/png'});
+      if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
+        await navigator.share({ files:[file], title: nombre, text: texto });
+        return;
+      }
+    }catch(e){
+      // Si el usuario cancel\u00f3 el share, no continuar
+      if(e && e.name==='AbortError') return;
     }
   }
 
-  // Fallback: abrir la red con texto + descarga automática
-  descargarImagen();
-  const texto = encodeURIComponent(nombre + ' – ¡Mirá el resultado! 📲');
+  // Para Instagram: en desktop no hay URL de share directa, solo descargar
+  if(red==='instagram'){
+    descargarImagen();
+    alert('Imagen descargada. Abr\u00ed Instagram y adjunt\u00e1 la imagen desde tu galer\u00eda.');
+    return;
+  }
+
+  // Fallback para PC: descargar imagen + abrir red social en nueva pesta\u00f1a
+  const textoEnc = encodeURIComponent(texto);
+  const pageUrl  = encodeURIComponent(window.location.href);
   const urls = {
-    whatsapp: 'https://wa.me/?text=' + texto,
-    twitter:  'https://twitter.com/intent/tweet?text=' + texto,
-    facebook: 'https://www.facebook.com/sharer/sharer.php?quote=' + texto + '&u=' + encodeURIComponent(window.location.href),
-    telegram: 'https://t.me/share/url?url=' + encodeURIComponent(window.location.href) + '&text=' + texto,
+    whatsapp: 'https://wa.me/?text=' + textoEnc,
+    twitter:  'https://twitter.com/intent/tweet?text=' + textoEnc,
+    facebook: 'https://www.facebook.com/sharer/sharer.php?quote=' + textoEnc + '&u=' + pageUrl,
+    telegram: 'https://t.me/share/url?url=' + pageUrl + '&text=' + textoEnc,
   };
+  descargarImagen();
   if(urls[red]) window.open(urls[red], '_blank', 'noopener,noreferrer');
 }
 
@@ -7275,20 +7544,6 @@ const SVG_SHARE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
 // ============================================================
 // MENÚ HAMBURGUESA (móvil)
 // ============================================================
-// ── Modo claro / oscuro ──────────────────────────────────────
-function toggleTema(){
-  const esClaro = document.body.classList.toggle('light');
-  localStorage.setItem('tema', esClaro ? 'light' : 'dark');
-}
-function initTema(){
-  const guardado = localStorage.getItem('tema');
-  // Si no hay preferencia guardada, respetar preferencia del sistema
-  const prefSistema = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-  const tema = guardado || prefSistema;
-  if(tema === 'light') document.body.classList.add('light');
-}
-// Aplicar antes de que se pinte la página
-initTema();
 
 function toggleMenu(){
   const nav = document.getElementById('main-nav');
@@ -7677,6 +7932,243 @@ if(typeof saveIdentidad !== 'undefined'){
     _origSaveId(i);
     setTimeout(_pwaUpdateBanner, 200);
   };
+}
+</script>
+
+<!-- ══ BOTTOM NAV MOBILE ══════════════════════════════════ -->
+<nav class="bottom-nav" aria-label="Navegación principal">
+
+  <button class="bn-item active" data-sec="fixture" onclick="showSection('fixture')">
+    <span class="bn-live-dot" id="bn-live-dot"></span>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg>
+    Partidos
+  </button>
+
+  <button class="bn-item" data-sec="posiciones" onclick="showSection('posiciones')">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h18v18H3z"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
+    Posiciones
+  </button>
+
+  <button class="bn-item" data-sec="resultados" onclick="showSection('resultados')">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>
+    Resultados
+  </button>
+
+  <button class="bn-item" data-sec="goleadores" onclick="showSection('goleadores')">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+    Goleadores
+  </button>
+
+  <button class="bn-item" data-sec="equipos" onclick="showSection('equipos')">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    Equipos
+  </button>
+
+</nav>
+
+
+<script>
+// ============================================================
+// ESTADISTICAS DE USO — Tracking + Visualizacion en Admin
+// ============================================================
+// Guarda en Firestore bajo /lrr/stats_{YYYY-MM-DD} para no
+// mezclar con los datos de la app. Cada documento tiene:
+//   visitas: number
+//   secciones: { fixture:n, posiciones:n, ... }
+//   dispositivos: { mobile:n, tablet:n, desktop:n }
+//   shares: { whatsapp:n, twitter:n, facebook:n, instagram:n }
+//
+// Se usa window._fb.get / .set ya definidos arriba.
+// ─────────────────────────────────────────────────────────────
+
+(function(){
+  // Clave del documento del dia actual
+  function statKey(date){
+    const d = date || new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth()+1).padStart(2,'0');
+    const day = String(d.getDate()).padStart(2,'0');
+    return 'stats_' + y + '-' + m + '-' + day;
+  }
+
+  // Detectar tipo de dispositivo
+  function detectDevice(){
+    const ua = navigator.userAgent;
+    if(/tablet|ipad|playbook|silk/i.test(ua)) return 'tablet';
+    if(/mobile|iphone|ipod|android|blackberry|opera mini|iemobile/i.test(ua)) return 'mobile';
+    return 'desktop';
+  }
+
+  // Lee el stats del dia, aplica fn(obj), guarda
+  async function patchStats(fn){
+    if(!window._fb) return;
+    const key = statKey();
+    try {
+      let s = await window._fb.get(key);
+      if(!s) s = { visitas:0, secciones:{}, dispositivos:{}, shares:{} };
+      if(!s.secciones) s.secciones = {};
+      if(!s.dispositivos) s.dispositivos = {};
+      if(!s.shares) s.shares = {};
+      fn(s);
+      await window._fb.set(key, s);
+    } catch(e){ console.warn('Stats error', e); }
+  }
+
+  // ── Registrar visita del dia ────────────────────────────────
+  // Usamos sessionStorage para no contar multiples recargas de la misma sesion
+  if(!sessionStorage.getItem('_dm_visited')){
+    sessionStorage.setItem('_dm_visited','1');
+    const dev = detectDevice();
+    patchStats(s => {
+      s.visitas = (s.visitas||0) + 1;
+      s.dispositivos[dev] = (s.dispositivos[dev]||0) + 1;
+    });
+  }
+
+  // ── Registrar cambio de seccion ─────────────────────────────
+  const _origShowSection = window.showSection;
+  if(typeof _origShowSection === 'function'){
+    window.showSection = function(sec){
+      _origShowSection(sec);
+      patchStats(s => {
+        s.secciones[sec] = (s.secciones[sec]||0) + 1;
+      });
+    };
+  } else {
+    // Si showSection aun no existe, hookeamos mas tarde
+    document.addEventListener('DOMContentLoaded', function(){
+      if(typeof window.showSection === 'function'){
+        const orig = window.showSection;
+        window.showSection = function(sec){
+          orig(sec);
+          patchStats(s => { s.secciones[sec] = (s.secciones[sec]||0) + 1; });
+        };
+      }
+    });
+  }
+
+  // ── Registrar compartidos ───────────────────────────────────
+  const _origCompartir = window.compartirImgEn;
+  if(typeof _origCompartir === 'function'){
+    window.compartirImgEn = async function(red){
+      patchStats(s => { s.shares[red] = (s.shares[red]||0) + 1; });
+      return _origCompartir(red);
+    };
+  }
+
+  // Exponer la clave helper globalmente para el render
+  window._statKey = statKey;
+  window._patchStats = patchStats;
+})();
+
+// ── Render del panel de estadisticas ─────────────────────────
+
+const SECCIONES_LABELS = {
+  fixture:'Partidos', posiciones:'Posiciones', resultados:'Resultados',
+  goleadores:'Goleadores', equipos:'Equipos', torneos:'Torneos',
+  noticias:'Noticias', playoff:'Playoff'
+};
+const DEVICE_LABELS = { mobile:'Celular', tablet:'Tablet', desktop:'PC / Mac' };
+const SHARE_LABELS  = { whatsapp:'WhatsApp', twitter:'X / Twitter', facebook:'Facebook', instagram:'Instagram', descargar:'Descarga' };
+
+function _statsBarChart(container, data, labels, maxColor){
+  if(!container) return;
+  const total = Object.values(data).reduce((a,b)=>a+b,0)||1;
+  const sorted = Object.entries(data).sort((a,b)=>b[1]-a[1]);
+  if(!sorted.length){ container.innerHTML='<div style="color:rgba(255,255,255,.25);font-family:Rajdhani,sans-serif;font-size:12px;padding:4px 0">Sin datos aun</div>'; return; }
+  container.innerHTML = sorted.map(([k,v])=>{
+    const pct = Math.round(v/total*100);
+    const label = (labels&&labels[k]) || k;
+    return '<div class="stats-bar-row">'
+      +'<div class="stats-bar-label" title="'+label+'">'+label+'</div>'
+      +'<div class="stats-bar-track"><div class="stats-bar-fill" style="width:'+pct+'%"></div></div>'
+      +'<div class="stats-bar-num">'+v+'</div>'
+      +'</div>';
+  }).join('');
+}
+
+async function renderEstadisticas(){
+  const loadEl = document.getElementById('stats-loading');
+  const contEl = document.getElementById('stats-content');
+  if(!loadEl||!contEl) return;
+  loadEl.style.display='block'; contEl.style.display='none';
+
+  if(!window._fb){ loadEl.textContent='Firebase no disponible.'; return; }
+
+  // Cargar ultimos 7 dias
+  const days = [];
+  for(let i=6;i>=0;i--){
+    const d = new Date(); d.setDate(d.getDate()-i);
+    days.push(d);
+  }
+  const keys = days.map(d=>window._statKey(d));
+  const docs = await Promise.all(keys.map(k=>window._fb.get(k)));
+
+  // Agregar totales
+  let totalVisitas = 0;
+  const totalSecs = {}, totalDevs = {}, totalShares = {};
+  const visitasPorDia = [];
+
+  docs.forEach((s,i)=>{
+    const vis = s ? (s.visitas||0) : 0;
+    totalVisitas += vis;
+    visitasPorDia.push({ label: days[i].toLocaleDateString('es-AR',{weekday:'short'}), val: vis });
+    if(s){
+      Object.entries(s.secciones||{}).forEach(([k,v])=>{ totalSecs[k]=(totalSecs[k]||0)+v; });
+      Object.entries(s.dispositivos||{}).forEach(([k,v])=>{ totalDevs[k]=(totalDevs[k]||0)+v; });
+      Object.entries(s.shares||{}).forEach(([k,v])=>{ totalShares[k]=(totalShares[k]||0)+v; });
+    }
+  });
+
+  const hoy = docs[6];
+  const visitasHoy = hoy ? (hoy.visitas||0) : 0;
+  const totalSharesNum = Object.values(totalShares).reduce((a,b)=>a+b,0);
+  const secTop = Object.entries(totalSecs).sort((a,b)=>b[1]-a[1])[0];
+
+  // KPIs
+  const kpiRow = document.getElementById('stats-kpi-row');
+  if(kpiRow) kpiRow.innerHTML = [
+    { val: totalVisitas, label: 'Visitas (7 dias)' },
+    { val: visitasHoy,   label: 'Visitas hoy' },
+    { val: totalSharesNum, label: 'Compartidos' },
+    { val: secTop ? SECCIONES_LABELS[secTop[0]]||secTop[0] : '-', label: 'Seccion mas vista', big: false },
+  ].map(k=>'<div class="stats-kpi"><div class="stats-kpi-val" style="font-size:'+(typeof k.val==='string'?'18px':'36px')+'">'+k.val+'</div><div class="stats-kpi-label">'+k.label+'</div></div>').join('');
+
+  // Secciones
+  _statsBarChart(document.getElementById('stats-secciones-chart'), totalSecs, SECCIONES_LABELS);
+
+  // Dispositivos
+  _statsBarChart(document.getElementById('stats-dispositivos-chart'), totalDevs, DEVICE_LABELS);
+
+  // Visitas por dia — grafico de barras vertical
+  const diasEl = document.getElementById('stats-dias-chart');
+  if(diasEl){
+    const maxV = Math.max(...visitasPorDia.map(x=>x.val), 1);
+    diasEl.innerHTML = '<div class="stats-day-row">'
+      + visitasPorDia.map(d=>{
+          const h = Math.round(d.val/maxV*100);
+          return '<div class="stats-day-col">'
+            +'<div style="font-family:Rajdhani,sans-serif;font-size:10px;color:rgba(255,255,255,.4);margin-bottom:3px">'+d.val+'</div>'
+            +'<div class="stats-day-bar" style="height:'+h+'%"></div>'
+            +'<div class="stats-day-label">'+d.label+'</div>'
+            +'</div>';
+        }).join('')
+      + '</div>';
+  }
+
+  // Shares
+  _statsBarChart(document.getElementById('stats-shares-chart'), totalShares, SHARE_LABELS);
+
+  loadEl.style.display='none'; contEl.style.display='block';
+}
+
+async function resetearEstadisticas(){
+  if(!confirm('Se borran todas las estadisticas de los ultimos 7 dias. Continuar?')) return;
+  if(!window._fb) return;
+  const days = [];
+  for(let i=6;i>=0;i--){ const d=new Date(); d.setDate(d.getDate()-i); days.push(d); }
+  await Promise.all(days.map(d=>window._fb.set(window._statKey(d), { visitas:0, secciones:{}, dispositivos:{}, shares:{} })));
+  renderEstadisticas();
 }
 </script>
 
