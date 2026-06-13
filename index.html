@@ -1257,7 +1257,8 @@ table.posiciones td:nth-child(8){   /* GF */
 }
 .adv-banner a,.adv-banner div.adv-inner{ display:block;width:100%; }
 .adv-banner img{ width:100%;max-height:90px;object-fit:cover;display:block; }
-.adv-banner video{ width:100%;max-height:90px;object-fit:cover;display:block; }
+.adv-banner video,.adv-banner .adv-vid{ width:100%;max-height:90px;object-fit:cover;display:block; }
+.adv-banner .adv-vid-wrap{ position:relative; }
 .adv-banner .adv-text-only{
   display:flex;align-items:center;justify-content:space-between;
   padding:10px 16px;gap:12px;
@@ -1291,7 +1292,8 @@ table.posiciones td:nth-child(8){   /* GF */
 }
 .adv-sidebar a,.adv-sidebar div.adv-inner{ display:block; }
 .adv-sidebar img{ width:100%;display:block;object-fit:cover;max-height:160px; }
-.adv-sidebar video{ width:100%;display:block;max-height:160px;object-fit:cover; }
+.adv-sidebar video,.adv-sidebar .adv-vid{ width:100%;display:block;max-height:160px;object-fit:cover; }
+.adv-sidebar .adv-vid-wrap{ position:relative; }
 .adv-sidebar .adv-text-wrap{
   padding:10px 12px 12px;text-align:center;
 }
@@ -1311,39 +1313,80 @@ table.posiciones td:nth-child(8){   /* GF */
   padding:5px 12px;text-decoration:none;
 }
 
-/* ── Inline card (dentro de sección) ── */
+/* ── Tarjeta destacada (dentro de sección) ── */
 .adv-inline{
-  display:flex;align-items:center;gap:12px;
-  background:rgba(201,162,39,.06);border:1px solid rgba(201,162,39,.15);
-  border-radius:var(--r-md);padding:10px 12px;
-  position:relative;overflow:hidden;margin:8px 0;
+  display:grid;grid-template-columns:120px 1fr;
+  background:linear-gradient(135deg,rgba(201,162,39,.1) 0%,rgba(201,162,39,.04) 100%);
+  border:1px solid rgba(201,162,39,.3);border-left:4px solid var(--dorado);
+  border-radius:var(--r-md);overflow:hidden;
+  position:relative;margin:10px 0;
+  box-shadow:0 4px 20px rgba(201,162,39,.08);
+  transition:box-shadow .2s,border-color .2s;
+  text-decoration:none;color:inherit;
 }
-.adv-inline a.adv-wrap{ display:contents; }
-.adv-inline img{
-  flex-shrink:0;width:56px;height:56px;object-fit:contain;
-  border-radius:var(--r-sm);
+.adv-inline:hover{
+  box-shadow:0 6px 28px rgba(201,162,39,.18);
+  border-color:rgba(201,162,39,.55);
 }
-.adv-inline video{ flex-shrink:0;width:80px;height:56px;object-fit:cover;border-radius:var(--r-sm); }
-.adv-inline .adv-text-wrap{ flex:1;min-width:0; }
+.adv-inline img,
+.adv-inline .adv-vid{
+  width:100%;height:100%;min-height:90px;object-fit:cover;display:block;
+}
+.adv-inline .adv-vid-wrap{ position:relative;height:100%; }
+.adv-inline .adv-text-wrap{
+  padding:14px 16px;display:flex;flex-direction:column;justify-content:center;gap:4px;
+}
 .adv-inline .adv-tit{
-  font-family:'Rajdhani',sans-serif;font-weight:900;font-size:15px;
-  color:var(--blanco);text-transform:uppercase;letter-spacing:.5px;line-height:1.2;
+  font-family:'Bebas Neue',sans-serif;font-size:20px;
+  color:var(--blanco);letter-spacing:1px;line-height:1;
 }
 .adv-inline .adv-desc{
-  font-family:'DM Sans',sans-serif;font-size:11px;
-  color:rgba(255,255,255,.45);line-height:1.4;margin-top:2px;
+  font-family:'DM Sans',sans-serif;font-size:12px;
+  color:rgba(255,255,255,.55);line-height:1.4;
 }
 .adv-inline .adv-cta{
-  flex-shrink:0;font-family:'Rajdhani',sans-serif;font-weight:700;
-  font-size:11px;letter-spacing:.5px;text-transform:uppercase;
+  display:inline-block;margin-top:8px;align-self:flex-start;
+  font-family:'Rajdhani',sans-serif;font-weight:700;
+  font-size:11px;letter-spacing:.6px;text-transform:uppercase;
   background:var(--dorado);color:#000;border-radius:4px;
-  padding:5px 10px;text-decoration:none;
+  padding:5px 12px;text-decoration:none;
 }
+/* Sin imagen: ocupa todo el ancho */
+.adv-inline.adv-no-img{ grid-template-columns:1fr; }
 
 /* Carrusel: solo muestra 1 hijo a la vez */
 .adv-carousel > .adv-slide{ display:none; }
 .adv-carousel > .adv-slide.active{ display:block; }
-.adv-carousel > .adv-slide.active.adv-inline{ display:flex; }
+
+/* Apilado: pubs una debajo de la otra con separador */
+.adv-stack-item{ margin-bottom:8px; }
+.adv-stack-item:last-child{ margin-bottom:0; }
+
+/* Tabs imagen/video en el admin */
+.adv-media-tab{
+  padding:5px 14px;border-radius:var(--r-sm);border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.05);color:rgba(255,255,255,.5);
+  font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;
+  letter-spacing:.4px;text-transform:uppercase;cursor:pointer;
+  transition:all .15s;
+}
+.adv-media-tab.active{
+  background:rgba(201,162,39,.15);border-color:rgba(201,162,39,.4);
+  color:var(--dorado);
+}
+.adv-media-tab:hover:not(.active){ background:rgba(255,255,255,.09);color:rgba(255,255,255,.8); }
+
+/* Botón mute flotante sobre el video */
+.adv-mute-btn{
+  position:absolute;bottom:8px;right:8px;
+  background:rgba(0,0,0,.65);border:none;border-radius:50%;
+  width:32px;height:32px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;color:#fff;z-index:5;
+  transition:background .15s,transform .1s;
+  backdrop-filter:blur(4px);
+}
+.adv-mute-btn:hover{ background:rgba(0,0,0,.85);transform:scale(1.1); }
 
 /* ── Admin pub list ── */
 .pub-item{
@@ -2654,7 +2697,7 @@ table.posiciones td:nth-child(8){   /* GF */
                   <option value="banner-seccion">📌 Banner por sección</option>
                   <option value="sidebar">◀ Sidebar (desktop)</option>
                   <option value="mobile">📱 Mobile</option>
-                  <option value="inline">📄 Inline en sección</option>
+                  <option value="inline">🃏 Tarjeta destacada en sección</option>
                 </select>
               </div>
               <div class="form-group" id="adv-seccion-wrap" style="display:none"><label>Sección</label>
@@ -2680,16 +2723,47 @@ table.posiciones td:nth-child(8){   /* GF */
               <div class="form-group"><label>Texto del botón <span style="color:var(--gris);font-size:10px">(opcional)</span></label>
                 <input type="text" id="adv-cta" placeholder="Ej: Visitanos · Ver más" maxlength="30" oninput="advActualizarPreview()"/>
               </div>
-              <!-- Imagen -->
-              <div class="form-group"><label>Imagen <span style="color:var(--gris);font-size:10px">(JPG/PNG/WebP)</span></label>
-                <div class="upload-area" id="adv-img-area" onclick="document.getElementById('adv-img-file').click()">
-                  <input type="file" accept="image/*" id="adv-img-file" style="display:none" onchange="advPreviewImg(this)"/>
-                  <span class="icon">🖼</span><p>Tocá para subir imagen</p>
+              <!-- Imagen o Video -->
+              <div class="form-group">
+                <label>Imagen o Video <span style="color:var(--gris);font-size:10px">(JPG/PNG/WebP · MP4/WebM)</span></label>
+                <!-- Selector de tipo de medio -->
+                <div style="display:flex;gap:6px;margin-bottom:8px" id="adv-media-type-wrap">
+                  <button type="button" class="adv-media-tab active" id="adv-tab-img" onclick="advSwitchMedia('img')">🖼 Imagen</button>
+                  <button type="button" class="adv-media-tab" id="adv-tab-vid" onclick="advSwitchMedia('vid')">🎬 Video</button>
                 </div>
-                <div class="preview-wrap" id="adv-img-wrap" style="display:none">
-                  <img id="adv-img-preview" src="" alt="" style="max-height:80px;border-radius:6px;"/>
-                  <button type="button" class="btn-quitar-img" onclick="advQuitarImg()">✕ Quitar</button>
+                <!-- Upload imagen -->
+                <div id="adv-img-panel">
+                  <div class="upload-area" id="adv-img-area" onclick="document.getElementById('adv-img-file').click()">
+                    <input type="file" accept="image/*" id="adv-img-file" style="display:none" onchange="advPreviewImg(this)"/>
+                    <span class="icon">🖼</span><p>Tocá para subir imagen</p>
+                  </div>
+                  <div class="preview-wrap" id="adv-img-wrap" style="display:none">
+                    <img id="adv-img-preview" src="" alt="" style="max-height:80px;border-radius:6px;"/>
+                    <button type="button" class="btn-quitar-img" onclick="advQuitarImg()">✕ Quitar</button>
+                  </div>
                 </div>
+                <!-- Upload video -->
+                <div id="adv-vid-panel" style="display:none">
+                  <div class="upload-area" id="adv-vid-area" onclick="document.getElementById('adv-vid-file').click()">
+                    <input type="file" accept="video/mp4,video/webm,video/*" id="adv-vid-file" style="display:none" onchange="advPreviewVid(this)"/>
+                    <span class="icon">🎬</span><p>Tocá para subir video</p>
+                  </div>
+                  <div class="preview-wrap" id="adv-vid-wrap" style="display:none">
+                    <video id="adv-vid-preview" style="max-height:100px;border-radius:6px;max-width:100%" muted autoplay loop playsinline></video>
+                    <button type="button" class="btn-quitar-img" onclick="advQuitarVid()">✕ Quitar</button>
+                  </div>
+                  <div id="adv-vid-size-warn" style="display:none;margin-top:6px;font-family:'Rajdhani',sans-serif;font-size:11px;color:#ffb347;letter-spacing:.3px">
+                    ⚠ El video supera 8 MB. Puede demorar en cargar.
+                  </div>
+                </div>
+              </div>
+              <!-- Modo de visualización (cuando hay 2+ pubs en el mismo slot) -->
+              <div class="form-group" id="adv-modo-wrap">
+                <label>Modo con múltiples pubs <span style="color:var(--gris);font-size:10px">(cuando hay 2 o más en el mismo slot)</span></label>
+                <select id="adv-modo" onchange="advActualizarPreview()">
+                  <option value="carrusel">🔄 Carrusel · se turnan automáticamente</option>
+                  <option value="apilado">⬇ Apilado · una debajo de la otra</option>
+                </select>
               </div>
               <!-- Estado y rotación -->
               <div class="form-row">
@@ -2699,7 +2773,7 @@ table.posiciones td:nth-child(8){   /* GF */
                     <option value="pausado">⏸ Pausado</option>
                   </select>
                 </div>
-                <div class="form-group"><label>Rotación <span style="color:var(--gris);font-size:10px">(seg)</span></label>
+                <div class="form-group" id="adv-duracion-wrap"><label>Rotación <span style="color:var(--gris);font-size:10px">(seg)</span></label>
                   <input type="number" id="adv-duracion" value="6" min="2" max="60"/>
                 </div>
               </div>
@@ -8446,6 +8520,7 @@ setTimeout(()=>clearInterval(_bellInterval), 8000); // timeout de seguridad
 
 const ADV_KEY = 'lrr_publicidad';
 let _advImgB64  = '';   // buffer imagen actual
+let _advVidB64  = '';   // buffer video actual (data URL)
 let _advEditId  = null; // null = nueva, string = editando
 
 // ── Persistencia ─────────────────────────────────────────────
@@ -8477,8 +8552,11 @@ function advNueva(){
   const pos = document.getElementById('adv-posicion'); if(pos) pos.value = 'banner-global';
   const est = document.getElementById('adv-estado');   if(est) est.value = 'activo';
   const dur = document.getElementById('adv-duracion'); if(dur) dur.value = '6';
-  // Imagen
+  const mod = document.getElementById('adv-modo');     if(mod) mod.value = 'carrusel';
+  // Imagen / Video
   advQuitarImg();
+  advQuitarVid();
+  advSwitchMedia('img');
   advToggleSeccion();
   // Mostrar formulario, ocultar lista
   document.getElementById('adv-lista-wrap').style.display = 'none';
@@ -8503,16 +8581,27 @@ function advEditar(id){
   document.getElementById('adv-posicion').value = p.posicion || 'banner-global';
   document.getElementById('adv-estado').value   = p.estado   || 'activo';
   document.getElementById('adv-duracion').value = p.duracion || 6;
+  const modEl = document.getElementById('adv-modo'); if(modEl) modEl.value = p.modo || 'carrusel';
   advToggleSeccion();
   if(p.seccion) document.getElementById('adv-seccion').value = p.seccion;
 
-  // Imagen preview
-  if(p.img){
+  // Imagen / Video preview
+  advQuitarImg();
+  advQuitarVid();
+  if(p.vid){
+    _advVidB64 = p.vid;
+    const vp = document.getElementById('adv-vid-preview'); if(vp) vp.src = p.vid;
+    document.getElementById('adv-vid-wrap').style.display = 'block';
+    document.getElementById('adv-vid-area').style.display = 'none';
+    advSwitchMedia('vid');
+  } else if(p.img){
+    _advImgB64 = p.img;
     document.getElementById('adv-img-preview').src = p.img;
     document.getElementById('adv-img-wrap').style.display = 'block';
     document.getElementById('adv-img-area').style.display = 'none';
+    advSwitchMedia('img');
   } else {
-    advQuitarImg();
+    advSwitchMedia('img');
   }
 
   document.getElementById('adv-lista-wrap').style.display = 'none';
@@ -8526,6 +8615,7 @@ function advCancelar(){
   document.getElementById('adv-lista-wrap').style.display = 'block';
   _advEditId = null;
   _advImgB64 = '';
+  _advVidB64 = '';
 }
 
 // ── Admin: guardar (nueva o edición) ─────────────────────────
@@ -8538,22 +8628,31 @@ function advGuardar(){
   const seccion  = document.getElementById('adv-seccion')?.value   || '';
   const estado   = document.getElementById('adv-estado')?.value    || 'activo';
   const duracion = parseInt(document.getElementById('adv-duracion')?.value || '6', 10);
+  const modo     = document.getElementById('adv-modo')?.value      || 'carrusel';
 
   if(!nombre){ advMostrarMsg('Ingresá el nombre del anunciante.', 'error'); return; }
 
   const all = advGetAll();
 
+  // Determinar medio activo: video tiene prioridad si existe
+  const mediaImg = _advVidB64 ? '' : (_advImgB64 || '');
+  const mediaVid = _advVidB64 || '';
+
   if(_advEditId){
     // Editar existente
     const idx = all.findIndex(x => x.id === _advEditId);
     if(idx < 0){ advMostrarMsg('No se encontró la publicidad.', 'error'); return; }
-    all[idx] = { ...all[idx], nombre, desc, url, cta, posicion, seccion, estado, duracion,
-                 img: _advImgB64 || all[idx].img || '' };
+    all[idx] = { ...all[idx], nombre, desc, url, cta, posicion, seccion, estado, duracion, modo,
+                 img: mediaImg || all[idx].img || '',
+                 vid: mediaVid || all[idx].vid || '' };
+    // Si se cambió a video, borrar imagen previa y viceversa
+    if(mediaVid) all[idx].img = '';
+    if(mediaImg) all[idx].vid = '';
   } else {
     // Nueva: generar ID único
     const id = 'adv_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
-    all.push({ id, nombre, desc, url, cta, posicion, seccion, estado, duracion,
-               img: _advImgB64, creadoEn: Date.now() });
+    all.push({ id, nombre, desc, url, cta, posicion, seccion, estado, duracion, modo,
+               img: mediaImg, vid: mediaVid, creadoEn: Date.now() });
   }
 
   advSaveAll(all);
@@ -8590,7 +8689,17 @@ function advToggleSeccion(){
   const pos  = document.getElementById('adv-posicion')?.value || '';
   const wrap = document.getElementById('adv-seccion-wrap');
   if(wrap) wrap.style.display = (pos === 'banner-seccion' || pos === 'inline') ? '' : 'none';
+  // Ocultar rotación en modo apilado (no tiene sentido)
+  const modo = document.getElementById('adv-modo')?.value || 'carrusel';
+  const durWrap = document.getElementById('adv-duracion-wrap');
+  if(durWrap) durWrap.style.display = (modo === 'apilado') ? 'none' : '';
 }
+
+// Actualizar toggle de rotación cuando cambia el modo
+document.addEventListener('DOMContentLoaded', ()=>{
+  const modoEl = document.getElementById('adv-modo');
+  if(modoEl) modoEl.addEventListener('change', advToggleSeccion);
+});
 
 function advPreviewImg(input){
   const file = input.files[0];
@@ -8629,13 +8738,57 @@ function advQuitarImg(){
   advActualizarPreview();
 }
 
+function advSwitchMedia(tipo){
+  const imgPanel = document.getElementById('adv-img-panel');
+  const vidPanel = document.getElementById('adv-vid-panel');
+  const tabImg   = document.getElementById('adv-tab-img');
+  const tabVid   = document.getElementById('adv-tab-vid');
+  if(!imgPanel || !vidPanel) return;
+  const isVid = (tipo === 'vid');
+  imgPanel.style.display = isVid ? 'none' : '';
+  vidPanel.style.display = isVid ? ''     : 'none';
+  if(tabImg) tabImg.classList.toggle('active', !isVid);
+  if(tabVid) tabVid.classList.toggle('active',  isVid);
+  advActualizarPreview();
+}
+
+function advPreviewVid(input){
+  const file = input.files[0];
+  if(!file) return;
+  // Advertencia de tamaño
+  const warn = document.getElementById('adv-vid-size-warn');
+  if(warn) warn.style.display = (file.size > 8*1024*1024) ? '' : 'none';
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    _advVidB64 = e.target.result;
+    const vp = document.getElementById('adv-vid-preview');
+    if(vp){ vp.src = _advVidB64; vp.load(); vp.play().catch(()=>{}); }
+    document.getElementById('adv-vid-wrap').style.display = 'block';
+    document.getElementById('adv-vid-area').style.display = 'none';
+    advActualizarPreview();
+  };
+  reader.readAsDataURL(file);
+}
+
+function advQuitarVid(){
+  _advVidB64 = '';
+  const vp   = document.getElementById('adv-vid-preview');
+  if(vp){ vp.pause(); vp.src = ''; }
+  const wrap = document.getElementById('adv-vid-wrap'); if(wrap) wrap.style.display = 'none';
+  const area = document.getElementById('adv-vid-area'); if(area) area.style.display = '';
+  const file = document.getElementById('adv-vid-file'); if(file) file.value = '';
+  const warn = document.getElementById('adv-vid-size-warn'); if(warn) warn.style.display = 'none';
+  advActualizarPreview();
+}
+
 // ── Preview en vivo ───────────────────────────────────────────
 const _ADV_POS_LABELS = {
   'banner-global': '🔝 Banner global · se ve en todas las secciones',
   'banner-seccion':'📌 Banner por sección · aparece arriba del contenido',
   'sidebar':       '◀ Sidebar · panel lateral en desktop',
   'mobile':        '📱 Mobile · debajo del encabezado en celular',
-  'inline':        '📄 Inline · al pie de la sección'
+  'inline':        '🃏 Tarjeta destacada · integrada en la sección con imagen y texto'
 };
 
 function advActualizarPreview(){
@@ -8652,8 +8805,14 @@ function advActualizarPreview(){
   // Etiqueta de posición
   if(posLbl) posLbl.textContent = _ADV_POS_LABELS[posicion] || posicion;
 
-  const img  = _advImgB64;
-  const imgHTML = img ? `<img src="${img}" alt="" style="display:block;width:100%;${posicion==='inline'?'width:56px;height:56px;object-fit:contain;flex-shrink:0;border-radius:6px':posicion==='sidebar'?'max-height:140px;object-fit:cover':'max-height:80px;object-fit:cover'}"/>` : '';
+  // Usar video si existe, imagen si no
+  const vid  = _advVidB64;
+  const img  = vid ? '' : _advImgB64;
+  const mediaEl = vid
+    ? `<video src="${vid}" style="display:block;width:100%;${posicion==='inline'?'height:90px;object-fit:cover':posicion==='sidebar'?'max-height:140px;object-fit:cover':'max-height:80px;object-fit:cover'}" autoplay muted loop playsinline></video>`
+    : '';
+  const imgHTML = img ? `<img src="${img}" alt="" style="display:block;width:100%;${posicion==='inline'?'min-height:80px;object-fit:cover':posicion==='sidebar'?'max-height:140px;object-fit:cover':'max-height:80px;object-fit:cover'}"/>` : '';
+  const mediaHTML = mediaEl || imgHTML;
   const nomHTML = nombre ? `<div style="font-family:'Rajdhani',sans-serif;font-weight:900;font-size:${posicion==='inline'?'14':'13'}px;color:#fff;text-transform:uppercase;letter-spacing:.4px;line-height:1.2">${nombre}</div>` : '<div style="font-family:\'Rajdhani\',sans-serif;font-size:12px;color:rgba(255,255,255,.2);font-style:italic">Nombre del anunciante</div>';
   const descHTML = desc ? `<div style="font-family:'DM Sans',sans-serif;font-size:11px;color:rgba(255,255,255,.5);margin-top:2px;line-height:1.4">${desc}</div>` : '';
   const ctaHTML  = cta  ? `<span style="display:inline-block;margin-top:7px;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:10px;letter-spacing:.5px;text-transform:uppercase;background:var(--dorado);color:#000;border-radius:4px;padding:4px 9px">${cta}</span>` : '';
@@ -8664,9 +8823,9 @@ function advActualizarPreview(){
   if(posicion === 'banner-global' || posicion === 'banner-seccion' || posicion === 'mobile'){
     // Banner horizontal
     wrap.style.background = '#0c0c14';
-    if(img){
+    if(img || vid){
       html = `<div style="position:relative;background:rgba(201,162,39,.07);border-top:1px solid rgba(201,162,39,.18);border-bottom:1px solid rgba(201,162,39,.18)">
-        ${imgHTML}${pubLabel}
+        ${mediaHTML}${pubLabel}
       </div>`;
     } else {
       html = `<div style="position:relative;background:rgba(201,162,39,.07);border-top:1px solid rgba(201,162,39,.18);border-bottom:1px solid rgba(201,162,39,.18);display:flex;align-items:center;justify-content:space-between;padding:10px 14px;gap:10px;min-height:56px">
@@ -8678,19 +8837,28 @@ function advActualizarPreview(){
     // Sidebar card
     wrap.style.background = '#0c0c14';
     html = `<div style="position:relative;background:rgba(201,162,39,.06);border:1px solid rgba(201,162,39,.15);border-radius:8px;overflow:hidden">
-      ${imgHTML}
+      ${mediaHTML}
       <div style="padding:10px 12px 12px;text-align:center">${nomHTML}${descHTML}${ctaHTML}</div>
       ${pubLabel}
     </div>`;
 
   } else if(posicion === 'inline'){
-    // Inline horizontal card
+    // Tarjeta destacada
     wrap.style.background = '#0c0c14';
-    html = `<div style="position:relative;display:flex;align-items:center;gap:10px;background:rgba(201,162,39,.06);border:1px solid rgba(201,162,39,.15);border-radius:8px;padding:10px 12px;overflow:hidden">
-      ${img ? `<img src="${img}" alt="" style="flex-shrink:0;width:54px;height:54px;object-fit:contain;border-radius:6px"/>` : ''}
-      <div style="flex:1;min-width:0">${nomHTML}${descHTML}</div>
-      ${ctaHTML}${pubLabel}
-    </div>`;
+    if(img || vid){
+      html = `<div style="position:relative;display:grid;grid-template-columns:110px 1fr;background:linear-gradient(135deg,rgba(201,162,39,.1),rgba(201,162,39,.04));border:1px solid rgba(201,162,39,.3);border-left:4px solid #c9a227;border-radius:8px;overflow:hidden;box-shadow:0 4px 20px rgba(201,162,39,.08)">
+        <div style="position:relative">${mediaHTML}</div>
+        <div style="padding:12px 14px;display:flex;flex-direction:column;justify-content:center;gap:3px">
+          ${nomHTML}${descHTML}${ctaHTML}
+        </div>
+        ${pubLabel}
+      </div>`;
+    } else {
+      html = `<div style="position:relative;background:linear-gradient(135deg,rgba(201,162,39,.1),rgba(201,162,39,.04));border:1px solid rgba(201,162,39,.3);border-left:4px solid #c9a227;border-radius:8px;padding:14px 16px;box-shadow:0 4px 20px rgba(201,162,39,.08)">
+        ${nomHTML}${descHTML}${ctaHTML}
+        ${pubLabel}
+      </div>`;
+    }
   }
 
   inner.innerHTML = html || `<div style="display:flex;align-items:center;justify-content:center;height:60px;font-family:'Rajdhani',sans-serif;font-size:11px;color:rgba(255,255,255,.2);letter-spacing:.5px;text-transform:uppercase">Completá los campos para ver el preview</div>`;
@@ -8720,7 +8888,7 @@ function renderAdminListaPubs(){
 
   const POS_LABEL = {
     'banner-global':'Banner global','banner-seccion':'Banner sección',
-    'sidebar':'Sidebar','mobile':'Mobile','inline':'Inline'
+    'sidebar':'Sidebar','mobile':'Mobile','inline':'Tarjeta destacada'
   };
   const SEC_LABEL = {
     fixture:'Partidos',posiciones:'Posiciones',resultados:'Resultados',
@@ -8730,9 +8898,11 @@ function renderAdminListaPubs(){
   el.innerHTML = all.map(p => {
     const pos = POS_LABEL[p.posicion] || p.posicion;
     const sec = (p.seccion && SEC_LABEL[p.seccion]) ? ' · ' + SEC_LABEL[p.seccion] : '';
-    const thumb = p.img
-      ? `<div class="pub-item-thumb"><img src="${p.img}" alt=""/></div>`
-      : `<div class="pub-item-thumb">🖼</div>`;
+    const thumb = p.vid
+      ? `<div class="pub-item-thumb" style="font-size:20px">🎬</div>`
+      : (p.img
+        ? `<div class="pub-item-thumb"><img src="${p.img}" alt=""/></div>`
+        : `<div class="pub-item-thumb">🖼</div>`);
     return `<div class="pub-item">
       ${thumb}
       <div class="pub-item-info">
@@ -8753,37 +8923,57 @@ function renderAdminListaPubs(){
 function _advBuildHTML(p, tipo){
   const link  = p.url ? p.url : null;
   const inner = _advInnerHTML(p, tipo);
+  // Para inline (tarjeta destacada) agregamos clase extra si no hay imagen
+  const extraClass = (tipo === 'inline' && !p.img && !p.vid) ? ' adv-no-img' : '';
   if(link){
-    return `<a href="${link}" target="_blank" rel="noopener" class="adv-${tipo}" style="text-decoration:none">${inner}<span class="adv-label">Publicidad</span></a>`;
+    return `<a href="${link}" target="_blank" rel="noopener" class="adv-${tipo}${extraClass}" style="text-decoration:none">${inner}<span class="adv-label">Publicidad</span></a>`;
   }
-  return `<div class="adv-${tipo}">${inner}<span class="adv-label">Publicidad</span></div>`;
+  return `<div class="adv-${tipo}${extraClass}">${inner}<span class="adv-label">Publicidad</span></div>`;
 }
 
 function _advInnerHTML(p, tipo){
-  const img  = p.img  ? (tipo==='inline'
-    ? `<img src="${p.img}" alt="${p.nombre||''}" loading="lazy"/>`
-    : `<img src="${p.img}" alt="${p.nombre||''}" loading="lazy"/>`) : '';
+  // Construir el elemento multimedia (video o imagen)
+  const vidId = 'adv-v-' + (p.id||'').slice(-6) + '-' + Math.random().toString(36).slice(2,5);
+  const mediaEl = p.vid
+    ? `<div class="adv-vid-wrap" style="position:relative">
+         <video id="${vidId}" src="${p.vid}" autoplay muted loop playsinline class="adv-vid"></video>
+         <button class="adv-mute-btn" onclick="advToggleMute('${vidId}',this)" title="Activar/silenciar sonido">🔇</button>
+       </div>`
+    : (p.img ? `<img src="${p.img}" alt="${p.nombre||''}" loading="lazy"/>` : '');
+
   const cta  = p.cta  ? `<span class="adv-cta">${p.cta}</span>` : '';
   const desc = p.desc ? `<div class="adv-desc">${p.desc}</div>` : '';
   const nom  = p.nombre ? `<div class="adv-tit">${p.nombre}</div>` : '';
 
   if(tipo === 'banner'){
-    if(img){
-      return img;
-    }
+    if(mediaEl){ return mediaEl; }
     return `<div class="adv-text-only">${nom}<div>${desc}</div>${cta}</div>`;
   }
   if(tipo === 'sidebar'){
-    return `${img}<div class="adv-text-wrap">${nom}${desc}${cta}</div>`;
+    return `${mediaEl}<div class="adv-text-wrap">${nom}${desc}${cta}</div>`;
   }
   if(tipo === 'inline'){
-    return `${img}<div class="adv-text-wrap">${nom}${desc}</div>${cta}`;
+    // Tarjeta destacada: media a la izquierda, texto + CTA a la derecha
+    if(mediaEl){
+      return `${mediaEl}<div class="adv-text-wrap">${nom}${desc}${cta}</div>`;
+    }
+    return `<div class="adv-text-wrap">${nom}${desc}${cta}</div>`;
   }
-  return `${img}<div class="adv-text-wrap">${nom}${desc}${cta}</div>`;
+  return `${mediaEl}<div class="adv-text-wrap">${nom}${desc}${cta}</div>`;
+}
+
+// Alterna mute/unmute en el video de una publicidad
+function advToggleMute(vidId, btn){
+  const v = document.getElementById(vidId);
+  if(!v) return;
+  v.muted = !v.muted;
+  btn.textContent = v.muted ? '🔇' : '🔊';
+  btn.title = v.muted ? 'Activar sonido' : 'Silenciar';
 }
 
 function _advMontarSlot(el, pubs, tipo){
   if(!el){ return; }
+  if(el._advTimer){ clearInterval(el._advTimer); el._advTimer = null; }
   if(!pubs.length){ el.innerHTML = ''; return; }
 
   if(pubs.length === 1){
@@ -8791,14 +8981,23 @@ function _advMontarSlot(el, pubs, tipo){
     return;
   }
 
-  // Carrusel: múltiples pubs en el mismo slot
+  // Determinar modo: si todas las pubs del slot tienen modo 'apilado' → apilar
+  const modoApilado = pubs.every(p => (p.modo || 'carrusel') === 'apilado');
+
+  if(modoApilado){
+    // Apilado: mostrar todas una debajo de la otra con separador
+    el.innerHTML = pubs.map(p =>
+      '<div class="adv-stack-item">' + _advBuildHTML(p, tipo) + '</div>'
+    ).join('');
+    return;
+  }
+
+  // Carrusel: múltiples pubs que se turnan automáticamente
   const slotId = el.id || ('adv_' + Math.random().toString(36).slice(2,6));
   el.innerHTML = `<div class="adv-carousel" id="car-${slotId}">`
     + pubs.map((p,i) => `<div class="adv-slide${i===0?' active':''}">${_advBuildHTML(p, tipo)}</div>`).join('')
     + '</div>';
 
-  // Limpiar timer anterior si existe
-  if(el._advTimer) clearInterval(el._advTimer);
   let cur = 0;
   const dur = (pubs[0].duracion || 6) * 1000;
   el._advTimer = setInterval(()=>{
