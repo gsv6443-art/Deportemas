@@ -280,11 +280,7 @@
     // Re-aplicar identidad y re-renderizar (escudos ya actualizado)
     aplicarIdentidad();
     renderFotosSidebar();
-    renderTodasLasPubs();
-    actualizarNavLive();
-    renderSection(currentSection);
-
-    // Ocultar splash ahora que los datos de Firebase ya están listos
+    if(typeof renderTodasLasPubs==='function') renderTodasLasPubs();
     if(window._splashFallback) clearTimeout(window._splashFallback);
     if(window._ocultarSplash) window._ocultarSplash();
 
@@ -324,8 +320,8 @@
       // Ignorar el eco inmediato cuando esta pestaña acaba de guardar
       if(window._fbEscribiendoPubs) return;
       localStorage.setItem('lrr_publicidad', JSON.stringify(fbVal));
-      renderTodasLasPubs();
-      if(document.getElementById('lista-publicidad'))
+      if(typeof renderTodasLasPubs==='function') renderTodasLasPubs();
+      if(typeof renderAdminListaPubs==='function' && document.getElementById('adv-lista'))
         renderAdminListaPubs();
     });
     // Suscribir cambios en tiempo real a noticias
@@ -1244,6 +1240,165 @@ table.posiciones td:nth-child(8){   /* GF */
 .admin-section.visible{display:block;}
 .admin-title{font-family:'Rajdhani',sans-serif;font-weight:900;font-size:15px;color:var(--dorado);letter-spacing:1px;text-transform:uppercase;margin-bottom:16px;}
 
+/* ════════════════════════════════════════════════════════════
+   PUBLICIDAD — sistema nuevo
+   ════════════════════════════════════════════════════════════ */
+
+/* Contenedor general */
+.adv-slot{ width:100%; }
+.adv-slot:empty{ display:none; }
+
+/* ── Banner horizontal (top de sección o global) ── */
+.adv-banner{
+  width:100%;background:rgba(201,162,39,.07);
+  border-top:1px solid rgba(201,162,39,.18);
+  border-bottom:1px solid rgba(201,162,39,.18);
+  overflow:hidden;position:relative;
+}
+.adv-banner a,.adv-banner div.adv-inner{ display:block;width:100%; }
+.adv-banner img{ width:100%;max-height:90px;object-fit:cover;display:block; }
+.adv-banner video{ width:100%;max-height:90px;object-fit:cover;display:block; }
+.adv-banner .adv-text-only{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 16px;gap:12px;
+}
+.adv-banner .adv-tit{
+  font-family:'Rajdhani',sans-serif;font-weight:900;font-size:15px;
+  color:var(--blanco);text-transform:uppercase;letter-spacing:.5px;
+}
+.adv-banner .adv-desc{
+  font-family:'DM Sans',sans-serif;font-size:11px;
+  color:rgba(255,255,255,.5);margin-top:1px;
+}
+.adv-banner .adv-cta{
+  flex-shrink:0;font-family:'Rajdhani',sans-serif;font-weight:700;
+  font-size:11px;letter-spacing:.5px;text-transform:uppercase;
+  background:var(--dorado);color:#000;border-radius:4px;
+  padding:5px 10px;white-space:nowrap;text-decoration:none;
+}
+.adv-label{
+  position:absolute;top:4px;right:6px;
+  font-family:'Rajdhani',sans-serif;font-size:9px;font-weight:700;
+  letter-spacing:1px;text-transform:uppercase;
+  color:rgba(255,255,255,.25);pointer-events:none;
+}
+
+/* ── Sidebar card ── */
+.adv-sidebar{
+  width:100%;background:rgba(201,162,39,.06);
+  border:1px solid rgba(201,162,39,.15);border-radius:var(--r-md);
+  overflow:hidden;position:relative;margin-bottom:10px;
+}
+.adv-sidebar a,.adv-sidebar div.adv-inner{ display:block; }
+.adv-sidebar img{ width:100%;display:block;object-fit:cover;max-height:160px; }
+.adv-sidebar video{ width:100%;display:block;max-height:160px;object-fit:cover; }
+.adv-sidebar .adv-text-wrap{
+  padding:10px 12px 12px;text-align:center;
+}
+.adv-sidebar .adv-tit{
+  font-family:'Rajdhani',sans-serif;font-weight:900;font-size:14px;
+  color:var(--blanco);text-transform:uppercase;letter-spacing:.5px;
+}
+.adv-sidebar .adv-desc{
+  font-family:'DM Sans',sans-serif;font-size:11px;
+  color:rgba(255,255,255,.45);margin-top:3px;line-height:1.4;
+}
+.adv-sidebar .adv-cta{
+  display:inline-block;margin-top:8px;
+  font-family:'Rajdhani',sans-serif;font-weight:700;font-size:11px;
+  letter-spacing:.5px;text-transform:uppercase;
+  background:var(--dorado);color:#000;border-radius:4px;
+  padding:5px 12px;text-decoration:none;
+}
+
+/* ── Inline card (dentro de sección) ── */
+.adv-inline{
+  display:flex;align-items:center;gap:12px;
+  background:rgba(201,162,39,.06);border:1px solid rgba(201,162,39,.15);
+  border-radius:var(--r-md);padding:10px 12px;
+  position:relative;overflow:hidden;margin:8px 0;
+}
+.adv-inline a.adv-wrap{ display:contents; }
+.adv-inline img{
+  flex-shrink:0;width:56px;height:56px;object-fit:contain;
+  border-radius:var(--r-sm);
+}
+.adv-inline video{ flex-shrink:0;width:80px;height:56px;object-fit:cover;border-radius:var(--r-sm); }
+.adv-inline .adv-text-wrap{ flex:1;min-width:0; }
+.adv-inline .adv-tit{
+  font-family:'Rajdhani',sans-serif;font-weight:900;font-size:15px;
+  color:var(--blanco);text-transform:uppercase;letter-spacing:.5px;line-height:1.2;
+}
+.adv-inline .adv-desc{
+  font-family:'DM Sans',sans-serif;font-size:11px;
+  color:rgba(255,255,255,.45);line-height:1.4;margin-top:2px;
+}
+.adv-inline .adv-cta{
+  flex-shrink:0;font-family:'Rajdhani',sans-serif;font-weight:700;
+  font-size:11px;letter-spacing:.5px;text-transform:uppercase;
+  background:var(--dorado);color:#000;border-radius:4px;
+  padding:5px 10px;text-decoration:none;
+}
+
+/* Carrusel: solo muestra 1 hijo a la vez */
+.adv-carousel > .adv-slide{ display:none; }
+.adv-carousel > .adv-slide.active{ display:block; }
+.adv-carousel > .adv-slide.active.adv-inline{ display:flex; }
+
+/* ── Admin pub list ── */
+.pub-item{
+  display:flex;align-items:center;gap:10px;
+  background:var(--negro3);border:1px solid rgba(255,255,255,.07);
+  border-radius:var(--r-md);padding:10px 12px;margin-bottom:8px;
+}
+.pub-item-thumb{
+  width:48px;height:36px;border-radius:4px;object-fit:cover;flex-shrink:0;
+  background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;
+  font-size:18px;
+}
+.pub-item-thumb img{ width:100%;height:100%;object-fit:contain;border-radius:4px; }
+.pub-item-info{ flex:1;min-width:0; }
+.pub-item-nombre{
+  font-family:'Rajdhani',sans-serif;font-weight:900;font-size:13px;
+  color:var(--blanco);text-transform:uppercase;letter-spacing:.3px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.pub-item-meta{
+  font-family:'DM Sans',sans-serif;font-size:11px;
+  color:rgba(255,255,255,.35);margin-top:2px;
+}
+.pub-item-estado{
+  font-family:'Rajdhani',sans-serif;font-weight:700;font-size:10px;
+  letter-spacing:1px;text-transform:uppercase;padding:2px 7px;border-radius:3px;flex-shrink:0;
+}
+.pub-item-estado.activo{ background:rgba(0,200,80,.15);color:#00c850; }
+.pub-item-estado.pausado{ background:rgba(255,255,255,.07);color:rgba(255,255,255,.35); }
+.pub-item-actions{ display:flex;gap:6px;flex-shrink:0; }
+.pub-item-actions button{
+  background:rgba(255,255,255,.07);border:none;color:rgba(255,255,255,.6);
+  border-radius:4px;padding:5px 8px;cursor:pointer;font-size:12px;
+  font-family:'Rajdhani',sans-serif;font-weight:700;transition:background .15s;
+}
+.pub-item-actions button:hover{ background:rgba(255,255,255,.15);color:#fff; }
+.pub-item-actions button.del:hover{ background:rgba(255,60,48,.25);color:#ff3b30; }
+
+/* ── Mobile sidebar (horizontal debajo del nav) ── */
+@media(max-width:759px){
+  #adv-mobile-wrap{
+    display:block;overflow:hidden;
+    border-bottom:1px solid rgba(201,162,39,.12);
+  }
+  #adv-mobile-wrap .adv-sidebar{
+    margin:0;border-radius:0;border-left:none;border-right:none;
+    border-top:none;
+  }
+  #adv-mobile-wrap .adv-sidebar img,
+  #adv-mobile-wrap .adv-sidebar video{ max-height:70px; }
+}
+@media(min-width:760px){
+  #adv-mobile-wrap{ display:none; }
+}
+
 /* ── PUSH NOTIFICATIONS ── */
 #push-toast{
   position:fixed;top:16px;left:50%;transform:translateX(-50%) translateY(-120px);
@@ -1455,6 +1610,52 @@ table.posiciones td:nth-child(8){   /* GF */
 .site-footer{
   background:var(--negro2);border-top:2px solid rgba(201,162,39,.25);
   margin-top:32px;
+}
+
+/* FOOTER BODY */
+.footer-body{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:32px;
+  padding:40px 32px 32px;
+  border-bottom:1px solid rgba(201,162,39,.15);
+}
+.footer-col{
+  display:flex;flex-direction:column;
+}
+.footer-col-title{
+  font-family:'Rajdhani',sans-serif;font-weight:900;font-size:13px;
+  color:var(--dorado);text-transform:uppercase;letter-spacing:2px;
+  margin-bottom:16px;padding-bottom:10px;
+  border-bottom:1px solid rgba(201,162,39,.2);
+}
+/* Contacto */
+.footer-contacto{display:flex;flex-direction:column;gap:8px;}
+.footer-contacto-item{display:flex;align-items:flex-start;gap:8px;}
+.footer-contacto-item .icon{font-size:14px;flex-shrink:0;margin-top:1px;}
+.footer-contacto-item .info{font-family:'DM Sans',sans-serif;font-size:12px;color:rgba(255,255,255,.5);line-height:1.5;}
+.footer-contacto-item .info strong{display:block;font-size:10px;font-weight:700;font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px;color:rgba(255,255,255,.3);}
+/* Redes sociales */
+.footer-redes{display:flex;flex-direction:column;gap:8px;}
+.footer-red-link{
+  display:flex;align-items:center;gap:12px;padding:10px 12px;
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);
+  border-radius:var(--r-md);text-decoration:none;
+  transition:background .15s,border-color .15s;
+}
+.footer-red-link:hover{background:rgba(201,162,39,.08);border-color:rgba(201,162,39,.2);}
+.footer-red-icon{width:32px;height:32px;border-radius:var(--r-md);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.footer-red-info{flex:1;min-width:0;}
+.footer-red-name{font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;color:var(--blanco);letter-spacing:.3px;}
+.footer-red-handle{font-family:'DM Sans',sans-serif;font-size:11px;color:rgba(255,255,255,.4);margin-top:1px;}
+/* Footer bottom */
+.footer-bottom{
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;
+  padding:14px 32px;
+  font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;
+  color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.6px;
+}
+@media(max-width:760px){
+  .footer-body{grid-template-columns:1fr;gap:24px;padding:28px 16px 20px;}
+  .footer-bottom{padding:12px 16px;font-size:10px;}
 }
 
 /* RADIO PLAYER CUSTOM */
@@ -1672,153 +1873,7 @@ table.posiciones td:nth-child(8){   /* GF */
 
 /* ── Slot de pubs del sidebar en mobile ── */
 /* En desktop se oculta (las pubs van al sidebar normal) */
-#pub-mobile-sidebar-wrap{ display:none; }
-@media(max-width:760px){
-  #pub-mobile-sidebar-wrap{
-    display:block;
-    /* va debajo del banner global, antes del contenido */
-  }
-  /* En mobile el pub-sidebar se muestra como inline (horizontal) */
-  #pub-mobile-sidebar-wrap .pub-sidebar{
-    display:flex;align-items:center;
-    border-radius:0;border-left:none;border-right:none;border-top:none;
-    padding:8px 14px;gap:12px;
-  }
-  #pub-mobile-sidebar-wrap .pub-sidebar img{
-    width:auto;height:52px;max-width:90px;object-fit:contain;
-  }
-  #pub-mobile-sidebar-wrap .pub-sidebar .pub-texto-wrap{
-    text-align:left;padding:0;flex:1;
-  }
-  #pub-mobile-sidebar-wrap .pub-sidebar .pub-texto-titulo{ font-size:13px; }
-  #pub-mobile-sidebar-wrap .pub-sidebar video{
-    width:90px;height:52px;object-fit:cover;border-radius:var(--r-sm);flex-shrink:0;
-  }
-}
 
-/* FOOTER BODY */
-.footer-body{
-  display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;
-  border-bottom:1px solid rgba(255,255,255,.06);
-}
-@media(max-width:680px){.footer-body{grid-template-columns:1fr;}}
-.footer-col{padding:24px 32px;}
-.footer-col+.footer-col{border-left:1px solid rgba(255,255,255,.06);}
-@media(max-width:680px){.footer-col+.footer-col{border-left:none;border-top:1px solid rgba(255,255,255,.06);}}
-.footer-col-title{
-  font-family:'Bebas Neue',sans-serif;font-weight:400;font-size:14px;
-  color:var(--dorado);letter-spacing:2px;text-transform:uppercase;
-  margin-bottom:14px;padding-bottom:7px;border-bottom:1px solid rgba(201,162,39,.2);
-}
-
-/* Contacto */
-.footer-contacto-item{
-  display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;
-}
-.footer-contacto-item .icon{font-size:16px;margin-top:1px;flex-shrink:0;}
-.footer-contacto-item .info{font-family:'Rajdhani',sans-serif;font-size:13px;color:rgba(255,255,255,.7);line-height:1.4;}
-.footer-contacto-item .info strong{display:block;font-size:10px;font-weight:900;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:1px;}
-
-/* Redes sociales */
-.footer-redes{display:flex;flex-direction:column;gap:8px;}
-.footer-red-link{
-  display:flex;align-items:center;gap:10px;text-decoration:none;
-  padding:7px 10px;border-radius:var(--r-sm);border:1px solid rgba(255,255,255,.07);
-  background:rgba(255,255,255,.03);transition:border-color .15s,background .15s;
-}
-.footer-red-link:hover{border-color:var(--dorado);background:rgba(201,162,39,.08);}
-.footer-red-icon{width:28px;height:28px;border-radius:var(--r-md);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff;}
-.footer-red-info{flex:1;min-width:0;}
-.footer-red-name{font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;color:var(--blanco);line-height:1;}
-.footer-red-handle{font-family:'Rajdhani',sans-serif;font-size:11px;color:rgba(255,255,255,.35);text-transform:lowercase;}
-.footer-red-link .arrow{font-size:11px;color:rgba(255,255,255,.2);}
-
-/* Colores redes */
-.red-instagram{background:linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);}
-.red-facebook{background:#1877f2;}
-.red-twitter{background:#000;}
-.red-youtube{background:#ff0000;}
-.red-tiktok{background:#010101;}
-.red-whatsapp{background:#25d366;}
-.red-telegram{background:#2ca5e0;}
-.red-spotify{background:#1db954;}
-.red-default{background:rgba(201,162,39,.3);}
-
-/* FOOTER BOTTOM */
-.footer-bottom{
-  padding:14px 32px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;
-  font-family:'Rajdhani',sans-serif;font-size:11px;color:rgba(255,255,255,.2);
-  text-transform:uppercase;letter-spacing:.5px;
-}
-.footer-bottom a{color:rgba(201,162,39,.5);text-decoration:none;}
-.footer-bottom a:hover{color:var(--dorado);}
-
-/* Banner superior – debajo del header, ancho completo */
-.pub-banner-top{
-  background:var(--negro2);border-bottom:1px solid rgba(201,162,39,.15);
-  display:flex;align-items:center;justify-content:center;
-  min-height:72px;padding:8px 0;position:relative;
-}
-.pub-banner-top.oculto{display:none;}
-.pub-banner-top .pub-label{
-  position:absolute;top:4px;left:10px;
-  font-family:'Rajdhani',sans-serif;font-size:9px;font-weight:700;
-  color:rgba(255,255,255,.18);text-transform:uppercase;letter-spacing:1px;
-}
-.pub-banner-top a,.pub-banner-top div{max-width:100%;display:flex;align-items:center;justify-content:center;}
-.pub-banner-top img{max-height:68px;max-width:100%;object-fit:contain;border-radius:var(--r-sm);}
-
-/* Publicidad en sidebar */
-.pub-sidebar{
-  background:var(--negro2);border:1px solid rgba(201,162,39,.2);border-radius:var(--r-md);
-  overflow:hidden;position:relative;
-}
-.pub-sidebar .pub-label{
-  background:rgba(0,0,0,.4);
-  font-family:'Rajdhani',sans-serif;font-size:9px;font-weight:700;
-  color:rgba(255,255,255,.25);text-transform:uppercase;letter-spacing:1px;
-  padding:3px 8px;display:block;text-align:center;
-}
-.pub-sidebar img{width:100%;display:block;border-radius:0;}
-.pub-sidebar .pub-texto-wrap{padding:12px 14px;text-align:center;}
-.pub-sidebar .pub-texto-titulo{
-  font-family:'Rajdhani',sans-serif;font-weight:900;font-size:15px;
-  color:var(--blanco);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;
-}
-.pub-sidebar .pub-texto-desc{
-  font-family:'DM Sans',sans-serif;font-size:11px;color:rgba(255,255,255,.55);line-height:1.4;margin-bottom:8px;
-}
-.pub-sidebar .pub-cta{
-  display:inline-block;background:var(--dorado);color:var(--negro);
-  font-family:'Rajdhani',sans-serif;font-weight:900;font-size:11px;
-  text-transform:uppercase;letter-spacing:1px;text-decoration:none;
-  padding:5px 16px;border-radius:var(--r-sm);transition:background .15s;
-}
-.pub-sidebar .pub-cta:hover{background:var(--dorado-light);}
-
-/* Publicidad inline – entre secciones */
-.pub-inline{
-  background:var(--negro2);border:1px solid rgba(201,162,39,.15);border-radius:var(--r-md);
-  padding:14px 18px;margin:6px 0 10px;display:flex;align-items:center;gap:16px;
-  position:relative;transition:border-color .15s;
-}
-.pub-inline:hover{border-color:rgba(201,162,39,.35);}
-.pub-inline .pub-label{
-  position:absolute;top:5px;right:10px;
-  font-family:'Rajdhani',sans-serif;font-size:9px;font-weight:700;
-  color:rgba(255,255,255,.18);text-transform:uppercase;letter-spacing:1px;
-}
-.pub-inline img{height:56px;width:auto;max-width:110px;object-fit:contain;border-radius:var(--r-sm);flex-shrink:0;}
-.pub-inline-texto{flex:1;min-width:0;}
-.pub-inline-titulo{font-family:'Rajdhani',sans-serif;font-weight:900;font-size:16px;color:var(--blanco);text-transform:uppercase;letter-spacing:.5px;line-height:1.2;margin-bottom:3px;}
-.pub-inline-desc{font-family:'DM Sans',sans-serif;font-size:12px;color:rgba(255,255,255,.5);line-height:1.4;}
-.pub-inline a.pub-cta{
-  display:inline-block;background:var(--dorado);color:var(--negro);
-  font-family:'Rajdhani',sans-serif;font-weight:900;font-size:11px;
-  text-transform:uppercase;letter-spacing:1px;text-decoration:none;
-  padding:5px 16px;border-radius:var(--r-sm);white-space:nowrap;flex-shrink:0;
-}
-.pub-inline a.pub-cta:hover{background:var(--dorado-light);}
 
 /* ── Carrusel de publicidades ────────────────────────── */
 .pub-carrusel{position:relative;overflow:hidden;}
@@ -2573,82 +2628,105 @@ table.posiciones td:nth-child(8){   /* GF */
       </div>
 
       <!-- PUBLICIDAD ADMIN -->
+      <!-- DEPORTEMAS ADMIN -->
       <div class="admin-section" id="admin-publicidad">
         <div class="admin-title">Publicidad</div>
-        <p style="font-size:11px;color:var(--gris);margin-bottom:16px;font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px">5 posiciones disponibles. Si hay varias pubs activas en el mismo lugar, rotan automáticamente.</p>
 
-        <div class="form-row">
-          <div class="form-group"><label>Posición</label>
-            <select id="pub-posicion" onchange="updateAdminPubForm()">
-              <option value="banner">🔝 Banner global (todas las secciones)</option>
-              <option value="banner-seccion">📌 Banner por sección</option>
-              <option value="sidebar">◀ Sidebar global (todas las secciones)</option>
-              <option value="sidebar-seccion">◀ Sidebar por sección</option>
-              <option value="inline">📄 Inline en sección</option>
-            </select>
-          </div>
-          <div class="form-group" id="pub-seccion-wrap" style="display:none"><label>Sección</label>
-            <select id="pub-seccion">
-              <option value="fixture">Partidos</option>
-              <option value="posiciones">Posiciones</option>
-              <option value="resultados">Resultados</option>
-              <option value="goleadores">Goleadores</option>
-              <option value="equipos">Equipos</option>
-              <option value="torneos">Torneos</option>
-              <option value="noticias">Noticias</option>
-              <option value="playoff">Play Off</option>
-            </select>
-          </div>
+        <!-- LISTA DE PUBLICIDADES -->
+        <div id="adv-lista-wrap">
+          <div id="adv-lista"></div>
+          <button class="btn-primary" onclick="advNueva()" style="margin-top:4px">＋ Nueva publicidad</button>
         </div>
 
-        <div class="form-group"><label>Título / Nombre del anunciante</label>
-          <input type="text" id="pub-titulo" placeholder="Ej: Pizzería Don Juan"/>
-        </div>
-        <div class="form-group"><label>Descripción / Eslogan <span style="color:var(--gris);font-size:10px">(opcional)</span></label>
-          <input type="text" id="pub-desc" placeholder="Ej: Las mejores pizzas de Río Tercero"/>
-        </div>
-        <div class="form-group"><label>Enlace (URL) <span style="color:var(--gris);font-size:10px">(opcional)</span></label>
-          <input type="text" id="pub-url" placeholder="https://www.ejemplo.com"/>
-        </div>
-        <div class="form-group"><label>Texto del botón <span style="color:var(--gris);font-size:10px">(opcional)</span></label>
-          <input type="text" id="pub-cta" placeholder="Ej: Visitanos · Ver más · Contactar"/>
-        </div>
-        <div class="form-group"><label>Imagen del anuncio <span style="color:var(--gris);font-size:10px">(opcional si cargás video)</span></label>
-          <div class="upload-area">
-            <input type="file" accept="image/*" id="pub-img-file" onchange="pubPreviewImg(this)"/>
-            <span class="icon">🖼</span><p>Subí la imagen del anuncio</p>
+        <!-- FORMULARIO + PREVIEW EN VIVO -->
+        <div id="adv-form-wrap" style="display:none">
+
+          <div class="admin-title" style="font-size:13px;margin-bottom:14px" id="adv-form-titulo">Nueva publicidad</div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start">
+
+            <!-- ── Columna izquierda: campos ── -->
+            <div>
+              <!-- Posición -->
+              <div class="form-group"><label>Posición</label>
+                <select id="adv-posicion" onchange="advToggleSeccion();advActualizarPreview()">
+                  <option value="banner-global">🔝 Banner global</option>
+                  <option value="banner-seccion">📌 Banner por sección</option>
+                  <option value="sidebar">◀ Sidebar (desktop)</option>
+                  <option value="mobile">📱 Mobile</option>
+                  <option value="inline">📄 Inline en sección</option>
+                </select>
+              </div>
+              <div class="form-group" id="adv-seccion-wrap" style="display:none"><label>Sección</label>
+                <select id="adv-seccion" onchange="advActualizarPreview()">
+                  <option value="fixture">Partidos</option>
+                  <option value="posiciones">Posiciones</option>
+                  <option value="resultados">Resultados</option>
+                  <option value="goleadores">Goleadores</option>
+                  <option value="equipos">Equipos</option>
+                  <option value="torneos">Torneos</option>
+                  <option value="noticias">Noticias</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Nombre del anunciante</label>
+                <input type="text" id="adv-nombre" placeholder="Ej: Pizzería Don Juan" maxlength="60" oninput="advActualizarPreview()"/>
+              </div>
+              <div class="form-group"><label>Descripción / Eslogan <span style="color:var(--gris);font-size:10px">(opcional)</span></label>
+                <input type="text" id="adv-desc" placeholder="Ej: Las mejores pizzas de Río Tercero" maxlength="100" oninput="advActualizarPreview()"/>
+              </div>
+              <div class="form-group"><label>URL de destino <span style="color:var(--gris);font-size:10px">(opcional)</span></label>
+                <input type="text" id="adv-url" placeholder="https://ejemplo.com" oninput="advActualizarPreview()"/>
+              </div>
+              <div class="form-group"><label>Texto del botón <span style="color:var(--gris);font-size:10px">(opcional)</span></label>
+                <input type="text" id="adv-cta" placeholder="Ej: Visitanos · Ver más" maxlength="30" oninput="advActualizarPreview()"/>
+              </div>
+              <!-- Imagen -->
+              <div class="form-group"><label>Imagen <span style="color:var(--gris);font-size:10px">(JPG/PNG/WebP)</span></label>
+                <div class="upload-area" id="adv-img-area" onclick="document.getElementById('adv-img-file').click()">
+                  <input type="file" accept="image/*" id="adv-img-file" style="display:none" onchange="advPreviewImg(this)"/>
+                  <span class="icon">🖼</span><p>Tocá para subir imagen</p>
+                </div>
+                <div class="preview-wrap" id="adv-img-wrap" style="display:none">
+                  <img id="adv-img-preview" src="" alt="" style="max-height:80px;border-radius:6px;"/>
+                  <button type="button" class="btn-quitar-img" onclick="advQuitarImg()">✕ Quitar</button>
+                </div>
+              </div>
+              <!-- Estado y rotación -->
+              <div class="form-row">
+                <div class="form-group"><label>Estado</label>
+                  <select id="adv-estado">
+                    <option value="activo">✅ Activo</option>
+                    <option value="pausado">⏸ Pausado</option>
+                  </select>
+                </div>
+                <div class="form-group"><label>Rotación <span style="color:var(--gris);font-size:10px">(seg)</span></label>
+                  <input type="number" id="adv-duracion" value="6" min="2" max="60"/>
+                </div>
+              </div>
+              <div id="adv-form-msg" style="display:none;margin-bottom:10px;font-family:'Rajdhani',sans-serif;font-size:12px;text-transform:uppercase;letter-spacing:.5px"></div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn-primary" onclick="advGuardar()">💾 Guardar</button>
+                <button class="btn-secondary" onclick="advCancelar()">Cancelar</button>
+              </div>
+            </div>
+
+            <!-- ── Columna derecha: preview en vivo ── -->
+            <div style="position:sticky;top:16px">
+              <div style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.3);margin-bottom:8px">Vista previa</div>
+              <!-- Etiqueta de posición -->
+              <div id="adv-preview-pos-label" style="font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--dorado);margin-bottom:6px;opacity:.7"></div>
+              <!-- Contenedor del preview -->
+              <div id="adv-preview-wrap" style="background:#0c0c14;border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,.07);min-height:80px;">
+                <div id="adv-preview-inner" style="pointer-events:none"></div>
+              </div>
+              <!-- Nota -->
+              <div style="font-family:'DM Sans',sans-serif;font-size:10px;color:rgba(255,255,255,.2);margin-top:8px;line-height:1.5">
+                El preview refleja exactamente cómo se ve el anuncio publicado. Las dimensiones pueden variar levemente según el dispositivo.
+              </div>
+            </div>
+
           </div>
-          <div class="preview-wrap" id="pub-img-wrap">
-            <img id="pub-img-preview" src="" alt=""/>
-            <button type="button" class="btn-quitar-img" onclick="quitarImagen('pub-img-preview','pub-img-wrap','pub-img-file','_pubImgB64')">✕ Quitar</button>
-          </div>
         </div>
-        <div class="form-group"><label>Video del anuncio <span style="color:var(--gris);font-size:10px">(MP4, WebM — reemplaza la imagen si se carga)</span></label>
-          <div class="upload-area">
-            <input type="file" accept="video/*" id="pub-video-file" onchange="pubPreviewVideo(this)"/>
-            <span class="icon">🎬</span><p>Subí el video del anuncio</p>
-          </div>
-          <div id="pub-video-preview" style="margin-top:8px"></div>
-        </div>
-        <div class="form-row">
-          <div class="form-group"><label>Estado</label>
-            <select id="pub-estado">
-              <option value="activo">Activo</option>
-              <option value="pausado">Pausado</option>
-            </select>
-          </div>
-          <div class="form-group"><label>Orden / Prioridad</label>
-            <input type="number" id="pub-orden" value="0" min="0" placeholder="0"/>
-          </div>
-          <div class="form-group"><label>Duración rotación <span style="color:var(--gris);font-size:10px">(seg, si hay varias)</span></label>
-            <input type="number" id="pub-duracion" value="5" min="2" max="60" placeholder="5"/>
-          </div>
-        </div>
-        <button class="btn-primary" onclick="guardarPublicidad()">💾 Guardar Publicidad</button>
-        <div id="pub-msg" style="margin-top:8px;font-size:12px;display:none;font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px"></div>
-        <hr style="margin:20px 0;border:none;border-top:1px solid rgba(255,255,255,.08)"/>
-        <div class="admin-title" style="font-size:14px">Publicidades cargadas</div>
-        <div class="admin-list" id="lista-publicidad"></div>
       </div>
 
       <!-- DEPORTEMAS ADMIN -->
@@ -3041,9 +3119,9 @@ table.posiciones td:nth-child(8){   /* GF */
 </header>
 
 <!-- BANNER PUBLICITARIO SUPERIOR -->
-<div id="pub-banner-top-wrap"></div>
-<!-- PUBLICIDAD SIDEBAR — solo visible en mobile -->
-<div id="pub-mobile-sidebar-wrap"></div>
+
+<!-- PUBLICIDAD MOBILE (banner horizontal debajo del header, solo mobile) -->
+<div id="adv-mobile-wrap"></div>
 
 <div class="container">
   <div class="layout">
@@ -3078,27 +3156,28 @@ table.posiciones td:nth-child(8){   /* GF */
           <div style="padding:16px;text-align:center;font-family:'Rajdhani',sans-serif;font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:rgba(255,255,255,.2)">Sin fotos cargadas</div>
         </div>
       </div>
-      <!-- PUBLICIDAD SIDEBAR global -->
-      <div id="pub-sidebar-wrap"></div>
-      <!-- PUBLICIDAD SIDEBAR por sección (solo una visible a la vez) -->
-      <div id="pub-sidebar-sec-wrap"></div>
+      <!-- PUBLICIDAD SIDEBAR (desktop) -->
+      <div id="adv-sidebar-wrap"></div>
     </aside>
 
     <main class="main">
 
       <!-- FIXTURE -->
       <section class="section visible" id="section-fixture">
+        <div class="adv-slot" id="adv-top-fixture"></div>
         <div class="tabs-row">
           <button class="div-tab active" onclick="switchDivTab('primera',this)">Primera División</button>
           <button class="div-tab" onclick="switchDivTab('segunda',this)">Segunda División</button>
         </div>
-        <div id="pub-banner-seccion-fixture"></div>
-        <div id="pub-inline-fixture"></div>
+        
+        
         <div id="fixture-content"></div>
+        <div class="adv-slot" id="adv-bottom-fixture"></div>
       </section>
 
       <!-- POSICIONES -->
       <section class="section" id="section-posiciones">
+        <div class="adv-slot" id="adv-top-posiciones"></div>
         <div class="tabs-row">
           <button class="div-tab active" onclick="switchDivTab('primera',this)">Primera División</button>
           <button class="div-tab" onclick="switchDivTab('segunda',this)">Segunda División</button>
@@ -3125,13 +3204,16 @@ table.posiciones td:nth-child(8){   /* GF */
           <button class="torneo-tab active" onclick="switchGrupoTab('campeonato',this)" style="font-size:10px">Campeonato</button>
           <button class="torneo-tab" onclick="switchGrupoTab('repechaje',this)" style="font-size:10px">Repechaje</button>
         </div>
-        <div id="pub-banner-seccion-posiciones"></div>
-        <div id="pub-inline-posiciones"></div>
+        
+        
         <div id="posiciones-content"></div>
+      
+        <div class="adv-slot" id="adv-bottom-posiciones"></div>
       </section>
 
       <!-- RESULTADOS -->
       <section class="section" id="section-resultados">
+        <div class="adv-slot" id="adv-top-resultados"></div>
         <div class="tabs-row">
           <button class="div-tab active" onclick="switchDivTab('primera',this)">Primera División</button>
           <button class="div-tab" onclick="switchDivTab('segunda',this)">Segunda División</button>
@@ -3147,13 +3229,16 @@ table.posiciones td:nth-child(8){   /* GF */
           <button class="torneo-tab" onclick="switchFaseResTab('fase2',this)">2ª Fase</button>
           <button class="torneo-tab" onclick="switchFaseResTab('fase3',this)">3ª Fase</button>
         </div>
-        <div id="pub-banner-seccion-resultados"></div>
-        <div id="pub-inline-resultados"></div>
+        
+        
         <div id="resultados-content"></div>
+      
+        <div class="adv-slot" id="adv-bottom-resultados"></div>
       </section>
 
       <!-- GOLEADORES -->
       <section class="section" id="section-goleadores">
+        <div class="adv-slot" id="adv-top-goleadores"></div>
         <div class="tabs-row">
           <button class="div-tab active" onclick="switchDivTab('primera',this)">Primera División</button>
           <button class="div-tab" onclick="switchDivTab('segunda',this)">Segunda División</button>
@@ -3169,34 +3254,45 @@ table.posiciones td:nth-child(8){   /* GF */
           <button class="torneo-tab" onclick="switchFaseGolTab('fase2',this)">2ª Fase</button>
           <button class="torneo-tab" onclick="switchFaseGolTab('fase3',this)">3ª Fase</button>
         </div>
-        <div id="pub-banner-seccion-goleadores"></div>
-        <div id="pub-inline-goleadores"></div>
+        
+        
         <div id="goleadores-content"></div>
+      
+        <div class="adv-slot" id="adv-bottom-goleadores"></div>
       </section>
 
       <!-- EQUIPOS -->
       <section class="section" id="section-equipos">
+        <div class="adv-slot" id="adv-top-equipos"></div>
         <div class="tabs-row">
           <button class="div-tab active" onclick="switchDivTab('primera',this)">Primera División</button>
           <button class="div-tab" onclick="switchDivTab('segunda',this)">Segunda División</button>
         </div>
-        <div id="pub-banner-seccion-equipos"></div>
-        <div id="pub-inline-equipos"></div>
+        
+        
         <div id="equipos-content" class="equipos-grid"></div>
+      
+        <div class="adv-slot" id="adv-bottom-equipos"></div>
       </section>
 
       <!-- TORNEOS -->
       <section class="section" id="section-torneos">
-        <div id="pub-banner-seccion-torneos"></div>
-        <div id="pub-inline-torneos"></div>
+        <div class="adv-slot" id="adv-top-torneos"></div>
+        
+        
         <div id="torneos-content"></div>
+      
+        <div class="adv-slot" id="adv-bottom-torneos"></div>
       </section>
 
       <!-- NOTICIAS -->
       <section class="section" id="section-noticias">
-        <div id="pub-banner-seccion-noticias"></div>
-        <div id="pub-inline-noticias"></div>
+        <div class="adv-slot" id="adv-top-noticias"></div>
+        
+        
         <div id="noticias-content"></div>
+      
+        <div class="adv-slot" id="adv-bottom-noticias"></div>
       </section>
 
     </main>
@@ -4435,446 +4531,6 @@ function renderFooter(){
 // ============================================================
 // PUBLICIDAD
 // ============================================================
-const PUB_KEY = 'lrr_publicidad';
-function getPubs(){ try{ return JSON.parse(localStorage.getItem(PUB_KEY))||[]; }catch(e){ return []; } }
-function savePubs(p){
-  localStorage.setItem(PUB_KEY, JSON.stringify(p));
-  if(window._fb){
-    window._fbEscribiendoPubs = true;
-    window._fb.set('pubs', p).then(()=>{
-      setTimeout(()=>{ window._fbEscribiendoPubs = false; }, 2000);
-    }).catch(()=>{ window._fbEscribiendoPubs = false; });
-  }
-}
-
-let _pubImgB64 = '';
-let _pubVideoB64 = '';
-
-function pubPreviewImg(input){
-  const file=input.files[0]; if(!file) return;
-  const r=new FileReader(); r.onload=e=>{
-    _pubImgB64=e.target.result;
-    const p=document.getElementById('pub-img-preview'); if(p) p.src=_pubImgB64;
-    const w=document.getElementById('pub-img-wrap'); if(w) w.classList.add('visible');
-  }; r.readAsDataURL(file);
-}
-
-function pubPreviewVideo(input){
-  const file=input.files[0]; if(!file) return;
-  const r=new FileReader(); r.onload=e=>{
-    _pubVideoB64=e.target.result;
-    const prev=document.getElementById('pub-video-preview');
-    prev.innerHTML=`<video src="${_pubVideoB64}" controls muted style="max-width:100%;max-height:120px;border-radius:var(--r-sm);border:1px solid rgba(255,255,255,.1)"></video>
-      <div style="font-size:11px;color:var(--gris);font-family:'Rajdhani',sans-serif;margin-top:4px">🎬 ${file.name}</div>`;
-  }; r.readAsDataURL(file);
-}
-
-function updateAdminPubForm(){
-  const pos=document.getElementById('pub-posicion').value;
-  const secWrap=document.getElementById('pub-seccion-wrap');
-  if(secWrap) secWrap.style.display=(pos==='inline'||pos==='banner-seccion'||pos==='sidebar-seccion')?'':'none';
-}
-
-function guardarPublicidad(){
-  const titulo=document.getElementById('pub-titulo').value.trim();
-  if(!titulo){ alert('Completá el nombre del anunciante'); return; }
-  const pos=document.getElementById('pub-posicion').value;
-
-  const pub={
-    id: window._pubEditandoId || String(Date.now()),
-    posicion: pos,
-    seccion: (pos==='inline'||pos==='banner-seccion'||pos==='sidebar-seccion') ? document.getElementById('pub-seccion').value : '',
-    titulo,
-    desc:     document.getElementById('pub-desc').value.trim(),
-    url:      document.getElementById('pub-url').value.trim(),
-    cta:      document.getElementById('pub-cta').value.trim(),
-    img:      _pubImgB64 || (window._pubImgActual||''),
-    video:    _pubVideoB64 || (window._pubVideoActual||''),
-    estado:   document.getElementById('pub-estado').value,
-    orden:    parseInt(document.getElementById('pub-orden').value)||0,
-    duracion: parseInt(document.getElementById('pub-duracion').value)||5,
-  };
-
-  // Leer siempre el array más fresco (el listener lo mantiene actualizado)
-  let pubs = getPubs();
-
-  if(window._pubEditandoId){
-    // Modo edición: reemplazar el existente
-    const idx = pubs.findIndex(p=>p.id===window._pubEditandoId);
-    if(idx>=0) pubs[idx]=pub; else pubs.push(pub);
-    window._pubEditandoId = null;
-    window._pubImgActual = '';
-    window._pubVideoActual = '';
-    // Restaurar botón
-    const btn = document.querySelector('#admin-publicidad .btn-primary');
-    if(btn) btn.textContent = '💾 Guardar Publicidad';
-    const cancelBtn = document.getElementById('pub-cancel-edit');
-    if(cancelBtn) cancelBtn.style.display='none';
-  } else {
-    // Modo creación
-    pubs.push(pub);
-  }
-
-  pubs.sort((a,b)=>a.orden-b.orden);
-  savePubs(pubs);
-
-  // Reset formulario
-  ['pub-titulo','pub-desc','pub-url','pub-cta'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  document.getElementById('pub-orden').value='0';
-  document.getElementById('pub-duracion').value='5';
-  document.getElementById('pub-estado').value='activo';
-  _pubImgB64=''; _pubVideoB64='';
-  const p=document.getElementById('pub-img-preview'); if(p){ p.src=''; }
-  const pw=document.getElementById('pub-img-wrap'); if(pw) pw.classList.remove('visible');
-  const vp=document.getElementById('pub-video-preview'); if(vp) vp.innerHTML='';
-  const pf=document.getElementById('pub-img-file'); if(pf) pf.value='';
-  const pvf=document.getElementById('pub-video-file'); if(pvf) pvf.value='';
-
-  const msg=document.getElementById('pub-msg');
-  msg.textContent='✓ Publicidad guardada'; msg.style.color='var(--dorado)'; msg.style.display='block';
-  setTimeout(()=>msg.style.display='none',2500);
-  renderAdminListaPubs();
-  renderTodasLasPubs();
-}
-
-function togglePubEstado(id){
-  const pubs=getPubs();
-  const idx=pubs.findIndex(p=>p.id===id); if(idx<0) return;
-  pubs[idx].estado = pubs[idx].estado==='activo' ? 'pausado' : 'activo';
-  savePubs(pubs);
-  renderAdminListaPubs();
-  renderTodasLasPubs();
-}
-
-function eliminarPub(id){
-  pedirConfirmacion('¿Eliminar esta publicidad?',function(){
-    savePubs(getPubs().filter(p=>p.id!==id));
-    renderAdminListaPubs();
-    renderTodasLasPubs();
-  });
-}
-
-function editarPublicidad(id){
-  const pubs=getPubs();
-  const p=pubs.find(x=>x.id===id); if(!p) return;
-
-  // Guardar contexto de edición
-  window._pubEditandoId = id;
-  window._pubImgActual  = p.img||'';
-  window._pubVideoActual= p.video||'';
-
-  // Rellenar formulario
-  document.getElementById('pub-posicion').value = p.posicion||'banner';
-  updateAdminPubForm();
-  if(p.posicion==='inline'||p.posicion==='banner-seccion'||p.posicion==='sidebar-seccion')
-    document.getElementById('pub-seccion').value = p.seccion||'fixture';
-  document.getElementById('pub-titulo').value  = p.titulo||'';
-  document.getElementById('pub-desc').value    = p.desc||'';
-  document.getElementById('pub-url').value     = p.url||'';
-  document.getElementById('pub-cta').value     = p.cta||'';
-  document.getElementById('pub-estado').value  = p.estado||'activo';
-  document.getElementById('pub-estado').value  = p.estado||'activo';
-  document.getElementById('pub-orden').value   = p.orden||0;
-  document.getElementById('pub-duracion').value = p.duracion||5;
-  // Mostrar imagen actual si existe
-  _pubImgB64=''; _pubVideoB64='';
-  const prev=document.getElementById('pub-img-preview');
-  const wrap=document.getElementById('pub-img-wrap');
-  if(p.img && prev && wrap){ prev.src=p.img; wrap.classList.add('visible'); }
-  else if(wrap) wrap.classList.remove('visible');
-
-  // Mostrar video actual si existe
-  const vp=document.getElementById('pub-video-preview');
-  if(p.video && vp){
-    vp.innerHTML=`<video src="${p.video}" muted style="max-height:80px;border-radius:var(--r-sm)"></video>
-      <p style="font-size:10px;color:var(--gris);margin-top:4px;font-family:'Rajdhani',sans-serif">Video actual — subí uno nuevo para reemplazarlo</p>`;
-  } else if(vp) vp.innerHTML='';
-
-  // Cambiar botón a "Actualizar" y mostrar Cancelar
-  const btn=document.querySelector('#admin-publicidad .btn-primary');
-  if(btn) btn.textContent='💾 Actualizar Publicidad';
-  let cancelBtn=document.getElementById('pub-cancel-edit');
-  if(!cancelBtn){
-    cancelBtn=document.createElement('button');
-    cancelBtn.id='pub-cancel-edit';
-    cancelBtn.className='btn-danger';
-    cancelBtn.style.cssText='margin-left:8px;font-size:12px;';
-    cancelBtn.textContent='✕ Cancelar edición';
-    cancelBtn.onclick=cancelarEdicionPub;
-    btn.parentNode.insertBefore(cancelBtn, btn.nextSibling);
-  }
-  cancelBtn.style.display='';
-
-  // Scroll al formulario
-  document.getElementById('admin-publicidad').scrollIntoView({behavior:'smooth'});
-}
-
-function cancelarEdicionPub(){
-  window._pubEditandoId=null;
-  window._pubImgActual='';
-  window._pubVideoActual='';
-  _pubImgB64=''; _pubVideoB64='';
-  ['pub-titulo','pub-desc','pub-url','pub-cta'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  document.getElementById('pub-orden').value='0';
-  document.getElementById('pub-duracion').value='5';
-  document.getElementById('pub-estado').value='activo';
-  const prev=document.getElementById('pub-img-preview'); if(prev) prev.src='';
-  const wrap=document.getElementById('pub-img-wrap'); if(wrap) wrap.classList.remove('visible');
-  const vp=document.getElementById('pub-video-preview'); if(vp) vp.innerHTML='';
-  const btn=document.querySelector('#admin-publicidad .btn-primary');
-  if(btn) btn.textContent='💾 Guardar Publicidad';
-  const cancelBtn=document.getElementById('pub-cancel-edit');
-  if(cancelBtn) cancelBtn.style.display='none';
-}
-
-function renderAdminListaPubs(){
-  const el=document.getElementById('lista-publicidad'); if(!el) return;
-  const pubs=getPubs();
-  if(!pubs.length){ el.innerHTML='<p class="admin-empty">Sin publicidades cargadas</p>'; return; }
-  const posLabel={banner:'Banner global',sidebar:'Sidebar global','banner-seccion':'Banner sección','sidebar-seccion':'Sidebar sección',inline:'Inline'};
-  const secLabel={fixture:'Partidos',posiciones:'Posiciones',resultados:'Resultados',goleadores:'Goleadores',equipos:'Equipos',torneos:'Torneos',noticias:'Noticias',playoff:'Play Off'};
-  el.innerHTML=pubs.map(p=>`
-    <div class="pub-admin-item">
-      ${p.video
-        ? `<video src="${p.video}" muted style="width:48px;height:36px;object-fit:cover;border-radius:var(--r-sm);flex-shrink:0;border:1px solid rgba(255,255,255,.1)"></video>`
-        : p.img?`<img class="pub-admin-item-thumb" src="${p.img}" alt=""/>`:''}
-      <div class="pub-admin-item-info">
-        <div class="pub-admin-item-titulo">${p.titulo}${p.video?' 🎬':''}</div>
-        <div class="pub-admin-item-meta">${posLabel[p.posicion]||p.posicion}${p.seccion?' · '+secLabel[p.seccion]:''} · <span style="color:${p.estado==='activo'?'#4caf74':'var(--gris)'}">${p.estado==='activo'?'Activo':'Pausado'}</span> · ${p.duracion||5}s</div>
-      </div>
-      <div style="display:flex;gap:4px;flex-shrink:0">
-        <button class="btn-edit" onclick="editarPublicidad('${p.id}')" title="Editar">✏</button>
-        <button class="btn-edit" onclick="togglePubEstado('${p.id}')" style="font-size:10px" title="${p.estado==='activo'?'Pausar':'Activar'}">${p.estado==='activo'?'⏸':'▶'}</button>
-        <button class="btn-danger" onclick="eliminarPub('${p.id}')" title="Eliminar">✕</button>
-      </div>
-    </div>`).join('');
-}
-
-/**
- * Construye el HTML de una publicidad según su tipo y la renderiza donde corresponde.
- */
-function pubHTML(p){
-  const wrap = p.url ? `href="${p.url}" target="_blank" rel="noopener"` : '';
-  const Tag  = p.url ? 'a' : 'div';
-
-  // Helper: bloque multimedia (video tiene prioridad sobre imagen)
-  const mediaVideo = src => `<video src="${src}" autoplay muted loop playsinline style="width:100%;display:block;border-radius:0;max-height:200px;object-fit:cover"></video>`;
-  const mediaImg   = (src,alt,style) => `<img src="${src}" alt="${alt}" style="${style}"/>`;
-
-  if(p.posicion==='banner'){
-    const media = p.video
-      ? `<video src="${p.video}" autoplay muted loop playsinline style="max-height:64px;max-width:220px;object-fit:cover;border-radius:var(--r-sm);flex-shrink:0"></video>`
-      : p.img ? mediaImg(p.img, p.titulo, 'max-height:60px;max-width:280px;object-fit:contain;border-radius:var(--r-sm)') : '';
-    return `<div class="pub-banner-top">
-      <span class="pub-label">Publicidad</span>
-      <${Tag} ${wrap} style="display:flex;align-items:center;gap:14px;text-decoration:none;padding:0 12px">
-        ${media}
-        ${p.titulo||p.desc?`<div style="text-align:left">
-          ${p.titulo?`<div style="font-family:'Rajdhani',sans-serif;font-weight:900;font-size:16px;color:var(--blanco);text-transform:uppercase;letter-spacing:.5px">${p.titulo}</div>`:''}
-          ${p.desc?`<div style="font-family:'DM Sans',sans-serif;font-size:12px;color:rgba(255,255,255,.55)">${p.desc}</div>`:''}
-        </div>`:''}
-        ${p.cta&&p.url?`<a href="${p.url}" target="_blank" rel="noopener" class="pub-cta" style="margin-left:10px">${p.cta}</a>`:''}
-      </${Tag}>
-    </div>`;
-  }
-
-  if(p.posicion==='sidebar'){
-    const media = p.video
-      ? `<${Tag} ${wrap}>${mediaVideo(p.video)}</${Tag}>`
-      : p.img ? `<${Tag} ${wrap}>${mediaImg(p.img, p.titulo, 'width:100%;display:block')}</${Tag}>` : '';
-    return `<div class="pub-sidebar">
-      <span class="pub-label">Publicidad</span>
-      ${media}
-      ${p.titulo||p.desc?`<div class="pub-texto-wrap">
-        ${p.titulo?`<div class="pub-texto-titulo">${p.titulo}</div>`:''}
-        ${p.desc?`<div class="pub-texto-desc">${p.desc}</div>`:''}
-        ${p.cta&&p.url?`<a href="${p.url}" target="_blank" rel="noopener" class="pub-cta">${p.cta}</a>`:''}
-      </div>`:''}
-    </div>`;
-  }
-
-  // inline
-  const mediaInline = p.video
-    ? `<video src="${p.video}" autoplay muted loop playsinline style="height:60px;width:100px;object-fit:cover;border-radius:var(--r-sm);flex-shrink:0"></video>`
-    : p.img ? mediaImg(p.img, p.titulo, 'height:56px;width:auto;max-width:110px;object-fit:contain;border-radius:var(--r-sm);flex-shrink:0') : '';
-  return `<div class="pub-inline">
-    <span class="pub-label">Publicidad</span>
-    ${mediaInline}
-    <div class="pub-inline-texto">
-      ${p.titulo?`<div class="pub-inline-titulo">${p.titulo}</div>`:''}
-      ${p.desc?`<div class="pub-inline-desc">${p.desc}</div>`:''}
-    </div>
-    ${p.cta&&p.url?`<a href="${p.url}" target="_blank" rel="noopener" class="pub-cta">${p.cta}</a>`:''}
-  </div>`;
-}
-
-// ── Motor de carrusel de publicidades ────────────────────────
-// Guarda los intervalos activos por slotId para poder destruirlos
-window._pubCarruseles = window._pubCarruseles || {};
-
-/**
- * Monta un carrusel en un contenedor DOM dado un array de pubs activas.
- * Si solo hay 1 pub, la muestra directamente sin carrusel.
- * @param {HTMLElement} el  - contenedor destino
- * @param {Array}       pubs - array de publicidades a rotar
- * @param {string}      slotId - identificador único del slot (para el intervalo)
- */
-function montarCarrusel(el, pubs, slotId){
-  // Destruir carrusel anterior si existía
-  if(window._pubCarruseles[slotId]){
-    clearInterval(window._pubCarruseles[slotId]);
-    delete window._pubCarruseles[slotId];
-  }
-  if(!el) return;
-  if(!pubs.length){ el.innerHTML=''; return; }
-
-  // Una sola pub: sin carrusel
-  if(pubs.length===1){ el.innerHTML=pubHTML(pubs[0]); return; }
-
-  // Duración de rotación: usar la del primer anuncio (o 5s)
-  const durSeg = Math.max(2, pubs[0].duracion||5);
-  const durMs  = durSeg * 1000;
-
-  // Construir markup del carrusel
-  const slidesHTML = pubs.map((p,i)=>
-    `<div class="pub-slide${i===0?' activo':''}" data-idx="${i}">${pubHTML(p)}</div>`
-  ).join('');
-  const dotsHTML = pubs.map((_,i)=>
-    `<span class="pub-dot${i===0?' activo':''}" data-idx="${i}" onclick="pubCarruselIr('${slotId}',${i})"></span>`
-  ).join('');
-
-  el.innerHTML = `
-    <div class="pub-carrusel" data-slot="${slotId}">
-      <div class="pub-carrusel-track">${slidesHTML}</div>
-      <div class="pub-dots">${dotsHTML}</div>
-      <div class="pub-progreso"><div class="pub-progreso-fill" id="pub-prog-${slotId}"></div></div>
-    </div>`;
-
-  let actual = 0;
-
-  // Función de ir a un slide
-  function irA(idx){
-    const slides = el.querySelectorAll('.pub-slide');
-    const dots   = el.querySelectorAll('.pub-dot');
-    slides.forEach((s,i)=>s.classList.toggle('activo', i===idx));
-    dots.forEach((d,i)=>d.classList.toggle('activo',   i===idx));
-    actual = idx;
-    reiniciarBarra();
-  }
-
-  // Barra de progreso animada
-  function reiniciarBarra(){
-    const fill = document.getElementById('pub-prog-'+slotId);
-    if(!fill) return;
-    fill.classList.remove('animando');
-    fill.style.width='0%';
-    // Forzar reflow para resetear la animación
-    void fill.offsetWidth;
-    fill.classList.add('animando');
-    fill.style.transition=`width ${durMs}ms linear`;
-    fill.style.width='100%';
-  }
-
-  // Exponer para los dots onclick
-  window._pubCarruselIrFns = window._pubCarruselIrFns||{};
-  window._pubCarruselIrFns[slotId] = irA;
-
-  // Arrancar
-  reiniciarBarra();
-  const intervalo = setInterval(()=>{
-    irA((actual+1) % pubs.length);
-  }, durMs);
-  window._pubCarruseles[slotId] = intervalo;
-}
-
-// Llamado desde el onclick de los dots
-function pubCarruselIr(slotId, idx){
-  // Reiniciar el intervalo para que no corte a mitad
-  const pubs = getPubs().filter(p=>p.estado==='activo');
-  // Reconstruir contexto del slot para reiniciar timer
-  if(window._pubCarruseles[slotId]){
-    clearInterval(window._pubCarruseles[slotId]);
-    delete window._pubCarruseles[slotId];
-  }
-  const fn = window._pubCarruselIrFns&&window._pubCarruselIrFns[slotId];
-  if(fn) fn(idx);
-  // Re-armar el intervalo
-  const el = document.querySelector(`.pub-carrusel[data-slot="${slotId}"]`);
-  if(!el) return;
-  const slotPubs = _pubsParaSlot(pubs, slotId);
-  if(slotPubs.length>1){
-    const durMs = Math.max(2, slotPubs[0].duracion||5)*1000;
-    window._pubCarruseles[slotId] = setInterval(()=>{
-      const actual = [...el.querySelectorAll('.pub-slide')].findIndex(s=>s.classList.contains('activo'));
-      if(window._pubCarruselIrFns[slotId])
-        window._pubCarruselIrFns[slotId]((actual+1)%slotPubs.length);
-    }, durMs);
-  }
-}
-
-// Helper: obtener pubs para un slot dado su ID
-function _pubsParaSlot(activas, slotId){
-  if(slotId==='banner')  return activas.filter(p=>p.posicion==='banner');
-  if(slotId==='sidebar') return activas.filter(p=>p.posicion==='sidebar');
-  if(slotId.startsWith('inline-'))      return activas.filter(p=>p.posicion==='inline'&&p.seccion===slotId.slice(7));
-  if(slotId.startsWith('banner-s-'))    return activas.filter(p=>p.posicion==='banner-seccion'&&p.seccion===slotId.slice(9));
-  if(slotId.startsWith('sidebar-sec-')) return activas.filter(p=>p.posicion==='sidebar-seccion'&&p.seccion===slotId.slice(11));
-  return [];
-}
-
-/** Renderiza todas las posiciones publicitarias con soporte de carrusel */
-function renderTodasLasPubs(){
-  const activas = getPubs().filter(p=>p.estado==='activo');
-  const SECCIONES = ['fixture','posiciones','resultados','goleadores','equipos','torneos','noticias'];
-
-  // Banner global (todas las secciones)
-  montarCarrusel(
-    document.getElementById('pub-banner-top-wrap'),
-    activas.filter(p=>p.posicion==='banner'),
-    'banner'
-  );
-
-  // Sidebar global (desktop) — visible en todas las secciones
-  const sidebarPubs = activas.filter(p=>p.posicion==='sidebar');
-  montarCarrusel(
-    document.getElementById('pub-sidebar-wrap'),
-    sidebarPubs,
-    'sidebar'
-  );
-  // Sidebar global (mobile)
-  montarCarrusel(
-    document.getElementById('pub-mobile-sidebar-wrap'),
-    sidebarPubs,
-    'sidebar-mobile'
-  );
-
-  // Sidebar por sección — mostrar la de la sección activa
-  renderSidebarSeccion(activas, currentSection);
-
-  // Banner por sección + Inline por sección
-  SECCIONES.forEach(sec=>{
-    montarCarrusel(
-      document.getElementById('pub-banner-seccion-'+sec),
-      activas.filter(p=>p.posicion==='banner-seccion'&&p.seccion===sec),
-      'banner-s-'+sec
-    );
-    montarCarrusel(
-      document.getElementById('pub-inline-'+sec),
-      activas.filter(p=>p.posicion==='inline'&&p.seccion===sec),
-      'inline-'+sec
-    );
-  });
-}
-
-/** Actualiza el slot de sidebar por sección según la sección activa */
-function renderSidebarSeccion(activas, sec){
-  if(!activas) activas = getPubs().filter(p=>p.estado==='activo');
-  const wrap = document.getElementById('pub-sidebar-sec-wrap');
-  if(!wrap) return;
-  const pubs = activas.filter(p=>p.posicion==='sidebar-seccion'&&p.seccion===sec);
-  montarCarrusel(wrap, pubs, 'sidebar-sec-'+sec);
-}
-
 // ============================================================
 // NOTICIAS
 // ============================================================
@@ -6160,7 +5816,7 @@ function quitarImagen(previewId, wrapId, inputId, varName){
   // Limpiar la variable global correspondiente
   if(varName==='_dmRadioLogoB64') _dmRadioLogoB64='';
   else if(varName==='_noImg')       _noImg='';
-  else if(varName==='_pubImgB64')   _pubImgB64='';
+  else if(varName==='_pubImgDataB64')   _pubImgDataB64='';
   else if(varName==='_escudoB64')   _escudoB64='';
   else if(varName==='_logoB64')     _logoB64='';
   else if(varName==='_fotoPrevB64') _fotoPrevB64='';
@@ -6612,7 +6268,7 @@ function switchAdminTab(tab,el){
   if(tab==='fotos') renderAdminListaFotos();
   if(tab==='fichas'){ poblarSelectFichas(); renderAdminListaFichas(); }
   if(tab==='noticias') renderAdminListaNoticias();
-  if(tab==='publicidad'){ updateAdminPubForm(); renderAdminListaPubs(); }
+  if(tab==='publicidad'){ renderAdminListaPubs(); }
   if(tab==='deportemas'){ cargarFormDM(); }
   if(tab==='estadisticas'){ renderEstadisticas(); }
   if(tab==='notificaciones'){ actualizarContadorSubs(); }}
@@ -7999,9 +7655,10 @@ asegurarIds();
 aplicarIdentidad();
 renderFotosSidebar();
 toggleFotosSidebar('fixture');
-renderTodasLasPubs();
 actualizarNavLive();
 renderSection('fixture');
+// Publicidad: diferida para garantizar que el JS esté cargado
+setTimeout(function(){ if(typeof renderTodasLasPubs==='function') renderTodasLasPubs(); }, 0);
 </script>
 
 <!-- ============================================================
@@ -8081,7 +7738,7 @@ renderSection('fixture');
 
   <!-- FOOTER BOTTOM -->
   <div class="footer-bottom">
-    <span id="footer-copy">© 2025 Deportemas · La Radio del Fútbol</span>
+    <span id="footer-copy">© 2026 LV26 FM 101.9 AM 1430 · La Radio del Fútbol</span>
     <span>Desarrollado en Río Tercero, Córdoba</span>
   </div>
 
@@ -8128,7 +7785,7 @@ renderFooter();
     try {
       aplicarIdentidad();
       renderFotosSidebar();
-      renderTodasLasPubs();
+      if(typeof renderTodasLasPubs==='function') renderTodasLasPubs();
       actualizarNavLive();
       renderSection(currentSection);
     } catch(e) { console.warn('Fallback render error:', e); }
@@ -8779,6 +8436,431 @@ const _bellInterval = setInterval(()=>{
   }
 }, 500);
 setTimeout(()=>clearInterval(_bellInterval), 8000); // timeout de seguridad
+</script>
+
+
+<script>
+// ============================================================
+// PUBLICIDAD — sistema completo reescrito desde cero
+// ============================================================
+
+const ADV_KEY = 'lrr_publicidad';
+let _advImgB64  = '';   // buffer imagen actual
+let _advEditId  = null; // null = nueva, string = editando
+
+// ── Persistencia ─────────────────────────────────────────────
+function advGetAll(){
+  try{ return JSON.parse(localStorage.getItem(ADV_KEY)) || []; }
+  catch(e){ return []; }
+}
+
+function advSaveAll(arr){
+  localStorage.setItem(ADV_KEY, JSON.stringify(arr));
+  // Firebase: flag para ignorar el eco del listener
+  if(window._fb){
+    window._fbEscribiendoPubs = true;
+    window._fb.set('pubs', arr)
+      .then(()=> setTimeout(()=>{ window._fbEscribiendoPubs = false; }, 2500))
+      .catch(()=>{ window._fbEscribiendoPubs = false; });
+  }
+}
+
+// ── Admin: abrir formulario para nueva publicidad ─────────────
+function advNueva(){
+  _advEditId = null;
+  _advImgB64 = '';
+  document.getElementById('adv-form-titulo').textContent = 'Nueva publicidad';
+  // Limpiar campos
+  ['adv-nombre','adv-desc','adv-url','adv-cta'].forEach(id=>{
+    const el = document.getElementById(id); if(el) el.value = '';
+  });
+  const pos = document.getElementById('adv-posicion'); if(pos) pos.value = 'banner-global';
+  const est = document.getElementById('adv-estado');   if(est) est.value = 'activo';
+  const dur = document.getElementById('adv-duracion'); if(dur) dur.value = '6';
+  // Imagen
+  advQuitarImg();
+  advToggleSeccion();
+  // Mostrar formulario, ocultar lista
+  document.getElementById('adv-lista-wrap').style.display = 'none';
+  document.getElementById('adv-form-wrap').style.display  = 'block';
+  advOcultarMsg();
+  setTimeout(advActualizarPreview, 0);
+}
+
+// ── Admin: cargar datos de una pub para editar ────────────────
+function advEditar(id){
+  const all = advGetAll();
+  const p   = all.find(x => x.id === id);
+  if(!p) return;
+  _advEditId = id;
+  _advImgB64 = p.img || '';
+
+  document.getElementById('adv-form-titulo').textContent = 'Editar publicidad';
+  document.getElementById('adv-nombre').value   = p.nombre   || '';
+  document.getElementById('adv-desc').value     = p.desc     || '';
+  document.getElementById('adv-url').value      = p.url      || '';
+  document.getElementById('adv-cta').value      = p.cta      || '';
+  document.getElementById('adv-posicion').value = p.posicion || 'banner-global';
+  document.getElementById('adv-estado').value   = p.estado   || 'activo';
+  document.getElementById('adv-duracion').value = p.duracion || 6;
+  advToggleSeccion();
+  if(p.seccion) document.getElementById('adv-seccion').value = p.seccion;
+
+  // Imagen preview
+  if(p.img){
+    document.getElementById('adv-img-preview').src = p.img;
+    document.getElementById('adv-img-wrap').style.display = 'block';
+    document.getElementById('adv-img-area').style.display = 'none';
+  } else {
+    advQuitarImg();
+  }
+
+  document.getElementById('adv-lista-wrap').style.display = 'none';
+  document.getElementById('adv-form-wrap').style.display  = 'block';
+  advOcultarMsg();
+}
+
+// ── Admin: cancelar formulario ────────────────────────────────
+function advCancelar(){
+  document.getElementById('adv-form-wrap').style.display  = 'none';
+  document.getElementById('adv-lista-wrap').style.display = 'block';
+  _advEditId = null;
+  _advImgB64 = '';
+}
+
+// ── Admin: guardar (nueva o edición) ─────────────────────────
+function advGuardar(){
+  const nombre   = (document.getElementById('adv-nombre')?.value   || '').trim();
+  const desc     = (document.getElementById('adv-desc')?.value     || '').trim();
+  const url      = (document.getElementById('adv-url')?.value      || '').trim();
+  const cta      = (document.getElementById('adv-cta')?.value      || '').trim();
+  const posicion = document.getElementById('adv-posicion')?.value  || 'banner-global';
+  const seccion  = document.getElementById('adv-seccion')?.value   || '';
+  const estado   = document.getElementById('adv-estado')?.value    || 'activo';
+  const duracion = parseInt(document.getElementById('adv-duracion')?.value || '6', 10);
+
+  if(!nombre){ advMostrarMsg('Ingresá el nombre del anunciante.', 'error'); return; }
+
+  const all = advGetAll();
+
+  if(_advEditId){
+    // Editar existente
+    const idx = all.findIndex(x => x.id === _advEditId);
+    if(idx < 0){ advMostrarMsg('No se encontró la publicidad.', 'error'); return; }
+    all[idx] = { ...all[idx], nombre, desc, url, cta, posicion, seccion, estado, duracion,
+                 img: _advImgB64 || all[idx].img || '' };
+  } else {
+    // Nueva: generar ID único
+    const id = 'adv_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+    all.push({ id, nombre, desc, url, cta, posicion, seccion, estado, duracion,
+               img: _advImgB64, creadoEn: Date.now() });
+  }
+
+  advSaveAll(all);
+  renderTodasLasPubs();
+  advMostrarMsg('Publicidad guardada correctamente.', 'ok');
+  setTimeout(()=>{
+    advCancelar();
+    renderAdminListaPubs();
+  }, 900);
+}
+
+// ── Admin: eliminar con confirmación ─────────────────────────
+function advEliminar(id){
+  if(!confirm('¿Eliminar esta publicidad?')) return;
+  const all = advGetAll().filter(x => x.id !== id);
+  advSaveAll(all);
+  renderTodasLasPubs();
+  renderAdminListaPubs();
+}
+
+// ── Admin: activar / pausar rápido ───────────────────────────
+function advToggleEstado(id){
+  const all = advGetAll();
+  const idx = all.findIndex(x => x.id === id);
+  if(idx < 0) return;
+  all[idx].estado = all[idx].estado === 'activo' ? 'pausado' : 'activo';
+  advSaveAll(all);
+  renderTodasLasPubs();
+  renderAdminListaPubs();
+}
+
+// ── Helpers del formulario ────────────────────────────────────
+function advToggleSeccion(){
+  const pos  = document.getElementById('adv-posicion')?.value || '';
+  const wrap = document.getElementById('adv-seccion-wrap');
+  if(wrap) wrap.style.display = (pos === 'banner-seccion' || pos === 'inline') ? '' : 'none';
+}
+
+function advPreviewImg(input){
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const raw = e.target.result;
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 800;
+      let w = img.width, h = img.height;
+      if(w > MAX || h > MAX){
+        const ratio = Math.min(MAX/w, MAX/h);
+        w = Math.round(w*ratio); h = Math.round(h*ratio);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      _advImgB64 = canvas.toDataURL('image/webp', 0.82);
+      document.getElementById('adv-img-preview').src = _advImgB64;
+      document.getElementById('adv-img-wrap').style.display = 'block';
+      document.getElementById('adv-img-area').style.display = 'none';
+      advActualizarPreview();
+    };
+    img.src = raw;
+  };
+  reader.readAsDataURL(file);
+}
+
+function advQuitarImg(){
+  _advImgB64 = '';
+  const prev = document.getElementById('adv-img-preview'); if(prev) prev.src = '';
+  const wrap = document.getElementById('adv-img-wrap');    if(wrap) wrap.style.display = 'none';
+  const area = document.getElementById('adv-img-area');    if(area) area.style.display = '';
+  const file = document.getElementById('adv-img-file');    if(file) file.value = '';
+  advActualizarPreview();
+}
+
+// ── Preview en vivo ───────────────────────────────────────────
+const _ADV_POS_LABELS = {
+  'banner-global': '🔝 Banner global · se ve en todas las secciones',
+  'banner-seccion':'📌 Banner por sección · aparece arriba del contenido',
+  'sidebar':       '◀ Sidebar · panel lateral en desktop',
+  'mobile':        '📱 Mobile · debajo del encabezado en celular',
+  'inline':        '📄 Inline · al pie de la sección'
+};
+
+function advActualizarPreview(){
+  const nombre  = document.getElementById('adv-nombre')?.value  || '';
+  const desc    = document.getElementById('adv-desc')?.value    || '';
+  const cta     = document.getElementById('adv-cta')?.value     || '';
+  const posicion = document.getElementById('adv-posicion')?.value || 'banner-global';
+
+  const inner  = document.getElementById('adv-preview-inner');
+  const posLbl = document.getElementById('adv-preview-pos-label');
+  const wrap   = document.getElementById('adv-preview-wrap');
+  if(!inner || !wrap) return;
+
+  // Etiqueta de posición
+  if(posLbl) posLbl.textContent = _ADV_POS_LABELS[posicion] || posicion;
+
+  const img  = _advImgB64;
+  const imgHTML = img ? `<img src="${img}" alt="" style="display:block;width:100%;${posicion==='inline'?'width:56px;height:56px;object-fit:contain;flex-shrink:0;border-radius:6px':posicion==='sidebar'?'max-height:140px;object-fit:cover':'max-height:80px;object-fit:cover'}"/>` : '';
+  const nomHTML = nombre ? `<div style="font-family:'Rajdhani',sans-serif;font-weight:900;font-size:${posicion==='inline'?'14':'13'}px;color:#fff;text-transform:uppercase;letter-spacing:.4px;line-height:1.2">${nombre}</div>` : '<div style="font-family:\'Rajdhani\',sans-serif;font-size:12px;color:rgba(255,255,255,.2);font-style:italic">Nombre del anunciante</div>';
+  const descHTML = desc ? `<div style="font-family:'DM Sans',sans-serif;font-size:11px;color:rgba(255,255,255,.5);margin-top:2px;line-height:1.4">${desc}</div>` : '';
+  const ctaHTML  = cta  ? `<span style="display:inline-block;margin-top:7px;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:10px;letter-spacing:.5px;text-transform:uppercase;background:var(--dorado);color:#000;border-radius:4px;padding:4px 9px">${cta}</span>` : '';
+  const pubLabel = `<span style="position:absolute;top:4px;right:6px;font-family:'Rajdhani',sans-serif;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.2)">Publicidad</span>`;
+
+  let html = '';
+
+  if(posicion === 'banner-global' || posicion === 'banner-seccion' || posicion === 'mobile'){
+    // Banner horizontal
+    wrap.style.background = '#0c0c14';
+    if(img){
+      html = `<div style="position:relative;background:rgba(201,162,39,.07);border-top:1px solid rgba(201,162,39,.18);border-bottom:1px solid rgba(201,162,39,.18)">
+        ${imgHTML}${pubLabel}
+      </div>`;
+    } else {
+      html = `<div style="position:relative;background:rgba(201,162,39,.07);border-top:1px solid rgba(201,162,39,.18);border-bottom:1px solid rgba(201,162,39,.18);display:flex;align-items:center;justify-content:space-between;padding:10px 14px;gap:10px;min-height:56px">
+        <div>${nomHTML}${descHTML}</div>${ctaHTML}${pubLabel}
+      </div>`;
+    }
+
+  } else if(posicion === 'sidebar'){
+    // Sidebar card
+    wrap.style.background = '#0c0c14';
+    html = `<div style="position:relative;background:rgba(201,162,39,.06);border:1px solid rgba(201,162,39,.15);border-radius:8px;overflow:hidden">
+      ${imgHTML}
+      <div style="padding:10px 12px 12px;text-align:center">${nomHTML}${descHTML}${ctaHTML}</div>
+      ${pubLabel}
+    </div>`;
+
+  } else if(posicion === 'inline'){
+    // Inline horizontal card
+    wrap.style.background = '#0c0c14';
+    html = `<div style="position:relative;display:flex;align-items:center;gap:10px;background:rgba(201,162,39,.06);border:1px solid rgba(201,162,39,.15);border-radius:8px;padding:10px 12px;overflow:hidden">
+      ${img ? `<img src="${img}" alt="" style="flex-shrink:0;width:54px;height:54px;object-fit:contain;border-radius:6px"/>` : ''}
+      <div style="flex:1;min-width:0">${nomHTML}${descHTML}</div>
+      ${ctaHTML}${pubLabel}
+    </div>`;
+  }
+
+  inner.innerHTML = html || `<div style="display:flex;align-items:center;justify-content:center;height:60px;font-family:'Rajdhani',sans-serif;font-size:11px;color:rgba(255,255,255,.2);letter-spacing:.5px;text-transform:uppercase">Completá los campos para ver el preview</div>`;
+}
+
+function advMostrarMsg(txt, tipo){
+  const el = document.getElementById('adv-form-msg');
+  if(!el) return;
+  el.textContent = txt;
+  el.style.color   = tipo === 'ok' ? '#6fffaa' : '#ff7060';
+  el.style.display = 'block';
+}
+function advOcultarMsg(){
+  const el = document.getElementById('adv-form-msg');
+  if(el){ el.style.display = 'none'; el.textContent = ''; }
+}
+
+// ── Admin: renderizar lista de publicidades ───────────────────
+function renderAdminListaPubs(){
+  const el = document.getElementById('adv-lista');
+  if(!el) return;
+  const all = advGetAll();
+  if(!all.length){
+    el.innerHTML = '<div style="text-align:center;padding:20px;font-family:\'Rajdhani\',sans-serif;font-size:12px;letter-spacing:.5px;text-transform:uppercase;color:rgba(255,255,255,.25)">Sin publicidades cargadas</div>';
+    return;
+  }
+
+  const POS_LABEL = {
+    'banner-global':'Banner global','banner-seccion':'Banner sección',
+    'sidebar':'Sidebar','mobile':'Mobile','inline':'Inline'
+  };
+  const SEC_LABEL = {
+    fixture:'Partidos',posiciones:'Posiciones',resultados:'Resultados',
+    goleadores:'Goleadores',equipos:'Equipos',torneos:'Torneos',noticias:'Noticias'
+  };
+
+  el.innerHTML = all.map(p => {
+    const pos = POS_LABEL[p.posicion] || p.posicion;
+    const sec = (p.seccion && SEC_LABEL[p.seccion]) ? ' · ' + SEC_LABEL[p.seccion] : '';
+    const thumb = p.img
+      ? `<div class="pub-item-thumb"><img src="${p.img}" alt=""/></div>`
+      : `<div class="pub-item-thumb">🖼</div>`;
+    return `<div class="pub-item">
+      ${thumb}
+      <div class="pub-item-info">
+        <div class="pub-item-nombre">${p.nombre||'Sin nombre'}</div>
+        <div class="pub-item-meta">${pos}${sec}</div>
+      </div>
+      <div class="pub-item-estado ${p.estado||'activo'}">${p.estado==='pausado'?'Pausado':'Activo'}</div>
+      <div class="pub-item-actions">
+        <button onclick="advToggleEstado('${p.id}')">${p.estado==='activo'?'⏸':'▶'}</button>
+        <button onclick="advEditar('${p.id}')">✏</button>
+        <button class="del" onclick="advEliminar('${p.id}')">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Render público: mostrar pubs en la página ─────────────────
+function _advBuildHTML(p, tipo){
+  const link  = p.url ? p.url : null;
+  const inner = _advInnerHTML(p, tipo);
+  if(link){
+    return `<a href="${link}" target="_blank" rel="noopener" class="adv-${tipo}" style="text-decoration:none">${inner}<span class="adv-label">Publicidad</span></a>`;
+  }
+  return `<div class="adv-${tipo}">${inner}<span class="adv-label">Publicidad</span></div>`;
+}
+
+function _advInnerHTML(p, tipo){
+  const img  = p.img  ? (tipo==='inline'
+    ? `<img src="${p.img}" alt="${p.nombre||''}" loading="lazy"/>`
+    : `<img src="${p.img}" alt="${p.nombre||''}" loading="lazy"/>`) : '';
+  const cta  = p.cta  ? `<span class="adv-cta">${p.cta}</span>` : '';
+  const desc = p.desc ? `<div class="adv-desc">${p.desc}</div>` : '';
+  const nom  = p.nombre ? `<div class="adv-tit">${p.nombre}</div>` : '';
+
+  if(tipo === 'banner'){
+    if(img){
+      return img;
+    }
+    return `<div class="adv-text-only">${nom}<div>${desc}</div>${cta}</div>`;
+  }
+  if(tipo === 'sidebar'){
+    return `${img}<div class="adv-text-wrap">${nom}${desc}${cta}</div>`;
+  }
+  if(tipo === 'inline'){
+    return `${img}<div class="adv-text-wrap">${nom}${desc}</div>${cta}`;
+  }
+  return `${img}<div class="adv-text-wrap">${nom}${desc}${cta}</div>`;
+}
+
+function _advMontarSlot(el, pubs, tipo){
+  if(!el){ return; }
+  if(!pubs.length){ el.innerHTML = ''; return; }
+
+  if(pubs.length === 1){
+    el.innerHTML = _advBuildHTML(pubs[0], tipo);
+    return;
+  }
+
+  // Carrusel: múltiples pubs en el mismo slot
+  const slotId = el.id || ('adv_' + Math.random().toString(36).slice(2,6));
+  el.innerHTML = `<div class="adv-carousel" id="car-${slotId}">`
+    + pubs.map((p,i) => `<div class="adv-slide${i===0?' active':''}">${_advBuildHTML(p, tipo)}</div>`).join('')
+    + '</div>';
+
+  // Limpiar timer anterior si existe
+  if(el._advTimer) clearInterval(el._advTimer);
+  let cur = 0;
+  const dur = (pubs[0].duracion || 6) * 1000;
+  el._advTimer = setInterval(()=>{
+    const car = document.getElementById('car-' + slotId);
+    if(!car){ clearInterval(el._advTimer); return; }
+    const slides = car.querySelectorAll('.adv-slide');
+    slides[cur].classList.remove('active');
+    cur = (cur + 1) % slides.length;
+    slides[cur].classList.add('active');
+  }, dur);
+}
+
+// Actualiza el sidebar de publicidades filtrando por sección activa.
+// Si hay pubs específicas de esa sección (posicion==='sidebar' && seccion===sec),
+// las muestra; si no, muestra todas las del sidebar sin filtro de sección.
+function renderSidebarSeccion(cb, sec){
+  const sideEl = document.getElementById('adv-sidebar-wrap');
+  if(!sideEl) { if(typeof cb==='function') cb(); return; }
+  const all    = advGetAll();
+  const activas = all.filter(p => p.estado === 'activo' && p.posicion === 'sidebar');
+  // Primero intentar pubs específicas de la sección
+  const porSec = sec ? activas.filter(p => p.seccion === sec) : [];
+  const pubs   = porSec.length ? porSec : activas;
+  _advMontarSlot(sideEl, pubs, 'sidebar');
+  if(typeof cb==='function') cb();
+}
+
+function renderTodasLasPubs(){
+  const all    = advGetAll();
+  const activas = all.filter(p => p.estado === 'activo');
+  const SECS   = ['fixture','posiciones','resultados','goleadores','equipos','torneos','noticias'];
+
+  // Banner global → top de todas las secciones
+  const globales = activas.filter(p => p.posicion === 'banner-global');
+  SECS.forEach(sec => {
+    const el = document.getElementById('adv-top-' + sec);
+    if(el) _advMontarSlot(el, globales, 'banner');
+  });
+
+  // Banner por sección → top de esa sección
+  SECS.forEach(sec => {
+    const el   = document.getElementById('adv-top-' + sec);
+    const pubs = activas.filter(p => p.posicion === 'banner-seccion' && p.seccion === sec);
+    // Si hay banner-seccion, reemplaza el global para esa sección; si no, se queda el global
+    if(pubs.length && el) _advMontarSlot(el, pubs, 'banner');
+  });
+
+  // Inline → bottom de la sección
+  SECS.forEach(sec => {
+    const el   = document.getElementById('adv-bottom-' + sec);
+    const pubs = activas.filter(p => p.posicion === 'inline' && p.seccion === sec);
+    if(el) _advMontarSlot(el, pubs, 'inline');
+  });
+
+  // Sidebar (desktop)
+  const sideEl = document.getElementById('adv-sidebar-wrap');
+  if(sideEl) _advMontarSlot(sideEl, activas.filter(p => p.posicion === 'sidebar'), 'sidebar');
+
+  // Mobile
+  const mobEl = document.getElementById('adv-mobile-wrap');
+  if(mobEl) _advMontarSlot(mobEl, activas.filter(p => p.posicion === 'mobile'), 'sidebar');
+}
 </script>
 
 </body>
