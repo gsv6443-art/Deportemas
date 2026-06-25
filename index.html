@@ -1,11 +1,108 @@
 <!DOCTYPE html>
 <html lang="es">
-<head> gtag.js <meta name="google-site-verification" content="ssdT0TPE7HtsBerpNZRDI_zgmqqU5-4cKEMscu7zUjU" />  
-<meta name="google-site-verification" content="google16d3ee8414c322ce">
+<head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DEPORTEMAS</title>
-<!-- PWA -->
+
+<!-- ============================================================
+     SEO PRIMARIO
+     ============================================================ -->
+<title>DeporteMás – Liga Regional Riotercerense de Fútbol | Río Tercero, Córdoba</title>
+<meta name="description" content="Resultados, tabla de posiciones, goleadores y fixture de la Liga Regional Riotercerense de Fútbol. Seguí en vivo los partidos de Primera y Segunda División desde Río Tercero, Córdoba.">
+<meta name="keywords" content="liga regional riotercerense, fútbol río tercero, tabla de posiciones río tercero, resultados fútbol córdoba, deportemas, liga de fútbol córdoba, fixture río tercero">
+<meta name="author" content="DeporteMás">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://deportemas26.gsv6443.workers.dev/">
+<meta name="google-site-verification" content="google16d3ee8414c322ce">
+
+<!-- ============================================================
+     OPEN GRAPH (Facebook, WhatsApp, LinkedIn)
+     ============================================================ -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="DeporteMás">
+<meta property="og:title" content="DeporteMás – Liga Regional Riotercerense de Fútbol">
+<meta property="og:description" content="Resultados, posiciones, goleadores y fixture de la Liga Regional Riotercerense. Seguí el fútbol de Río Tercero en tiempo real.">
+<meta property="og:url" content="https://deportemas26.gsv6443.workers.dev/">
+<meta property="og:image" content="https://deportemas26.gsv6443.workers.dev/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="es_AR">
+
+<!-- ============================================================
+     TWITTER / X CARD
+     ============================================================ -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="DeporteMás – Liga Regional Riotercerense de Fútbol">
+<meta name="twitter:description" content="Resultados, posiciones, goleadores y fixture de la Liga Regional Riotercerense. Fútbol de Río Tercero, Córdoba.">
+<meta name="twitter:image" content="https://deportemas26.gsv6443.workers.dev/og-image.jpg">
+
+<!-- ============================================================
+     GEO / SEO LOCAL
+     ============================================================ -->
+<meta name="geo.region" content="AR-X">
+<meta name="geo.placename" content="Río Tercero, Córdoba, Argentina">
+<meta name="geo.position" content="-32.1742;-64.1159">
+<meta name="ICBM" content="-32.1742, -64.1159">
+
+<!-- ============================================================
+     SCHEMA.ORG – JSON-LD (datos estructurados para Google)
+     ============================================================ -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "SportsOrganization",
+      "@id": "https://deportemas26.gsv6443.workers.dev/#liga",
+      "name": "Liga Regional Riotercerense de Fútbol",
+      "sport": "Soccer",
+      "url": "https://deportemas26.gsv6443.workers.dev/",
+      "logo": "https://deportemas26.gsv6443.workers.dev/og-image.jpg",
+      "location": {
+        "@type": "Place",
+        "name": "Río Tercero",
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": "Río Tercero",
+          "addressRegion": "Córdoba",
+          "addressCountry": "AR"
+        }
+      }
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://deportemas26.gsv6443.workers.dev/#website",
+      "url": "https://deportemas26.gsv6443.workers.dev/",
+      "name": "DeporteMás",
+      "description": "Resultados, posiciones, goleadores y fixture de la Liga Regional Riotercerense de Fútbol",
+      "publisher": {
+        "@id": "https://deportemas26.gsv6443.workers.dev/#liga"
+      },
+      "inLanguage": "es-AR",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://deportemas26.gsv6443.workers.dev/?q={search_term_string}"
+        },
+        "query-input": "required name=search_term_string"
+      }
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://deportemas26.gsv6443.workers.dev/#deportemas",
+      "name": "DeporteMás",
+      "url": "https://deportemas26.gsv6443.workers.dev/",
+      "logo": "https://deportemas26.gsv6443.workers.dev/og-image.jpg",
+      "sameAs": []
+    }
+  ]
+}
+</script>
+
+<!-- ============================================================
+     PWA
+     ============================================================ -->
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -229,10 +326,10 @@
     const [
       fbData, fbEscudosViejo, fbIdentidad, fbFotos,
       fbNoticias, fbPubs, fbFichas, fbCronos, fbDM,
-      fbEscudosNuevo
+      fbEscudosNuevo, fbTransferencias
     ] = await Promise.all([
       window._fb.get('data'),
-      window._fb.get('escudos'),      // doc viejo (puede existir en instalaciones previas)
+      window._fb.get('escudos'),
       window._fb.get('identidad'),
       window._fb.get('fotos'),
       window._fb.get('noticias'),
@@ -240,7 +337,8 @@
       window._fb.get('fichas'),
       window._fb.get('cronos'),
       window._fb.get('deportemas'),
-      window._fb.getAllEscudos(),     // nuevo: docs individuales por escudo
+      window._fb.getAllEscudos(),
+      window._fb.get('transferencias'),
     ]);
 
     if(fbData)      { data = fbData; if(!data.playoff) data.playoff=[];
@@ -253,7 +351,8 @@
                       saveData(data); }
     if(fbIdentidad) { localStorage.setItem('lrr_identidad', JSON.stringify(fbIdentidad)); }
     if(fbFotos)     { localStorage.setItem('lrr_fotos',     JSON.stringify(fbFotos)); }
-    if(fbNoticias)  { localStorage.setItem('lrr_noticias',  JSON.stringify(fbNoticias)); }
+    if(fbNoticias)       { localStorage.setItem('lrr_noticias',  JSON.stringify(fbNoticias)); }
+    if(fbTransferencias) { localStorage.setItem(TF_KEY, JSON.stringify(fbTransferencias)); }
     if(fbPubs)      { localStorage.setItem('lrr_publicidad', JSON.stringify(fbPubs)); }
     if(fbFichas)    { localStorage.setItem('lrr_fichas',    JSON.stringify(fbFichas)); }
     if(fbCronos)    { localStorage.setItem('lrr_cronos',    JSON.stringify(fbCronos)); }
@@ -331,6 +430,12 @@
       localStorage.setItem('lrr_noticias', JSON.stringify(fbVal));
       if(currentSection==='noticias') renderNoticias();
     });
+    // Suscribir cambios en tiempo real a transferencias
+    window._fb.listen('transferencias', fbVal => {
+      if(!fbVal) return;
+      localStorage.setItem(TF_KEY, JSON.stringify(fbVal));
+      if(currentSection==='noticias') renderTransferencias();
+    });
     // Suscribir cambios en tiempo real a fichas
     window._fb.listen('fichas', fbVal => {
       if(!fbVal) return;
@@ -348,17 +453,18 @@
 </script>
 <style>
 :root{
-  --negro:#080808;--negro2:#111113;--negro3:#191920;--negro4:#232330;
+  /* ── GRAFITO + DORADO ── */
+  --negro:#2a2a32;--negro2:#343440;--negro3:#3e3e4c;--negro4:#484858;
   --dorado:#c9a227;--dorado-light:#f0c040;--dorado-dark:#8a6d0f;
-  --dorado-bg:rgba(201,162,39,0.08);--dorado-border:rgba(201,162,39,0.3);
-  --blanco:#f5f5f5;--gris:#888;--gris-claro:#bbb;
+  --dorado-bg:rgba(201,162,39,0.10);--dorado-border:rgba(201,162,39,0.35);
+  --blanco:#f5f5f5;--gris:#aaa;--gris-claro:#ccc;
   --rojo:#c0392b;--verde-clasificacion:#1a6b2f;
   --r-sm:4px;--r-md:8px;--r-lg:12px;
   --radius:var(--r-md);
-  --shadow:0 4px 24px rgba(0,0,0,.5);
-  /* Canvas compartir */
-  --cv-neg2:#111113;--cv-neg3:#191920;--cv-neg4:#232330;
-  --cv-blanco:#f5f5f5;--cv-gris:#888;
+  --shadow:0 4px 24px rgba(0,0,0,.35);
+  /* Canvas compartir — grafito + dorado */
+  --cv-neg2:#2a2a32;--cv-neg3:#343440;--cv-neg4:#3e3e4c;
+  --cv-blanco:#f5f5f5;--cv-gris:#aaa;
 }
 
 /* ── MODO CLARO ─────────────────────────────────────────────── */
@@ -379,8 +485,8 @@ html{scroll-behavior:smooth;}
 body{
   font-family:'DM Sans',sans-serif;background:var(--negro);color:var(--blanco);min-height:100vh;
   background-image:
-    radial-gradient(ellipse at 15% 10%,rgba(201,162,39,.06) 0%,transparent 55%),
-    radial-gradient(ellipse at 85% 90%,rgba(201,162,39,.04) 0%,transparent 55%);
+    radial-gradient(ellipse at 15% 10%,rgba(201,162,39,.05) 0%,transparent 55%),
+    radial-gradient(ellipse at 85% 90%,rgba(201,162,39,.03) 0%,transparent 55%);
   -webkit-font-smoothing:antialiased;
 }
 
@@ -392,51 +498,64 @@ body{
 
 /* HEADER */
 header{
-  background:var(--negro2);
-  border-bottom:2px solid var(--dorado);
+  background:linear-gradient(90deg,#2a2a32 0%,#38384a 100%);
+  border-bottom:none;
   padding:0 2rem;
   display:flex;align-items:center;gap:1.2rem;
   height:72px;
   position:sticky;top:0;z-index:100;
-  box-shadow:0 2px 20px rgba(0,0,0,.6);
+  box-shadow:0 2px 24px rgba(0,0,0,.35);
+}
+header::after{
+  content:'';
+  position:absolute;bottom:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent 0%,var(--dorado) 20%,var(--dorado-light) 50%,var(--dorado) 80%,transparent 100%);
 }
 .logo-wrap{display:flex;align-items:center;gap:12px;flex-shrink:0;}
 #logo-img-header{height:50px;width:50px;object-fit:contain;border-radius:var(--r-md);display:none;}
 #logo-img-header.show{display:block;}
 .logo-iniciales{
-  width:50px;height:50px;background:var(--dorado);border-radius:var(--r-md);
+  width:50px;height:50px;
+  background:linear-gradient(135deg,var(--dorado),var(--dorado-light));
+  border-radius:var(--r-md);
   display:flex;align-items:center;justify-content:center;
-  font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--negro);flex-shrink:0;
-  box-shadow:0 0 16px rgba(201,162,39,.35);
+  font-family:'Bebas Neue',sans-serif;font-size:22px;color:#2a2a32;flex-shrink:0;
+  box-shadow:0 0 20px rgba(201,162,39,.45);
 }
 .logo-iniciales.hidden{display:none;}
 .logo-texto h1{
-  font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--dorado);
+  font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--blanco);
   text-transform:uppercase;letter-spacing:2px;line-height:1.1;
-  text-shadow:0 0 24px rgba(201,162,39,.4);
 }
 .logo-texto span{
-  font-size:10px;color:rgba(201,162,39,.6);font-weight:700;
+  font-size:10px;color:rgba(201,162,39,.7);font-weight:700;
   letter-spacing:3px;text-transform:uppercase;font-family:'Rajdhani',sans-serif;
 }
 nav{display:flex;gap:2px;margin-left:auto;flex-wrap:wrap;align-items:center;}
 nav a{
-  color:rgba(255,255,255,.65);text-decoration:none;font-size:12px;font-weight:700;
+  color:rgba(255,255,255,.55);text-decoration:none;font-size:12px;font-weight:700;
   padding:7px 13px;border-radius:var(--r-sm);transition:all .18s;
   letter-spacing:.6px;text-transform:uppercase;font-family:'Rajdhani',sans-serif;
+  border:0.5px solid transparent;
 }
-nav a:hover,nav a.active{color:var(--dorado);background:rgba(201,162,39,.1);}
+nav a:hover{color:rgba(255,255,255,.85);background:rgba(255,255,255,.06);}
+nav a.active{
+  color:var(--dorado);
+  background:rgba(201,162,39,.1);
+  border-color:rgba(201,162,39,.25);
+}
 .btn-admin-nav{
-  background:var(--dorado)!important;color:var(--negro)!important;
+  background:var(--dorado)!important;color:#2a2a32!important;
   font-weight:900!important;margin-left:8px;border-radius:var(--r-sm)!important;
-  box-shadow:0 0 12px rgba(201,162,39,.3)!important;
+  box-shadow:0 0 14px rgba(201,162,39,.35)!important;
+  border-color:transparent!important;
 }
 .btn-admin-nav:hover{background:var(--dorado-light)!important;}
 .btn-instalar-nav{
   display:none;align-items:center;gap:5px;
-  background:rgba(201,162,39,.12)!important;
+  background:rgba(201,162,39,.1)!important;
   color:var(--dorado)!important;
-  border:1px solid var(--dorado-border)!important;
+  border:0.5px solid var(--dorado-border)!important;
   font-weight:700!important;margin-left:8px;border-radius:var(--r-sm)!important;
   font-size:12px;letter-spacing:.3px;padding:4px 10px;cursor:pointer;
   font-family:inherit;transition:background .15s;
@@ -446,7 +565,7 @@ nav a:hover,nav a.active{color:var(--dorado);background:rgba(201,162,39,.1);}
   .btn-instalar-nav.visible{ display:none !important; }
 }
 .btn-instalar-nav.visible{display:flex;}
-.btn-instalar-nav:hover{background:rgba(201,162,39,.22)!important;}
+.btn-instalar-nav:hover{background:rgba(201,162,39,.2)!important;}
 .btn-instalar-nav svg{width:13px;height:13px;flex-shrink:0;}
 
 /* Íconos: mostrar sol en oscuro, luna en claro */
@@ -473,30 +592,55 @@ nav a:hover,nav a.active{color:var(--dorado);background:rgba(201,162,39,.1);}
 
 /* SIDEBAR */
 .sidebar{display:flex;flex-direction:column;gap:.9rem;}
+
+/* ── Side block — bloque del sidebar ── */
 .side-block{
-  background:var(--negro2);border:1px solid var(--dorado-border);
-  border-radius:var(--radius);overflow:hidden;
-  box-shadow:var(--shadow);
+  background:var(--negro2);
+  border:0.5px solid rgba(255,255,255,.08);
+  border-radius:var(--r-lg);overflow:hidden;
+  box-shadow:0 4px 20px rgba(0,0,0,.25);
 }
 .side-block-header{
-  background:linear-gradient(90deg,var(--dorado) 0%,var(--dorado-light) 100%);
-  color:var(--negro);font-family:'Rajdhani',sans-serif;font-weight:900;
-  font-size:12px;letter-spacing:2px;text-transform:uppercase;padding:8px 14px;
+  display:flex;align-items:center;gap:8px;
+  padding:10px 14px;
+  border-bottom:0.5px solid rgba(201,162,39,.15);
 }
+.side-block-header::before{
+  content:'';width:3px;height:14px;
+  background:var(--dorado);border-radius:2px;flex-shrink:0;
+}
+.side-block-header span,
+.side-block-header{
+  font-family:'Bebas Neue',sans-serif;font-size:15px;
+  letter-spacing:2px;text-transform:uppercase;color:var(--dorado);
+}
+
+/* ── Side menu — ítems de navegación ── */
 .side-menu a{
-  display:block;padding:10px 16px;font-size:12px;font-weight:700;
-  color:rgba(255,255,255,.65);text-decoration:none;letter-spacing:.4px;
-  border-bottom:1px solid rgba(255,255,255,.04);transition:all .14s;
+  display:flex;align-items:center;gap:8px;
+  padding:10px 16px;font-size:11px;font-weight:700;
+  color:rgba(255,255,255,.5);text-decoration:none;letter-spacing:.5px;
+  border-bottom:0.5px solid rgba(255,255,255,.04);transition:all .14s;
   text-transform:uppercase;font-family:'Rajdhani',sans-serif;
 }
-.side-menu a:last-child{border-bottom:none;}
-.side-menu a:hover,.side-menu a.active{
-  background:var(--dorado-bg);color:var(--dorado);
-  border-left:3px solid var(--dorado);padding-left:13px;
+.side-menu a::before{
+  content:'';width:5px;height:5px;border-radius:50%;
+  background:rgba(255,255,255,.15);flex-shrink:0;transition:background .14s;
 }
+.side-menu a:last-child{border-bottom:none;}
+.side-menu a:hover{
+  background:rgba(255,255,255,.04);
+  color:rgba(255,255,255,.8);
+}
+.side-menu a:hover::before{ background:rgba(201,162,39,.5); }
+.side-menu a.active{
+  background:rgba(201,162,39,.08);color:var(--dorado);
+}
+.side-menu a.active::before{ background:var(--dorado); }
 
 /* MAIN */
 .main{display:flex;flex-direction:column;gap:1rem;}
+
 /* ── Secciones: fade suave al navegar ── */
 @keyframes sec-in{
   from{ opacity:0; transform:translateY(6px); }
@@ -506,57 +650,71 @@ nav a:hover,nav a.active{color:var(--dorado);background:rgba(201,162,39,.1);}
   from{ opacity:1; }
   to  { opacity:0; }
 }
+.section{ display:none; animation:sec-in .22s ease both; }
+.section.visible{ display:block; }
+.section.saliendo{ display:block; animation:sec-out .16s ease forwards; pointer-events:none; }
 
-.section{
-  display:none;
-  animation:sec-in .22s ease both;
-}
-.section.visible{
-  display:block;
-}
-.section.saliendo{
-  display:block;
-  animation:sec-out .16s ease forwards;
-  pointer-events:none;
-}
-
-/* CARD */
+/* ── CARD — contenedor base ── */
 .card{
-  background:var(--negro2);border:1px solid var(--dorado-border);
-  border-radius:var(--radius);overflow:hidden;margin-bottom:1rem;
-  box-shadow:var(--shadow);
+  background:var(--negro2);
+  border:0.5px solid rgba(255,255,255,.08);
+  border-radius:var(--r-lg);overflow:hidden;margin-bottom:1rem;
+  box-shadow:0 4px 20px rgba(0,0,0,.2);
 }
 .card-header{
-  background:linear-gradient(90deg,var(--negro4) 0%,rgba(201,162,39,.12) 100%);
-  border-bottom:1px solid var(--dorado-border);
+  background:linear-gradient(90deg,rgba(201,162,39,.06) 0%,transparent 100%);
+  border-bottom:0.5px solid rgba(201,162,39,.18);
   padding:12px 18px;display:flex;align-items:center;justify-content:space-between;
+  gap:10px;
 }
 .card-header span{
-  font-family:'Rajdhani',sans-serif;font-weight:700;font-size:15px;color:var(--dorado);
-  letter-spacing:1.2px;text-transform:uppercase;
-}
-.div-badge{
-  background:var(--dorado);color:var(--negro);font-size:11px;font-weight:900;
-  padding:2px 10px;border-radius:var(--r-sm);letter-spacing:1px;font-family:'Rajdhani',sans-serif;
+  font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--dorado);
+  letter-spacing:1.5px;text-transform:uppercase;
 }
 
-/* TABS */
+/* ── Div badge ── */
+.div-badge{
+  background:rgba(201,162,39,.15);color:var(--dorado);
+  font-size:10px;font-weight:900;
+  padding:2px 10px;border-radius:20px;letter-spacing:1px;
+  font-family:'Rajdhani',sans-serif;
+  border:0.5px solid rgba(201,162,39,.35);
+}
+
+/* ── TABS ── */
 .tabs-row{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;}
+
+/* Tab de división (Primera / Segunda) */
 .div-tab{
-  padding:8px 20px;font-size:12px;font-weight:700;
-  border:1px solid var(--dorado-border);border-radius:var(--r-sm);cursor:pointer;
-  background:var(--negro2);color:rgba(255,255,255,.55);
-  transition:all .16s;font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.6px;
+  padding:7px 18px;font-size:11px;font-weight:700;
+  border:0.5px solid rgba(201,162,39,.25);border-radius:20px;cursor:pointer;
+  background:transparent;color:rgba(255,255,255,.5);
+  transition:all .16s;font-family:'Rajdhani',sans-serif;
+  text-transform:uppercase;letter-spacing:.6px;
 }
-.div-tab.active{background:var(--dorado);color:var(--negro);border-color:var(--dorado);box-shadow:0 0 10px rgba(201,162,39,.25);}
-.div-tab:hover:not(.active){color:var(--dorado);border-color:var(--dorado);}
+.div-tab.active{
+  background:var(--dorado);color:#2a2a32;
+  border-color:var(--dorado);
+  box-shadow:0 0 14px rgba(201,162,39,.3);
+  font-weight:900;
+}
+.div-tab:hover:not(.active){
+  color:var(--dorado);border-color:rgba(201,162,39,.5);
+  background:rgba(201,162,39,.06);
+}
+
+/* Tab de torneo (Apertura / Clausura / Fases) */
 .torneo-tab{
-  padding:6px 16px;font-size:11px;font-weight:700;
-  border:1px solid rgba(255,255,255,.12);border-radius:20px;cursor:pointer;
-  background:transparent;color:rgba(255,255,255,.45);
-  transition:all .16s;font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px;
+  padding:5px 14px;font-size:11px;font-weight:700;
+  border:0.5px solid rgba(255,255,255,.1);border-radius:20px;cursor:pointer;
+  background:transparent;color:rgba(255,255,255,.4);
+  transition:all .16s;font-family:'Rajdhani',sans-serif;
+  text-transform:uppercase;letter-spacing:.5px;
 }
-.torneo-tab.active{background:rgba(255,255,255,.1);color:var(--blanco);border-color:rgba(255,255,255,.35);}
+.torneo-tab.active{
+  background:rgba(255,255,255,.08);color:var(--blanco);
+  border-color:rgba(255,255,255,.3);
+}
 
 /* ══════════════════════════════════════════════════════
    CARDS DE PARTIDO — JERARQUÍA VISUAL POR ESTADO
@@ -565,7 +723,7 @@ nav a:hover,nav a.active{color:var(--dorado);background:rgba(201,162,39,.1);}
 /* ── Wrapper base ── */
 .card-partido-wrap{
   position:relative;overflow:hidden;
-  border-bottom:1px solid rgba(255,255,255,.045);
+  border-bottom:1px solid rgba(255,255,255,.04);
   border-left:3px solid transparent;
   transition:background .18s, border-color .18s;
 }
@@ -594,34 +752,23 @@ nav a:hover,nav a.active{color:var(--dorado);background:rgba(201,162,39,.1);}
     rgba(201,162,39,.04) 65%
   );
 }
-/* Nombre de equipos más brillante en live */
 .card-partido-wrap[data-estado="en-juego"] .equipo-local,
 .card-partido-wrap[data-estado="en-juego"] .equipo-visit{
-  color:var(--blanco);
-  letter-spacing:.7px;
+  color:var(--blanco);letter-spacing:.7px;
 }
-/* Hora en rojo cuando está en vivo */
-.card-partido-wrap[data-estado="en-juego"] .hora{
-  color:#e74c3c;
-}
+.card-partido-wrap[data-estado="en-juego"] .hora{ color:#e74c3c; }
 
-/* ── JUGADO: segundo plano, el dato ya es histórico ── */
+/* ── JUGADO: borde dorado más visible, hover suave ── */
 .card-partido-wrap[data-estado="jugado"]{
   background:transparent;
-  border-left-color:rgba(201,162,39,.18);
+  border-left-color:rgba(201,162,39,.4);
 }
 .card-partido-wrap[data-estado="jugado"]:hover{
   background:rgba(201,162,39,.04);
 }
-/* Equipos más apagados — el resultado es el dato importante */
 .card-partido-wrap[data-estado="jugado"] .equipo-local,
-.card-partido-wrap[data-estado="jugado"] .equipo-visit{
-  opacity:.52;
-}
-/* Hora apagada */
-.card-partido-wrap[data-estado="jugado"] .hora{
-  opacity:.4;
-}
+.card-partido-wrap[data-estado="jugado"] .equipo-visit{ opacity:.55; }
+.card-partido-wrap[data-estado="jugado"] .hora{ opacity:.45; }
 
 /* ── PENDIENTE: neutro, expectante ── */
 .card-partido-wrap[data-estado="pendiente"]{
@@ -629,7 +776,7 @@ nav a:hover,nav a.active{color:var(--dorado);background:rgba(201,162,39,.1);}
   border-left-color:transparent;
 }
 .card-partido-wrap[data-estado="pendiente"]:hover{
-  background:rgba(201,162,39,.04);
+  background:rgba(255,255,255,.03);
   border-left-color:rgba(201,162,39,.25);
 }
 
@@ -638,7 +785,7 @@ nav a:hover,nav a.active{color:var(--dorado);background:rgba(201,162,39,.1);}
   display:grid;
   grid-template-columns:68px 1fr 88px 1fr 76px;
   align-items:center;
-  padding:14px 18px;      /* ↑ de 12 a 14 — más respiración */
+  padding:14px 18px;
   transition:background .14s;
 }
 .partido:last-child{border-bottom:none;}
@@ -646,8 +793,7 @@ nav a:hover,nav a.active{color:var(--dorado);background:rgba(201,162,39,.1);}
 /* ── Columnas del partido ── */
 .partido .hora{
   font-size:13px;font-weight:700;
-  color:var(--dorado);
-  text-align:center;
+  color:var(--dorado);text-align:center;
   font-family:'Rajdhani',sans-serif;
   transition:color .18s, opacity .18s;
 }
@@ -664,22 +810,18 @@ nav a:hover,nav a.active{color:var(--dorado);background:rgba(201,162,39,.1);}
   text-transform:uppercase;letter-spacing:.5px;
   transition:opacity .18s;
 }
-/* Marcador VS pendiente */
 .partido .vs{
   text-align:center;
   font-family:'Bebas Neue',sans-serif;font-size:22px;
   color:rgba(255,255,255,.22);
 }
-/* Marcador resultado (jugado) */
 .partido .vs.resultado{
-  font-size:19px;
-  font-family:'Bebas Neue',sans-serif;
+  font-size:19px;font-family:'Bebas Neue',sans-serif;
   background:linear-gradient(135deg,var(--dorado),var(--dorado-light));
-  color:var(--negro);
-  border-radius:var(--r-sm);
-  padding:3px 10px;
+  color:#2a2a32;border-radius:var(--r-sm);padding:4px 12px;
   display:inline-block;
-  box-shadow:0 0 12px rgba(201,162,39,.3);
+  box-shadow:0 2px 14px rgba(201,162,39,.35);
+  letter-spacing:1px;
 }
 
 /* ── Badge de estado ── */
@@ -690,19 +832,18 @@ nav a:hover,nav a.active{color:var(--dorado);background:rgba(201,162,39,.1);}
   font-family:'Rajdhani',sans-serif;
 }
 .estado.pendiente{
-  background:rgba(201,162,39,.10);
-  color:rgba(201,162,39,.7);
-  border:1px solid rgba(201,162,39,.16);
+  background:rgba(201,162,39,.08);
+  color:rgba(201,162,39,.65);
+  border:0.5px solid rgba(201,162,39,.2);
 }
 .estado.jugado{
-  background:rgba(26,107,47,.18);
-  color:rgba(76,175,116,.75);
-  border:1px solid rgba(26,107,47,.22);
+  background:rgba(26,107,47,.15);
+  color:rgba(76,175,116,.8);
+  border:0.5px solid rgba(26,107,47,.2);
 }
 .estado.en-juego{
-  background:rgba(192,57,43,.25);
-  color:#e74c3c;
-  border:1px solid rgba(192,57,43,.35);
+  background:rgba(192,57,43,.2);color:#e74c3c;
+  border:0.5px solid rgba(192,57,43,.3);
   animation:blink 1.2s infinite;
 }
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.45}}
@@ -960,44 +1101,33 @@ table.posiciones{
 
 /* ── Encabezado ── */
 table.posiciones thead th{
-  background:rgba(201,162,39,.10);
+  background:rgba(201,162,39,.07);
   color:var(--dorado);
   padding:11px 10px;
   font-family:'Rajdhani',sans-serif;font-weight:900;font-size:11px;
   text-align:center;letter-spacing:1.2px;text-transform:uppercase;
-  border-bottom:2px solid var(--dorado-border);
+  border-bottom:1.5px solid rgba(201,162,39,.35);
   white-space:nowrap;
 }
-table.posiciones thead th:first-child{ /* # */
-  padding-left:14px;width:36px;
-}
-table.posiciones thead th:nth-child(2){ /* Equipo */
-  text-align:left;padding-left:12px;
-}
-/* Separador visual antes de grupos de columnas */
-table.posiciones thead th:nth-child(4),  /* G (empieza grupo G/E/P) */
-table.posiciones thead th:nth-child(8){  /* GF (empieza grupo GF/GC/DG) */
-  border-left:1px solid rgba(201,162,39,.18);
+table.posiciones thead th:first-child{ padding-left:14px;width:40px; }
+table.posiciones thead th:nth-child(2){ text-align:left;padding-left:12px; }
+table.posiciones thead th:nth-child(4),
+table.posiciones thead th:nth-child(8){
+  border-left:1px solid rgba(201,162,39,.15);
 }
 
 /* ── Filas del cuerpo ── */
 table.posiciones tbody tr{
-  border-bottom:1px solid rgba(255,255,255,.045);
+  border-bottom:0.5px solid rgba(255,255,255,.05);
   transition:background .14s;
 }
 table.posiciones tbody tr:last-child{border-bottom:none;}
-
-/* Filas alternas — tono muy sutil para no pelear con los colores de zona */
-table.posiciones tbody tr:nth-child(even){
-  background:rgba(255,255,255,.022);
-}
-table.posiciones tbody tr:hover{
-  background:rgba(201,162,39,.07) !important;
-}
+table.posiciones tbody tr:nth-child(even){ background:rgba(255,255,255,.02); }
+table.posiciones tbody tr:hover{ background:rgba(201,162,39,.07) !important; }
 
 /* ── Celdas ── */
 table.posiciones td{
-  padding:13px 10px;
+  padding:12px 10px;
   text-align:center;
   font-family:'Rajdhani',sans-serif;font-size:14px;
   vertical-align:middle;
@@ -1005,26 +1135,38 @@ table.posiciones td{
 table.posiciones td:first-child{padding-left:14px;}
 table.posiciones td:nth-child(2){text-align:left;padding-left:12px;}
 table.posiciones td:last-child{padding-right:14px;}
-
-/* Separadores verticales entre grupos de columnas */
-table.posiciones td:nth-child(4),   /* G */
-table.posiciones td:nth-child(8){   /* GF */
-  border-left:1px solid rgba(255,255,255,.06);
+table.posiciones td:nth-child(4),
+table.posiciones td:nth-child(8){
+  border-left:1px solid rgba(255,255,255,.05);
 }
 
 /* ── Número de posición ── */
 .pos-num{
-  color:rgba(255,255,255,.5);
+  color:rgba(255,255,255,.45);
   font-weight:900;font-size:13px;
   font-family:'Rajdhani',sans-serif;
   min-width:20px;
 }
 
-/* ── Nombre de equipo ── */
+/* Círculo dorado para el primer puesto */
+.pos-num-1{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:24px;height:24px;border-radius:50%;
+  background:linear-gradient(135deg,var(--dorado),var(--dorado-light));
+  color:#2a2a32;font-family:'Rajdhani',sans-serif;font-weight:900;font-size:12px;
+  box-shadow:0 0 10px rgba(201,162,39,.45);
+}
+
+/* ── Nombre de equipo — DM Sans para más legibilidad ── */
 .pos-equipo{
   display:flex;align-items:center;gap:9px;
-  font-family:'Bebas Neue',sans-serif;font-size:16px;
-  text-transform:uppercase;letter-spacing:.5px;
+  font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;
+}
+
+/* ── PTS — Bebas Neue, protagonista ── */
+.pos-pts{
+  font-family:'Bebas Neue',sans-serif;font-size:18px;
+  color:var(--dorado);font-weight:400;
 }
 
 /* ── Zonas: borde izquierdo + fondo tenue ── */
@@ -1044,7 +1186,7 @@ table.posiciones td:nth-child(8){   /* GF */
 .zona-descenso                   {background:rgba(192,57,43,.05);}
 
 /* ESCUDO MINI */
-.escudo-mini{width:30px;height:30px;border-radius:50%;background:var(--negro4);display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-weight:900;font-size:9px;color:var(--dorado);border:1px solid var(--dorado-border);flex-shrink:0;overflow:hidden;}
+.escudo-mini{width:30px;height:30px;border-radius:50%;background:var(--negro4);display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-weight:900;font-size:9px;color:var(--dorado);border:0.5px solid var(--dorado-border);flex-shrink:0;overflow:hidden;}
 .escudo-mini img{width:100%;height:100%;object-fit:contain;}
 
 /* GOLEADORES */
@@ -1053,6 +1195,11 @@ table.posiciones td:nth-child(8){   /* GF */
 .goleador-row:hover{background:rgba(201,162,39,.05);}
 .gol-pos{width:30px;height:30px;border-radius:50%;background:var(--negro4);border:1px solid var(--dorado-border);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:rgba(255,255,255,.55);font-family:'Rajdhani',sans-serif;flex-shrink:0;}
 .gol-pos.top1{background:linear-gradient(135deg,var(--dorado),var(--dorado-light));color:var(--negro);box-shadow:0 0 10px rgba(201,162,39,.4);}
+/* ── GOLEADORES – fondo foto líder ──────────────────────────── */
+.goleadores-card-wrap{position:relative;overflow:hidden;border-radius:var(--r-md);}
+.goleadores-bg-foto{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top center;opacity:.11;pointer-events:none;user-select:none;filter:blur(3px) grayscale(25%);transform:scale(1.06);}
+.goleadores-bg-grad{position:absolute;inset:0;background:linear-gradient(135deg,rgba(8,8,16,.94) 35%,rgba(8,8,16,.65));pointer-events:none;}
+.goleadores-card-wrap>.card{position:relative;z-index:1;background:transparent;}
 .gol-nombre{flex:1;font-family:'Bebas Neue',sans-serif;font-size:16px;text-transform:uppercase;letter-spacing:.5px;}
 .gol-equipo{font-size:11px;color:var(--gris);margin-top:2px;font-family:'Rajdhani',sans-serif;}
 .gol-goles{font-family:'Bebas Neue',sans-serif;font-size:30px;color:var(--dorado);min-width:36px;text-align:center;line-height:1;}
@@ -1157,23 +1304,31 @@ table.posiciones td:nth-child(8){   /* GF */
   font-family:'Rajdhani',sans-serif;font-size:12px;text-transform:uppercase;letter-spacing:.5px;
 }
 .fecha-acordeon{
-  background:var(--negro2);border:1px solid rgba(201,162,39,.2);
-  border-radius:var(--radius);overflow:hidden;margin-bottom:.7rem;
-  transition:border-color .16s;
+  background:var(--negro2);
+  border:0.5px solid rgba(201,162,39,.18);
+  border-radius:var(--r-lg);overflow:hidden;margin-bottom:.7rem;
+  transition:border-color .16s, box-shadow .16s;
 }
-.fecha-acordeon:hover{border-color:var(--dorado-border);}
+.fecha-acordeon:hover{
+  border-color:rgba(201,162,39,.35);
+  box-shadow:0 4px 20px rgba(0,0,0,.2);
+}
 .fecha-acordeon-header{
   display:flex;align-items:center;justify-content:space-between;
-  padding:12px 18px;cursor:pointer;
-  background:linear-gradient(90deg,var(--negro4),rgba(201,162,39,.1));
+  padding:13px 18px;cursor:pointer;
+  background:linear-gradient(90deg,rgba(201,162,39,.06) 0%,transparent 100%);
   border-bottom:1px solid transparent;
   transition:background .15s;user-select:none;
 }
-.fecha-acordeon-header:hover{background:linear-gradient(90deg,var(--negro4),rgba(201,162,39,.2));}
-.fecha-acordeon-header.open{border-bottom-color:rgba(201,162,39,.2);}
+.fecha-acordeon-header:hover{
+  background:linear-gradient(90deg,rgba(201,162,39,.12) 0%,rgba(201,162,39,.02) 100%);
+}
+.fecha-acordeon-header.open{
+  border-bottom-color:rgba(201,162,39,.15);
+}
 .fecha-acordeon-title{
-  font-family:'Rajdhani',sans-serif;font-weight:800;font-size:16px;
-  color:var(--blanco);text-transform:uppercase;letter-spacing:1px;
+  font-family:'Bebas Neue',sans-serif;font-size:17px;
+  color:var(--blanco);letter-spacing:1.5px;
   display:flex;align-items:center;gap:10px;
 }
 .fecha-acordeon-meta{
@@ -1186,23 +1341,23 @@ table.posiciones td:nth-child(8){   /* GF */
 .fecha-acordeon-body{display:none;}
 .fecha-acordeon-body.open{display:block;}
 
-/* card partido wrap */
+/* card partido wrap — dentro del acordeón */
 .card-partido-wrap{position:relative;overflow:hidden;border-bottom:1px solid rgba(255,255,255,.04);}
 .card-partido-wrap:last-child{border-bottom:none;}
 
 /* PARTIDO DETALLE */
 .partido-detalle{
-  background:rgba(0,0,0,.25);border-top:1px solid rgba(201,162,39,.12);
+  background:rgba(0,0,0,.15);border-top:1px solid rgba(201,162,39,.1);
   padding:8px 16px 10px;display:none;
 }
 .partido-detalle.open{display:block;}
 .partido-detalle-cols{display:grid;grid-template-columns:1fr 1fr;gap:4px 20px;}
-.pd-col-title{font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;}
+.pd-col-title{font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;}
 .pd-evento{display:flex;align-items:center;gap:5px;font-family:'Rajdhani',sans-serif;font-size:12px;color:rgba(255,255,255,.75);padding:2px 0;}
 .pd-evento .pd-min{color:var(--dorado);font-weight:700;min-width:28px;}
 .pd-evento .pd-icono{font-size:13px;}
 .pd-arbitros{margin-top:8px;border-top:1px solid rgba(255,255,255,.06);padding-top:6px;}
-.pd-arb-title{font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;}
+.pd-arb-title{font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;}
 .pd-arb-row{display:flex;align-items:center;gap:6px;font-family:'Rajdhani',sans-serif;font-size:12px;color:rgba(255,255,255,.65);padding:1px 0;}
 .pd-arb-rol{color:rgba(255,255,255,.3);font-size:10px;min-width:120px;text-transform:uppercase;letter-spacing:.4px;}
 .pd-arb-nombre{color:rgba(255,255,255,.8);}
@@ -1971,57 +2126,97 @@ table.posiciones td:nth-child(8){   /* GF */
 
 .noticias-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:18px;}
 .noticia-card{
-  background:var(--negro2);border:1px solid rgba(255,255,255,.07);border-radius:var(--radius);
-  overflow:hidden;cursor:pointer;transition:border-color .2s,transform .2s,box-shadow .2s;
+  background:var(--negro2);
+  border:0.5px solid rgba(255,255,255,.07);
+  border-radius:var(--r-lg);
+  overflow:hidden;cursor:pointer;
+  transition:border-color .2s,transform .2s,box-shadow .2s;
   display:flex;flex-direction:column;
 }
-.noticia-card:hover{border-color:var(--dorado);transform:translateY(-3px);box-shadow:0 10px 32px rgba(0,0,0,.5);}
+.noticia-card:hover{
+  border-color:rgba(201,162,39,.45);
+  transform:translateY(-3px);
+  box-shadow:0 12px 36px rgba(0,0,0,.4);
+}
 .noticia-card-img{
   width:100%;aspect-ratio:16/9;object-fit:cover;display:block;
   background:var(--negro3);
 }
 .noticia-card-img-placeholder{
-  width:100%;aspect-ratio:16/9;background:linear-gradient(135deg,var(--negro3),var(--negro4));
+  width:100%;aspect-ratio:16/9;
+  background:linear-gradient(135deg,var(--negro3) 0%,var(--negro4) 100%);
   display:flex;align-items:center;justify-content:center;
-  font-size:36px;color:rgba(255,255,255,.1);
+  font-size:36px;color:rgba(255,255,255,.07);
+  position:relative;overflow:hidden;
 }
-.noticia-card-body{padding:14px 16px;flex:1;display:flex;flex-direction:column;gap:6px;}
+.noticia-card-img-placeholder::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:40%;
+  background:linear-gradient(transparent,var(--negro2));
+}
+.noticia-card-body{padding:12px 14px 8px;flex:1;display:flex;flex-direction:column;gap:6px;}
+
+/* Categoría — pill/badge */
 .noticia-card-cat{
-  font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:900;
+  display:inline-flex;align-items:center;
+  padding:2px 9px;border-radius:20px;
+  background:rgba(201,162,39,.1);
+  border:0.5px solid rgba(201,162,39,.28);
+  font-family:'Rajdhani',sans-serif;font-size:9px;font-weight:900;
   letter-spacing:1.5px;text-transform:uppercase;color:var(--dorado);
+  align-self:flex-start;
 }
+
+/* Título — Bebas Neue, impacto visual */
 .noticia-card-titulo{
-  font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;
-  color:var(--blanco);line-height:1.3;
+  font-family:'Bebas Neue',sans-serif;font-size:20px;font-weight:400;
+  color:var(--blanco);line-height:1.15;letter-spacing:.5px;
 }
+
+/* Bajada — DM Sans, legible */
 .noticia-card-bajada{
-  font-family:'DM Sans',sans-serif;font-size:12px;color:rgba(255,255,255,.55);
-  line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
-  flex:1;
+  font-family:'DM Sans',sans-serif;font-size:12px;color:rgba(255,255,255,.5);
+  line-height:1.55;display:-webkit-box;-webkit-line-clamp:3;
+  -webkit-box-orient:vertical;overflow:hidden;flex:1;
 }
+
+/* Footer con fecha, autor e íconos de medios */
 .noticia-card-footer{
   display:flex;align-items:center;justify-content:space-between;
-  padding:10px 16px;border-top:1px solid rgba(255,255,255,.05);
-  font-family:'Rajdhani',sans-serif;font-size:11px;color:rgba(255,255,255,.3);
+  padding:8px 14px 10px;
+  border-top:0.5px solid rgba(255,255,255,.06);
+  font-family:'Rajdhani',sans-serif;font-size:10px;
+  color:rgba(255,255,255,.28);
   text-transform:uppercase;letter-spacing:.5px;
+  gap:8px;
 }
-.noticia-card-media-icons{display:flex;gap:6px;font-size:13px;}
+.noticia-card-media-icons{display:flex;gap:5px;font-size:13px;}
 
 /* MODAL NOTICIA */
 #noticia-modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.92);z-index:3500;align-items:flex-start;justify-content:center;padding:2rem 1rem;overflow-y:auto;}
 #noticia-modal.open{display:flex;}
-.noticia-modal-box{background:var(--negro2);border:1px solid var(--dorado-border);border-radius:var(--r-lg);width:760px;max-width:98vw;margin-bottom:2rem;overflow:hidden;position:relative;}
+.noticia-modal-box{
+  background:var(--negro2);
+  border:0.5px solid rgba(201,162,39,.25);
+  border-radius:var(--r-lg);
+  width:760px;max-width:98vw;margin-bottom:2rem;overflow:hidden;position:relative;
+  box-shadow:0 24px 80px rgba(0,0,0,.7);
+}
 .noticia-modal-close{position:absolute;top:14px;right:16px;background:none;border:none;color:rgba(255,255,255,.4);font-size:22px;cursor:pointer;z-index:2;}
 .noticia-modal-close:hover{color:var(--dorado);}
 .noticia-modal-img{width:100%;max-height:400px;object-fit:cover;display:block;}
 .noticia-modal-header{padding:22px 28px 12px;}
-.noticia-modal-cat{font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:900;letter-spacing:2px;text-transform:uppercase;color:var(--dorado);margin-bottom:8px;}
+.noticia-modal-cat{
+  display:inline-flex;align-items:center;padding:2px 10px;border-radius:20px;
+  background:rgba(201,162,39,.1);border:0.5px solid rgba(201,162,39,.28);
+  font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:900;
+  letter-spacing:2px;text-transform:uppercase;color:var(--dorado);margin-bottom:10px;
+}
 .noticia-modal-titulo{font-family:'Bebas Neue',sans-serif;font-weight:400;font-size:30px;color:var(--blanco);letter-spacing:1.5px;line-height:1.1;margin-bottom:10px;}
 .noticia-modal-meta{font-family:'Rajdhani',sans-serif;font-size:11px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.5px;display:flex;gap:12px;flex-wrap:wrap;}
 .noticia-modal-body{padding:0 28px 24px;}
 .noticia-modal-cuerpo{font-family:'DM Sans',sans-serif;font-size:14px;color:rgba(255,255,255,.82);line-height:1.8;white-space:pre-wrap;margin-bottom:18px;}
 .noticia-modal-galeria{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:18px;}
-.noticia-modal-galeria img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:var(--r-sm);cursor:pointer;border:1px solid rgba(255,255,255,.07);transition:border-color .15s;}
+.noticia-modal-galeria img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:var(--r-sm);cursor:pointer;border:0.5px solid rgba(255,255,255,.07);transition:border-color .15s;}
 .noticia-modal-galeria img:hover{border-color:var(--dorado);}
 .noticia-media-section{margin-bottom:14px;}
 .noticia-media-label{font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:900;letter-spacing:1.5px;text-transform:uppercase;color:var(--gris);margin-bottom:8px;}
@@ -2029,19 +2224,64 @@ table.posiciones td:nth-child(8){   /* GF */
 .noticia-video{width:100%;border-radius:var(--r-md);max-height:380px;background:#000;}
 .noticia-archivo-link{
   display:inline-flex;align-items:center;gap:8px;
-  background:rgba(201,162,39,.1);border:1px solid var(--dorado-border);
+  background:rgba(201,162,39,.08);border:0.5px solid var(--dorado-border);
   border-radius:var(--r-sm);padding:8px 14px;
   font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;color:var(--dorado);
   text-decoration:none;transition:background .15s;
 }
-.noticia-archivo-link:hover{background:rgba(201,162,39,.25);}
+.noticia-archivo-link:hover{background:rgba(201,162,39,.2);}
 
 /* Lightbox imagen */
 #img-lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.97);z-index:9000;align-items:center;justify-content:center;cursor:zoom-out;}
 #img-lightbox.open{display:flex;}
 #img-lightbox img{max-width:92vw;max-height:92vh;object-fit:contain;border-radius:var(--r-sm);}
 
-/* Admin noticias */
+/* ── TRANSFERENCIAS ──────────────────────────────────────── */
+.noticias-tabs{display:flex;gap:0;margin-bottom:18px;border-bottom:2px solid rgba(255,255,255,.08);}
+.noticias-tab{padding:9px 20px;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:13px;letter-spacing:.8px;text-transform:uppercase;color:rgba(255,255,255,.4);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:color .2s,border-color .2s;}
+.noticias-tab.active{color:var(--dorado);border-bottom-color:var(--dorado);}
+.noticias-tab:hover:not(.active){color:rgba(255,255,255,.7);}
+
+.mercado-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;}
+.mercado-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:.6px;text-transform:uppercase;}
+.mercado-badge.verano{background:rgba(201,162,39,.15);color:var(--dorado);border:1px solid rgba(201,162,39,.3);}
+.mercado-badge.invierno{background:rgba(58,155,213,.15);color:#3a9bd5;border:1px solid rgba(58,155,213,.3);}
+
+.transferencias-filtros{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+.tf-filtro{padding:5px 14px;border-radius:20px;font-family:'Rajdhani',sans-serif;font-weight:600;font-size:12px;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;border:1px solid rgba(255,255,255,.12);background:transparent;color:rgba(255,255,255,.45);transition:all .2s;}
+.tf-filtro.active,.tf-filtro:hover{background:rgba(201,162,39,.15);color:var(--dorado);border-color:rgba(201,162,39,.4);}
+
+.transferencias-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;}
+.tf-card{background:var(--negro2);border:0.5px solid rgba(255,255,255,.07);border-radius:var(--r-lg);overflow:hidden;display:flex;flex-direction:column;transition:transform .2s,border-color .2s,box-shadow .2s;}
+.tf-card:hover{transform:translateY(-3px);border-color:rgba(201,162,39,.35);box-shadow:0 10px 30px rgba(0,0,0,.4);}
+.tf-card-top{position:relative;background:var(--negro3);display:flex;align-items:center;justify-content:center;height:150px;overflow:hidden;}
+.tf-card-foto{width:100%;height:100%;object-fit:cover;object-position:top center;}
+.tf-card-foto-placeholder{font-size:64px;opacity:.25;}
+.tf-card-tipo{position:absolute;top:10px;right:10px;padding:3px 10px;border-radius:20px;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:11px;letter-spacing:.5px;text-transform:uppercase;}
+.tf-card-tipo.alta{background:rgba(26,107,47,.8);color:#4caf74;}
+.tf-card-tipo.baja{background:rgba(192,57,43,.8);color:#ff7070;}
+.tf-card-tipo.prestamo{background:rgba(201,162,39,.8);color:#111;}
+.tf-card-body{padding:14px 16px;flex:1;display:flex;flex-direction:column;gap:8px;}
+.tf-card-nombre{font-family:'Bebas Neue',sans-serif;font-size:22px;color:#fff;letter-spacing:.5px;line-height:1.1;}
+.tf-card-pos{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:600;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px;margin-top:-4px;}
+.tf-card-clubes{display:flex;align-items:center;gap:8px;margin-top:4px;}
+.tf-card-club{display:flex;align-items:center;gap:6px;min-width:0;}
+.tf-card-club-esc{width:26px;height:26px;border-radius:50%;object-fit:cover;background:rgba(255,255,255,.05);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:10px;color:var(--dorado);}
+.tf-card-club-nombre{font-family:'DM Sans',sans-serif;font-size:13px;color:rgba(255,255,255,.75);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tf-card-arrow{font-size:18px;color:var(--dorado);flex-shrink:0;}
+.tf-card-desc{font-family:'DM Sans',sans-serif;font-size:12px;color:rgba(255,255,255,.4);line-height:1.5;margin-top:2px;}
+.tf-card-footer{padding:8px 16px 12px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid rgba(255,255,255,.05);}
+.tf-card-mercado{font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;}
+
+/* Admin transferencias */
+.tf-admin-list{display:flex;flex-direction:column;gap:8px;margin-top:12px;}
+.tf-admin-item{display:flex;align-items:center;gap:12px;padding:10px 14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:8px;}
+.tf-admin-item-foto{width:44px;height:44px;border-radius:8px;object-fit:cover;object-position:top;background:rgba(255,255,255,.05);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:22px;}
+.tf-admin-item-info{flex:1;min-width:0;}
+.tf-admin-item-nombre{font-family:'Bebas Neue',sans-serif;font-size:17px;color:#fff;letter-spacing:.3px;}
+.tf-admin-item-sub{font-family:'DM Sans',sans-serif;font-size:12px;color:rgba(255,255,255,.4);}
+.tf-admin-item-actions{display:flex;gap:6px;flex-shrink:0;}
+
 .noticia-admin-item{background:var(--negro3);border:1px solid rgba(255,255,255,.07);border-radius:var(--r-md);padding:10px 14px;margin-bottom:7px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
 .noticia-admin-item-info{flex:1;min-width:0;}
 .noticia-admin-item-titulo{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:14px;color:var(--blanco);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -2352,6 +2592,7 @@ table.posiciones td:nth-child(8){   /* GF */
       <button class="admin-tab" onclick="switchAdminTab('equipos',this)">Equipos</button>
       <button class="admin-tab" onclick="switchAdminTab('fichas',this)">Fichas de Clubes</button>
       <button class="admin-tab" onclick="switchAdminTab('noticias',this)">Noticias</button>
+      <button class="admin-tab" onclick="switchAdminTab('transferencias',this)">Transferencias</button>
       <button class="admin-tab" onclick="switchAdminTab('publicidad',this)">Publicidad</button>
       <button class="admin-tab" onclick="switchAdminTab('deportemas',this)">Deportemas</button>
       <button class="admin-tab" onclick="switchAdminTab('torneos',this)">Torneos</button>
@@ -2383,6 +2624,13 @@ table.posiciones td:nth-child(8){   /* GF */
             <option value="clausura">Clausura 2026</option>
           </select>
         </div>
+        <!-- playoff flag solo primera -->
+        <div id="p-playoff-wrap" class="form-group" style="display:none">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" id="p-es-playoff" style="width:16px;height:16px;accent-color:var(--dorado)"/>
+            <span>Partido de Play Off <span style="color:var(--gris);font-size:11px">(no suma en tabla de posiciones, sí en goleadores)</span></span>
+          </label>
+        </div>
         <!-- campo fase solo segunda -->
         <div id="p-fase-wrap" class="form-group" style="display:none"><label>Fase (Segunda División)</label>
           <select id="p-fase-res" onchange="updateAdminZonaVis()">
@@ -2398,6 +2646,13 @@ table.posiciones td:nth-child(8){   /* GF */
             <option value="llano">Zona Llano</option>
             <option value="">Sin zona</option>
           </select>
+        </div>
+        <!-- reserva flag: aplica a ambas divisiones -->
+        <div class="form-group" id="p-reserva-wrap">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" id="p-es-reserva" style="width:16px;height:16px;accent-color:var(--dorado)" onchange="updateReservaVis()"/>
+            <span>Partido de Reserva <span style="color:var(--gris);font-size:11px">(sin goleadores ni tarjetas rojas)</span></span>
+          </label>
         </div>
         <div class="form-row">
           <div class="form-group"><label>Equipo Local</label><input type="text" id="p-local" placeholder="Nombre exacto del equipo"/></div>
@@ -2430,14 +2685,16 @@ table.posiciones td:nth-child(8){   /* GF */
           <div class="form-group"><label>Árbitro asistente 2</label><input type="text" id="p-arb3" placeholder="Nombre y apellido"/></div>
           <div class="form-group"><label>Cuarto árbitro</label><input type="text" id="p-arb4" placeholder="Nombre y apellido (opcional)"/></div>
         </div>
-        <!-- GOLES -->
-        <div class="seccion-label">⚽ Goles</div>
-        <div class="evento-list" id="p-goles-list"></div>
-        <button class="btn-add-evento" onclick="addEventoRow('p-goles-list','gol')">+ Agregar gol</button>
-        <!-- EXPULSIONES -->
-        <div class="seccion-label">🟥 Expulsiones</div>
-        <div class="evento-list" id="p-exp-list"></div>
-        <button class="btn-add-evento" onclick="addEventoRow('p-exp-list','exp')">+ Agregar expulsión</button>
+        <!-- GOLES + EXPULSIONES — se ocultan si es partido de reserva -->
+        <div id="p-eventos-wrap">
+          <div class="seccion-label">⚽ Goles</div>
+          <div class="evento-list" id="p-goles-list"></div>
+          <button class="btn-add-evento" onclick="addEventoRow('p-goles-list','gol')">+ Agregar gol</button>
+          <!-- EXPULSIONES -->
+          <div class="seccion-label">🟥 Expulsiones</div>
+          <div class="evento-list" id="p-exp-list"></div>
+          <button class="btn-add-evento" onclick="addEventoRow('p-exp-list','exp')">+ Agregar expulsión</button>
+        </div>
         <br/><br/>
         <button class="btn-primary" onclick="agregarPartido()">+ Agregar Partido</button>
         <button class="btn-danger" style="margin-left:8px" onclick="limpiarTodos('partidos')">🗑 Limpiar todos los partidos</button>
@@ -2526,6 +2783,16 @@ table.posiciones td:nth-child(8){   /* GF */
           <div class="form-group"><label>Equipo</label><input type="text" id="g-equipo" placeholder="Club"/></div>
         </div>
         <div class="form-group" style="max-width:120px"><label>Goles</label><input type="number" id="g-goles" min="0" value="0"/></div>
+        <div class="form-group"><label>Foto del jugador <span style="color:var(--gris);font-size:10px">(opcional — aparece de fondo en la tabla)</span></label>
+          <div class="upload-area">
+            <input type="file" accept="image/*" id="g-foto-file" onchange="gPreviewFoto(this)"/>
+            <span class="icon">📸</span><p>Hacé clic o arrastrá la foto</p>
+          </div>
+          <div class="preview-wrap" id="g-foto-wrap">
+            <img id="g-foto-preview" src="" alt="" style="max-height:140px;object-fit:cover;object-position:top"/>
+            <button type="button" class="btn-quitar-img" onclick="quitarImagen('g-foto-preview','g-foto-wrap','g-foto-file','_gFoto')">✕ Quitar</button>
+          </div>
+        </div>
         <button class="btn-primary" onclick="agregarGoleador()">+ Agregar Goleador</button>
         <div class="admin-list" id="lista-goleadores"></div>
       </div>
@@ -2669,9 +2936,73 @@ table.posiciones td:nth-child(8){   /* GF */
         <hr style="margin:22px 0;border:none;border-top:1px solid rgba(255,255,255,.08)"/>
         <div class="admin-title" style="font-size:14px">Noticias publicadas</div>
         <div class="admin-list" id="lista-noticias"></div>
-      </div>
+      </div><!-- /admin-noticias -->
 
-      <!-- PUBLICIDAD ADMIN -->
+      <!-- TRANSFERENCIAS ADMIN -->
+      <div class="admin-section" id="admin-transferencias">
+        <div class="admin-title">Mercado de Pases</div>
+
+        <div class="form-row">
+          <div class="form-group"><label>Nombre del jugador</label>
+            <input type="text" id="tf-nombre" placeholder="Ej: Lucas Rodríguez"/>
+          </div>
+          <div class="form-group"><label>Posición</label>
+            <select id="tf-posicion">
+              <option value="Arquero">Arquero</option>
+              <option value="Defensor">Defensor</option>
+              <option value="Mediocampista">Mediocampista</option>
+              <option value="Delantero">Delantero</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group"><label>Tipo de movimiento</label>
+            <select id="tf-tipo">
+              <option value="alta">🟢 Alta / Incorporación</option>
+              <option value="baja">🔴 Baja / Salida</option>
+              <option value="prestamo">🟡 Préstamo</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Mercado</label>
+            <select id="tf-mercado">
+              <option value="verano">☀️ Mercado de Verano</option>
+              <option value="invierno">❄️ Mercado de Invierno</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group"><label>Club de origen</label>
+            <input type="text" id="tf-origen" placeholder="Ej: Belgrano"/>
+          </div>
+          <div class="form-group"><label>Club de destino</label>
+            <input type="text" id="tf-destino" placeholder="Ej: Talleres"/>
+          </div>
+        </div>
+
+        <div class="form-group"><label>Foto del jugador</label>
+          <div class="upload-area">
+            <input type="file" accept="image/*" id="tf-foto-file" onchange="tfPreviewFoto(this)"/>
+            <span class="icon">📸</span><p>Hacé clic o arrastrá la foto del jugador</p>
+          </div>
+          <div class="preview-wrap" id="tf-foto-wrap">
+            <img id="tf-foto-preview" src="" alt="" style="max-height:180px;object-fit:cover;object-position:top"/>
+            <button type="button" class="btn-quitar-img" onclick="quitarImagen('tf-foto-preview','tf-foto-wrap','tf-foto-file','_tfFoto')">✕ Quitar</button>
+          </div>
+        </div>
+
+        <div class="form-group"><label>Descripción <span style="color:var(--gris);font-size:10px">(opcional)</span></label>
+          <input type="text" id="tf-desc" placeholder="Ej: Firma por 1 año con opción de renovación"/>
+        </div>
+
+        <button class="btn-primary" onclick="guardarTransferencia()">✅ Publicar movimiento</button>
+        <div id="tf-msg" style="margin-top:8px;font-size:12px;display:none;font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px"></div>
+
+        <hr style="margin:22px 0;border:none;border-top:1px solid rgba(255,255,255,.08)"/>
+        <div class="admin-title" style="font-size:14px">Movimientos publicados</div>
+        <div class="tf-admin-list" id="lista-transferencias"></div>
+      </div>
       <!-- DEPORTEMAS ADMIN -->
       <div class="admin-section" id="admin-publicidad">
         <div class="admin-title">Publicidad</div>
@@ -3152,11 +3483,11 @@ table.posiciones td:nth-child(8){   /* GF */
 </button>
 
 <!-- HEADER -->
-<div id="splash" style="position:fixed;inset:0;background:#080808;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;transition:opacity .4s">
+<div id="splash" style="position:fixed;inset:0;background:#2a2a32;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;transition:opacity .4s">
   <!-- Contenedor logo: muestra imagen si hay, o iniciales si no -->
   <div id="splash-logo" style="width:80px;height:80px;border-radius:var(--r-lg);display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 0 28px rgba(201,162,39,.35)">
     <img id="splash-logo-img" src="" alt="" style="width:100%;height:100%;object-fit:contain;display:none"/>
-    <div id="splash-logo-ini" style="width:100%;height:100%;background:#c9a227;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:30px;color:#080808">DM</div>
+    <div id="splash-logo-ini" style="width:100%;height:100%;background:#c9a227;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:30px;color:#2a2a32">DM</div>
   </div>
   <div id="splash-nombre" style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:#c9a227;letter-spacing:4px;text-transform:uppercase">DEPORTEMAS</div>
   <div style="font-family:'Rajdhani',sans-serif;font-size:11px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:2px">Cargando...</div>
@@ -3257,6 +3588,11 @@ table.posiciones td:nth-child(8){   /* GF */
           <button class="div-tab active" onclick="switchDivTab('primera',this)">Primera División</button>
           <button class="div-tab" onclick="switchDivTab('segunda',this)">Segunda División</button>
         </div>
+        <!-- sub-tab Primera / Reserva -->
+        <div class="tabs-row" id="pos-cat-tabs">
+          <button class="torneo-tab active" onclick="switchCatPosTab('titulares',this)">Primera</button>
+          <button class="torneo-tab" onclick="switchCatPosTab('reserva',this)">Reserva</button>
+        </div>
         <!-- tabs primera -->
         <div class="tabs-row" id="pos-torneo-tabs">
           <button class="torneo-tab active" onclick="switchTorneoTab('apertura',this,'pos')">Apertura 2026</button>
@@ -3279,10 +3615,9 @@ table.posiciones td:nth-child(8){   /* GF */
           <button class="torneo-tab active" onclick="switchGrupoTab('campeonato',this)" style="font-size:10px">Campeonato</button>
           <button class="torneo-tab" onclick="switchGrupoTab('repechaje',this)" style="font-size:10px">Repechaje</button>
         </div>
-        
-        
+
         <div id="posiciones-content"></div>
-      
+
         <div class="adv-slot" id="adv-bottom-posiciones"></div>
       </section>
 
@@ -3292,6 +3627,11 @@ table.posiciones td:nth-child(8){   /* GF */
         <div class="tabs-row">
           <button class="div-tab active" onclick="switchDivTab('primera',this)">Primera División</button>
           <button class="div-tab" onclick="switchDivTab('segunda',this)">Segunda División</button>
+        </div>
+        <!-- sub-tab Primera / Reserva -->
+        <div class="tabs-row" id="res-cat-tabs">
+          <button class="torneo-tab active" onclick="switchCatResTab('titulares',this)">Primera</button>
+          <button class="torneo-tab" onclick="switchCatResTab('reserva',this)">Reserva</button>
         </div>
         <!-- tabs primera: apertura/clausura -->
         <div class="tabs-row" id="res-torneo-tabs">
@@ -3304,10 +3644,9 @@ table.posiciones td:nth-child(8){   /* GF */
           <button class="torneo-tab" onclick="switchFaseResTab('fase2',this)">2ª Fase</button>
           <button class="torneo-tab" onclick="switchFaseResTab('fase3',this)">3ª Fase</button>
         </div>
-        
-        
+
         <div id="resultados-content"></div>
-      
+
         <div class="adv-slot" id="adv-bottom-resultados"></div>
       </section>
 
@@ -3363,10 +3702,15 @@ table.posiciones td:nth-child(8){   /* GF */
       <!-- NOTICIAS -->
       <section class="section" id="section-noticias">
         <div class="adv-slot" id="adv-top-noticias"></div>
-        
-        
+
+        <div class="noticias-tabs">
+          <div class="noticias-tab active" onclick="switchNoticiaTab('noticias',this)">📰 Noticias</div>
+          <div class="noticias-tab" onclick="switchNoticiaTab('transferencias',this)">🔄 Mercado de Pases</div>
+        </div>
+
         <div id="noticias-content"></div>
-      
+        <div id="transferencias-content" style="display:none"></div>
+
         <div class="adv-slot" id="adv-bottom-noticias"></div>
       </section>
 
@@ -3691,6 +4035,23 @@ function switchGrupoTab(grupo,el){
   renderPosiciones();
 }
 
+let currentCatRes = 'titulares'; // 'titulares' | 'reserva'
+let currentCatPos = 'titulares'; // 'titulares' | 'reserva'
+
+function switchCatResTab(cat, el){
+  currentCatRes = cat;
+  document.querySelectorAll('#res-cat-tabs .torneo-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  renderResultados();
+}
+
+function switchCatPosTab(cat, el){
+  currentCatPos = cat;
+  document.querySelectorAll('#pos-cat-tabs .torneo-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  renderPosiciones();
+}
+
 function switchFaseResTab(fase,el){
   currentFaseRes=fase;
   el.closest('.tabs-row').querySelectorAll('.torneo-tab').forEach(t=>t.classList.remove('active'));
@@ -3820,17 +4181,21 @@ function partidoHTML(p,mostrarDetalle){
     </div>`;
   }
 
-  // Botón compartir solo para partidos jugados o en juego
-  const shareBtnHTML = (p.estado==='jugado'||p.estado==='en-juego')
+  // Botón compartir solo para partidos titulares jugados o en juego
+  const shareBtnHTML = (p.estado==='jugado'||p.estado==='en-juego') && !p.esReserva
     ? `<div class="share-card-row"><button class="btn-share" onclick="abrirShare(()=>generarImagenPartido(data.partidos.find(x=>String(x.id)==='${String(p.id)}')))">
         ${SVG_SHARE} Compartir
       </button></div>`
     : '';
 
+  const reservaBadge = p.esReserva
+    ? `<span style="font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;padding:2px 8px;border-radius:10px;background:rgba(201,162,39,0.15);color:var(--dorado);margin-left:6px">RESERVA</span>`
+    : '';
+
   return `<div class="card-partido-wrap" data-estado="${p.estado}">
     ${diaHTML}
     <div class="partido">
-      <div class="hora">${p.hora}</div>
+      <div class="hora">${p.hora}${reservaBadge}</div>
       <div class="equipo-local">${p.local}${getEscudoHTML(p.local)}</div>
       ${vsHTML}
       <div class="equipo-visit">${getEscudoHTML(p.visit)}${p.visit}</div>
@@ -3876,17 +4241,31 @@ function toggleFecha(header){
 function renderResultados(){
   const div=currentDivision;
   const el=document.getElementById('resultados-content');
+  const soloReserva = currentCatRes === 'reserva';
 
-  function acordeonFechas(ps,badge){
+  // Mapa para pasar IDs al generador de imagen de reserva
+  window._reservaMapa = window._reservaMapa || {};
+
+  function acordeonFechas(ps, badge){
     if(!ps.length) return null;
     const byF={};const orden=[];
     ps.forEach(p=>{if(!byF[p.fecha]){byF[p.fecha]=[];orden.push(p.fecha);}byF[p.fecha].push(p);});
     return orden.map((fecha,idx)=>{
       const arr=byF[fecha];
       const isLast=idx===orden.length-1;
+
+      // Botón compartir solo en tab Reserva
+      const shareBtn = soloReserva
+        ? (()=>{
+            const key='rv_'+div+'_'+idx;
+            window._reservaMapa[key]=arr.map(p=>String(p.id));
+            return `<button class="btn-share" onclick="abrirShare(()=>generarImagenReserva(window._reservaMapa['${key}']))">${SVG_SHARE} Compartir</button>`;
+          })()
+        : '';
+
       return `<div class="fecha-acordeon">
         <div class="fecha-acordeon-header ${isLast?'open':''}" onclick="toggleFecha(this)">
-          <div class="fecha-acordeon-title"><span>${fecha}</span><span class="div-badge">${badge}</span></div>
+          <div class="fecha-acordeon-title"><span>${fecha}</span><div style="display:flex;align-items:center;gap:6px"><span class="div-badge">${badge}</span>${shareBtn}</div></div>
           <div class="fecha-acordeon-meta">
             <span>${arr.length} partido${arr.length!==1?'s':''}</span>
             <span class="fecha-acordeon-arrow ${isLast?'open':''}">▼</span>
@@ -3897,23 +4276,33 @@ function renderResultados(){
     }).join('');
   }
 
-  // ---- SEGUNDA DIVISIÓN: por fase ----
+  // ---- SEGUNDA DIVISIÓN ----
   if(div==='segunda'){
     const faseLabels={'fase1':'1ª FASE','fase2':'2ª FASE','fase3':'3ª FASE'};
     const fase=currentFaseRes;
-    const badge=faseLabels[fase]||'2ª';
-    const ps=data.partidos.filter(p=>p.div==='segunda'&&p.estado==='jugado'&&(p.faseRes||p.fase||'fase1')===fase);
+    const badge=(soloReserva?'RESERVA · ':'')+faseLabels[fase];
+    const ps=data.partidos.filter(p=>
+      p.div==='segunda' &&
+      p.estado==='jugado' &&
+      (p.faseRes||p.fase||'fase1')===fase &&
+      (soloReserva ? p.esReserva===true : !p.esReserva)
+    );
     const html=acordeonFechas(ps,badge);
-    el.innerHTML=html||`<div class="card"><div class="card-header"><span>Resultados – ${faseLabels[fase]}</span><span class="div-badge">2ª</span></div><div class="empty-msg">No hay resultados para esta fase</div></div>`;
+    el.innerHTML=html||`<div class="card"><div class="card-header"><span>Resultados${soloReserva?' · Reserva':''} – ${faseLabels[fase]}</span><span class="div-badge">2ª</span></div><div class="empty-msg">No hay resultados para esta fase</div></div>`;
     return;
   }
 
-  // ---- PRIMERA DIVISIÓN: por torneo ----
+  // ---- PRIMERA DIVISIÓN ----
   const torneo=currentTorneo.res;
-  const badge=torneo==='apertura'?'APERTURA':'CLAUSURA';
-  const ps=data.partidos.filter(p=>p.div==='primera'&&p.estado==='jugado'&&(p.torneo||'apertura')===torneo);
+  const badge=(soloReserva?'RESERVA · ':'')+(torneo==='apertura'?'APERTURA':'CLAUSURA');
+  const ps=data.partidos.filter(p=>
+    p.div==='primera' &&
+    p.estado==='jugado' &&
+    (p.torneo||'apertura')===torneo &&
+    (soloReserva ? p.esReserva===true : !p.esReserva)
+  );
   const html=acordeonFechas(ps,badge);
-  el.innerHTML=html||`<div class="card"><div class="card-header"><span>Resultados – ${torneoLabel(torneo)}</span><span class="div-badge">1ª</span></div><div class="empty-msg">No hay resultados para este torneo</div></div>`;
+  el.innerHTML=html||`<div class="card"><div class="card-header"><span>Resultados${soloReserva?' · Reserva':''} – ${torneoLabel(torneo)}</span><span class="div-badge">1ª</span></div><div class="empty-msg">No hay resultados para este torneo</div></div>`;
 }
 
 // ============================================================
@@ -4062,6 +4451,12 @@ function renderPosiciones(){
   const torneo=currentTorneo.pos;
   const el=document.getElementById('posiciones-content');
 
+  // ---- RESERVA ----
+  if(currentCatPos === 'reserva'){
+    renderPosicionesReserva(div, el);
+    return;
+  }
+
   // ---- TABLA GENERAL: suma Apertura + Clausura ----
   if(torneo==='general'&&div==='primera'){
     // Agrupar todas las posiciones de primera (ambos torneos) por equipo
@@ -4096,9 +4491,9 @@ function renderPosiciones(){
         ? `<span title="${p.ptsDescMotivo||'Descuento por tribunal'}" style="margin-left:4px;font-size:9px;font-weight:900;color:#e74c3c;background:rgba(192,57,43,.18);border:1px solid rgba(192,57,43,.35);border-radius:var(--r-sm);padding:1px 4px;cursor:help">-${p.ptsDesc}</span>`
         : '';
       return `<tr class="${cls}">
-        <td class="pos-num">${i+1}</td>
+        <td class="pos-num">${i===0?'<span class="pos-num-1">1</span>':i+1}</td>
         <td><div class="pos-equipo">${getEscudoHTML(p.equipo,28)} ${p.equipo}</div></td>
-        <td>${p.pts}${descBadge}</td>
+        <td class="pos-pts">${p.pts!=null?p.pts:0}${descBadge}</td>
         <td>${p.pj}</td><td>${p.g}</td><td>${p.e}</td><td>${p.p}</td>
         <td>${p.gf}</td><td>${p.gc}</td><td>${p.dg}</td>
       </tr>`;
@@ -4121,9 +4516,7 @@ function renderPosiciones(){
         <span style="color:rgba(255,255,255,.3);font-size:10px;margin-left:auto">Suma acumulada de ambos torneos</span>
       </div>
     </div>`;
-    document.querySelectorAll('#posiciones-content tbody td:nth-child(3)').forEach(td=>{
-      td.style.fontWeight='900';td.style.color='var(--dorado)';td.style.fontFamily="'Barlow Condensed',sans-serif";td.style.fontSize='16px';
-    });
+    // PTS estilizado via clase .pos-pts en CSS
     return;
   }
 
@@ -4148,9 +4541,9 @@ function renderPosiciones(){
       ? `<span title="${p.ptsDescMotivo||'Descuento por tribunal disciplinario'}" style="margin-left:4px;font-size:9px;font-weight:900;color:#e74c3c;background:rgba(192,57,43,.18);border:1px solid rgba(192,57,43,.35);border-radius:var(--r-sm);padding:1px 4px;cursor:help;white-space:nowrap">-${p.ptsDesc}</span>`
       : '';
     return `<tr class="${cls}">
-      <td class="pos-num">${i+1}</td>
+      <td class="pos-num">${i===0?'<span class="pos-num-1">1</span>':i+1}</td>
       <td><div class="pos-equipo">${getEscudoHTML(p.equipo,28)} ${p.equipo}</div></td>
-      <td>${p.pts!=null?p.pts:0}${descBadge}</td>
+      <td class="pos-pts">${p.pts!=null?p.pts:0}${descBadge}</td>
       <td>${p.pj}</td><td>${p.g}</td><td>${p.e}</td><td>${p.p}</td>
       <td>${p.gf||0}</td><td>${p.gc||0}</td><td>${p.dg||'+0'}</td>
     </tr>`;
@@ -4170,9 +4563,7 @@ function renderPosiciones(){
     </table></div>
     <div style="display:flex;gap:16px;padding:8px 14px;font-size:11px;color:var(--gris);font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px;flex-wrap:wrap">${leyenda}</div>
   </div>`;
-  document.querySelectorAll('#posiciones-content tbody td:nth-child(3)').forEach(td=>{
-    td.style.fontWeight='900';td.style.color='var(--dorado)';td.style.fontFamily="'Barlow Condensed',sans-serif";td.style.fontSize='16px';
-  });
+  // PTS estilizado via clase .pos-pts en CSS
   // render playoff debajo de la tabla
   if(div==='primera'&&(torneo==='apertura'||torneo==='clausura')){
     const playoffDiv=document.createElement('div');
@@ -4180,6 +4571,247 @@ function renderPosiciones(){
     el.appendChild(playoffDiv);
     renderPlayoff(torneo,'playoff-render-area');
   }
+}
+
+// ============================================================
+// POSICIONES RESERVA — calculadas desde partidos esReserva
+// ============================================================
+function calcularPosicionesReserva(div, filtroExtra){
+  const partidos = data.partidos.filter(p =>
+    p.div === div &&
+    p.esReserva === true &&
+    p.estado === 'jugado' &&
+    (filtroExtra ? filtroExtra(p) : true)
+  );
+  const map = {};
+  partidos.forEach(p => {
+    const res = parsearResultado(p.resultado);
+    if(!res) return;
+    const {golesLocal: gl, golesVisit: gv} = res;
+    [p.local, p.visit].forEach((eq, lado) => {
+      if(!map[eq]) map[eq] = {equipo:eq, pj:0, g:0, e:0, p:0, gf:0, gc:0, pts:0};
+      const r = map[eq];
+      const gf = lado===0 ? gl : gv;
+      const gc = lado===0 ? gv : gl;
+      r.pj++; r.gf += gf; r.gc += gc;
+      if(gf > gc){ r.g++; r.pts += 3; }
+      else if(gf === gc){ r.e++; r.pts += 1; }
+      else { r.p++; }
+    });
+  });
+  return Object.values(map)
+    .map(r => ({...r, dg: (r.gf-r.gc >= 0 ? '+' : '') + (r.gf-r.gc)}))
+    .sort((a,b) => (b.pts-a.pts) || (b.gf-b.gc)-(a.gf-a.gc));
+}
+
+function posReservaTablaHTML(titulo, pos, divBadge, shareBtn){
+  if(!pos.length) return `<div class="card"><div class="card-header"><span>${titulo}</span><span class="div-badge">${divBadge}</span></div><div class="empty-msg">No hay partidos de reserva jugados</div></div>`;
+  const rows = pos.map((p,i) => `<tr>
+    <td class="pos-num">${i===0?'<span class="pos-num-1">1</span>':i+1}</td>
+    <td><div class="pos-equipo">${getEscudoHTML(p.equipo,28)} ${p.equipo}</div></td>
+    <td class="pos-pts">${p.pts}</td>
+    <td>${p.pj}</td><td>${p.g}</td><td>${p.e}</td><td>${p.p}</td>
+    <td>${p.gf}</td><td>${p.gc}</td><td>${p.dg}</td>
+  </tr>`).join('');
+  return `<div class="card" style="margin-bottom:.8rem">
+    <div class="card-header">
+      <span>${titulo}</span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="div-badge">${divBadge}</span>
+        ${shareBtn}
+      </div>
+    </div>
+    <div class="tabla-wrap"><table class="posiciones">
+      <thead><tr><th>#</th><th>Equipo</th><th>PTS</th><th>PJ</th><th>G</th><th>E</th><th>P</th><th>GF</th><th>GC</th><th>DG</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>
+  </div>`;
+}
+
+function renderPosicionesReserva(div, el){
+  const shareBtn = `<button class="btn-share" onclick="abrirShare(generarImagenPosicionesReserva)">${SVG_SHARE} Compartir</button>`;
+
+  // ---- SEGUNDA DIVISIÓN: idéntico al comportamiento de la tabla principal ----
+  if(div === 'segunda'){
+    const faseLabels = {'fase1':'1ª Fase','fase2':'2ª Fase','fase3':'3ª Fase'};
+    const fase = currentFase;
+
+    // Función de filtro idéntica a renderPosicionesSegunda
+    const filtrar = (f, zona) => calcularPosicionesReserva('segunda', p => {
+      if((p.faseRes||p.fase||'fase1') !== f) return false;
+      if(zona == null) return true;
+      return (p.zona||'') === zona;
+    });
+
+    if(fase === 'fase1'){
+      const zona = currentZona;
+      const tit  = zona === 'sierra' ? '1ª Fase – Zona Sierra' : '1ª Fase – Zona Llano';
+      el.innerHTML = posReservaTablaHTML(`Reserva – ${tit}`, filtrar('fase1', zona), 'RESERVA · 2ª', shareBtn);
+    } else if(fase === 'fase2'){
+      const grupo = currentGrupo;
+      const tit   = grupo === 'campeonato' ? '2ª Fase – Campeonato' : '2ª Fase – Repechaje';
+      el.innerHTML = posReservaTablaHTML(`Reserva – ${tit}`, filtrar('fase2', grupo), 'RESERVA · 2ª', shareBtn);
+    } else {
+      el.innerHTML = posReservaTablaHTML('Reserva – 3ª Fase', filtrar('fase3', null), 'RESERVA · 2ª', shareBtn);
+    }
+    return;
+  }
+
+  // ---- PRIMERA DIVISIÓN: filtrada por torneo activo ----
+  const torneo   = currentTorneo.pos === 'general' ? 'apertura' : currentTorneo.pos;
+  const tornLabel = torneo === 'apertura' ? 'APERTURA' : 'CLAUSURA';
+  const pos = calcularPosicionesReserva('primera', p => (p.torneo||'apertura') === torneo);
+  el.innerHTML = posReservaTablaHTML(
+    `Reserva – ${tornLabel} / Primera División`,
+    pos, 'RESERVA · 1ª', shareBtn
+  );
+}
+
+// Generador de imagen para posiciones de reserva
+async function generarImagenPosicionesReserva(){
+  await document.fonts.ready;
+  const id   = getIdentidad();
+  const liga = id.nombre||'DEPORTEMAS';
+  const W    = CV_W;
+  const div  = currentDivision;
+
+  let pos, tituloPosiciones;
+  if(div === 'segunda'){
+    const faseLabels = {'fase1':'1ª FASE','fase2':'2ª FASE','fase3':'3ª FASE'};
+    const fase = currentFase;
+    if(fase === 'fase1'){
+      const zona = currentZona;
+      const zonaLabel = zona === 'sierra' ? 'ZONA SIERRA' : 'ZONA LLANO';
+      pos = calcularPosicionesReserva('segunda', p =>
+        (p.faseRes||p.fase||'fase1') === 'fase1' && (p.zona||'') === zona);
+      tituloPosiciones = `RESERVA  ·  1ª FASE  ·  ${zonaLabel}  ·  2ª DIV`;
+    } else if(fase === 'fase2'){
+      const grupo = currentGrupo;
+      const grupoLabel = grupo === 'campeonato' ? 'CAMPEONATO' : 'REPECHAJE';
+      pos = calcularPosicionesReserva('segunda', p =>
+        (p.faseRes||p.fase||'fase1') === 'fase2' && (p.zona||'') === grupo);
+      tituloPosiciones = `RESERVA  ·  2ª FASE  ·  ${grupoLabel}  ·  2ª DIV`;
+    } else {
+      pos = calcularPosicionesReserva('segunda', p =>
+        (p.faseRes||p.fase||'fase1') === 'fase3');
+      tituloPosiciones = 'RESERVA  ·  3ª FASE  ·  SEGUNDA DIVISIÓN';
+    }
+  } else {
+    const torneo = currentTorneo.pos === 'general' ? 'apertura' : currentTorneo.pos;
+    const tornLabel = torneo === 'apertura' ? 'APERTURA' : 'CLAUSURA';
+    pos = calcularPosicionesReserva('primera', p => (p.torneo||'apertura') === torneo);
+    tituloPosiciones = `RESERVA  ·  ${tornLabel}  ·  PRIMERA DIVISIÓN`;
+  }
+  if(!pos.length) return null;
+
+  const ROW_H = s(40);
+  const HDR_H = s(29);
+  const hHeader   = s(64);
+  const hTitulo   = s(48);
+  const hFooter   = s(40);
+  const hDisponible = CV_H - hHeader - hTitulo - HDR_H - hFooter - s(12);
+  const maxRows   = Math.floor(hDisponible / ROW_H);
+  const rows      = Math.min(pos.length, maxRows);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = CV_H;
+  const ctx = canvas.getContext('2d');
+  ctx.textBaseline = 'alphabetic';
+
+  ctx.fillStyle = C.NEG2; ctx.fillRect(0, 0, W, CV_H);
+  let y = await cvHeader(ctx, W, id, 0);
+
+  // Título
+  ctx.fillStyle = C.DORADO;
+  ctx.font = `${s(20)}px "Bebas Neue", Arial, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.fillText(tituloPosiciones, W/2, y+s(31));
+  y += s(48);
+
+  // Columnas
+  const C1=s(8), C2=s(40), C3=s(80), EQMAX=s(220);
+  const numCols=[
+    {l:'PTS',x:C3+EQMAX+s(4),   w:s(50)},
+    {l:'PJ', x:C3+EQMAX+s(58),  w:s(38)},
+    {l:'G',  x:C3+EQMAX+s(100), w:s(34)},
+    {l:'E',  x:C3+EQMAX+s(138), w:s(34)},
+    {l:'P',  x:C3+EQMAX+s(176), w:s(34)},
+    {l:'GF', x:C3+EQMAX+s(214), w:s(34)},
+    {l:'GC', x:C3+EQMAX+s(252), w:s(34)},
+    {l:'DG', x:C3+EQMAX+s(290), w:s(40)},
+  ];
+
+  // Header tabla
+  ctx.fillStyle='rgba(201,162,39,0.13)'; ctx.fillRect(0,y,W,HDR_H);
+  ctx.fillStyle=C.DORADO;
+  ctx.font=`700 ${s(11)}px "Rajdhani", Arial, sans-serif`;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('#', C1+s(16), y+HDR_H/2);
+  ctx.textAlign='left';
+  ctx.fillText('EQUIPO', C3, y+HDR_H/2);
+  numCols.forEach(c=>{ ctx.textAlign='center'; ctx.fillText(c.l, c.x+c.w/2, y+HDR_H/2); });
+  ctx.textBaseline='alphabetic';
+  y += HDR_H;
+
+  // Precargar escudos
+  const escudoImgs = {};
+  await Promise.all(pos.slice(0,rows).map(p => new Promise(res=>{
+    const entry=escudos[p.equipo]||escudos[normalizar(p.equipo)];
+    const src=entry&&typeof entry==='object'?entry.img:entry;
+    if(!src){res();return;}
+    const img=new Image();
+    img.onload=()=>{escudoImgs[p.equipo]=img;res();};
+    img.onerror=()=>res();
+    img.src=src;
+  })));
+
+  pos.slice(0,rows).forEach((p,i)=>{
+    const fy = y + ROW_H/2;
+    ctx.fillStyle = i%2===0?'rgba(255,255,255,0.025)':'rgba(0,0,0,0.12)';
+    ctx.fillRect(0,y,W,ROW_H);
+
+    // Número
+    ctx.fillStyle = i===0 ? C.DORADO : 'rgba(255,255,255,0.5)';
+    ctx.font = (i===0?'700':'500')+` ${s(13)}px "Rajdhani", Arial, sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(i+1, C1+s(16), fy);
+
+    // Escudo
+    const eSize=s(26), eX=C2+s(2), eY=y+(ROW_H-eSize)/2;
+    const eImg=escudoImgs[p.equipo];
+    if(eImg){
+      ctx.save(); ctx.beginPath();
+      ctx.arc(eX+eSize/2,eY+eSize/2,eSize/2,0,Math.PI*2); ctx.clip();
+      ctx.drawImage(eImg,eX,eY,eSize,eSize); ctx.restore();
+    } else { cvEscudoFallback(ctx,p.equipo,eX,eY,eSize); }
+
+    // Nombre — DM Sans
+    ctx.fillStyle=C.BLANCO;
+    ctx.font=`600 ${s(13)}px "DM Sans", Arial, sans-serif`;
+    ctx.textAlign='left'; ctx.textBaseline='middle';
+    cvFillTextTrunc(ctx, p.equipo, C3, fy, EQMAX-s(4));
+
+    // PTS — Bebas Neue
+    ctx.fillStyle=C.DORADO;
+    ctx.font=`${s(19)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.textAlign='center';
+    ctx.fillText(p.pts, numCols[0].x+numCols[0].w/2, fy);
+
+    // Stats — Rajdhani
+    ctx.fillStyle='rgba(255,255,255,0.65)';
+    ctx.font=`600 ${s(12)}px "Rajdhani", Arial, sans-serif`;
+    [p.pj,p.g,p.e,p.p,p.gf,p.gc,p.dg].forEach((v,ci)=>{
+      ctx.fillText(String(v??0), numCols[ci+1].x+numCols[ci+1].w/2, fy);
+    });
+
+    ctx.fillStyle='rgba(255,255,255,0.04)';
+    ctx.fillRect(0,y+ROW_H-1,W,1);
+    y += ROW_H;
+  });
+
+  cvFooter(ctx, W, CV_H - s(40), liga);
+  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+  return canvas;
 }
 
 // ============================================================
@@ -4193,9 +4825,9 @@ function tablaHTML(titulo,pos,clasifican,leyendaExtra){
       ? `<span title="${p.ptsDescMotivo||'Descuento por tribunal'}" style="margin-left:4px;font-size:9px;font-weight:900;color:#e74c3c;background:rgba(192,57,43,.18);border:1px solid rgba(192,57,43,.35);border-radius:var(--r-sm);padding:1px 4px;cursor:help">-${p.ptsDesc}</span>`
       : '';
     return `<tr class="${cls}">
-      <td class="pos-num">${i+1}</td>
+      <td class="pos-num">${i===0?'<span class="pos-num-1">1</span>':i+1}</td>
       <td><div class="pos-equipo">${getEscudoHTML(p.equipo,28)} ${p.equipo}</div></td>
-      <td>${p.pts!=null?p.pts:0}${descBadge}</td>
+      <td class="pos-pts">${p.pts!=null?p.pts:0}${descBadge}</td>
       <td>${p.pj}</td><td>${p.g}</td><td>${p.e}</td><td>${p.p}</td>
       <td>${p.gf||0}</td><td>${p.gc||0}</td><td>${p.dg||'+0'}</td>
     </tr>`;
@@ -4215,9 +4847,7 @@ function tablaHTML(titulo,pos,clasifican,leyendaExtra){
 }
 
 function applyGoldPts(){
-  document.querySelectorAll('#posiciones-content tbody td:nth-child(3)').forEach(td=>{
-    td.style.fontWeight='900';td.style.color='var(--dorado)';td.style.fontFamily="'Barlow Condensed',sans-serif";td.style.fontSize='16px';
-  });
+  // PTS estilizado via clase .pos-pts en CSS
 }
 
 function renderPosicionesSegunda(){
@@ -4287,8 +4917,9 @@ function renderGoleadores(){
       el.innerHTML=`<div class="card"><div class="card-header"><span>Goleadores – ${faseLabels[fase]}</span><span class="div-badge">2ª</span></div><div class="empty-msg">No hay goleadores para esta fase</div></div>`;
       return;
     }
-    el.innerHTML=`<div class="card"><div class="card-header"><span>Goleadores – ${faseLabels[fase]} / Segunda División</span><div style="display:flex;align-items:center;gap:8px"><span class="div-badge">2ª</span><button class="btn-share" onclick="abrirShare(generarImagenGoleadores)">${SVG_SHARE} Compartir</button></div></div>
-      ${gs.map((g,i)=>filaGol(g,i)).join('')}</div>`;
+    const fotoBg = gs[0].foto ? `<img class="goleadores-bg-foto" src="${gs[0].foto}" alt=""/><div class="goleadores-bg-grad"></div>` : '';
+    el.innerHTML=`<div class="goleadores-card-wrap">${fotoBg}<div class="card"><div class="card-header"><span>Goleadores – ${faseLabels[fase]} / Segunda División</span><div style="display:flex;align-items:center;gap:8px"><span class="div-badge">2ª</span><button class="btn-share" onclick="abrirShare(generarImagenGoleadores)">${SVG_SHARE} Compartir</button></div></div>
+      ${gs.map((g,i)=>filaGol(g,i)).join('')}</div></div>`;
     return;
   }
 
@@ -4299,8 +4930,9 @@ function renderGoleadores(){
     el.innerHTML=`<div class="card"><div class="card-header"><span>Goleadores – ${torneoLabel(torneo)}</span><span class="div-badge">1ª</span></div><div class="empty-msg">No hay goleadores para este torneo</div></div>`;
     return;
   }
-  el.innerHTML=`<div class="card"><div class="card-header"><span>Goleadores – ${torneoLabel(torneo)} / Primera División</span><div style="display:flex;align-items:center;gap:8px"><span class="div-badge">1ª</span><button class="btn-share" onclick="abrirShare(generarImagenGoleadores)">${SVG_SHARE} Compartir</button></div></div>
-    ${gs.map((g,i)=>filaGol(g,i)).join('')}</div>`;
+  const fotoBg = gs[0].foto ? `<img class="goleadores-bg-foto" src="${gs[0].foto}" alt=""/><div class="goleadores-bg-grad"></div>` : '';
+  el.innerHTML=`<div class="goleadores-card-wrap">${fotoBg}<div class="card"><div class="card-header"><span>Goleadores – ${torneoLabel(torneo)} / Primera División</span><div style="display:flex;align-items:center;gap:8px"><span class="div-badge">1ª</span><button class="btn-share" onclick="abrirShare(generarImagenGoleadores)">${SVG_SHARE} Compartir</button></div></div>
+    ${gs.map((g,i)=>filaGol(g,i)).join('')}</div></div>`;
 }
 
 // ============================================================
@@ -4804,8 +5436,228 @@ function renderNoticias(){
 }
 
 // ============================================================
-// MODAL NOTICIA (vista pública)
+// TRANSFERENCIAS / MERCADO DE PASES
 // ============================================================
+const TF_KEY = 'lrr_transferencias';
+function getTransferencias(){ try{ return JSON.parse(localStorage.getItem(TF_KEY))||[]; }catch(e){ return []; } }
+function saveTransferencias(arr){ localStorage.setItem(TF_KEY, JSON.stringify(arr)); if(window._fb) window._fb.set('transferencias',arr); }
+
+let _tfFoto = '';
+
+function tfPreviewFoto(input){
+  const file = input.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    _tfFoto = e.target.result;
+    const prev = document.getElementById('tf-foto-preview');
+    const wrap = document.getElementById('tf-foto-wrap');
+    if(prev){ prev.src = _tfFoto; }
+    if(wrap){ wrap.classList.add('visible'); }
+  };
+  reader.readAsDataURL(file);
+}
+
+function guardarTransferencia(){
+  const nombre = document.getElementById('tf-nombre').value.trim();
+  if(!nombre){ mostrarMsg('tf-msg','⚠ Ingresá el nombre del jugador','#e05555'); return; }
+  const origen  = document.getElementById('tf-origen').value.trim();
+  const destino = document.getElementById('tf-destino').value.trim();
+  if(!origen || !destino){ mostrarMsg('tf-msg','⚠ Completá club de origen y destino','#e05555'); return; }
+
+  const tf = {
+    id:       'tf_' + Date.now(),
+    nombre,
+    posicion: document.getElementById('tf-posicion').value,
+    tipo:     document.getElementById('tf-tipo').value,
+    mercado:  document.getElementById('tf-mercado').value,
+    origen,
+    destino,
+    foto:     _tfFoto || '',
+    desc:     document.getElementById('tf-desc').value.trim(),
+    fecha:    new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'}),
+  };
+
+  const arr = getTransferencias();
+  arr.unshift(tf);
+  saveTransferencias(arr);
+  limpiarFormTransferencia();
+  mostrarMsg('tf-msg','✅ Movimiento publicado','var(--dorado)');
+  renderAdminListaTransferencias();
+  if(currentSection==='noticias') renderTransferencias();
+}
+
+function limpiarFormTransferencia(){
+  ['tf-nombre','tf-origen','tf-destino','tf-desc'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  _tfFoto='';
+  const prev=document.getElementById('tf-foto-preview'); if(prev) prev.src='';
+  const wrap=document.getElementById('tf-foto-wrap'); if(wrap) wrap.classList.remove('visible');
+  const fi=document.getElementById('tf-foto-file'); if(fi) fi.value='';
+}
+
+function eliminarTransferencia(id){
+  if(!confirm('¿Eliminar este movimiento?')) return;
+  saveTransferencias(getTransferencias().filter(t=>t.id!==id));
+  renderAdminListaTransferencias();
+  if(currentSection==='noticias') renderTransferencias();
+}
+
+function editarTransferencia(id){
+  const t = getTransferencias().find(x=>x.id===id); if(!t) return;
+  const posOpts = ['Arquero','Defensor','Mediocampista','Delantero'].map(p=>`<option${t.posicion===p?' selected':''}>${p}</option>`).join('');
+  const tipoOpts = [['alta','🟢 Alta / Incorporación'],['baja','🔴 Baja / Salida'],['prestamo','🟡 Préstamo']]
+    .map(([v,l])=>`<option value="${v}"${t.tipo===v?' selected':''}>${l}</option>`).join('');
+  const mercOpts = [['verano','☀️ Mercado de Verano'],['invierno','❄️ Mercado de Invierno']]
+    .map(([v,l])=>`<option value="${v}"${t.mercado===v?' selected':''}>${l}</option>`).join('');
+
+  const body = `
+    <div class="form-row">
+      <div class="form-group"><label>Nombre</label><input id="ed-tf-nombre" value="${t.nombre}"/></div>
+      <div class="form-group"><label>Posición</label><select id="ed-tf-posicion">${posOpts}</select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Tipo</label><select id="ed-tf-tipo">${tipoOpts}</select></div>
+      <div class="form-group"><label>Mercado</label><select id="ed-tf-mercado">${mercOpts}</select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Club origen</label><input id="ed-tf-origen" value="${t.origen}"/></div>
+      <div class="form-group"><label>Club destino</label><input id="ed-tf-destino" value="${t.destino}"/></div>
+    </div>
+    <div class="form-group"><label>Descripción</label><input id="ed-tf-desc" value="${t.desc||''}"/></div>
+    ${t.foto?`<div style="margin-top:8px"><img src="${t.foto}" style="max-height:120px;border-radius:8px;object-fit:cover"/></div>`:''}
+  `;
+
+  abrirModalEdicion('Editar movimiento', body, ()=>{
+    const nombre = document.getElementById('ed-tf-nombre').value.trim();
+    const origen = document.getElementById('ed-tf-origen').value.trim();
+    const destino= document.getElementById('ed-tf-destino').value.trim();
+    if(!nombre||!origen||!destino){ alert('Completá todos los campos obligatorios'); return false; }
+    const arr = getTransferencias();
+    const idx = arr.findIndex(x=>x.id===id); if(idx<0) return;
+    arr[idx]={...arr[idx], nombre,
+      posicion: document.getElementById('ed-tf-posicion').value,
+      tipo:     document.getElementById('ed-tf-tipo').value,
+      mercado:  document.getElementById('ed-tf-mercado').value,
+      origen, destino,
+      desc:     document.getElementById('ed-tf-desc').value.trim(),
+    };
+    saveTransferencias(arr);
+    renderAdminListaTransferencias();
+    if(currentSection==='noticias') renderTransferencias();
+    cerrarModalEdicion();
+  });
+}
+
+function renderAdminListaTransferencias(){
+  const el = document.getElementById('lista-transferencias'); if(!el) return;
+  const arr = getTransferencias();
+  if(!arr.length){ el.innerHTML='<div class="empty-msg">No hay movimientos publicados</div>'; return; }
+  const tipoLabel = {alta:'Alta',baja:'Baja',prestamo:'Préstamo'};
+  el.innerHTML = arr.map(t=>`
+    <div class="tf-admin-item">
+      ${t.foto
+        ? `<img class="tf-admin-item-foto" src="${t.foto}" alt="${t.nombre}"/>`
+        : `<div class="tf-admin-item-foto">⚽</div>`}
+      <div class="tf-admin-item-info">
+        <div class="tf-admin-item-nombre">${t.nombre}</div>
+        <div class="tf-admin-item-sub">${t.posicion} · ${tipoLabel[t.tipo]||t.tipo} · ${t.origen} → ${t.destino}</div>
+      </div>
+      <div class="tf-admin-item-actions">
+        <button class="btn-edit" onclick="editarTransferencia('${t.id}')">✏️</button>
+        <button class="btn-danger btn-sm" onclick="eliminarTransferencia('${t.id}')">🗑</button>
+      </div>
+    </div>`).join('');
+}
+
+// ── Vista pública ─────────────────────────────────────────────
+function switchNoticiaTab(tab, el){
+  document.querySelectorAll('.noticias-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('noticias-content').style.display    = tab==='noticias'      ? '' : 'none';
+  document.getElementById('transferencias-content').style.display = tab==='transferencias' ? '' : 'none';
+  if(tab==='transferencias') renderTransferencias();
+}
+
+function tfEscudoHTML(nombre){
+  const entry = escudos[nombre]||escudos[normalizar(nombre)];
+  const src   = entry&&typeof entry==='object'?entry.img:entry;
+  if(src) return `<img class="tf-card-club-esc" src="${src}" alt="${nombre}"/>`;
+  const ini   = entry&&typeof entry==='object'?entry.ini:(nombre||'?').substring(0,2).toUpperCase();
+  return `<div class="tf-card-club-esc">${ini}</div>`;
+}
+
+function renderTransferencias(){
+  const el = document.getElementById('transferencias-content'); if(!el) return;
+  const arr = getTransferencias();
+
+  if(!arr.length){
+    el.innerHTML=`<div class="card"><div class="card-header"><span>🔄 Mercado de Pases</span></div><div class="empty-msg">No hay movimientos publicados todavía</div></div>`;
+    return;
+  }
+
+  // Filtros dinámicos: mercados disponibles
+  const mercados = [...new Set(arr.map(t=>t.mercado))];
+  const mercadoLabel = {verano:'☀️ Verano', invierno:'❄️ Invierno'};
+  const tipoLabel    = {alta:'Alta',baja:'Baja',prestamo:'Préstamo'};
+  const tipoColor    = {alta:'#4caf74',baja:'#ff7070',prestamo:'var(--dorado)'};
+
+  el.innerHTML=`
+    <div class="mercado-header">
+      <span style="font-family:'Rajdhani',sans-serif;font-weight:800;font-size:17px;color:var(--dorado);letter-spacing:1.2px">🔄 Mercado de Pases</span>
+      <span style="font-family:'Rajdhani',sans-serif;font-size:11px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.5px">${arr.length} movimiento${arr.length!==1?'s':''}</span>
+    </div>
+    <div class="transferencias-filtros">
+      <button class="tf-filtro active" onclick="tfFiltrar('todos',this)">Todos</button>
+      ${mercados.map(m=>`<button class="tf-filtro" onclick="tfFiltrar('${m}',this)">${mercadoLabel[m]||m}</button>`).join('')}
+      <button class="tf-filtro" onclick="tfFiltrar('alta',this)">🟢 Altas</button>
+      <button class="tf-filtro" onclick="tfFiltrar('baja',this)">🔴 Bajas</button>
+      <button class="tf-filtro" onclick="tfFiltrar('prestamo',this)">🟡 Préstamos</button>
+    </div>
+    <div class="transferencias-grid" id="tf-grid">
+      ${arr.map(t=>`
+        <div class="tf-card" data-mercado="${t.mercado}" data-tipo="${t.tipo}">
+          <div class="tf-card-top">
+            ${t.foto
+              ?`<img class="tf-card-foto" src="${t.foto}" alt="${t.nombre}"/>`
+              :`<div class="tf-card-foto-placeholder">⚽</div>`}
+            <span class="tf-card-tipo ${t.tipo}">${tipoLabel[t.tipo]||t.tipo}</span>
+          </div>
+          <div class="tf-card-body">
+            <div class="tf-card-nombre">${t.nombre}</div>
+            <div class="tf-card-pos">${t.posicion}</div>
+            <div class="tf-card-clubes">
+              <div class="tf-card-club">
+                ${tfEscudoHTML(t.origen)}
+                <span class="tf-card-club-nombre">${t.origen}</span>
+              </div>
+              <span class="tf-card-arrow">→</span>
+              <div class="tf-card-club">
+                ${tfEscudoHTML(t.destino)}
+                <span class="tf-card-club-nombre">${t.destino}</span>
+              </div>
+            </div>
+            ${t.desc?`<div class="tf-card-desc">${t.desc}</div>`:''}
+          </div>
+          <div class="tf-card-footer">
+            <span class="tf-card-mercado" style="color:${t.mercado==='invierno'?'#3a9bd5':'var(--dorado)'}">${mercadoLabel[t.mercado]||t.mercado}</span>
+            <span style="font-family:'DM Sans',sans-serif;font-size:11px;color:rgba(255,255,255,.3)">${t.fecha||''}</span>
+            <button class="btn-share" style="margin-left:auto" onclick="event.stopPropagation();abrirShare(()=>generarImagenTransferencia('${t.id}'))">${SVG_SHARE} Compartir</button>
+          </div>
+        </div>`).join('')}
+    </div>`;
+}
+
+function tfFiltrar(valor, btn){
+  document.querySelectorAll('.tf-filtro').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('#tf-grid .tf-card').forEach(card=>{
+    if(valor==='todos') card.style.display='';
+    else card.style.display=(card.dataset.mercado===valor||card.dataset.tipo===valor)?'':'none';
+  });
+}
+
+
 function abrirNoticiaModal(id){
   const n=getNoticias().find(x=>x.id===id); if(!n) return;
 
@@ -5217,8 +6069,18 @@ function buildEventoRowsHTML(eventos, tipo, listId){
 function updateAdminPartidoDiv(){
   const esPrimera=document.getElementById('p-div').value==='primera';
   document.getElementById('p-torneo-wrap').style.display=esPrimera?'':'none';
+  document.getElementById('p-playoff-wrap').style.display=esPrimera?'':'none';
   document.getElementById('p-fase-wrap').style.display=esPrimera?'none':'';
   updateAdminZonaVis();
+}
+
+function updateReservaVis(){
+  const esReserva = document.getElementById('p-es-reserva').checked;
+  document.getElementById('p-eventos-wrap').style.display = esReserva ? 'none' : '';
+  if(esReserva){
+    document.getElementById('p-goles-list').innerHTML = '';
+    document.getElementById('p-exp-list').innerHTML = '';
+  }
 }
 function updateAdminZonaVis(){
   const div=document.getElementById('p-div').value;
@@ -5231,8 +6093,9 @@ function updateAdminZonaVis(){
 // ADMIN – AGREGAR
 // ============================================================
 function agregarPartido(){
-  const goles=leerEventos('p-goles-list','gol');
-  const expulsiones=leerEventos('p-exp-list','exp');
+  const esReserva = document.getElementById('p-es-reserva').checked;
+  const goles     = esReserva ? [] : leerEventos('p-goles-list','gol');
+  const expulsiones = esReserva ? [] : leerEventos('p-exp-list','exp');
   const arb1=document.getElementById('p-arb1').value.trim();
   const arb2=document.getElementById('p-arb2').value.trim();
   const arb3=document.getElementById('p-arb3').value.trim();
@@ -5250,9 +6113,13 @@ function agregarPartido(){
     estado:document.getElementById('p-estado').value,
     resultado:document.getElementById('p-resultado').value,
     periodo:document.getElementById('p-periodo').value||'PT',
+    esReserva,
     arbitros,goles,expulsiones
   };
-  if(div==='primera') d.torneo=document.getElementById('p-torneo-sel').value;
+  if(div==='primera'){
+    d.torneo=document.getElementById('p-torneo-sel').value;
+    d.esPlayoff=document.getElementById('p-es-playoff').checked;
+  }
   else {
     d.faseRes=document.getElementById('p-fase-res').value;
     if(d.faseRes==='fase1') d.zona=document.getElementById('p-zona').value||'';
@@ -5264,6 +6131,8 @@ function agregarPartido(){
   saveData(data);
   document.getElementById('p-goles-list').innerHTML='';
   document.getElementById('p-exp-list').innerHTML='';
+  const chkRes = document.getElementById('p-es-reserva');
+  if(chkRes){ chkRes.checked=false; updateReservaVis(); }
   renderAdminListas();renderSection(currentSection);
   // Si el partido fue cargado directamente como "en juego", animar inicio
   if(d.estado==='en-juego') dispararAnimacionMarcador(d.id, 'inicio', '');
@@ -5303,14 +6172,41 @@ function updateAdminGolDiv(){
   document.getElementById('g-fase-wrap').style.display=esPrimera?'none':'';
 }
 
+let _gFoto = '';
+function gPreviewFoto(input){
+  const file=input.files[0]; if(!file) return;
+  const r=new FileReader();
+  r.onload=e=>{
+    _gFoto=e.target.result;
+    const p=document.getElementById('g-foto-preview'); if(p) p.src=_gFoto;
+    const w=document.getElementById('g-foto-wrap'); if(w) w.classList.add('visible');
+  };
+  r.readAsDataURL(file);
+}
+
+function edGPreviewFoto(input){
+  const file=input.files[0]; if(!file) return;
+  const r=new FileReader();
+  r.onload=e=>{
+    window._edGFoto=e.target.result;
+    const w=document.getElementById('ed-g-foto-wrap');
+    if(w) w.innerHTML=`<img src="${window._edGFoto}" style="max-height:120px;border-radius:8px;object-fit:cover;object-position:top;display:block;margin-top:6px"/>`;
+  };
+  r.readAsDataURL(file);
+}
+
 function agregarGoleador(){
   const nombre=document.getElementById('g-nombre').value.trim();
   if(!nombre){alert('Completá el nombre');return;}
   const div=document.getElementById('g-div').value;
-  const obj={id:String(Date.now()),div,nombre,equipo:document.getElementById('g-equipo').value,goles:+document.getElementById('g-goles').value};
+  const obj={id:String(Date.now()),div,nombre,equipo:document.getElementById('g-equipo').value,goles:+document.getElementById('g-goles').value,foto:_gFoto||''};
   if(div==='primera') obj.torneo=document.getElementById('g-torneo').value;
   else obj.faseGol=document.getElementById('g-fase').value;
   data.goleadores.push(obj);
+  _gFoto='';
+  const fp=document.getElementById('g-foto-preview'); if(fp) fp.src='';
+  const fw=document.getElementById('g-foto-wrap'); if(fw) fw.classList.remove('visible');
+  const ff=document.getElementById('g-foto-file'); if(ff) ff.value='';
   saveData(data);renderAdminListas();renderSection(currentSection);
 }
 
@@ -5437,6 +6333,12 @@ function abrirModalEdicion(tipo,id){
       <div class="form-row"><div class="form-group"><label>División</label>${divSelect}</div>
         <div class="form-group"><label>Fecha / Jornada</label><input type="text" id="ed-fecha" value="${obj.fecha||''}"/></div></div>
       <div class="form-group" ${esPrimera?'':'style="display:none"'} id="ed-torneo-partido-wrap"><label>Torneo (Primera)</label>${torneoSelect}</div>
+      <div class="form-group" ${esPrimera?'':'style="display:none"'} id="ed-playoff-wrap">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" id="ed-es-playoff" ${obj.esPlayoff?'checked':''} style="width:16px;height:16px;accent-color:var(--dorado)"/>
+          <span>Partido de Play Off <span style="color:var(--gris);font-size:11px">(no suma en tabla de posiciones, sí en goleadores)</span></span>
+        </label>
+      </div>
       <div class="form-group" ${!esPrimera?'':'style="display:none"'} id="ed-faseRes-wrap"><label>Fase (Segunda)</label><select id="ed-faseRes" onchange="(function(){const f=document.getElementById('ed-faseRes').value;const d=document.getElementById('ed-div').value;const zw=document.getElementById('ed-zona-wrap');if(zw)zw.style.display=(d==='segunda'&&f==='fase1')?'':'none';})()">${faseResOpts}</select></div>
       <div class="form-group" ${(!esPrimera&&(obj.faseRes||'fase1')==='fase1')?'':'style="display:none"'} id="ed-zona-wrap"><label>Zona (1ª Fase)</label>
         <select id="ed-zona">
@@ -5503,12 +6405,20 @@ function abrirModalEdicion(tipo,id){
         <div class="form-group"><label style="color:rgba(255,255,255,.5)">Motivo</label><input type="text" id="ed-pts-desc-motivo" value="${obj.ptsDescMotivo||''}" placeholder="Ej: Resolución Tribunal N°12"/></div>
       </div>`;
   } else if(tipo==='goleadores'){
+    const fotoActual = obj.foto ? `<img src="${obj.foto}" style="max-height:120px;border-radius:8px;object-fit:cover;object-position:top;display:block;margin-top:6px"/>` : '';
     bodyHTML=`
       <div class="form-row"><div class="form-group"><label>Torneo</label>${torneoSelect}</div>
         <div class="form-group"><label>División</label>${divSelect}</div></div>
       <div class="form-row"><div class="form-group"><label>Jugador</label><input type="text" id="ed-nombre" value="${obj.nombre||''}"/></div>
         <div class="form-group"><label>Equipo</label><input type="text" id="ed-equipo" value="${obj.equipo||''}"/></div></div>
-      <div class="form-group" style="max-width:120px"><label>Goles</label><input type="number" id="ed-goles" value="${obj.goles||0}" min="0"/></div>`;
+      <div class="form-group" style="max-width:120px"><label>Goles</label><input type="number" id="ed-goles" value="${obj.goles||0}" min="0"/></div>
+      <div class="form-group"><label>Foto del jugador <span style="color:var(--gris);font-size:10px">(fondo de la tabla)</span></label>
+        <div class="upload-area" style="padding:12px">
+          <input type="file" accept="image/*" id="ed-g-foto-file" onchange="edGPreviewFoto(this)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%"/>
+          <p style="pointer-events:none;font-size:11px">Hacé clic para cambiar la foto</p>
+        </div>
+        <div id="ed-g-foto-wrap">${fotoActual}</div>
+      </div>`;
   } else if(tipo==='equipos'){
     const esc=escudos[normalizar(obj.nombre)];
     const curImg=esc&&esc.img?`<img id="ed-escudo-preview" src="${esc.img}" style="max-height:60px;margin-top:6px;border-radius:var(--r-sm);border:1px solid var(--dorado-border);display:block"/>`:`<img id="ed-escudo-preview" style="display:none;max-height:60px;margin-top:6px"/>`;
@@ -5825,7 +6735,12 @@ function guardarEdicion(tipo,id){
     // Guardar copia del partido anterior para detectar el tipo de evento
     const partidoViejo={...data.partidos[idx], goles:[...(data.partidos[idx].goles||[])], expulsiones:[...(data.partidos[idx].expulsiones||[])]};
     const updated={...data.partidos[idx],div:divVal,fecha:val('ed-fecha'),dia:val('ed-dia'),local:val('ed-local'),visit:val('ed-visit'),hora:val('ed-hora'),estado:val('ed-estado'),resultado:val('ed-resultado'),periodo:val('ed-periodo')||'PT',arbitros:arbs,goles,expulsiones};
-    if(divVal==='primera'){updated.torneo=val('ed-torneo');delete updated.faseRes;delete updated.zona;}
+    if(divVal==='primera'){
+      updated.torneo=val('ed-torneo');
+      const chk=document.getElementById('ed-es-playoff');
+      updated.esPlayoff=chk?chk.checked:false;
+      delete updated.faseRes;delete updated.zona;
+    }
     else{
       updated.faseRes=val('ed-faseRes')||'fase1';
       if(updated.faseRes==='fase1') updated.zona=val('ed-zona')||'';
@@ -5849,7 +6764,9 @@ function guardarEdicion(tipo,id){
     data.posiciones[idx]=updated;
   } else if(tipo==='goleadores'){
     const idx=data.goleadores.findIndex(p=>String(p.id)===sid);if(idx<0)return;
-    data.goleadores[idx]={...data.goleadores[idx],torneo:val('ed-torneo'),div:val('ed-div'),nombre:val('ed-nombre'),equipo:val('ed-equipo'),goles:num('ed-goles')};
+    const nuevaFoto = window._edGFoto !== undefined ? window._edGFoto : (data.goleadores[idx].foto||'');
+    data.goleadores[idx]={...data.goleadores[idx],torneo:val('ed-torneo'),div:val('ed-div'),nombre:val('ed-nombre'),equipo:val('ed-equipo'),goles:num('ed-goles'),foto:nuevaFoto};
+    window._edGFoto = undefined;
   } else if(tipo==='equipos'){
     const idx=data.equipos.findIndex(p=>String(p.id)===sid);if(idx<0)return;
     const nombreViejo=data.equipos[idx].nombre;
@@ -6020,6 +6937,7 @@ function recalcularTodo(){
 
   data.partidos.forEach(p => {
     if(p.estado !== 'jugado') return;
+    if(p.esPlayoff) return;  // ← partidos de playoff no suman en posiciones
     const res = parsearResultado(p.resultado);
     if(!res) return;
 
@@ -6343,6 +7261,7 @@ function switchAdminTab(tab,el){
   if(tab==='fotos') renderAdminListaFotos();
   if(tab==='fichas'){ poblarSelectFichas(); renderAdminListaFichas(); }
   if(tab==='noticias') renderAdminListaNoticias();
+  if(tab==='transferencias') renderAdminListaTransferencias();
   if(tab==='publicidad'){ renderAdminListaPubs(); }
   if(tab==='deportemas'){ cargarFormDM(); }
   if(tab==='estadisticas'){ renderEstadisticas(); }
@@ -6641,14 +7560,14 @@ document.getElementById('share-modal').addEventListener('click', function(e){
 // ── Helpers de dibujo Canvas ────────────────────────────────
 
 const C = {
-  NEG:    '#080808',
-  NEG2:   '#111113',
-  NEG3:   '#191920',
-  NEG4:   '#232330',
+  NEG:    '#2a2a32',
+  NEG2:   '#343440',
+  NEG3:   '#3e3e4c',
+  NEG4:   '#484858',
   DORADO: '#c9a227',
   DORADO2:'#f0c040',
   BLANCO: '#f5f5f5',
-  GRIS:   '#888888',
+  GRIS:   '#aaaaaa',
   VERDE:  '#1a6b2f',
   ROJO:   '#c0392b',
   AZUL:   '#3a9bd5',
@@ -6683,11 +7602,19 @@ function cvDrawLogo(ctx, logoSrc, x, y, size){
   });
 }
 
+// Factor de escala global para imágenes 1080×1350
+const CV_W = 1080;
+const CV_H = 1350;
+const CV_S = CV_W / 700; // ≈ 1.543 — se aplica a todas las medidas internas
+
+// Escala un valor de coordenadas/tamaño del diseño base (700px) al canvas 1080px
+function s(v){ return Math.round(v * CV_S); }
+
 // Dibuja un encabezado de liga con logo opcional
 async function cvHeader(ctx, W, id, yStart){
   const liga = id.nombre || 'DEPORTEMAS';
   const sub  = id.subtitulo || 'Fútbol · Córdoba';
-  const H = 64;
+  const H = s(64);
 
   const grad = ctx.createLinearGradient(0, yStart, W, yStart);
   grad.addColorStop(0, C.NEG4);
@@ -6697,25 +7624,25 @@ async function cvHeader(ctx, W, id, yStart){
   ctx.fillStyle = C.DORADO;
   ctx.fillRect(0, yStart + H - 2, W, 2);
 
-  const logoSize = 40, logoX = 18, logoY = yStart + (H - logoSize) / 2;
+  const logoSize = s(40), logoX = s(18), logoY = yStart + (H - logoSize) / 2;
   const logoOk = await cvDrawLogo(ctx, id.logo, logoX, logoY, logoSize);
   if(!logoOk){
-    cvRoundRect(ctx, logoX, logoY, logoSize, logoSize, 6);
+    cvRoundRect(ctx, logoX, logoY, logoSize, logoSize, s(6));
     ctx.fillStyle = C.DORADO; ctx.fill();
     ctx.fillStyle = C.NEG;
-    ctx.font = 'bold 15px Arial, sans-serif';
+    ctx.font = `bold ${s(15)}px Arial, sans-serif`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText((liga.substr(0,2)).toUpperCase(), logoX + logoSize/2, logoY + logoSize/2);
   }
 
-  const textX = logoX + logoSize + 12;
+  const textX = logoX + logoSize + s(12);
   ctx.fillStyle = C.BLANCO;
-  ctx.font = '700 22px "Rajdhani", Arial, sans-serif';
+  ctx.font = `${s(28)}px "Bebas Neue", Arial, sans-serif`;
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-  cvFillTextTrunc(ctx, liga.toUpperCase(), textX, yStart + 32, W - textX - 20);
-  ctx.fillStyle = 'rgba(201,162,39,0.55)';
-  ctx.font = '500 11px "Rajdhani", Arial, sans-serif';
-  cvFillTextTrunc(ctx, sub.toUpperCase(), textX, yStart + 50, W - textX - 20);
+  cvFillTextTrunc(ctx, liga.toUpperCase(), textX, yStart + s(36), W - textX - s(20));
+  ctx.fillStyle = 'rgba(201,162,39,0.65)';
+  ctx.font = `500 ${s(12)}px "DM Sans", Arial, sans-serif`;
+  cvFillTextTrunc(ctx, sub, textX, yStart + s(52), W - textX - s(20));
 
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   return yStart + H;
@@ -6723,11 +7650,11 @@ async function cvHeader(ctx, W, id, yStart){
 
 // Dibuja el footer de la imagen
 function cvFooter(ctx, W, yStart, ligaNombre){
-  const H = 34;
+  const H = s(40);
   ctx.fillStyle = C.NEG4;
   ctx.fillRect(0, yStart, W, H);
-  ctx.fillStyle = 'rgba(201,162,39,0.35)';
-  ctx.font = '600 11px "Rajdhani", Arial, sans-serif';
+  ctx.fillStyle = 'rgba(201,162,39,0.4)';
+  ctx.font = `500 ${s(13)}px "DM Sans", Arial, sans-serif`;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText((ligaNombre||'DEPORTEMAS').toUpperCase() + '  ·  deportemas.com.ar', W/2, yStart + H/2);
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
@@ -6791,13 +7718,23 @@ async function generarImagenPartido(p){
   await document.fonts.ready;
   const id   = getIdentidad();
   const liga = id.nombre || 'DEPORTEMAS';
-  const W    = 700;
+  const W    = CV_W;
   const golesLocal = (p.goles||[]).filter(g=>g.equipo==='local');
   const golesVisit = (p.goles||[]).filter(g=>g.equipo==='visit');
   const exps       = p.expulsiones||[];
   const tieneEventos = golesLocal.length||golesVisit.length||exps.length;
   const evRows = Math.max(golesLocal.length, golesVisit.length) + exps.length;
-  const H = 64 + 220 + (tieneEventos ? 16 + evRows*30 + 16 : 0) + 34;
+
+  // Calcular alto del contenido con escala
+  const hHeader  = s(64);
+  const hZona    = s(220);
+  const hEventos = tieneEventos ? s(16) + evRows*s(38) + s(16) : 0;
+  const hFooter  = s(34);
+  const hContenido = hHeader + hZona + hEventos + hFooter;
+
+  // Canvas fijo 1080×1350; contenido empieza desde arriba
+  const H = CV_H;
+  const yOffset = 0;
 
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
@@ -6808,10 +7745,10 @@ async function generarImagenPartido(p){
   ctx.fillStyle = C.NEG2;
   ctx.fillRect(0, 0, W, H);
 
-  let y = await cvHeader(ctx, W, id, 0);
+  let y = await cvHeader(ctx, W, id, yOffset);
 
   // Zona resultado — gradiente sutil
-  const zH = 184;
+  const zH = s(184);
   const grad2 = ctx.createLinearGradient(0, y, 0, y+zH);
   grad2.addColorStop(0, C.NEG3); grad2.addColorStop(1, C.NEG2);
   ctx.fillStyle = grad2;
@@ -6820,63 +7757,62 @@ async function generarImagenPartido(p){
   // Subtítulo fecha/división
   const divLabel = p.div==='primera'?'1ª División':'2ª División';
   const tornLabel = p.torneo?' · '+torneoLabel(p.torneo):'';
-  ctx.fillStyle='rgba(201,162,39,0.6)';
-  ctx.font = '600 12px "Rajdhani", Arial, sans-serif';
+  ctx.fillStyle='rgba(201,162,39,0.7)';
+  ctx.font = `600 ${s(14)}px "Rajdhani", Arial, sans-serif`;
   ctx.textAlign='center';
-  ctx.fillText([(p.fecha||''),(p.dia||''),divLabel+tornLabel].filter(Boolean).join('  ·  '), W/2, y+20);
+  ctx.fillText([(p.fecha||''),(p.dia||''),divLabel+tornLabel].filter(Boolean).join('  ·  '), W/2, y+s(22));
 
   // Zona central: escudos + nombres + marcador
-  const midY = y + 110;
-  const ESCUDO = 52;
-  const MARGEN = 30;
+  const midY = y + s(115);
+  const ESCUDO = s(60);
+  const MARGEN = s(28);
   const CENTRO_X = W/2;
 
   // Marcador (caja dorada)
-  const mW=110, mH=50;
+  const mW=s(130), mH=s(58);
   const mX=CENTRO_X-mW/2, mY=midY-mH/2;
-  cvRoundRect(ctx, mX, mY, mW, mH, 8);
+  cvRoundRect(ctx, mX, mY, mW, mH, s(8));
   const mGrad=ctx.createLinearGradient(mX,mY,mX+mW,mY+mH);
   mGrad.addColorStop(0,C.DORADO); mGrad.addColorStop(1,C.DORADO2);
   ctx.fillStyle=mGrad; ctx.fill();
   ctx.fillStyle=C.NEG;
-  ctx.font='900 28px "Rajdhani", Arial, sans-serif';
+  ctx.font=`${s(36)}px "Bebas Neue", Arial, sans-serif`;
   ctx.textAlign='center';
   ctx.textBaseline='middle';
-  ctx.fillText(p.resultado||(p.estado==='en-juego'?'0-0':'VS'), CENTRO_X, midY+1);
+  ctx.fillText(p.resultado||(p.estado==='en-juego'?'0-0':'VS'), CENTRO_X, midY+2);
   ctx.textBaseline='alphabetic';
 
-  // Equipo local (derecha del escudo, izquierda del marcador)
+  // Equipo local
   const escLocalX = mX - MARGEN - ESCUDO;
   const escLocalY = midY - ESCUDO/2;
   await cvDrawEscudo(ctx, p.local, escLocalX, escLocalY, ESCUDO);
   ctx.fillStyle=C.BLANCO;
-  ctx.font='700 18px "Rajdhani", Arial, sans-serif';
+  ctx.font=`${s(22)}px "Bebas Neue", Arial, sans-serif`;
   ctx.textAlign='right';
   ctx.textBaseline='middle';
-  const maxNomW = escLocalX - 16;
-  cvFillTextTrunc(ctx, p.local.toUpperCase(), escLocalX-10, midY, escLocalX - 16);
+  cvFillTextTrunc(ctx, p.local.toUpperCase(), escLocalX-s(10), midY, escLocalX - s(16));
 
-  // Equipo visit (izquierda del escudo, derecha del marcador)
+  // Equipo visitante
   const escVisitX = mX + mW + MARGEN;
   const escVisitY = midY - ESCUDO/2;
   await cvDrawEscudo(ctx, p.visit, escVisitX, escVisitY, ESCUDO);
   ctx.fillStyle=C.BLANCO;
-  ctx.font='700 18px "Rajdhani", Arial, sans-serif';
+  ctx.font=`${s(22)}px "Bebas Neue", Arial, sans-serif`;
   ctx.textAlign='left';
-  cvFillTextTrunc(ctx, p.visit.toUpperCase(), escVisitX+ESCUDO+10, midY, W - escVisitX - ESCUDO - 16);
+  cvFillTextTrunc(ctx, p.visit.toUpperCase(), escVisitX+ESCUDO+s(10), midY, W - escVisitX - ESCUDO - s(16));
   ctx.textBaseline='alphabetic';
 
   // Badge estado
   const estadoTxt = p.estado==='jugado'?'FINAL':p.estado==='en-juego'?'● EN VIVO':'PRÓXIMO';
   const bCol = p.estado==='jugado'?'rgba(26,107,47,0.5)':p.estado==='en-juego'?'rgba(192,57,43,0.5)':'rgba(201,162,39,0.2)';
   const bTxt = p.estado==='jugado'?'#4caf74':p.estado==='en-juego'?'#ff5555':C.DORADO;
-  ctx.font='700 11px "Rajdhani", Arial, sans-serif';
-  const bW=ctx.measureText(estadoTxt).width+20;
-  cvRoundRect(ctx, CENTRO_X-bW/2, midY+34, bW, 20, 4);
+  ctx.font=`700 ${s(13)}px "Rajdhani", Arial, sans-serif`;
+  const bW=ctx.measureText(estadoTxt).width+s(24);
+  cvRoundRect(ctx, CENTRO_X-bW/2, midY+s(36), bW, s(24), s(5));
   ctx.fillStyle=bCol; ctx.fill();
   ctx.fillStyle=bTxt;
   ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText(estadoTxt, CENTRO_X, midY+44);
+  ctx.fillText(estadoTxt, CENTRO_X, midY+s(48));
   ctx.textBaseline='alphabetic';
 
   y += zH;
@@ -6884,41 +7820,43 @@ async function generarImagenPartido(p){
   // Eventos
   if(tieneEventos){
     ctx.fillStyle='rgba(255,255,255,0.06)';
-    ctx.fillRect(20, y, W-40, 1);
-    y += 16;
-    ctx.font='600 13px "Rajdhani", Arial, sans-serif';
-    const colL = W/2 - 16, colR = W/2 + 16;
+    ctx.fillRect(s(20), y, W-s(40), 1);
+    y += s(18);
+    const colL = W/2 - s(16), colR = W/2 + s(16);
     const maxRows = Math.max(golesLocal.length, golesVisit.length);
     for(let i=0;i<maxRows;i++){
       const gl=golesLocal[i], gv=golesVisit[i];
       if(gl){
-        ctx.fillStyle='rgba(255,255,255,0.82)';
+        ctx.fillStyle='rgba(255,255,255,0.85)';
+        ctx.font=`500 ${s(15)}px "DM Sans", Arial, sans-serif`;
         ctx.textAlign='right';
-        cvFillTextTrunc(ctx,'⚽ '+gl.jugador+(gl.min?" '"+gl.min:''), colL, y+18, W/2-20);
+        cvFillTextTrunc(ctx,'⚽ '+gl.jugador+(gl.min?" '"+gl.min:''), colL, y+s(20), W/2-s(20));
       }
       if(gv){
-        ctx.fillStyle='rgba(255,255,255,0.82)';
+        ctx.fillStyle='rgba(255,255,255,0.85)';
+        ctx.font=`500 ${s(15)}px "DM Sans", Arial, sans-serif`;
         ctx.textAlign='left';
-        cvFillTextTrunc(ctx,'⚽ '+gv.jugador+(gv.min?" '"+gv.min:''), colR, y+18, W/2-20);
+        cvFillTextTrunc(ctx,'⚽ '+gv.jugador+(gv.min?" '"+gv.min:''), colR, y+s(20), W/2-s(20));
       }
-      y+=30;
+      y+=s(42);
     }
     exps.forEach(e=>{
       const eq=e.equipo==='local'?p.local:p.visit;
       ctx.fillStyle='#e05555';
+      ctx.font=`500 ${s(15)}px "DM Sans", Arial, sans-serif`;
       if(e.equipo==='local'){
         ctx.textAlign='right';
-        cvFillTextTrunc(ctx,'🟥 '+e.jugador+(e.min?" '"+e.min:'')+' ('+eq+')', colL, y+18, W/2-20);
+        cvFillTextTrunc(ctx,'🟥 '+e.jugador+(e.min?" '"+e.min:'')+' ('+eq+')', colL, y+s(20), W/2-s(20));
       } else {
         ctx.textAlign='left';
-        cvFillTextTrunc(ctx,'🟥 '+e.jugador+(e.min?" '"+e.min:'')+' ('+eq+')', colR, y+18, W/2-20);
+        cvFillTextTrunc(ctx,'🟥 '+e.jugador+(e.min?" '"+e.min:'')+' ('+eq+')', colR, y+s(20), W/2-s(20));
       }
-      y+=30;
+      y+=s(42);
     });
-    y+=16;
+    y+=s(18);
   }
 
-  cvFooter(ctx, W, y, liga);
+  cvFooter(ctx, W, CV_H - s(34), liga);
   ctx.textAlign='left'; ctx.textBaseline='alphabetic';
   return canvas;
 }
@@ -6927,7 +7865,7 @@ async function generarImagenPosiciones(){
   await document.fonts.ready;
   const id    = getIdentidad();
   const liga  = id.nombre||'DEPORTEMAS';
-  const W     = 700;
+  const W     = CV_W;
   const torneo = currentTorneo.pos;
   const div   = currentDivision;
   let pos;
@@ -6968,45 +7906,51 @@ async function generarImagenPosiciones(){
   }
   if(!pos.length) return null;
 
-  const rows  = Math.min(pos.length,16);
-  const ROW_H = 38;
-  const HDR_H = 28;
-  const H = 64 + 46 + HDR_H + rows*ROW_H + 12 + 34;
+  const ROW_H = s(40);
+  const HDR_H = s(29);
+  const hHeader  = s(64);
+  const hTitulo  = s(48);
+  const hFooter  = s(40);
+  // Espacio disponible para la tabla (sin centrar, empieza desde arriba)
+  const hDisponible = CV_H - hHeader - hTitulo - HDR_H - hFooter - s(12);
+  const maxRows = Math.floor(hDisponible / ROW_H);
+  const rows = Math.min(pos.length, maxRows);
+  const yOffset = 0;
 
   const canvas = document.createElement('canvas');
-  canvas.width=W; canvas.height=H;
+  canvas.width=W; canvas.height=CV_H;
   const ctx=canvas.getContext('2d');
   ctx.textBaseline='alphabetic';
 
-  ctx.fillStyle=C.NEG2; ctx.fillRect(0,0,W,H);
-  let y = await cvHeader(ctx,W,id,0);
+  ctx.fillStyle=C.NEG2; ctx.fillRect(0,0,W,CV_H);
+  let y = await cvHeader(ctx,W,id,yOffset);
 
-  // Título
+  // Título con Bebas Neue
   ctx.fillStyle=C.DORADO;
-  ctx.font='700 15px "Rajdhani", Arial, sans-serif';
+  ctx.font=`${s(20)}px "Bebas Neue", Arial, sans-serif`;
   ctx.textAlign='center';
-  ctx.fillText(tituloPosiciones, W/2, y+30);
-  y+=46;
+  ctx.fillText(tituloPosiciones, W/2, y+s(31));
+  y+=s(48);
 
-  // Columnas: #(28) | escudo(32) | equipo(flex) | PTS | PJ | G | E | P | GF | GC | DG
-  const C1=8, C2=36, C3=72, EQMAX=200;
+  // Columnas: el ancho de equipo crece para aprovechar el espacio disponible
+  const C1=s(8), C2=s(40), C3=s(80), EQMAX=s(220);
   const numCols=[
-    {l:'PTS',x:C3+EQMAX+4,   w:42},
-    {l:'PJ', x:C3+EQMAX+50,  w:34},
-    {l:'G',  x:C3+EQMAX+88,  w:30},
-    {l:'E',  x:C3+EQMAX+122, w:30},
-    {l:'P',  x:C3+EQMAX+156, w:30},
-    {l:'GF', x:C3+EQMAX+190, w:30},
-    {l:'GC', x:C3+EQMAX+224, w:30},
-    {l:'DG', x:C3+EQMAX+258, w:38},
+    {l:'PTS',x:C3+EQMAX+s(4),   w:s(50)},
+    {l:'PJ', x:C3+EQMAX+s(58),  w:s(38)},
+    {l:'G',  x:C3+EQMAX+s(100), w:s(34)},
+    {l:'E',  x:C3+EQMAX+s(138), w:s(34)},
+    {l:'P',  x:C3+EQMAX+s(176), w:s(34)},
+    {l:'GF', x:C3+EQMAX+s(214), w:s(34)},
+    {l:'GC', x:C3+EQMAX+s(252), w:s(34)},
+    {l:'DG', x:C3+EQMAX+s(290), w:s(40)},
   ];
 
-  // Header tabla
+  // Header tabla — Rajdhani para etiquetas
   ctx.fillStyle='rgba(201,162,39,0.13)'; ctx.fillRect(0,y,W,HDR_H);
   ctx.fillStyle=C.DORADO;
-  ctx.font='700 11px "Rajdhani", Arial, sans-serif';
+  ctx.font=`700 ${s(11)}px "Rajdhani", Arial, sans-serif`;
   ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText('#', C1+14, y+HDR_H/2);
+  ctx.fillText('#', C1+s(16), y+HDR_H/2);
   ctx.textAlign='left';
   ctx.fillText('EQUIPO', C3, y+HDR_H/2);
   numCols.forEach(c=>{ ctx.textAlign='center'; ctx.fillText(c.l, c.x+c.w/2, y+HDR_H/2); });
@@ -7015,7 +7959,7 @@ async function generarImagenPosiciones(){
 
   // Cargar todos los escudos en paralelo antes de dibujar
   const escudoImgs = {};
-  await Promise.all(pos.slice(0,16).map(p => new Promise(res=>{
+  await Promise.all(pos.slice(0,rows).map(p => new Promise(res=>{
     const entry=escudos[p.equipo]||escudos[normalizar(p.equipo)];
     const src=entry&&typeof entry==='object'?entry.img:entry;
     if(!src){res();return;}
@@ -7025,7 +7969,7 @@ async function generarImagenPosiciones(){
     img.src=src;
   })));
 
-  pos.slice(0,16).forEach((p,i)=>{
+  pos.slice(0,rows).forEach((p,i)=>{
     const fy = y + ROW_H/2;
     ctx.fillStyle=i%2===0?'rgba(255,255,255,0.025)':'rgba(0,0,0,0.12)';
     ctx.fillRect(0,y,W,ROW_H);
@@ -7034,16 +7978,16 @@ async function generarImagenPosiciones(){
     const zc = div==='primera'
       ? (i===0?C.DORADO:i<=6?C.AZUL:i===13?'#e67e22':i>=14?C.ROJO:null)
       : (i<4?C.VERDE:null);
-    if(zc){ctx.fillStyle=zc;ctx.fillRect(0,y,3,ROW_H);}
+    if(zc){ctx.fillStyle=zc;ctx.fillRect(0,y,s(4),ROW_H);}
 
-    // Número
+    // Número — Rajdhani
     ctx.fillStyle=i===0?C.DORADO:'rgba(255,255,255,0.5)';
-    ctx.font=(i===0?'700':'500')+' 13px "Rajdhani", Arial, sans-serif';
+    ctx.font=(i===0?'700':'500')+` ${s(13)}px "Rajdhani", Arial, sans-serif`;
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(i+1, C1+14, fy);
+    ctx.fillText(i+1, C1+s(16), fy);
 
     // Escudo
-    const eSize=24, eX=C2+4, eY=y+(ROW_H-eSize)/2;
+    const eSize=s(26), eX=C2+s(2), eY=y+(ROW_H-eSize)/2;
     const eImg=escudoImgs[p.equipo];
     if(eImg){
       ctx.save();
@@ -7056,21 +8000,21 @@ async function generarImagenPosiciones(){
       cvEscudoFallback(ctx,p.equipo,eX,eY,eSize);
     }
 
-    // Nombre equipo
+    // Nombre equipo — DM Sans
     ctx.fillStyle=C.BLANCO;
-    ctx.font='700 13px "Rajdhani", Arial, sans-serif';
+    ctx.font=`600 ${s(13)}px "DM Sans", Arial, sans-serif`;
     ctx.textAlign='left'; ctx.textBaseline='middle';
-    cvFillTextTrunc(ctx, p.equipo.toUpperCase(), C3, fy, EQMAX-4);
+    cvFillTextTrunc(ctx, p.equipo, C3, fy, EQMAX-s(4));
 
-    // PTS (destacado)
+    // PTS destacado — Bebas Neue
     ctx.fillStyle=C.DORADO;
-    ctx.font='900 16px "Rajdhani", Arial, sans-serif';
+    ctx.font=`${s(19)}px "Bebas Neue", Arial, sans-serif`;
     ctx.textAlign='center';
     ctx.fillText(p.pts!=null?p.pts:0, numCols[0].x+numCols[0].w/2, fy);
 
-    // Resto stats
+    // Resto stats — Rajdhani
     ctx.fillStyle='rgba(255,255,255,0.65)';
-    ctx.font='500 12px "Rajdhani", Arial, sans-serif';
+    ctx.font=`600 ${s(12)}px "Rajdhani", Arial, sans-serif`;
     const dg=(p.gf||0)-(p.gc||0);
     const dgStr=dg>0?'+'+dg:String(dg);
     [p.pj,p.g,p.e,p.p,p.gf||0,p.gc||0,dgStr].forEach((v,ci)=>{
@@ -7082,8 +8026,7 @@ async function generarImagenPosiciones(){
     y+=ROW_H;
   });
 
-  y+=12;
-  cvFooter(ctx,W,y,liga);
+  cvFooter(ctx,W,CV_H - s(40),liga);
   ctx.textAlign='left'; ctx.textBaseline='alphabetic';
   return canvas;
 }
@@ -7092,7 +8035,7 @@ async function generarImagenGoleadores(){
   await document.fonts.ready;
   const id    = getIdentidad();
   const liga  = id.nombre||'DEPORTEMAS';
-  const W     = 700;
+  const W     = CV_W;
   let gs, subtitulo;
   if(currentDivision==='segunda'){
     const fl={'fase1':'1ª Fase','fase2':'2ª Fase','fase3':'3ª Fase'};
@@ -7108,22 +8051,55 @@ async function generarImagenGoleadores(){
   if(!gs.length) return null;
 
   const TOP   = Math.min(gs.length,10);
-  const ROW_H = 56;
-  const H     = 64 + 46 + TOP*ROW_H + 12 + 34;
+  const ROW_H = s(64);
+  const hHeader   = s(64);
+  const hTitulo   = s(52);
+  const hTabla    = TOP*ROW_H + s(12);
+  const hFooter   = s(40);
+  const hContenido = hHeader + hTitulo + hTabla + hFooter;
+  const yOffset = Math.max(0, Math.floor((CV_H - hContenido) / 2));
 
   const canvas=document.createElement('canvas');
-  canvas.width=W; canvas.height=H;
+  canvas.width=W; canvas.height=CV_H;
   const ctx=canvas.getContext('2d');
   ctx.textBaseline='alphabetic';
 
-  ctx.fillStyle=C.NEG2; ctx.fillRect(0,0,W,H);
-  let y=await cvHeader(ctx,W,id,0);
+  ctx.fillStyle=C.NEG2; ctx.fillRect(0,0,W,CV_H);
 
+  // Foto del líder de fondo (translúcida)
+  if(gs[0]?.foto){
+    await new Promise(res=>{
+      const img=new Image();
+      img.onload=()=>{
+        // Dibujar cubriendo el canvas entero
+        const ratio = img.naturalWidth/img.naturalHeight;
+        let dw=W, dh=W/ratio;
+        if(dh<CV_H){ dh=CV_H; dw=CV_H*ratio; }
+        const dx=(W-dw)/2, dy=0;
+        ctx.globalAlpha=0.08;
+        ctx.drawImage(img,dx,dy,dw,dh);
+        ctx.globalAlpha=1;
+        // Gradiente oscuro encima
+        const grad=ctx.createLinearGradient(0,0,W,CV_H);
+        grad.addColorStop(0,'rgba(8,8,16,.92)');
+        grad.addColorStop(1,'rgba(8,8,16,.72)');
+        ctx.fillStyle=grad;
+        ctx.fillRect(0,0,W,CV_H);
+        res();
+      };
+      img.onerror=()=>res();
+      img.src=gs[0].foto;
+    });
+  }
+
+  let y=await cvHeader(ctx,W,id,yOffset);
+
+  // Título — Bebas Neue
   ctx.fillStyle=C.DORADO;
-  ctx.font='700 15px "Rajdhani", Arial, sans-serif';
+  ctx.font=`${s(22)}px "Bebas Neue", Arial, sans-serif`;
   ctx.textAlign='center';
-  ctx.fillText('GOLEADORES  ·  '+subtitulo, W/2, y+30);
-  y+=46;
+  ctx.fillText('GOLEADORES  ·  '+subtitulo, W/2, y+s(34));
+  y+=s(52);
 
   // Precargar escudos
   const escudoImgs={};
@@ -7142,19 +8118,34 @@ async function generarImagenGoleadores(){
     ctx.fillStyle=i%2===0?'rgba(255,255,255,0.025)':'rgba(0,0,0,0.1)';
     ctx.fillRect(0,y,W,ROW_H);
 
-    // Número / medalla
+    // Número / podio — círculo dorado para el/los líderes
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    if(i<3){
-      ctx.font=`${Math.round(ROW_H*0.48)}px sans-serif`;
-      ctx.fillText(['🥇','🥈','🥉'][i], 28, fy);
+    const esLider = gs[i].goles === gs[0].goles;
+    if(esLider){
+      const podioSize = s(34);
+
+      ctx.shadowColor = 'rgba(201,162,39,.5)';
+      ctx.shadowBlur  = s(12);
+
+      ctx.beginPath();
+      ctx.arc(s(30), fy, podioSize/2, 0, Math.PI*2);
+      ctx.fillStyle = C.DORADO;
+      ctx.fill();
+
+      ctx.shadowBlur = 0;
+
+      ctx.fillStyle = '#111';
+      ctx.font = `700 ${s(17)}px "Rajdhani", Arial, sans-serif`;
+      ctx.fillText(i+1, s(30), fy+1);
     } else {
       ctx.fillStyle='rgba(255,255,255,0.4)';
-      ctx.font='700 14px "Rajdhani", Arial, sans-serif';
-      ctx.fillText(i+1, 28, fy);
+      ctx.font=`700 ${s(16)}px "Rajdhani", Arial, sans-serif`;
+      ctx.fillText(i+1, s(30), fy);
     }
+    ctx.shadowBlur = 0;
 
-    // Escudo del equipo
-    const eSize=36, eX=52, eY=y+(ROW_H-eSize)/2;
+    // Escudo
+    const eSize=s(42), eX=s(56), eY=y+(ROW_H-eSize)/2;
     const eImg=escudoImgs[g.equipo];
     if(eImg){
       ctx.save();
@@ -7167,25 +8158,26 @@ async function generarImagenGoleadores(){
       cvEscudoFallback(ctx,g.equipo,eX,eY,eSize);
     }
 
-    // Nombre jugador
+    // Nombre jugador — DM Sans, con el nombre propio legible
     ctx.fillStyle=i===0?C.DORADO:C.BLANCO;
-    ctx.font='700 17px "Rajdhani", Arial, sans-serif';
+    ctx.font=`600 ${s(19)}px "DM Sans", Arial, sans-serif`;
     ctx.textAlign='left'; ctx.textBaseline='middle';
-    cvFillTextTrunc(ctx,g.nombre.toUpperCase(), 100, fy-8, W-200);
+    cvFillTextTrunc(ctx, g.nombre, s(110), fy-s(9), W-s(230));
 
-    // Equipo
+    // Equipo — DM Sans secundario
     ctx.fillStyle=C.GRIS;
-    ctx.font='500 12px "Rajdhani", Arial, sans-serif';
-    cvFillTextTrunc(ctx,g.equipo, 100, fy+12, W-200);
+    ctx.font=`400 ${s(13)}px "DM Sans", Arial, sans-serif`;
+    cvFillTextTrunc(ctx, g.equipo, s(110), fy+s(13), W-s(230));
 
-    // Goles (derecha)
+    // Goles (derecha) — Bebas Neue para el número
     ctx.fillStyle=C.DORADO;
-    ctx.font='900 34px "Rajdhani", Arial, sans-serif';
+    ctx.font=`${s(42)}px "Bebas Neue", Arial, sans-serif`;
     ctx.textAlign='right';
-    ctx.fillText(g.goles, W-48, fy+12);
+    ctx.fillText(g.goles, W-s(52), fy+s(14));
+    // Label "GOLES" — Rajdhani
     ctx.fillStyle='rgba(201,162,39,0.55)';
-    ctx.font='500 11px "Rajdhani", Arial, sans-serif';
-    ctx.fillText('GOL'+(g.goles!==1?'ES':''), W-20, fy-4);
+    ctx.font=`700 ${s(12)}px "Rajdhani", Arial, sans-serif`;
+    ctx.fillText('GOL'+(g.goles!==1?'ES':''), W-s(22), fy-s(6));
     ctx.textBaseline='alphabetic';
 
     ctx.fillStyle='rgba(255,255,255,0.04)';
@@ -7193,8 +8185,7 @@ async function generarImagenGoleadores(){
     y+=ROW_H;
   });
 
-  y+=12;
-  cvFooter(ctx,W,y,liga);
+  cvFooter(ctx,W,CV_H - s(40),liga);
   ctx.textAlign='left'; ctx.textBaseline='alphabetic';
   return canvas;
 }
@@ -7207,25 +8198,30 @@ async function generarImagenProximos(ids){
   const ps   = ids.map(sid=>data.partidos.find(p=>String(p.id)===String(sid))).filter(Boolean);
   if(!ps.length) return null;
 
-  const W     = 700;
-  const ROW_H = 60;
-  const H     = 64 + 46 + ps.length * ROW_H + 12 + 34;
+  const W     = CV_W;
+  const ROW_H = s(70);
+  const hHeader   = s(64);
+  const hTitulo   = s(52);
+  const hFilas    = ps.length * ROW_H + s(12);
+  const hFooter   = s(40);
+  const hContenido = hHeader + hTitulo + hFilas + hFooter;
+  const yOffset = Math.max(0, Math.floor((CV_H - hContenido) / 2));
 
   const canvas = document.createElement('canvas');
-  canvas.width = W; canvas.height = H;
+  canvas.width = W; canvas.height = CV_H;
   const ctx = canvas.getContext('2d');
   ctx.textBaseline = 'alphabetic';
 
-  ctx.fillStyle = C.NEG2; ctx.fillRect(0, 0, W, H);
-  let y = await cvHeader(ctx, W, id, 0);
+  ctx.fillStyle = C.NEG2; ctx.fillRect(0, 0, W, CV_H);
+  let y = await cvHeader(ctx, W, id, yOffset);
 
-  // Subtítulo
+  // Título — Bebas Neue
   const divLabel = ps[0].div==='primera'?'PRIMERA DIVISIÓN':'SEGUNDA DIVISIÓN';
   ctx.fillStyle = C.DORADO;
-  ctx.font = '700 15px "Rajdhani", Arial, sans-serif';
+  ctx.font = `${s(22)}px "Bebas Neue", Arial, sans-serif`;
   ctx.textAlign = 'center';
-  ctx.fillText('PRÓXIMOS PARTIDOS  ·  ' + divLabel, W/2, y + 30);
-  y += 46;
+  ctx.fillText('PRÓXIMOS PARTIDOS  ·  ' + divLabel, W/2, y + s(34));
+  y += s(52);
 
   // Precargar escudos
   const escudoImgs = {};
@@ -7245,61 +8241,62 @@ async function generarImagenProximos(ids){
     ctx.fillStyle = i%2===0 ? 'rgba(255,255,255,0.025)' : 'rgba(0,0,0,0.12)';
     ctx.fillRect(0, y, W, ROW_H);
 
-    const ECSIZE = 28;
+    const ECSIZE = s(36);
     const CX = W / 2;
 
-    // Hora / día (izquierda)
+    // Hora / día — Rajdhani (etiqueta funcional)
     ctx.fillStyle = C.DORADO;
-    ctx.font = '700 12px "Rajdhani", Arial, sans-serif';
+    ctx.font = `700 ${s(14)}px "Rajdhani", Arial, sans-serif`;
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    const horaStr = (p.hora||'') + (p.dia ? '\n' + p.dia : '');
-    ctx.fillText(p.hora||'–', 14, fy - 6);
+    ctx.fillText(p.hora||'–', s(16), fy - s(7));
     if(p.dia){
-      ctx.fillStyle = 'rgba(255,255,255,0.3)';
-      ctx.font = '500 10px "Rajdhani", Arial, sans-serif';
-      ctx.fillText(p.dia, 14, fy + 8);
+      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      ctx.font = `400 ${s(12)}px "DM Sans", Arial, sans-serif`;
+      ctx.fillText(p.dia, s(16), fy + s(9));
     }
 
-    // VS badge (centro)
+    // VS badge — Bebas Neue para el texto
+    const vsW=s(52), vsH=s(32);
     ctx.fillStyle = C.NEG4;
-    cvRoundRect(ctx, CX-22, fy-14, 44, 28, 5);
+    cvRoundRect(ctx, CX-vsW/2, fy-vsH/2, vsW, vsH, s(5));
     ctx.fill();
-    ctx.fillStyle = 'rgba(201,162,39,0.6)';
-    ctx.font = '700 12px "Rajdhani", Arial, sans-serif';
+    ctx.fillStyle = C.DORADO;
+    ctx.font = `${s(18)}px "Bebas Neue", Arial, sans-serif`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('VS', CX, fy);
+    ctx.fillText('VS', CX, fy+1);
 
-    // Local (escudo + nombre, a la izquierda del VS)
-    const escLX = CX - 22 - 12 - ECSIZE;
+    // Local (escudo + nombre) — Bebas Neue para nombre
+    const escLX = CX - vsW/2 - s(14) - ECSIZE;
     const escLY = y + (ROW_H - ECSIZE) / 2;
     const eImgL = escudoImgs[p.local];
     if(eImgL){
       ctx.save(); ctx.beginPath(); ctx.arc(escLX+ECSIZE/2,escLY+ECSIZE/2,ECSIZE/2,0,Math.PI*2); ctx.clip();
       ctx.drawImage(eImgL,escLX,escLY,ECSIZE,ECSIZE); ctx.restore();
     } else { cvEscudoFallback(ctx,p.local,escLX,escLY,ECSIZE); }
-    ctx.fillStyle = C.BLANCO; ctx.font = '700 13px "Rajdhani", Arial, sans-serif';
+    ctx.fillStyle = C.BLANCO;
+    ctx.font = `${s(17)}px "Bebas Neue", Arial, sans-serif`;
     ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-    cvFillTextTrunc(ctx, p.local.toUpperCase(), escLX - 8, fy, escLX - 80);
+    cvFillTextTrunc(ctx, p.local.toUpperCase(), escLX - s(10), fy, escLX - s(90));
 
-    // Visitante (nombre + escudo, a la derecha del VS)
-    const escVX = CX + 22 + 12;
+    // Visitante (nombre + escudo) — Bebas Neue para nombre
+    const escVX = CX + vsW/2 + s(14);
     const escVY = y + (ROW_H - ECSIZE) / 2;
     const eImgV = escudoImgs[p.visit];
     if(eImgV){
       ctx.save(); ctx.beginPath(); ctx.arc(escVX+ECSIZE/2,escVY+ECSIZE/2,ECSIZE/2,0,Math.PI*2); ctx.clip();
       ctx.drawImage(eImgV,escVX,escVY,ECSIZE,ECSIZE); ctx.restore();
     } else { cvEscudoFallback(ctx,p.visit,escVX,escVY,ECSIZE); }
-    ctx.fillStyle = C.BLANCO; ctx.font = '700 13px "Rajdhani", Arial, sans-serif';
+    ctx.fillStyle = C.BLANCO;
+    ctx.font = `${s(17)}px "Bebas Neue", Arial, sans-serif`;
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    cvFillTextTrunc(ctx, p.visit.toUpperCase(), escVX + ECSIZE + 8, fy, W - escVX - ECSIZE - 20);
+    cvFillTextTrunc(ctx, p.visit.toUpperCase(), escVX + ECSIZE + s(10), fy, W - escVX - ECSIZE - s(20));
 
     ctx.fillStyle = 'rgba(255,255,255,0.04)';
     ctx.fillRect(0, y + ROW_H - 1, W, 1);
     y += ROW_H;
   });
 
-  y += 12;
-  cvFooter(ctx, W, y, liga);
+  cvFooter(ctx, W, CV_H - s(40), liga);
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   return canvas;
 }
@@ -7311,96 +8308,398 @@ async function generarImagenNoticia(noticiaId){
   if(!n) return null;
   const id   = getIdentidad();
   const liga = id.nombre||'DEPORTEMAS';
-  const W    = 700;
+  const W    = CV_W;
 
-  // Calcular alto dinámico según contenido
-  const MAX_TITULO_W = W - 80;
-  const tmpCanvas = document.createElement('canvas');
-  tmpCanvas.width = W; tmpCanvas.height = 1;
-  const tmpCtx = tmpCanvas.getContext('2d');
-  tmpCtx.font = '700 26px "Rajdhani", Arial, sans-serif';
-  // Estimar líneas del título
-  const tituloLineas = Math.ceil(tmpCtx.measureText(n.titulo).width / MAX_TITULO_W) + 1;
-  const tituloH = tituloLineas * 34;
-  const bajadaH = n.bajada ? Math.ceil(tmpCtx.measureText(n.bajada).width / MAX_TITULO_W) * 22 + 20 : 0;
-  const imgH    = n.img ? 220 : 0;
-  const H = 64 + (imgH ? imgH : 0) + 24 + 28 + tituloH + bajadaH + 50 + 34;
-
+  // Canvas fijo 1080×1350
   const canvas = document.createElement('canvas');
-  canvas.width = W; canvas.height = H;
+  canvas.width = W; canvas.height = CV_H;
   const ctx = canvas.getContext('2d');
   ctx.textBaseline = 'alphabetic';
 
-  ctx.fillStyle = C.NEG2; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle = C.NEG2; ctx.fillRect(0,0,W,CV_H);
   let y = await cvHeader(ctx, W, id, 0);
 
-  // Imagen de portada
+  // Imagen de portada — ocupa todo el espacio sin distorsión (object-fit: cover)
+  const imgH = n.img ? s(480) : 0;
   if(n.img){
     await new Promise(res=>{
       const img=new Image();
-      img.onload=()=>{ ctx.drawImage(img,0,y,W,imgH); res(); };
+      img.onload=()=>{
+        // Calcular recorte centrado (cover)
+        const iW=img.naturalWidth, iH=img.naturalHeight;
+        const scaleX=W/iW, scaleY=imgH/iH;
+        const scale=Math.max(scaleX,scaleY);
+        const dw=iW*scale, dh=iH*scale;
+        const dx=(W-dw)/2, dy=y+(imgH-dh)/2;
+        ctx.drawImage(img, dx, dy, dw, dh);
+        res();
+      };
       img.onerror=()=>res();
       img.src=n.img;
     });
-    // Gradiente encima de la imagen para legibilidad
-    const imgGrad=ctx.createLinearGradient(0,y+imgH-80,0,y+imgH);
-    imgGrad.addColorStop(0,'transparent');
-    imgGrad.addColorStop(1,C.NEG2);
-    ctx.fillStyle=imgGrad; ctx.fillRect(0,y+imgH-80,W,80);
+    // Gradiente inferior para que el texto encima sea legible
+    const imgGrad=ctx.createLinearGradient(0,y,0,y+imgH);
+    imgGrad.addColorStop(0,'rgba(8,8,16,0.1)');
+    imgGrad.addColorStop(0.5,'rgba(8,8,16,0.2)');
+    imgGrad.addColorStop(1,'rgba(8,8,16,0.96)');
+    ctx.fillStyle=imgGrad; ctx.fillRect(0,y,W,imgH);
     y += imgH;
   }
 
-  y += 18;
+  y += s(22);
 
-  // Badge categoría
+  // Badge categoría — Rajdhani
   ctx.fillStyle='rgba(201,162,39,0.15)';
   const catTxt=(n.cat||'Noticias').toUpperCase();
-  ctx.font='700 11px "Rajdhani", Arial, sans-serif';
-  const catW=ctx.measureText(catTxt).width+20;
-  cvRoundRect(ctx,40,y-14,catW,22,4); ctx.fill();
+  ctx.font=`700 ${s(13)}px "Rajdhani", Arial, sans-serif`;
+  const catW=ctx.measureText(catTxt).width+s(24);
+  cvRoundRect(ctx,s(40),y-s(16),catW,s(28),s(6)); ctx.fill();
   ctx.fillStyle=C.DORADO; ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText(catTxt,40+catW/2,y-3);
+  ctx.fillText(catTxt,s(40)+catW/2,y-s(2));
   ctx.textBaseline='alphabetic';
-  y += 16;
+  y += s(24);
 
-  // Título (multilinea manual)
+  // Título — Bebas Neue, grande e impactante
+  const MAX_TITULO_W = W - s(80);
   ctx.fillStyle = C.BLANCO;
-  ctx.font = '700 26px "Rajdhani", Arial, sans-serif';
+  ctx.font = `${s(52)}px "Bebas Neue", Arial, sans-serif`;
   ctx.textAlign = 'left';
   const tituloWords = n.titulo.toUpperCase().split(' ');
-  let linea=''; let ly=y+26;
+  let linea=''; let ly=y+s(52);
   tituloWords.forEach(word=>{
     const test=linea?linea+' '+word:word;
     if(ctx.measureText(test).width>MAX_TITULO_W&&linea){
-      ctx.fillText(linea,40,ly); ly+=34; linea=word;
+      ctx.fillText(linea,s(40),ly); ly+=s(58); linea=word;
     } else { linea=test; }
   });
-  if(linea){ ctx.fillText(linea,40,ly); ly+=34; }
-  y=ly+4;
+  if(linea){ ctx.fillText(linea,s(40),ly); ly+=s(58); }
+  y=ly+s(10);
 
-  // Bajada
+  // Bajada — DM Sans
   if(n.bajada){
-    ctx.fillStyle='rgba(255,255,255,0.6)';
-    ctx.font='500 15px "Rajdhani", Arial, sans-serif';
+    ctx.fillStyle='rgba(255,255,255,0.65)';
+    ctx.font=`400 ${s(20)}px "DM Sans", Arial, sans-serif`;
     const bajadaWords=n.bajada.split(' ');
-    let bl=''; let by=y+18;
+    let bl=''; let by=y+s(22);
     bajadaWords.forEach(w=>{
       const t=bl?bl+' '+w:w;
-      if(ctx.measureText(t).width>MAX_TITULO_W&&bl){ ctx.fillText(bl,40,by); by+=22; bl=w; }
+      if(ctx.measureText(t).width>MAX_TITULO_W&&bl){ ctx.fillText(bl,s(40),by); by+=s(28); bl=w; }
       else bl=t;
     });
-    if(bl){ ctx.fillText(bl,40,by); by+=22; }
-    y=by+8;
+    if(bl){ ctx.fillText(bl,s(40),by); by+=s(28); }
+    y=by+s(12);
   }
 
-  // Meta: fecha + autor
-  ctx.fillStyle='rgba(201,162,39,0.55)';
-  ctx.font='600 12px "Rajdhani", Arial, sans-serif';
-  ctx.fillText(`📅 ${n.fecha||''}  ·  ✍ ${n.autor||'Redacción'}`, 40, y+16);
-  y+=36;
+  // Meta — DM Sans
+  ctx.fillStyle='rgba(201,162,39,0.6)';
+  ctx.font=`500 ${s(15)}px "DM Sans", Arial, sans-serif`;
+  ctx.fillText(`📅 ${n.fecha||''}  ·  ✍ ${n.autor||'Redacción'}`, s(40), y+s(18));
 
-  cvFooter(ctx,W,y,liga);
+  cvFooter(ctx,W,CV_H - s(40),liga);
   ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+  return canvas;
+}
+
+// ── Generador: Transferencia ──────────────────────────────────
+async function generarImagenTransferencia(tfId){
+  await document.fonts.ready;
+  const t = getTransferencias().find(x=>x.id===tfId);
+  if(!t) return null;
+  const id   = getIdentidad();
+  const liga = id.nombre||'DEPORTEMAS';
+  const W    = CV_W;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = CV_H;
+  const ctx = canvas.getContext('2d');
+  ctx.textBaseline = 'alphabetic';
+
+  // ── Fondo base ───────────────────────────────────────────────
+  ctx.fillStyle = C.NEG2;
+  ctx.fillRect(0, 0, W, CV_H);
+
+  // ── Header ───────────────────────────────────────────────────
+  let y = await cvHeader(ctx, W, id, 0);
+
+  // ── Foto del jugador (zona superior) ─────────────────────────
+  const fotoH = s(420);
+  if(t.foto){
+    await new Promise(res=>{
+      const img = new Image();
+      img.onload = () => {
+        // Dibujar la foto escalada y centrada
+        const ratio  = img.naturalWidth / img.naturalHeight;
+        let dw = W, dh = W / ratio;
+        if(dh < fotoH){ dh = fotoH; dw = fotoH * ratio; }
+        const dx = (W - dw) / 2;
+        const dy = y;
+        ctx.drawImage(img, dx, dy, dw, dh);
+        res();
+      };
+      img.onerror = () => res();
+      img.src = t.foto;
+    });
+  } else {
+    // Placeholder oscuro con emoji
+    const grad = ctx.createLinearGradient(0, y, 0, y+fotoH);
+    grad.addColorStop(0, C.NEG3); grad.addColorStop(1, C.NEG4);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, y, W, fotoH);
+    ctx.font      = `${s(120)}px sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('⚽', W/2, y + fotoH/2);
+    ctx.textBaseline = 'alphabetic';
+  }
+
+  // Gradiente sobre la foto (de transparente a fondo oscuro)
+  const photoGrad = ctx.createLinearGradient(0, y, 0, y + fotoH);
+  photoGrad.addColorStop(0, 'rgba(8,8,16,0.08)');
+  photoGrad.addColorStop(0.55, 'rgba(8,8,16,0.15)');
+  photoGrad.addColorStop(1,  'rgba(8,8,16,0.95)');
+  ctx.fillStyle = photoGrad;
+  ctx.fillRect(0, y, W, fotoH);
+  y += fotoH;
+
+  // ── Badge tipo de movimiento ──────────────────────────────────
+  const tipoLabel = {alta:'INCORPORACIÓN', baja:'SALIDA', prestamo:'PRÉSTAMO'};
+  const tipoCol   = {alta:'rgba(26,107,47,0.85)', baja:'rgba(192,57,43,0.85)', prestamo:'rgba(201,162,39,0.85)'};
+  const tipoTxt   = {alta:'#4caf74', baja:'#ff7070', prestamo:C.NEG};
+  const badgeTxt  = tipoLabel[t.tipo] || t.tipo.toUpperCase();
+  ctx.font = `700 ${s(14)}px "Rajdhani", Arial, sans-serif`;
+  const badgeW = ctx.measureText(badgeTxt).width + s(28);
+  cvRoundRect(ctx, s(40), y - s(18), badgeW, s(30), s(6));
+  ctx.fillStyle = tipoCol[t.tipo]||'rgba(201,162,39,0.85)'; ctx.fill();
+  ctx.fillStyle = tipoTxt[t.tipo]||C.NEG;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(badgeTxt, s(40) + badgeW/2, y - s(3));
+  ctx.textBaseline = 'alphabetic';
+  y += s(20);
+
+  // ── Nombre del jugador — Bebas Neue ──────────────────────────
+  ctx.fillStyle = C.BLANCO;
+  ctx.font      = `${s(72)}px "Bebas Neue", Arial, sans-serif`;
+  ctx.textAlign = 'left';
+  cvFillTextTrunc(ctx, t.nombre.toUpperCase(), s(40), y + s(70), W - s(80));
+  y += s(78);
+
+  // ── Posición — Rajdhani ───────────────────────────────────────
+  ctx.fillStyle = 'rgba(201,162,39,0.7)';
+  ctx.font      = `700 ${s(20)}px "Rajdhani", Arial, sans-serif`;
+  ctx.fillText(t.posicion.toUpperCase(), s(40), y);
+  y += s(36);
+
+  // ── Separador dorado ─────────────────────────────────────────
+  ctx.fillStyle = 'rgba(201,162,39,0.3)';
+  ctx.fillRect(s(40), y, W - s(80), 1);
+  y += s(28);
+
+  // ── Clubes: origen → destino con escudos ─────────────────────
+  const ESC = s(58);
+  const CX  = W / 2;
+
+  // Club origen (izquierda)
+  const escOrigImg = await cvDrawEscudoPromise(t.origen, ESC);
+  const oriX = CX - s(160) - ESC;
+  const oriY = y;
+  if(escOrigImg){
+    ctx.save();
+    ctx.beginPath(); ctx.arc(oriX+ESC/2, oriY+ESC/2, ESC/2, 0, Math.PI*2); ctx.clip();
+    ctx.drawImage(escOrigImg, oriX, oriY, ESC, ESC);
+    ctx.restore();
+  } else {
+    cvEscudoFallback(ctx, t.origen, oriX, oriY, ESC);
+  }
+  ctx.fillStyle = C.BLANCO;
+  ctx.font      = `600 ${s(16)}px "DM Sans", Arial, sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  cvFillTextTruncCenter(ctx, t.origen, oriX + ESC/2, oriY + ESC + s(8), s(160));
+  ctx.textBaseline = 'alphabetic';
+
+  // Flecha central — Bebas Neue
+  ctx.fillStyle = C.DORADO;
+  ctx.font      = `${s(48)}px "Bebas Neue", Arial, sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('→', CX, oriY + ESC/2);
+  ctx.textBaseline = 'alphabetic';
+
+  // Club destino (derecha)
+  const escDestImg = await cvDrawEscudoPromise(t.destino, ESC);
+  const destX = CX + s(160);
+  const destY = y;
+  if(escDestImg){
+    ctx.save();
+    ctx.beginPath(); ctx.arc(destX+ESC/2, destY+ESC/2, ESC/2, 0, Math.PI*2); ctx.clip();
+    ctx.drawImage(escDestImg, destX, destY, ESC, ESC);
+    ctx.restore();
+  } else {
+    cvEscudoFallback(ctx, t.destino, destX, destY, ESC);
+  }
+  ctx.fillStyle = C.BLANCO;
+  ctx.font      = `600 ${s(16)}px "DM Sans", Arial, sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  cvFillTextTruncCenter(ctx, t.destino, destX + ESC/2, destY + ESC + s(8), s(160));
+  ctx.textBaseline = 'alphabetic';
+
+  y += ESC + s(52);
+
+  // ── Descripción opcional — DM Sans ───────────────────────────
+  if(t.desc){
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.font      = `400 ${s(18)}px "DM Sans", Arial, sans-serif`;
+    ctx.textAlign = 'center';
+    cvFillTextTrunc(ctx, t.desc, W/2, y + s(18), W - s(80));
+    y += s(36);
+  }
+
+  // ── Mercado badge inferior ────────────────────────────────────
+  const mercLabel = {verano:'☀ MERCADO DE VERANO', invierno:'❄ MERCADO DE INVIERNO'};
+  const mercColor = {verano:'rgba(201,162,39,0.2)', invierno:'rgba(58,155,213,0.2)'};
+  const mercTxtC  = {verano:C.DORADO, invierno:'#3a9bd5'};
+  const mTxt = mercLabel[t.mercado] || t.mercado.toUpperCase();
+  ctx.font = `700 ${s(14)}px "Rajdhani", Arial, sans-serif`;
+  const mW = ctx.measureText(mTxt).width + s(32);
+  cvRoundRect(ctx, W/2-mW/2, CV_H - s(90), mW, s(32), s(16));
+  ctx.fillStyle = mercColor[t.mercado]||'rgba(201,162,39,0.2)'; ctx.fill();
+  ctx.fillStyle = mercTxtC[t.mercado]||C.DORADO;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(mTxt, W/2, CV_H - s(74));
+  ctx.textBaseline = 'alphabetic';
+
+  cvFooter(ctx, W, CV_H - s(40), liga);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  return canvas;
+}
+
+// Helper: carga un escudo y devuelve la imagen (o null)
+function cvDrawEscudoPromise(nombre, size){
+  return new Promise(res=>{
+    const entry = escudos[nombre]||escudos[normalizar(nombre)];
+    const src   = entry&&typeof entry==='object'?entry.img:entry;
+    if(!src){ res(null); return; }
+    const img = new Image();
+    img.onload  = () => res(img);
+    img.onerror = () => res(null);
+    img.src = src;
+  });
+}
+
+// Helper: texto centrado con truncado
+function cvFillTextTruncCenter(ctx, text, cx, y, maxW){
+  let t = text||'';
+  while(ctx.measureText(t).width > maxW && t.length > 1) t = t.slice(0,-1);
+  if(t !== text) t = t.slice(0,-1)+'…';
+  ctx.fillText(t, cx, y);
+}
+
+// ── Generador: Resultados de Reserva (una fecha completa) ─────
+async function generarImagenReserva(ids){
+  await document.fonts.ready;
+  const id   = getIdentidad();
+  const liga = id.nombre||'DEPORTEMAS';
+  const W    = CV_W;
+
+  const ps = ids.map(sid=>data.partidos.find(p=>String(p.id)===String(sid))).filter(Boolean);
+  if(!ps.length) return null;
+
+  const ROW_H    = s(68);
+  const hHeader  = s(64);
+  const hTitulo  = s(52);
+  const hFilas   = ps.length * ROW_H + s(12);
+  const hFooter  = s(40);
+  const hContenido = hHeader + hTitulo + hFilas + hFooter;
+  const yOffset  = Math.max(0, Math.floor((CV_H - hContenido) / 2));
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = CV_H;
+  const ctx = canvas.getContext('2d');
+  ctx.textBaseline = 'alphabetic';
+
+  ctx.fillStyle = C.NEG2; ctx.fillRect(0, 0, W, CV_H);
+  let y = await cvHeader(ctx, W, id, yOffset);
+
+  // Título
+  const divLabel = ps[0].div==='primera'?'PRIMERA DIVISIÓN':'SEGUNDA DIVISIÓN';
+  const fecha    = ps[0].fecha||'';
+  ctx.fillStyle  = C.DORADO;
+  ctx.font       = `${s(20)}px "Bebas Neue", Arial, sans-serif`;
+  ctx.textAlign  = 'center';
+  ctx.fillText(`RESERVA  ·  ${fecha}  ·  ${divLabel}`, W/2, y+s(34));
+  y += s(52);
+
+  // Precargar escudos
+  const escudoImgs = {};
+  const equipos = [...new Set(ps.flatMap(p=>[p.local,p.visit]))];
+  await Promise.all(equipos.map(nombre=>new Promise(res=>{
+    const entry=escudos[nombre]||escudos[normalizar(nombre)];
+    const src=entry&&typeof entry==='object'?entry.img:entry;
+    if(!src){res();return;}
+    const img=new Image();
+    img.onload=()=>{escudoImgs[nombre]=img;res();};
+    img.onerror=()=>res();
+    img.src=src;
+  })));
+
+  ps.forEach((p, i) => {
+    const fy  = y + ROW_H / 2;
+    const CX  = W / 2;
+    const ECSIZE = s(32);
+
+    ctx.fillStyle = i%2===0 ? 'rgba(255,255,255,0.025)' : 'rgba(0,0,0,0.12)';
+    ctx.fillRect(0, y, W, ROW_H);
+
+    // Marcador central (caja dorada si jugado)
+    const resText = p.resultado || 'VS';
+    const mW = s(100), mH = s(40);
+    cvRoundRect(ctx, CX-mW/2, fy-mH/2, mW, mH, s(6));
+    if(p.estado==='jugado'){
+      const mg = ctx.createLinearGradient(CX-mW/2, 0, CX+mW/2, 0);
+      mg.addColorStop(0, C.DORADO); mg.addColorStop(1, C.DORADO2);
+      ctx.fillStyle = mg;
+    } else {
+      ctx.fillStyle = C.NEG4;
+    }
+    ctx.fill();
+    ctx.fillStyle  = p.estado==='jugado' ? C.NEG : C.DORADO;
+    ctx.font       = `${s(26)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.textAlign  = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(resText, CX, fy+1);
+    ctx.textBaseline = 'alphabetic';
+
+    // Escudo + nombre local (izquierda del marcador)
+    const escLX = CX - mW/2 - s(14) - ECSIZE;
+    const escLY = y + (ROW_H - ECSIZE) / 2;
+    const eImgL = escudoImgs[p.local];
+    if(eImgL){
+      ctx.save(); ctx.beginPath();
+      ctx.arc(escLX+ECSIZE/2, escLY+ECSIZE/2, ECSIZE/2, 0, Math.PI*2); ctx.clip();
+      ctx.drawImage(eImgL, escLX, escLY, ECSIZE, ECSIZE); ctx.restore();
+    } else { cvEscudoFallback(ctx, p.local, escLX, escLY, ECSIZE); }
+    ctx.fillStyle = C.BLANCO;
+    ctx.font      = `${s(17)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    cvFillTextTrunc(ctx, p.local.toUpperCase(), escLX-s(10), fy, escLX - s(20));
+
+    // Escudo + nombre visitante (derecha del marcador)
+    const escVX = CX + mW/2 + s(14);
+    const escVY = y + (ROW_H - ECSIZE) / 2;
+    const eImgV = escudoImgs[p.visit];
+    if(eImgV){
+      ctx.save(); ctx.beginPath();
+      ctx.arc(escVX+ECSIZE/2, escVY+ECSIZE/2, ECSIZE/2, 0, Math.PI*2); ctx.clip();
+      ctx.drawImage(eImgV, escVX, escVY, ECSIZE, ECSIZE); ctx.restore();
+    } else { cvEscudoFallback(ctx, p.visit, escVX, escVY, ECSIZE); }
+    ctx.fillStyle = C.BLANCO;
+    ctx.font      = `${s(17)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    cvFillTextTrunc(ctx, p.visit.toUpperCase(), escVX+ECSIZE+s(10), fy, W - escVX - ECSIZE - s(20));
+
+    ctx.fillStyle = 'rgba(255,255,255,0.04)';
+    ctx.fillRect(0, y+ROW_H-1, W, 1);
+    y += ROW_H;
+  });
+
+  cvFooter(ctx, W, CV_H - s(40), liga);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   return canvas;
 }
 
@@ -7411,64 +8710,67 @@ async function generarImagenTorneo(torneoId){
   if(!t) return null;
   const id   = getIdentidad();
   const liga = id.nombre||'DEPORTEMAS';
-  const W    = 700;
-  const H    = 64 + 220 + 34;
+  const W    = CV_W;
+  const cuerpoH = s(240);
 
   const canvas = document.createElement('canvas');
-  canvas.width=W; canvas.height=H;
+  canvas.width=W; canvas.height=CV_H;
   const ctx=canvas.getContext('2d');
   ctx.textBaseline='alphabetic';
 
-  ctx.fillStyle=C.NEG2; ctx.fillRect(0,0,W,H);
-  let y=await cvHeader(ctx,W,id,0);
+  ctx.fillStyle=C.NEG2; ctx.fillRect(0,0,W,CV_H);
 
-  // Fondo central
-  const grad=ctx.createLinearGradient(0,y,0,y+220);
+  const hHeader = s(64), hFooter = s(40);
+  const hContenido = hHeader + cuerpoH + hFooter;
+  const yOffset = Math.max(0, Math.floor((CV_H - hContenido) / 2));
+
+  let y=await cvHeader(ctx,W,id,yOffset);
+
+  const grad=ctx.createLinearGradient(0,y,0,y+cuerpoH);
   grad.addColorStop(0,C.NEG3); grad.addColorStop(1,C.NEG2);
-  ctx.fillStyle=grad; ctx.fillRect(0,y,W,220);
+  ctx.fillStyle=grad; ctx.fillRect(0,y,W,cuerpoH);
 
-  // Ícono trofeo (grande)
-  ctx.font=`80px sans-serif`;
+  // Trofeo
+  ctx.font=`${s(88)}px sans-serif`;
   ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText('🏆',W/2,y+70);
+  ctx.fillText('🏆',W/2,y+s(76));
   ctx.textBaseline='alphabetic';
 
-  // Nombre del torneo
+  // Nombre torneo — Bebas Neue
   ctx.fillStyle=C.BLANCO;
-  ctx.font='700 28px "Rajdhani", Arial, sans-serif';
+  ctx.font=`${s(36)}px "Bebas Neue", Arial, sans-serif`;
   ctx.textAlign='center'; ctx.textBaseline='alphabetic';
-  cvFillTextTrunc(ctx,t.nombre.toUpperCase(),W/2,y+128,W-80);
-  ctx.textBaseline='alphabetic';
+  cvFillTextTrunc(ctx,t.nombre.toUpperCase(),W/2,y+s(140),W-s(80));
 
-  // Descripción
+  // Descripción — DM Sans
   if(t.desc){
     ctx.fillStyle='rgba(255,255,255,0.5)';
-    ctx.font='500 14px "Rajdhani", Arial, sans-serif';
-    cvFillTextTrunc(ctx,t.desc,W/2,y+153,W-120);
+    ctx.font=`400 ${s(16)}px "DM Sans", Arial, sans-serif`;
+    cvFillTextTrunc(ctx,t.desc,W/2,y+s(166),W-s(120));
   }
 
-  // Badge estado + fechas
+  // Badge estado — Rajdhani
   const estadoTxt=t.estado==='activo'?'EN CURSO':t.estado==='proximo'?'PRÓXIMO':'FINALIZADO';
   const estadoCol=t.estado==='activo'?'rgba(26,107,47,0.6)':t.estado==='proximo'?'rgba(201,162,39,0.2)':'rgba(100,100,100,0.4)';
   const estadoTxtCol=t.estado==='activo'?'#4caf74':t.estado==='proximo'?C.DORADO:C.GRIS;
-  ctx.font='700 12px "Rajdhani", Arial, sans-serif';
-  const bW=ctx.measureText(estadoTxt).width+24;
-  cvRoundRect(ctx,W/2-bW/2,y+164,bW,24,5);
+  ctx.font=`700 ${s(14)}px "Rajdhani", Arial, sans-serif`;
+  const bW=ctx.measureText(estadoTxt).width+s(28);
+  cvRoundRect(ctx,W/2-bW/2,y+s(178),bW,s(28),s(6));
   ctx.fillStyle=estadoCol; ctx.fill();
   ctx.fillStyle=estadoTxtCol; ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText(estadoTxt,W/2,y+176);
+  ctx.fillText(estadoTxt,W/2,y+s(192));
   ctx.textBaseline='alphabetic';
 
-  // Fechas
+  // Fechas — DM Sans
   if(t.inicio||t.cierre){
-    ctx.fillStyle='rgba(201,162,39,0.55)';
-    ctx.font='600 12px "Rajdhani", Arial, sans-serif';
+    ctx.fillStyle='rgba(201,162,39,0.6)';
+    ctx.font=`500 ${s(14)}px "DM Sans", Arial, sans-serif`;
     ctx.textAlign='center';
     const fechas=[(t.inicio?'Inicio: '+t.inicio:''),(t.cierre?'Cierre: '+t.cierre:'')].filter(Boolean).join('  ·  ');
-    ctx.fillText(fechas,W/2,y+202);
+    ctx.fillText(fechas,W/2,y+s(222));
   }
 
-  cvFooter(ctx,W,y+220,liga);
+  cvFooter(ctx,W,CV_H - s(40),liga);
   ctx.textAlign='left'; ctx.textBaseline='alphabetic';
   return canvas;
 }
@@ -7478,7 +8780,7 @@ async function generarImagenPlayoff(torneo){
   await document.fonts.ready;
   const id   = getIdentidad();
   const liga = id.nombre||'DEPORTEMAS';
-  const W    = 700;
+  const W    = CV_W;
 
   const playoff = data.playoff.filter(c=>c.torneo===torneo);
   if(!playoff.length) return null;
@@ -7489,26 +8791,29 @@ async function generarImagenPlayoff(torneo){
     { label:'FINAL',            cruces: playoff.filter(c=>c.etapa==='final') },
   ].filter(e=>e.cruces.length);
 
-  // Calcular altura: por cada cruce = 54px, header etapa = 34px, separador = 12px
+  // Calcular altura del contenido con escala
   const totalCruces = etapas.reduce((a,e)=>a+e.cruces.length, 0);
-  const H = 64 + 50 + etapas.length*(34+12) + totalCruces*54 + 12 + 34;
+  const hHeader = s(64), hTitulo = s(56), hFooter = s(40);
+  const hTabla  = etapas.length*(s(38)+s(12)) + totalCruces*s(62) + s(12);
+  const hContenido = hHeader + hTitulo + hTabla + hFooter;
+  const yOffset = Math.max(0, Math.floor((CV_H - hContenido) / 2));
 
   const canvas = document.createElement('canvas');
-  canvas.width=W; canvas.height=H;
+  canvas.width=W; canvas.height=CV_H;
   const ctx=canvas.getContext('2d');
   ctx.textBaseline='alphabetic';
 
-  ctx.fillStyle=C.NEG2; ctx.fillRect(0,0,W,H);
-  let y = await cvHeader(ctx,W,id,0);
+  ctx.fillStyle=C.NEG2; ctx.fillRect(0,0,W,CV_H);
+  let y = await cvHeader(ctx,W,id,yOffset);
 
-  // Título
+  // Título — Bebas Neue
   ctx.fillStyle=C.DORADO;
-  ctx.font='700 16px "Rajdhani", Arial, sans-serif';
+  ctx.font=`${s(22)}px "Bebas Neue", Arial, sans-serif`;
   ctx.textAlign='center';
-  ctx.fillText('PLAY OFF  ·  '+torneoLabel(torneo).toUpperCase()+'  ·  PRIMERA DIVISIÓN', W/2, y+32);
-  y+=50;
+  ctx.fillText('PLAY OFF  ·  '+torneoLabel(torneo).toUpperCase()+'  ·  PRIMERA DIVISIÓN', W/2, y+s(36));
+  y+=s(56);
 
-  // Precargar escudos de todos los equipos involucrados
+  // Precargar escudos
   const equiposSet = new Set(playoff.flatMap(c=>[c.local,c.visit].filter(Boolean)));
   const escudoImgs={};
   await Promise.all([...equiposSet].map(nombre=>new Promise(res=>{
@@ -7519,82 +8824,83 @@ async function generarImagenPlayoff(torneo){
     img.onload=()=>{escudoImgs[nombre]=img;res();}; img.onerror=()=>res(); img.src=src;
   })));
 
-  const ECSIZE = 26;
+  const ECSIZE = s(32);
   const CX = W/2;
 
   for(const etapa of etapas){
-    // Header etapa
+    // Header etapa — Rajdhani
     ctx.fillStyle='rgba(201,162,39,0.12)';
-    ctx.fillRect(0,y,W,28);
+    ctx.fillRect(0,y,W,s(32));
     ctx.fillStyle=C.DORADO;
-    ctx.font='700 12px "Rajdhani", Arial, sans-serif';
+    ctx.font=`700 ${s(14)}px "Rajdhani", Arial, sans-serif`;
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(etapa.label, CX, y+14);
+    ctx.fillText(etapa.label, CX, y+s(16));
     ctx.textBaseline='alphabetic';
-    y+=34;
+    y+=s(38);
 
     for(const c of etapa.cruces){
-      const ROW=54;
+      const ROW=s(62);
       const fy=y+ROW/2;
 
       ctx.fillStyle='rgba(255,255,255,0.02)';
       ctx.fillRect(0,y,W,ROW);
 
-      // Local
+      // Local — Bebas Neue
       const eImgL=escudoImgs[c.local||''];
-      const escLX=CX-22-14-ECSIZE;
+      const escLX=CX-s(30)-s(16)-ECSIZE;
       const escLY=y+(ROW-ECSIZE)/2;
       if(eImgL){
         ctx.save(); ctx.beginPath(); ctx.arc(escLX+ECSIZE/2,escLY+ECSIZE/2,ECSIZE/2,0,Math.PI*2); ctx.clip();
         ctx.drawImage(eImgL,escLX,escLY,ECSIZE,ECSIZE); ctx.restore();
       } else if(c.local){ cvEscudoFallback(ctx,c.local,escLX,escLY,ECSIZE); }
-      ctx.fillStyle=C.BLANCO; ctx.font='700 13px "Rajdhani", Arial, sans-serif';
+      ctx.fillStyle=C.BLANCO;
+      ctx.font=`${s(16)}px "Bebas Neue", Arial, sans-serif`;
       ctx.textAlign='right'; ctx.textBaseline='middle';
-      cvFillTextTrunc(ctx,(c.local||'–').toUpperCase(), escLX-8, fy, escLX-16);
+      cvFillTextTrunc(ctx,(c.local||'–').toUpperCase(), escLX-s(10), fy, escLX-s(20));
 
-      // Visitante
+      // Visitante — Bebas Neue
       const eImgV=escudoImgs[c.visit||''];
-      const escVX=CX+22+14;
+      const escVX=CX+s(30)+s(16);
       const escVY=y+(ROW-ECSIZE)/2;
       if(eImgV){
         ctx.save(); ctx.beginPath(); ctx.arc(escVX+ECSIZE/2,escVY+ECSIZE/2,ECSIZE/2,0,Math.PI*2); ctx.clip();
         ctx.drawImage(eImgV,escVX,escVY,ECSIZE,ECSIZE); ctx.restore();
       } else if(c.visit){ cvEscudoFallback(ctx,c.visit,escVX,escVY,ECSIZE); }
-      ctx.fillStyle=C.BLANCO; ctx.font='700 13px "Rajdhani", Arial, sans-serif';
+      ctx.fillStyle=C.BLANCO;
+      ctx.font=`${s(16)}px "Bebas Neue", Arial, sans-serif`;
       ctx.textAlign='left'; ctx.textBaseline='middle';
-      cvFillTextTrunc(ctx,(c.visit||'–').toUpperCase(), escVX+ECSIZE+8, fy, W-escVX-ECSIZE-16);
+      cvFillTextTrunc(ctx,(c.visit||'–').toUpperCase(), escVX+ECSIZE+s(10), fy, W-escVX-ECSIZE-s(20));
 
-      // Marcador / VS (centro)
-      const marcTxt = c.idavuelta
-        ? (c.global||'IDA/VTA')
-        : (c.resultado||'VS');
+      // Marcador / VS — Bebas Neue para número, Rajdhani para VS
+      const marcTxt = c.idavuelta ? (c.global||'IDA/VTA') : (c.resultado||'VS');
       const estadoCls = c.estado||'pendiente';
       const mBg = estadoCls==='jugado'?'rgba(26,107,47,0.7)':estadoCls==='en-juego'?'rgba(192,57,43,0.7)':'rgba(35,35,48,0.9)';
       const mTxt= estadoCls==='jugado'?'#4caf74':estadoCls==='en-juego'?'#ff6655':C.DORADO;
-      const mW=60, mH=28;
-      cvRoundRect(ctx,CX-mW/2,fy-mH/2,mW,mH,5);
+      const mW=s(68), mH=s(32);
+      cvRoundRect(ctx,CX-mW/2,fy-mH/2,mW,mH,s(6));
       ctx.fillStyle=mBg; ctx.fill();
-      ctx.fillStyle=mTxt; ctx.font='700 13px "Rajdhani", Arial, sans-serif';
+      ctx.fillStyle=mTxt;
+      ctx.font=`${s(18)}px "Bebas Neue", Arial, sans-serif`;
       ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText(marcTxt,CX,fy);
+      ctx.fillText(marcTxt,CX,fy+1);
       ctx.textBaseline='alphabetic';
 
-      // Ganador (si lo hay)
+      // Ganador — DM Sans
       if(c.ganador){
-        ctx.fillStyle='rgba(201,162,39,0.5)';
-        ctx.font='500 10px "Rajdhani", Arial, sans-serif';
+        ctx.fillStyle='rgba(201,162,39,0.55)';
+        ctx.font=`500 ${s(12)}px "DM Sans", Arial, sans-serif`;
         ctx.textAlign='center';
-        ctx.fillText('✓ '+c.ganador.toUpperCase(), CX, fy+20);
+        ctx.fillText('✓ '+c.ganador, CX, fy+s(22));
       }
 
       ctx.fillStyle='rgba(255,255,255,0.04)';
       ctx.fillRect(0,y+ROW-1,W,1);
       y+=ROW;
     }
-    y+=12;
+    y+=s(12);
   }
 
-  cvFooter(ctx,W,y,liga);
+  cvFooter(ctx,W,CV_H - s(40),liga);
   ctx.textAlign='left'; ctx.textBaseline='alphabetic';
   return canvas;
 }
