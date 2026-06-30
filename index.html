@@ -209,6 +209,34 @@
       }catch(e){}
     },
 
+    // ── FOTOS DE GOLEADORES: cada una en su propio documento para evitar el límite de 1MB ──
+
+    // Guarda la foto de un goleador: /lrr/golfoto_<id>
+    async setGolFoto(id, base64){
+      try{
+        await setDoc(doc(db, COL, 'golfoto_' + id), { value: base64 });
+      }catch(e){ console.error('FB setGolFoto error', id, e); }
+    },
+    // Borra la foto de un goleador
+    async delGolFoto(id){
+      try{
+        await deleteDoc(doc(db, COL, 'golfoto_' + id));
+      }catch(e){ console.warn('FB delGolFoto error', id, e); }
+    },
+    // Lee todos los documentos golfoto_* y reconstruye el mapa {id: base64}
+    async getAllGolFotos(){
+      try{
+        const snap = await getDocs(collection(db, COL));
+        const result = {};
+        snap.forEach(d => {
+          if(d.id.startsWith('golfoto_')){
+            result[d.id.slice(8)] = d.data().value;
+          }
+        });
+        return result;
+      }catch(e){ console.warn('FB getAllGolFotos error', e); return {}; }
+    },
+
     auth, signInWithEmailAndPassword, signOut, onAuthStateChanged
   };
 
@@ -326,7 +354,7 @@
     const [
       fbData, fbEscudosViejo, fbIdentidad, fbFotos,
       fbNoticias, fbPubs, fbFichas, fbCronos, fbDM,
-      fbEscudosNuevo, fbTransferencias
+      fbEscudosNuevo, fbTransferencias, fbGolFotos
     ] = await Promise.all([
       window._fb.get('data'),
       window._fb.get('escudos'),
@@ -339,9 +367,15 @@
       window._fb.get('deportemas'),
       window._fb.getAllEscudos(),
       window._fb.get('transferencias'),
+      window._fb.getAllGolFotos(),
     ]);
 
+    // Cache en memoria de fotos de goleadores (id → base64), usado también por el listener en tiempo real
+    window._golFotosCache = fbGolFotos || {};
+
     if(fbData)      { data = fbData; if(!data.playoff) data.playoff=[];
+                      // Reincorporar las fotos de goleadores (se guardan en docs individuales aparte)
+                      if(data.goleadores) data.goleadores.forEach(g=>{ if(window._golFotosCache[g.id]) g.foto=window._golFotosCache[g.id]; });
                       localStorage.setItem('lrr_data2', JSON.stringify(data));
                       // Recalcular posiciones y goleadores desde los partidos al cargar
                       recalcularTodo();
@@ -397,6 +431,10 @@
       const partidosAnteriores = window._fbDataAnterior ? (window._fbDataAnterior.partidos||[]) : [];
       data = fbVal;
       if(!data.playoff) data.playoff=[];
+      // Reincorporar las fotos de goleadores (no viajan en el doc "data", están aparte)
+      if(data.goleadores && window._golFotosCache){
+        data.goleadores.forEach(g=>{ if(window._golFotosCache[g.id]) g.foto=window._golFotosCache[g.id]; });
+      }
       recalcularTodo();
       aplicarTodasLasPenalizaciones();
       localStorage.setItem('lrr_data2', JSON.stringify(data));
@@ -3768,12 +3806,18 @@ const FOTOS_KEY='lrr_fotos';
 
 function getPass(){return localStorage.getItem(PASS_KEY)||'admin123';}
 function getData(){try{const d=JSON.parse(localStorage.getItem(DATA_KEY))||defData();if(!d.playoff)d.playoff=[];return d;}catch(e){return defData();}}
+// Construye una copia de "d" sin las fotos de goleadores: van en documentos
+// individuales (golfoto_<id>) para no superar el límite de 1MB por documento de Firestore.
+function dataParaFirestore(d){
+  if(!d.goleadores || !d.goleadores.length) return d;
+  return { ...d, goleadores: d.goleadores.map(g => g.foto ? {...g, foto:''} : g) };
+}
 function saveData(d){
   localStorage.setItem(DATA_KEY,JSON.stringify(d));
   if(window._fb){
     // Activar flag para que el listener ignore el echo de esta escritura
     window._fbEscribiendoData = true;
-    window._fb.set('data', d).then(()=>{
+    window._fb.set('data', dataParaFirestore(d)).then(()=>{
       // Dar tiempo a que Firestore envíe el snapshot de vuelta y lo ignoremos
       setTimeout(()=>{ window._fbEscribiendoData = false; }, 3000);
     }).catch(()=>{ window._fbEscribiendoData = false; });
@@ -6244,7 +6288,7 @@ function edGPreviewFoto(input){
   r.onload=e=>{
     window._edGFoto=e.target.result;
     const w=document.getElementById('ed-g-foto-wrap');
-    if(w) w.innerHTML=`<img src="${window._edGFoto}" style="max-height:120px;border-radius:8px;object-fit:cover;object-position:top;display:block;margin-top:6px"/>`;
+    if(w) w.innerHTML=`<div class="preview-wrap visible" style="margin-top:6px"><img src="${window._edGFoto}" style="max-height:120px;max-width:none;object-fit:cover;object-position:top"/><button type="button" class="btn-quitar-img" onclick="edQuitarFotoGol()">✕ Quitar</button></div>`;
   };
   r.readAsDataURL(file);
 }
@@ -6257,6 +6301,11 @@ function agregarGoleador(){
   if(div==='primera') obj.torneo=document.getElementById('g-torneo').value;
   else obj.faseGol=document.getElementById('g-fase').value;
   data.goleadores.push(obj);
+  if(obj.foto && window._fb){
+    window._fb.setGolFoto(obj.id, obj.foto);
+    if(!window._golFotosCache) window._golFotosCache={};
+    window._golFotosCache[obj.id]=obj.foto;
+  }
   _gFoto='';
   const fp=document.getElementById('g-foto-preview'); if(fp) fp.src='';
   const fw=document.getElementById('g-foto-wrap'); if(fw) fw.classList.remove('visible');
@@ -6330,7 +6379,11 @@ function eliminar(tipo,id){
       aplicarTodasLasPenalizaciones();
     }
     else if(tipo==='posiciones')  data.posiciones =data.posiciones.filter(p=>String(p.id)!==sid);
-    else if(tipo==='goleadores') data.goleadores =data.goleadores.filter(p=>String(p.id)!==sid);
+    else if(tipo==='goleadores') {
+      data.goleadores =data.goleadores.filter(p=>String(p.id)!==sid);
+      if(window._fb) window._fb.delGolFoto(sid);
+      if(window._golFotosCache) delete window._golFotosCache[sid];
+    }
     else if(tipo==='equipos')    data.equipos    =data.equipos.filter(p=>String(p.id)!==sid);
     else if(tipo==='torneos')    data.torneos    =data.torneos.filter(p=>String(p.id)!==sid);
     saveData(data);
@@ -6475,7 +6528,7 @@ function abrirModalEdicion(tipo,id){
         <div class="form-group"><label style="color:rgba(255,255,255,.5)">Motivo</label><input type="text" id="ed-pts-desc-motivo" value="${obj.ptsDescMotivo||''}" placeholder="Ej: Resolución Tribunal N°12"/></div>
       </div>`;
   } else if(tipo==='goleadores'){
-    const fotoActual = obj.foto ? `<img src="${obj.foto}" style="max-height:120px;border-radius:8px;object-fit:cover;object-position:top;display:block;margin-top:6px"/>` : '';
+    const fotoActual = obj.foto ? `<div class="preview-wrap visible" style="margin-top:6px"><img src="${obj.foto}" style="max-height:120px;max-width:none;object-fit:cover;object-position:top"/><button type="button" class="btn-quitar-img" onclick="edQuitarFotoGol()">✕ Quitar</button></div>` : '';
     bodyHTML=`
       <div class="form-row"><div class="form-group"><label>Torneo</label>${torneoSelect}</div>
         <div class="form-group"><label>División</label>${divSelect}</div></div>
@@ -6842,6 +6895,16 @@ function guardarEdicion(tipo,id){
     const idx=data.goleadores.findIndex(p=>String(p.id)===sid);if(idx<0)return;
     const nuevaFoto = window._edGFoto !== undefined ? window._edGFoto : (data.goleadores[idx].foto||'');
     data.goleadores[idx]={...data.goleadores[idx],torneo:val('ed-torneo'),div:val('ed-div'),nombre:val('ed-nombre'),equipo:val('ed-equipo'),goles:num('ed-goles'),foto:nuevaFoto};
+    if(window._edGFoto !== undefined && window._fb){
+      if(nuevaFoto){
+        window._fb.setGolFoto(sid, nuevaFoto);
+        if(!window._golFotosCache) window._golFotosCache={};
+        window._golFotosCache[sid]=nuevaFoto;
+      } else {
+        window._fb.delGolFoto(sid);
+        if(window._golFotosCache) delete window._golFotosCache[sid];
+      }
+    }
     window._edGFoto = undefined;
   } else if(tipo==='equipos'){
     const idx=data.equipos.findIndex(p=>String(p.id)===sid);if(idx<0)return;
@@ -6888,6 +6951,14 @@ function quitarImagen(previewId, wrapId, inputId, varName){
   else if(varName==='_escudoB64')   _escudoB64='';
   else if(varName==='_logoB64')     _logoB64='';
   else if(varName==='_fotoPrevB64') _fotoPrevB64='';
+  else if(varName==='_gFoto')       _gFoto='';
+}
+
+// Quita la foto de un goleador desde el modal de edición (marca borrado explícito)
+function edQuitarFotoGol(){
+  window._edGFoto = '';
+  const w=document.getElementById('ed-g-foto-wrap');
+  if(w) w.innerHTML='';
 }
 
 // ============================================================
@@ -8281,7 +8352,7 @@ async function generarImagenGoleadores(){
   bgGrad.addColorStop(0,C.NEG3); bgGrad.addColorStop(1,C.NEG);
   ctx.fillStyle=bgGrad; ctx.fillRect(0,0,W,CV_H);
 
-  // Foto de fondo del lider (translucida sobre todo el canvas)
+  // Foto de fondo del lider (mas visible sobre todo el canvas)
   if(gs[0]&&gs[0].foto){
     await new Promise(res=>{
       const img=new Image();
@@ -8292,14 +8363,14 @@ async function generarImagenGoleadores(){
         const scale=Math.max(scaleX,scaleY);
         const dw=iW*scale, dh=iH*scale;
         const dx=(W-dw)/2, dy=(CV_H-dh)/2;
-        ctx.globalAlpha=0.22;
+        ctx.globalAlpha=0.5;
         ctx.drawImage(img,dx,dy,dw,dh);
         ctx.globalAlpha=1;
-        // Gradiente oscuro encima — más fuerte en la parte inferior
+        // Gradiente oscuro encima — mas suave, deja la foto bien visible arriba
         const g2=ctx.createLinearGradient(0,0,0,CV_H);
-        g2.addColorStop(0,'rgba(8,8,8,.55)');
-        g2.addColorStop(0.45,'rgba(8,8,8,.80)');
-        g2.addColorStop(1,'rgba(8,8,8,.97)');
+        g2.addColorStop(0,'rgba(8,8,8,.35)');
+        g2.addColorStop(0.45,'rgba(8,8,8,.55)');
+        g2.addColorStop(1,'rgba(8,8,8,.93)');
         ctx.fillStyle=g2; ctx.fillRect(0,0,W,CV_H);
         res();
       };
