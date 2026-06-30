@@ -2613,9 +2613,18 @@ table.posiciones td:nth-child(8){
             <select id="p-div" onchange="updateAdminPartidoDiv()">
               <option value="primera">Primera División</option>
               <option value="segunda">Segunda División</option>
+              <option value="reserva">Reserva</option>
             </select>
           </div>
           <div class="form-group"><label>Fecha / Jornada</label><input type="text" id="p-fecha" placeholder="Ej: Fecha 5"/></div>
+        </div>
+        <!-- subdivisión: solo visible cuando División = Reserva -->
+        <div id="p-reserva-subdiv-wrap" class="form-group" style="display:none">
+          <label>Corresponde a</label>
+          <select id="p-reserva-subdiv" onchange="updateAdminPartidoDiv()">
+            <option value="primera">Primera División</option>
+            <option value="segunda">Segunda División</option>
+          </select>
         </div>
         <!-- campo torneo solo primera -->
         <div id="p-torneo-wrap" class="form-group"><label>Torneo</label>
@@ -2647,21 +2656,7 @@ table.posiciones td:nth-child(8){
             <option value="">Sin zona</option>
           </select>
         </div>
-        <!-- reserva flag: aplica a ambas divisiones -->
-        <div class="form-group" id="p-reserva-wrap">
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-            <input type="checkbox" id="p-es-reserva" style="width:16px;height:16px;accent-color:var(--dorado)" onchange="updateReservaVis()"/>
-            <span>Partido de Reserva <span style="color:var(--gris);font-size:11px">(sin goleadores ni tarjetas rojas)</span></span>
-          </label>
-        </div>
-        <!-- Torneo de reserva — solo visible cuando esReserva está tildado -->
-        <div class="form-group" id="p-reserva-torneo-wrap" style="display:none">
-          <label>Torneo de Reserva</label>
-          <select id="p-reserva-torneo">
-            <option value="apertura">Apertura 2026</option>
-            <option value="clausura">Clausura 2026</option>
-          </select>
-        </div>
+        <!-- (la marca de "Partido de Reserva" ahora se define desde el selector de División) -->
         <div class="form-row">
           <div class="form-group"><label>Equipo Local</label><input type="text" id="p-local" placeholder="Nombre exacto del equipo"/></div>
           <div class="form-group"><label>Equipo Visitante</label><input type="text" id="p-visit" placeholder="Nombre exacto del equipo"/></div>
@@ -3981,8 +3976,9 @@ function switchDivTab(div,el){
     const esPrimera=div==='primera';
     // primera: torneos + general
     document.getElementById('pos-torneo-tabs').style.display=esPrimera?'flex':'none';
-    // segunda: fases
-    document.getElementById('pos-fase-tabs').style.display=esPrimera?'none':'flex';
+    // segunda: fases (ocultas si estamos viendo la categoría Reserva, que es tabla única)
+    const esReservaSegunda = !esPrimera && currentCatPos==='reserva';
+    document.getElementById('pos-fase-tabs').style.display=(esPrimera||esReservaSegunda)?'none':'flex';
     // sub-tabs
     actualizarSubTabsSegunda();
     // tab general solo primera
@@ -3997,7 +3993,8 @@ function switchDivTab(div,el){
   if(currentSection==='resultados'){
     const esPrimera=div==='primera';
     document.getElementById('res-torneo-tabs').style.display=esPrimera?'flex':'none';
-    document.getElementById('res-fase-tabs').style.display=esPrimera?'none':'flex';
+    const esReservaSegunda = !esPrimera && currentCatRes==='reserva';
+    document.getElementById('res-fase-tabs').style.display=(esPrimera||esReservaSegunda)?'none':'flex';
     if(!esPrimera){currentFaseRes='fase1';document.querySelectorAll('#res-fase-tabs .torneo-tab').forEach((t,i)=>t.classList.toggle('active',i===0));}
   }
   if(currentSection==='goleadores'){
@@ -4013,8 +4010,9 @@ function actualizarSubTabsSegunda(){
   const zonaTab=document.getElementById('pos-zona-tabs');
   const grupoTab=document.getElementById('pos-grupo-tabs');
   if(!zonaTab||!grupoTab) return;
-  zonaTab.style.display  =(currentDivision==='segunda'&&currentFase==='fase1')?'flex':'none';
-  grupoTab.style.display =(currentDivision==='segunda'&&currentFase==='fase2')?'flex':'none';
+  const esReservaSegunda = currentDivision==='segunda' && currentCatPos==='reserva';
+  zonaTab.style.display  =(currentDivision==='segunda'&&currentFase==='fase1'&&!esReservaSegunda)?'flex':'none';
+  grupoTab.style.display =(currentDivision==='segunda'&&currentFase==='fase2'&&!esReservaSegunda)?'flex':'none';
 }
 
 function switchFaseTab(fase,el){
@@ -4050,6 +4048,9 @@ function switchCatResTab(cat, el){
   currentCatRes = cat;
   document.querySelectorAll('#res-cat-tabs .torneo-tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
+  if(currentDivision==='segunda'){
+    document.getElementById('res-fase-tabs').style.display = (cat==='reserva')?'none':'flex';
+  }
   renderResultados();
 }
 
@@ -4057,6 +4058,11 @@ function switchCatPosTab(cat, el){
   currentCatPos = cat;
   document.querySelectorAll('#pos-cat-tabs .torneo-tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
+  if(currentDivision==='segunda'){
+    const esReservaSegunda = cat==='reserva';
+    document.getElementById('pos-fase-tabs').style.display = esReservaSegunda?'none':'flex';
+    actualizarSubTabsSegunda();
+  }
   renderPosiciones();
 }
 
@@ -4286,17 +4292,24 @@ function renderResultados(){
 
   // ---- SEGUNDA DIVISIÓN ----
   if(div==='segunda'){
+    if(soloReserva){
+      const badge='RESERVA';
+      const ps=data.partidos.filter(p=>p.div==='segunda'&&p.estado==='jugado'&&p.esReserva===true);
+      const html=acordeonFechas(ps,badge);
+      el.innerHTML=html||`<div class="card"><div class="card-header"><span>Resultados · Reserva</span><span class="div-badge">2ª</span></div><div class="empty-msg">No hay resultados de reserva</div></div>`;
+      return;
+    }
     const faseLabels={'fase1':'1ª FASE','fase2':'2ª FASE','fase3':'3ª FASE'};
     const fase=currentFaseRes;
-    const badge=(soloReserva?'RESERVA · ':'')+faseLabels[fase];
+    const badge=faseLabels[fase];
     const ps=data.partidos.filter(p=>
       p.div==='segunda' &&
       p.estado==='jugado' &&
       (p.faseRes||p.fase||'fase1')===fase &&
-      (soloReserva ? p.esReserva===true : !p.esReserva)
+      !p.esReserva
     );
     const html=acordeonFechas(ps,badge);
-    el.innerHTML=html||`<div class="card"><div class="card-header"><span>Resultados${soloReserva?' · Reserva':''} – ${faseLabels[fase]}</span><span class="div-badge">2ª</span></div><div class="empty-msg">No hay resultados para esta fase</div></div>`;
+    el.innerHTML=html||`<div class="card"><div class="card-header"><span>Resultados – ${faseLabels[fase]}</span><span class="div-badge">2ª</span></div><div class="empty-msg">No hay resultados para esta fase</div></div>`;
     return;
   }
 
@@ -4616,15 +4629,19 @@ function calcularPosicionesReserva(div, filtroExtra){
     .sort((a,b) => (b.pts-a.pts) || (b.gf-b.gc)-(a.gf-a.gc));
 }
 
-function posReservaTablaHTML(titulo, pos, divBadge, shareBtn){
+function posReservaTablaHTML(titulo, pos, divBadge, shareBtn, clasifican){
+  clasifican = clasifican||0;
   if(!pos.length) return `<div class="card"><div class="card-header"><span>${titulo}</span><span class="div-badge">${divBadge}</span></div><div class="empty-msg">No hay partidos de reserva jugados</div></div>`;
-  const rows = pos.map((p,i) => `<tr>
+  const rows = pos.map((p,i) => {
+    const cls = i<clasifican ? 'zona-clasificacion' : '';
+    return `<tr class="${cls}">
     <td class="pos-num">${i===0?'<span class="pos-num-1">1</span>':i+1}</td>
     <td><div class="pos-equipo">${getEscudoHTML(p.equipo,28)} ${p.equipo}</div></td>
     <td class="pos-pts">${p.pts}</td>
     <td>${p.pj}</td><td>${p.g}</td><td>${p.e}</td><td>${p.p}</td>
     <td>${p.gf}</td><td>${p.gc}</td><td>${p.dg}</td>
-  </tr>`).join('');
+  </tr>`;
+  }).join('');
   return `<div class="card" style="margin-bottom:.8rem">
     <div class="card-header">
       <span>${titulo}</span>
@@ -4637,35 +4654,19 @@ function posReservaTablaHTML(titulo, pos, divBadge, shareBtn){
       <thead><tr><th>#</th><th>Equipo</th><th>PTS</th><th>PJ</th><th>G</th><th>E</th><th>P</th><th>GF</th><th>GC</th><th>DG</th></tr></thead>
       <tbody>${rows}</tbody>
     </table></div>
+    ${clasifican>0?`<div style="display:flex;gap:14px;padding:8px 14px;font-size:11px;color:var(--gris);font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px;flex-wrap:wrap">
+      <span style="border-left:3px solid var(--verde-clasificacion);padding-left:6px">Clasifican a semifinales (${clasifican} primeros)</span>
+    </div>`:''}
   </div>`;
 }
 
 function renderPosicionesReserva(div, el){
   const shareBtn = `<button class="btn-share" onclick="abrirShare(generarImagenPosicionesReserva)">${SVG_SHARE} Compartir</button>`;
 
-  // ---- SEGUNDA DIVISIÓN: idéntico al comportamiento de la tabla principal ----
+  // ---- SEGUNDA DIVISIÓN: tabla general única, sin fases ----
   if(div === 'segunda'){
-    const faseLabels = {'fase1':'1ª Fase','fase2':'2ª Fase','fase3':'3ª Fase'};
-    const fase = currentFase;
-
-    // Función de filtro idéntica a renderPosicionesSegunda
-    const filtrar = (f, zona) => calcularPosicionesReserva('segunda', p => {
-      if((p.faseRes||p.fase||'fase1') !== f) return false;
-      if(zona == null) return true;
-      return (p.zona||'') === zona;
-    });
-
-    if(fase === 'fase1'){
-      const zona = currentZona;
-      const tit  = zona === 'sierra' ? '1ª Fase – Zona Sierra' : '1ª Fase – Zona Llano';
-      el.innerHTML = posReservaTablaHTML(`Reserva – ${tit}`, filtrar('fase1', zona), 'RESERVA · 2ª', shareBtn);
-    } else if(fase === 'fase2'){
-      const grupo = currentGrupo;
-      const tit   = grupo === 'campeonato' ? '2ª Fase – Campeonato' : '2ª Fase – Repechaje';
-      el.innerHTML = posReservaTablaHTML(`Reserva – ${tit}`, filtrar('fase2', grupo), 'RESERVA · 2ª', shareBtn);
-    } else {
-      el.innerHTML = posReservaTablaHTML('Reserva – 3ª Fase', filtrar('fase3', null), 'RESERVA · 2ª', shareBtn);
-    }
+    const pos = calcularPosicionesReserva('segunda', null);
+    el.innerHTML = posReservaTablaHTML('Reserva – Tabla General', pos, 'RESERVA · 2ª', shareBtn, 4);
     return;
   }
 
@@ -4687,27 +4688,11 @@ async function generarImagenPosicionesReserva(){
   const W    = CV_W;
   const div  = currentDivision;
 
-  let pos, tituloPosiciones;
+  let pos, tituloPosiciones, esGeneralSegunda=false;
   if(div === 'segunda'){
-    const faseLabels = {'fase1':'1ª FASE','fase2':'2ª FASE','fase3':'3ª FASE'};
-    const fase = currentFase;
-    if(fase === 'fase1'){
-      const zona = currentZona;
-      const zonaLabel = zona === 'sierra' ? 'ZONA SIERRA' : 'ZONA LLANO';
-      pos = calcularPosicionesReserva('segunda', p =>
-        (p.faseRes||p.fase||'fase1') === 'fase1' && (p.zona||'') === zona);
-      tituloPosiciones = `RESERVA  ·  1ª FASE  ·  ${zonaLabel}  ·  2ª DIV`;
-    } else if(fase === 'fase2'){
-      const grupo = currentGrupo;
-      const grupoLabel = grupo === 'campeonato' ? 'CAMPEONATO' : 'REPECHAJE';
-      pos = calcularPosicionesReserva('segunda', p =>
-        (p.faseRes||p.fase||'fase1') === 'fase2' && (p.zona||'') === grupo);
-      tituloPosiciones = `RESERVA  ·  2ª FASE  ·  ${grupoLabel}  ·  2ª DIV`;
-    } else {
-      pos = calcularPosicionesReserva('segunda', p =>
-        (p.faseRes||p.fase||'fase1') === 'fase3');
-      tituloPosiciones = 'RESERVA  ·  3ª FASE  ·  SEGUNDA DIVISIÓN';
-    }
+    pos = calcularPosicionesReserva('segunda', null);
+    tituloPosiciones = 'RESERVA  ·  TABLA GENERAL  ·  2ª DIV';
+    esGeneralSegunda = true;
   } else {
     const torneo = currentTorneo.pos === 'general' ? 'apertura' : currentTorneo.pos;
     const tornLabel = torneo === 'apertura' ? 'APERTURA' : 'CLAUSURA';
@@ -4720,8 +4705,9 @@ async function generarImagenPosicionesReserva(){
   const HDR_H = s(29);
   const hHeader   = s(64);
   const hTitulo   = s(48);
+  const hLeyenda  = esGeneralSegunda ? s(30) : 0;
   const hFooter   = s(40);
-  const hDisponible = CV_H - hHeader - hTitulo - HDR_H - hFooter - s(12);
+  const hDisponible = CV_H - hHeader - hTitulo - HDR_H - hLeyenda - hFooter - s(12);
   const maxRows   = Math.floor(hDisponible / ROW_H);
   const rows      = Math.min(pos.length, maxRows);
 
@@ -4782,6 +4768,11 @@ async function generarImagenPosicionesReserva(){
     ctx.fillStyle = i%2===0?'rgba(255,255,255,0.025)':'rgba(0,0,0,0.12)';
     ctx.fillRect(0,y,W,ROW_H);
 
+    // Borde de clasificación a semifinales (4 primeros) — solo Reserva Tabla General de Segunda
+    if(esGeneralSegunda && i<4){
+      ctx.fillStyle=C.VERDE; ctx.fillRect(0,y,s(4),ROW_H);
+    }
+
     // Número
     ctx.fillStyle = i===0 ? C.DORADO : 'rgba(255,255,255,0.5)';
     ctx.font = (i===0?'700':'500')+` ${s(13)}px "Rajdhani", Arial, sans-serif`;
@@ -4820,6 +4811,15 @@ async function generarImagenPosicionesReserva(){
     ctx.fillRect(0,y+ROW_H-1,W,1);
     y += ROW_H;
   });
+
+  if(esGeneralSegunda){
+    ctx.fillStyle=C.VERDE; ctx.fillRect(s(16), y+s(12), s(10), s(10));
+    ctx.fillStyle='rgba(255,255,255,0.6)';
+    ctx.font=`600 ${s(12)}px "Rajdhani", Arial, sans-serif`;
+    ctx.textAlign='left'; ctx.textBaseline='middle';
+    ctx.fillText('CLASIFICAN A SEMIFINALES (4 PRIMEROS)', s(34), y+s(17));
+    ctx.textBaseline='alphabetic';
+  }
 
   cvFooter(ctx, W, CV_H - s(40), liga);
   ctx.textAlign='left'; ctx.textBaseline='alphabetic';
@@ -6079,51 +6079,82 @@ function buildEventoRowsHTML(eventos, tipo, listId){
 }
 
 function updateAdminPartidoDiv(){
-  const esPrimera=document.getElementById('p-div').value==='primera';
+  const divVal = document.getElementById('p-div').value;
+  const esReserva = divVal === 'reserva';
+  const subdivWrap = document.getElementById('p-reserva-subdiv-wrap');
+  if(subdivWrap) subdivWrap.style.display = esReserva ? '' : 'none';
+  const efectivo = esReserva ? document.getElementById('p-reserva-subdiv').value : divVal;
+  const esPrimera = efectivo==='primera';
+  const esReservaSegunda = esReserva && efectivo==='segunda';
   document.getElementById('p-torneo-wrap').style.display=esPrimera?'':'none';
-  document.getElementById('p-playoff-wrap').style.display=esPrimera?'':'none';
-  document.getElementById('p-fase-wrap').style.display=esPrimera?'none':'';
+  document.getElementById('p-playoff-wrap').style.display=(esPrimera && !esReserva)?'':'none';
+  document.getElementById('p-fase-wrap').style.display=(esPrimera||esReservaSegunda)?'none':'';
+  const eventosWrap=document.getElementById('p-eventos-wrap');
+  if(eventosWrap){
+    eventosWrap.style.display = esReserva ? 'none' : '';
+    if(esReserva){
+      document.getElementById('p-goles-list').innerHTML = '';
+      document.getElementById('p-exp-list').innerHTML = '';
+    }
+  }
   updateAdminZonaVis();
 }
 
-function updateReservaVis(){
-  const esReserva = document.getElementById('p-es-reserva').checked;
-  document.getElementById('p-eventos-wrap').style.display = esReserva ? 'none' : '';
-  document.getElementById('p-reserva-torneo-wrap').style.display = esReserva ? '' : 'none';
-  if(esReserva){
-    document.getElementById('p-goles-list').innerHTML = '';
-    document.getElementById('p-exp-list').innerHTML = '';
-  }
-}
-
-function edUpdateReservaVis(){
-  const esReserva = document.getElementById('ed-es-reserva')?.checked;
-  const ew = document.getElementById('ed-eventos-wrap');
-  const tw = document.getElementById('ed-reserva-torneo-wrap');
-  if(ew) ew.style.display = esReserva ? 'none' : '';
-  if(tw) tw.style.display = esReserva ? '' : 'none';
-}
 function updateAdminZonaVis(){
-  const div=document.getElementById('p-div').value;
+  const divVal=document.getElementById('p-div').value;
+  const esReserva = divVal==='reserva';
+  const efectivo = esReserva ? document.getElementById('p-reserva-subdiv').value : divVal;
   const fase=document.getElementById('p-fase-res').value;
   const zonaWrap=document.getElementById('p-zona-wrap');
-  if(zonaWrap) zonaWrap.style.display=(div==='segunda'&&fase==='fase1')?'':'none';
+  const esReservaSegunda = esReserva && efectivo==='segunda';
+  if(zonaWrap) zonaWrap.style.display=(efectivo==='segunda'&&fase==='fase1'&&!esReservaSegunda)?'':'none';
+}
+
+function edUpdateDivVis(){
+  const divEl = document.getElementById('ed-div-partido');
+  if(!divEl) return;
+  const divVal = divEl.value;
+  const esReserva = divVal === 'reserva';
+  const subdivWrap = document.getElementById('ed-reserva-subdiv-wrap');
+  if(subdivWrap) subdivWrap.style.display = esReserva ? '' : 'none';
+  const efectivo = esReserva ? document.getElementById('ed-reserva-subdiv').value : divVal;
+  const esPrimera = efectivo === 'primera';
+  const esReservaSegunda = esReserva && efectivo==='segunda';
+  const torneoWrap=document.getElementById('ed-torneo-partido-wrap');
+  if(torneoWrap) torneoWrap.style.display = esPrimera ? '' : 'none';
+  const playoffWrap=document.getElementById('ed-playoff-wrap');
+  if(playoffWrap) playoffWrap.style.display = (esPrimera && !esReserva) ? '' : 'none';
+  const faseWrap=document.getElementById('ed-faseRes-wrap');
+  if(faseWrap) faseWrap.style.display = (esPrimera||esReservaSegunda) ? 'none' : '';
+  const zonaWrap=document.getElementById('ed-zona-wrap');
+  if(zonaWrap){
+    const fase = document.getElementById('ed-faseRes')?.value || 'fase1';
+    zonaWrap.style.display = (!esPrimera && fase==='fase1' && !esReservaSegunda) ? '' : 'none';
+  }
+  const eventosWrap=document.getElementById('ed-eventos-wrap');
+  if(eventosWrap){
+    eventosWrap.style.display = esReserva ? 'none' : '';
+    if(esReserva){
+      const gl=document.getElementById('ed-goles-list'); if(gl) gl.innerHTML='';
+      const xl=document.getElementById('ed-exp-list'); if(xl) xl.innerHTML='';
+    }
+  }
 }
 
 // ============================================================
 // ADMIN – AGREGAR
 // ============================================================
 function agregarPartido(){
-  const esReserva = document.getElementById('p-es-reserva').checked;
+  const divRaw   = document.getElementById('p-div').value;
+  const esReserva = divRaw === 'reserva';
+  const div = esReserva ? document.getElementById('p-reserva-subdiv').value : divRaw;
   const goles     = esReserva ? [] : leerEventos('p-goles-list','gol');
   const expulsiones = esReserva ? [] : leerEventos('p-exp-list','exp');
-  const torneoReserva = esReserva ? document.getElementById('p-reserva-torneo').value : null;
   const arb1=document.getElementById('p-arb1').value.trim();
   const arb2=document.getElementById('p-arb2').value.trim();
   const arb3=document.getElementById('p-arb3').value.trim();
   const arb4=document.getElementById('p-arb4').value.trim();
   const arbitros=[arb1,arb2,arb3,arb4].filter(Boolean);
-  const div=document.getElementById('p-div').value;
   const d={
     id:String(Date.now()),
     div,
@@ -6136,14 +6167,14 @@ function agregarPartido(){
     resultado:document.getElementById('p-resultado').value,
     periodo:document.getElementById('p-periodo').value||'PT',
     esReserva,
-    torneoReserva,
+    torneoReserva:null,
     arbitros,goles,expulsiones
   };
   if(div==='primera'){
     d.torneo=document.getElementById('p-torneo-sel').value;
-    d.esPlayoff=document.getElementById('p-es-playoff').checked;
+    d.esPlayoff=esReserva ? false : document.getElementById('p-es-playoff').checked;
   }
-  else {
+  else if(!esReserva){
     d.faseRes=document.getElementById('p-fase-res').value;
     if(d.faseRes==='fase1') d.zona=document.getElementById('p-zona').value||'';
   }
@@ -6154,9 +6185,8 @@ function agregarPartido(){
   saveData(data);
   document.getElementById('p-goles-list').innerHTML='';
   document.getElementById('p-exp-list').innerHTML='';
-  const chkRes = document.getElementById('p-es-reserva');
-  if(chkRes){ chkRes.checked=false; updateReservaVis(); }
-  document.getElementById('p-reserva-torneo-wrap').style.display='none';
+  document.getElementById('p-div').value='primera';
+  updateAdminPartidoDiv();
   renderAdminListas();renderSection(currentSection);
   // Si el partido fue cargado directamente como "en juego", animar inicio
   if(d.estado==='en-juego') dispararAnimacionMarcador(d.id, 'inicio', '');
@@ -6351,19 +6381,33 @@ function abrirModalEdicion(tipo,id){
 
   let bodyHTML='';
   if(tipo==='partidos'){
-    const esPrimera=obj.div==='primera';
+    const esReservaObj=!!obj.esReserva;
+    const efectivoDiv=obj.div||'primera';
+    const esPrimera=efectivoDiv==='primera';
     const faseResOpts=['fase1','fase2','fase3'].map(f=>`<option value="${f}" ${(obj.faseRes||'fase1')===f?'selected':''}>${f==='fase1'?'1ª':f==='fase2'?'2ª':'3ª'} Fase</option>`).join('');
+    const divSelectPartido=`<select id="ed-div-partido" onchange="edUpdateDivVis()">
+      <option value="primera" ${(!esReservaObj&&efectivoDiv==='primera')?'selected':''}>Primera División</option>
+      <option value="segunda" ${(!esReservaObj&&efectivoDiv==='segunda')?'selected':''}>Segunda División</option>
+      <option value="reserva" ${esReservaObj?'selected':''}>Reserva</option>
+    </select>`;
+    const subdivSelect=`<select id="ed-reserva-subdiv" onchange="edUpdateDivVis()">
+      <option value="primera" ${efectivoDiv==='primera'?'selected':''}>Primera División</option>
+      <option value="segunda" ${efectivoDiv==='segunda'?'selected':''}>Segunda División</option>
+    </select>`;
     bodyHTML=`
-      <div class="form-row"><div class="form-group"><label>División</label>${divSelect}</div>
+      <div class="form-row"><div class="form-group"><label>División</label>${divSelectPartido}</div>
         <div class="form-group"><label>Fecha / Jornada</label><input type="text" id="ed-fecha" value="${obj.fecha||''}"/></div></div>
+      <div class="form-group" id="ed-reserva-subdiv-wrap" style="${esReservaObj?'':'display:none'}">
+        <label>Corresponde a</label>${subdivSelect}
+      </div>
       <div class="form-group" ${esPrimera?'':'style="display:none"'} id="ed-torneo-partido-wrap"><label>Torneo (Primera)</label>${torneoSelect}</div>
-      <div class="form-group" ${esPrimera?'':'style="display:none"'} id="ed-playoff-wrap">
+      <div class="form-group" ${(esPrimera&&!esReservaObj)?'':'style="display:none"'} id="ed-playoff-wrap">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
           <input type="checkbox" id="ed-es-playoff" ${obj.esPlayoff?'checked':''} style="width:16px;height:16px;accent-color:var(--dorado)"/>
           <span>Partido de Play Off <span style="color:var(--gris);font-size:11px">(no suma en tabla de posiciones, sí en goleadores)</span></span>
         </label>
       </div>
-      <div class="form-group" ${!esPrimera?'':'style="display:none"'} id="ed-faseRes-wrap"><label>Fase (Segunda)</label><select id="ed-faseRes" onchange="(function(){const f=document.getElementById('ed-faseRes').value;const d=document.getElementById('ed-div').value;const zw=document.getElementById('ed-zona-wrap');if(zw)zw.style.display=(d==='segunda'&&f==='fase1')?'':'none';})()">${faseResOpts}</select></div>
+      <div class="form-group" ${!esPrimera?'':'style="display:none"'} id="ed-faseRes-wrap"><label>Fase (Segunda)</label><select id="ed-faseRes" onchange="edUpdateDivVis()">${faseResOpts}</select></div>
       <div class="form-group" ${(!esPrimera&&(obj.faseRes||'fase1')==='fase1')?'':'style="display:none"'} id="ed-zona-wrap"><label>Zona (1ª Fase)</label>
         <select id="ed-zona">
           <option value="sierra" ${(obj.zona||'')==='sierra'?'selected':''}>Zona Sierra</option>
@@ -6371,21 +6415,7 @@ function abrirModalEdicion(tipo,id){
           <option value="" ${!(obj.zona)?'selected':''}>Sin zona</option>
         </select>
       </div>
-      <!-- Reserva -->
-      <div class="form-group">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-          <input type="checkbox" id="ed-es-reserva" ${obj.esReserva?'checked':''} style="width:16px;height:16px;accent-color:var(--dorado)" onchange="edUpdateReservaVis()"/>
-          <span>Partido de Reserva <span style="color:var(--gris);font-size:11px">(sin goleadores ni rojas)</span></span>
-        </label>
-      </div>
-      <div class="form-group" id="ed-reserva-torneo-wrap" style="${obj.esReserva?'':'display:none'}">
-        <label>Torneo de Reserva</label>
-        <select id="ed-reserva-torneo">
-          <option value="apertura" ${(obj.torneoReserva||'apertura')==='apertura'?'selected':''}>Apertura 2026</option>
-          <option value="clausura" ${obj.torneoReserva==='clausura'?'selected':''}>Clausura 2026</option>
-        </select>
-      </div>
-      <div id="ed-eventos-wrap" style="${obj.esReserva?'display:none':''}">
+      <div id="ed-eventos-wrap" style="${esReservaObj?'display:none':''}">
       <div class="form-row"><div class="form-group"><label>Día del partido</label><input type="text" id="ed-dia" value="${obj.dia||''}"/></div>
         <div class="form-group"><label>Horario</label><input type="text" id="ed-hora" value="${obj.hora||''}"/></div></div>
       <div class="form-row"><div class="form-group"><label>Local</label><input type="text" id="ed-local" value="${obj.local||''}"/></div>
@@ -6771,24 +6801,28 @@ function guardarEdicion(tipo,id){
     const goles=leerEventos('ed-goles-list','gol');
     const expulsiones=leerEventos('ed-exp-list','exp');
     const arbs=[val('ed-arb1'),val('ed-arb2'),val('ed-arb3'),val('ed-arb4')].filter(Boolean);
-    const divVal=val('ed-div');
+    const divRaw=val('ed-div-partido');
+    const esReserva=divRaw==='reserva';
+    const divVal=esReserva?val('ed-reserva-subdiv'):divRaw;
     // Guardar copia del partido anterior para detectar el tipo de evento
     const partidoViejo={...data.partidos[idx], goles:[...(data.partidos[idx].goles||[])], expulsiones:[...(data.partidos[idx].expulsiones||[])]};
     const updated={...data.partidos[idx],div:divVal,fecha:val('ed-fecha'),dia:val('ed-dia'),local:val('ed-local'),visit:val('ed-visit'),hora:val('ed-hora'),estado:val('ed-estado'),resultado:val('ed-resultado'),periodo:val('ed-periodo')||'PT',arbitros:arbs,goles,expulsiones};
     if(divVal==='primera'){
       updated.torneo=val('ed-torneo');
       const chk=document.getElementById('ed-es-playoff');
-      updated.esPlayoff=chk?chk.checked:false;
+      updated.esPlayoff=esReserva?false:(chk?chk.checked:false);
       delete updated.faseRes;delete updated.zona;
+    } else if(esReserva){
+      delete updated.faseRes;delete updated.zona;delete updated.torneo;
     } else {
       updated.faseRes=val('ed-faseRes')||'fase1';
       if(updated.faseRes==='fase1') updated.zona=val('ed-zona')||'';
       else delete updated.zona;
       delete updated.torneo;
     }
-    const chkRes=document.getElementById('ed-es-reserva');
-    updated.esReserva=chkRes?chkRes.checked:false;
-    updated.torneoReserva=updated.esReserva?(val('ed-reserva-torneo')||'apertura'):null;
+    updated.esReserva=esReserva;
+    updated.torneoReserva=null;
+    if(esReserva){ updated.goles=[]; updated.expulsiones=[]; }
     data.partidos[idx]=updated;
     // Recalcular posiciones y goleadores desde todos los partidos jugados
     recalcularTodo();
@@ -8485,13 +8519,13 @@ async function generarImagenProximos(ids){
       ctx.fillStyle=sepGrad; ctx.fillRect(0,y,W,1);
     }
 
-    // Día arriba, hora abajo — sin superposición
+    // Día arriba, hora abajo — bloques separados sin superposición
     const tieneHora = !!p.hora;
     const tieneDia  = !!p.dia;
     const tieneArb  = (p.arbitros||[]).length > 0;
-    const infoH     = (tieneHora || tieneDia)
-                        ? (tieneDia && tieneHora ? s(48) : s(28))
-                        : 0;
+    const diaBlockH  = s(26);
+    const horaBlockH = s(34);
+    const infoH     = (tieneDia ? diaBlockH : 0) + (tieneHora ? horaBlockH : 0);
     const arbH      = tieneArb ? s(36) : 0;
     const bloqueH   = ECSIZE + s(28); // escudo + nombre
     const totalH    = infoH + bloqueH + arbH;
@@ -8500,17 +8534,20 @@ async function generarImagenProximos(ids){
     let cy = y + offsetY;
 
     if(tieneDia || tieneHora){
+      let blockY = cy;
       if(tieneDia){
-        ctx.fillStyle='rgba(255,255,255,0.45)';
-        ctx.font=`600 ${s(14)}px "DM Sans", Arial, sans-serif`;
+        ctx.fillStyle='rgba(255,255,255,0.5)';
+        ctx.font=`600 ${s(17)}px "DM Sans", Arial, sans-serif`;
         ctx.textAlign='center'; ctx.textBaseline='alphabetic';
-        ctx.fillText(p.dia, CX, cy+s(17));
+        ctx.fillText(p.dia, CX, blockY+s(18));
+        blockY += diaBlockH;
       }
       if(tieneHora){
         ctx.fillStyle=C.DORADO;
-        ctx.font=`${s(22)}px "Bebas Neue", Arial, sans-serif`;
+        ctx.font=`${s(28)}px "Bebas Neue", Arial, sans-serif`;
         ctx.textAlign='center'; ctx.textBaseline='alphabetic';
-        ctx.fillText(p.hora+' hs', CX, cy+(tieneDia ? s(40) : s(24)));
+        ctx.fillText(p.hora+' hs', CX, blockY+s(24));
+        blockY += horaBlockH;
       }
       cy += infoH;
     }
