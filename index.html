@@ -237,6 +237,25 @@
       }catch(e){ console.warn('FB getAllGolFotos error', e); return {}; }
     },
 
+    // ── ACTAS H.T.D.D.: cada acta en su propio documento (/lrr/acta_<id>) ──
+    async setActa(id, acta){
+      try{ await setDoc(doc(db, COL, id), acta); }
+      catch(e){ console.error('FB setActa error', id, e); }
+    },
+    async delActa(id){
+      try{ await deleteDoc(doc(db, COL, id)); }
+      catch(e){ console.warn('FB delActa error', id, e); }
+    },
+    async getAllActas(){
+      try{
+        const snap = await getDocs(collection(db, COL));
+        const result = [];
+        snap.forEach(d => { if(d.id.startsWith('acta_')) result.push(d.data()); });
+        result.sort((a,b)=>b.id.localeCompare(a.id));
+        return result;
+      }catch(e){ console.warn('FB getAllActas error', e); return []; }
+    },
+
     auth, signInWithEmailAndPassword, signOut, onAuthStateChanged
   };
 
@@ -354,7 +373,7 @@
     const [
       fbData, fbEscudosViejo, fbIdentidad, fbFotos,
       fbNoticias, fbPubs, fbFichas, fbCronos, fbDM,
-      fbEscudosNuevo, fbTransferencias, fbGolFotos
+      fbEscudosNuevo, fbTransferencias, fbGolFotos, fbActas
     ] = await Promise.all([
       window._fb.get('data'),
       window._fb.get('escudos'),
@@ -368,14 +387,18 @@
       window._fb.getAllEscudos(),
       window._fb.get('transferencias'),
       window._fb.getAllGolFotos(),
+      window._fb.getAllActas(),
     ]);
 
     // Cache en memoria de fotos de goleadores (id → base64), usado también por el listener en tiempo real
     window._golFotosCache = fbGolFotos || {};
 
-    if(fbData)      { data = fbData; if(!data.playoff) data.playoff=[];
-                      // Reincorporar las fotos de goleadores (se guardan en docs individuales aparte)
-                      if(data.goleadores) data.goleadores.forEach(g=>{ if(window._golFotosCache[g.id]) g.foto=window._golFotosCache[g.id]; });
+    if(fbData)      { data = fbData; if(!data.playoff) data.playoff=[]; if(!data.actas) data.actas=[]; if(!data.discMerges) data.discMerges=[]; if(!data.discIgnored) data.discIgnored=[];
+                      // Reincorporar fotos de goleadores y actas (guardadas en docs individuales aparte)
+                      if(data.goleadores && window._golFotosCache){
+                        data.goleadores.forEach(g=>{ if(window._golFotosCache[g.id]) g.foto=window._golFotosCache[g.id]; });
+                      }
+                      if(fbActas && fbActas.length) data.actas = fbActas;
                       localStorage.setItem('lrr_data2', JSON.stringify(data));
                       // Recalcular posiciones y goleadores desde los partidos al cargar
                       recalcularTodo();
@@ -431,6 +454,9 @@
       const partidosAnteriores = window._fbDataAnterior ? (window._fbDataAnterior.partidos||[]) : [];
       data = fbVal;
       if(!data.playoff) data.playoff=[];
+      if(!data.actas) data.actas=[];
+      if(!data.discMerges) data.discMerges=[];
+      if(!data.discIgnored) data.discIgnored=[];
       // Reincorporar las fotos de goleadores (no viajan en el doc "data", están aparte)
       if(data.goleadores && window._golFotosCache){
         data.goleadores.forEach(g=>{ if(window._golFotosCache[g.id]) g.foto=window._golFotosCache[g.id]; });
@@ -2529,7 +2555,93 @@ table.posiciones td:nth-child(8){
   font-weight:700;font-size:14px;letter-spacing:.5px;cursor:pointer;
 }
 .pwa-ios-close:hover{background:rgba(201,162,39,.1);}
+
+/* ============================================================
+   SANCIONES
+   ============================================================ */
+.sancion-tabs{display:flex;gap:4px;margin-bottom:1rem;flex-wrap:wrap;}
+.sancion-tab{padding:8px 16px;font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;border:1px solid rgba(255,255,255,.1);border-radius:var(--r-sm);background:none;color:rgba(255,255,255,.45);cursor:pointer;transition:all .16s;}
+.sancion-tab.active{border-color:var(--dorado);color:var(--dorado);background:rgba(201,162,39,.08);}
+.sancion-block{margin-bottom:1.4rem;}
+.sancion-block-title{font-family:'Bebas Neue',sans-serif;font-size:19px;letter-spacing:1px;color:#fff;margin-bottom:.7rem;display:flex;align-items:center;gap:8px;}
+.sb-count{background:var(--dorado);color:#080808;border-radius:20px;padding:1px 9px;font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;}
+.sancion-table{width:100%;border-collapse:collapse;font-size:12px;font-family:'Rajdhani',sans-serif;}
+.sancion-table th{text-align:left;padding:7px 10px;background:rgba(201,162,39,.07);color:var(--dorado);font-size:10px;text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid rgba(201,162,39,.15);}
+.sancion-table td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:top;color:rgba(255,255,255,.85);}
+.sancion-table tr:hover td{background:rgba(255,255,255,.025);}
+.s-val{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:28px;border-radius:50%;font-weight:700;font-size:13px;font-family:'Rajdhani',sans-serif;}
+.s-val.roja{background:rgba(231,76,60,.18);color:#e74c3c;border:1px solid rgba(231,76,60,.3);}
+.s-val.naranja{background:rgba(230,126,34,.15);color:#e67e22;border:1px solid rgba(230,126,34,.28);}
+.s-val.citado{background:rgba(241,196,15,.1);color:#f1c40f;border:1px solid rgba(241,196,15,.25);padding:3px 10px;border-radius:20px;font-size:9px;height:auto;}
+.s-club{font-weight:700;font-size:12px;color:rgba(255,255,255,.9);}
+.s-jugador{font-size:11px;color:rgba(255,255,255,.6);margin-top:1px;}
+.s-art{font-size:10px;color:var(--dorado);opacity:.75;}
+.s-comp{font-size:10px;color:rgba(255,255,255,.4);font-style:italic;}
+.amarilla-club{margin-bottom:.45rem;background:rgba(255,255,255,.025);border-radius:var(--r-sm);border:1px solid rgba(255,255,255,.06);overflow:hidden;}
+.amarilla-club-header{display:flex;align-items:center;justify-content:space-between;padding:9px 13px;cursor:pointer;user-select:none;}
+.amarilla-club-header:hover{background:rgba(255,255,255,.03);}
+.amarilla-club-nombre{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:.4px;display:flex;align-items:center;gap:8px;}
+.amarilla-club-count{background:rgba(241,196,15,.15);color:#f1c40f;border:1px solid rgba(241,196,15,.25);border-radius:20px;padding:2px 9px;font-size:11px;font-family:'Rajdhani',sans-serif;font-weight:700;}
+.amarilla-club-lista{padding:8px 13px 12px;display:none;}
+.amarilla-club-lista.open{display:flex;flex-wrap:wrap;gap:5px;}
+.amarilla-tag{background:rgba(241,196,15,.07);border:1px solid rgba(241,196,15,.14);border-radius:20px;padding:3px 10px;font-size:11px;font-family:'Rajdhani',sans-serif;color:rgba(255,255,255,.78);}
+.sancion-exp-card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-left:3px solid var(--dorado);border-radius:var(--r-sm);padding:12px 14px;margin-bottom:.6rem;}
+.sancion-exp-num{font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;color:var(--dorado);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;}
+.sancion-exp-texto{font-size:12px;color:rgba(255,255,255,.7);line-height:1.55;font-family:'DM Sans',sans-serif;}
+.sancion-acta-badge{background:rgba(201,162,39,.1);border:1px solid var(--dorado-border);border-radius:var(--r-sm);padding:4px 12px;font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--dorado);display:inline-block;margin-bottom:1rem;}
+.historial-acta-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.06);cursor:pointer;}
+.historial-acta-item:hover{background:rgba(255,255,255,.025);}
+.historial-acta-num{font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--dorado);letter-spacing:.5px;flex-shrink:0;}
+.historial-acta-meta{flex:1;min-width:0;}
+.historial-acta-fecha{font-family:'Rajdhani',sans-serif;font-size:12px;color:rgba(255,255,255,.7);}
+.historial-acta-stats{font-family:'Rajdhani',sans-serif;font-size:11px;color:rgba(255,255,255,.4);margin-top:2px;}
+.historial-acta-arrow{color:rgba(255,255,255,.3);font-size:14px;}
+.parse-preview{background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.08);border-radius:var(--r-sm);padding:12px;margin-top:12px;max-height:340px;overflow-y:auto;}
+.parse-section-title{font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--dorado);margin:10px 0 4px;}
+.parse-row{padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);font-family:'Rajdhani',sans-serif;font-size:11px;color:rgba(255,255,255,.72);line-height:1.4;}
+.parse-row strong{color:#fff;}
+.parse-estado{display:flex;align-items:center;gap:8px;padding:10px;background:rgba(255,255,255,.04);border-radius:var(--r-sm);font-family:'Rajdhani',sans-serif;font-size:12px;margin-bottom:10px;}
+.admin-acta-item{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.06);}
+.admin-acta-item:last-child{border-bottom:none;}
+.admin-acta-num{font-family:'Bebas Neue',sans-serif;font-size:17px;color:var(--dorado);letter-spacing:.5px;}
+.admin-acta-meta{font-family:'Rajdhani',sans-serif;font-size:11px;color:rgba(255,255,255,.45);margin-top:2px;}
+.btn-danger-sm{background:rgba(192,57,43,.12);color:#e74c3c;border:1px solid rgba(192,57,43,.28);border-radius:var(--r-sm);padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Rajdhani',sans-serif;flex-shrink:0;}
+.btn-danger-sm:hover{background:rgba(192,57,43,.28);}
+.btn-secondary{background:none;border:1px solid rgba(255,255,255,.18);color:rgba(255,255,255,.7);border-radius:var(--r-sm);padding:9px 18px;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:13px;letter-spacing:.5px;cursor:pointer;transition:background .15s;}
+.btn-secondary:hover{background:rgba(255,255,255,.07);}
+
+/* ── Tabla disciplinaria acumulada ── */
+.disc-toggle{display:flex;gap:6px;margin-bottom:1rem;background:rgba(255,255,255,.05);border-radius:var(--r-sm);padding:4px;}
+.disc-toggle-btn{flex:1;padding:7px 12px;border:none;border-radius:var(--r-sm);font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.5px;background:none;color:rgba(255,255,255,.45);cursor:pointer;transition:all .15s;}
+.disc-toggle-btn.active{background:rgba(201,162,39,.15);color:var(--dorado);}
+.disc-filter{display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;align-items:center;}
+.disc-filter select,.disc-filter input{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:var(--r-sm);color:#fff;font-family:'Rajdhani',sans-serif;font-size:12px;padding:7px 10px;flex:1;min-width:140px;}
+.disc-table{width:100%;border-collapse:collapse;font-size:12px;font-family:'Rajdhani',sans-serif;}
+.disc-table th{text-align:left;padding:8px 10px;background:rgba(201,162,39,.07);color:var(--dorado);font-size:10px;text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid rgba(201,162,39,.15);white-space:nowrap;}
+.disc-table td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:middle;}
+.disc-table tr:hover td{background:rgba(255,255,255,.025);}
+.disc-table tr.riesgo td:first-child{border-left:3px solid #e74c3c;}
+.disc-pill{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;border-radius:50%;font-weight:700;font-size:13px;line-height:1;}
+.disc-pill.am{background:rgba(241,196,15,.15);color:#f1c40f;border:1px solid rgba(241,196,15,.25);}
+.disc-pill.san{background:rgba(231,76,60,.15);color:#e74c3c;border:1px solid rgba(231,76,60,.25);}
+.disc-pill.zero{background:rgba(255,255,255,.05);color:rgba(255,255,255,.25);border:1px solid rgba(255,255,255,.07);}
+.disc-san-badge{display:inline-block;background:rgba(231,76,60,.1);color:#e74c3c;border:1px solid rgba(231,76,60,.2);border-radius:20px;padding:2px 8px;font-size:10px;font-family:'Rajdhani',sans-serif;font-weight:700;margin-left:4px;white-space:nowrap;}
+.disc-stats-bar{display:flex;gap:12px;flex-wrap:wrap;padding:10px 14px;background:rgba(255,255,255,.03);border-radius:var(--r-sm);margin-bottom:1rem;font-family:'Rajdhani',sans-serif;font-size:11px;color:rgba(255,255,255,.5);}
+.disc-stats-bar b{color:#fff;}
+/* Duplicados admin */
+.dup-card{background:rgba(241,196,15,.04);border:1px solid rgba(241,196,15,.2);border-radius:var(--r-sm);padding:12px 14px;margin-bottom:8px;}
+.dup-card-header{font-family:'Rajdhani',sans-serif;font-size:11px;color:rgba(241,196,15,.7);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+.dup-players{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:8px;}
+.dup-player{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:var(--r-sm);padding:7px 12px;font-family:'Rajdhani',sans-serif;font-size:12px;}
+.dup-player b{display:block;color:#fff;font-size:13px;}
+.dup-player span{color:rgba(255,255,255,.45);font-size:10px;}
+.dup-actions{display:flex;gap:6px;flex-wrap:wrap;}
+.btn-dup-merge{background:rgba(39,174,96,.1);color:#27ae60;border:1px solid rgba(39,174,96,.25);border-radius:var(--r-sm);padding:5px 12px;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:11px;cursor:pointer;letter-spacing:.4px;}
+.btn-dup-merge:hover{background:rgba(39,174,96,.2);}
+.btn-dup-ignore{background:none;color:rgba(255,255,255,.3);border:1px solid rgba(255,255,255,.1);border-radius:var(--r-sm);padding:5px 12px;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:11px;cursor:pointer;letter-spacing:.4px;}
+.btn-dup-ignore:hover{background:rgba(255,255,255,.05);color:rgba(255,255,255,.6);}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 </head>
 <body>
 
@@ -2639,6 +2751,7 @@ table.posiciones td:nth-child(8){
       <button class="admin-tab" onclick="switchAdminTab('playoff',this)">Play Off</button>
       <button class="admin-tab" onclick="switchAdminTab('config',this)">Config</button>
       <button class="admin-tab" onclick="switchAdminTab('estadisticas',this)">📊 Estadisticas</button>
+      <button class="admin-tab" onclick="switchAdminTab('sanciones',this)">🟥 Sanciones</button>
       <button class="admin-tab" onclick="switchAdminTab('notificaciones',this)">🔔 Notificaciones</button>
     </div>
     <div class="admin-body">
@@ -3434,6 +3547,48 @@ table.posiciones td:nth-child(8){
       </div>
 
       <!-- NOTIFICACIONES PUSH -->
+      <!-- SANCIONES ADMIN -->
+      <div class="admin-section" id="admin-sanciones">
+        <div class="admin-title">🟥 Sanciones – H.T.D.D.</div>
+
+        <!-- Subir PDF -->
+        <div class="form-group">
+          <label>Subir Acta del H.T.D.D. (PDF)</label>
+          <div class="upload-area">
+            <input type="file" accept="application/pdf" id="sancion-pdf-file" onchange="procesarPDFActa(this)"/>
+            <span class="icon">📄</span>
+            <p>Hacé clic para subir el PDF del acta</p>
+          </div>
+        </div>
+
+        <!-- Estado del procesamiento -->
+        <div id="sancion-parse-estado" style="display:none">
+          <div class="parse-estado" id="sancion-parse-msg">
+            <span id="sancion-parse-spinner">⏳</span>
+            <span id="sancion-parse-texto">Procesando PDF...</span>
+          </div>
+          <!-- Vista previa del resultado -->
+          <div id="sancion-parse-preview" class="parse-preview" style="display:none"></div>
+          <div id="sancion-parse-actions" style="display:none;margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn-primary" onclick="guardarActaParsed()">✅ Confirmar y guardar</button>
+            <button class="btn-secondary" onclick="descartarActaParsed()">✕ Descartar</button>
+          </div>
+        </div>
+
+        <hr style="margin:20px 0;border:none;border-top:1px solid rgba(255,255,255,.08)"/>
+
+        <!-- Gestión de duplicados -->
+        <div class="admin-title" style="font-size:14px">⚠ Posibles duplicados</div>
+        <div style="font-family:'Rajdhani',sans-serif;font-size:11px;color:rgba(255,255,255,.4);margin-bottom:10px">Jugadores del mismo club con nombre similar. Decidí cuáles fusionar.</div>
+        <div id="lista-duplicados"><div class="empty-msg">Sin duplicados detectados</div></div>
+
+        <hr style="margin:20px 0;border:none;border-top:1px solid rgba(255,255,255,.08)"/>
+
+        <!-- Lista de actas guardadas -->
+        <div class="admin-title" style="font-size:14px">Actas procesadas</div>
+        <div class="admin-list" id="lista-actas"></div>
+      </div><!-- /admin-sanciones -->
+
       <div class="admin-section" id="admin-notificaciones">
         <div class="admin-title">🔔 Notificaciones Push</div>
 
@@ -3557,6 +3712,7 @@ table.posiciones td:nth-child(8){
     <a href="#" data-sec="equipos" onclick="showSection('equipos');cerrarMenu();return false">Equipos</a>
     <a href="#" data-sec="torneos" onclick="showSection('torneos');cerrarMenu();return false">Torneos</a>
     <a href="#" data-sec="noticias" onclick="showSection('noticias');cerrarMenu();return false">Noticias</a>
+    <a href="#" data-sec="sanciones" onclick="showSection('sanciones');cerrarMenu();return false">Sanciones</a>
     <button class="btn-instalar-nav" id="nav-install-btn" onclick="pwaInstalar()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3v13M7 11l5 5 5-5"/><path d="M5 19h14"/></svg>
       Instalar app
@@ -3755,6 +3911,20 @@ table.posiciones td:nth-child(8){
         <div class="adv-slot" id="adv-bottom-noticias"></div>
       </section>
 
+      <!-- ── SANCIONES ─────────────────────────────────────────── -->
+      <section class="section" id="section-sanciones">
+        <div class="adv-slot" id="adv-top-sanciones"></div>
+        <div class="sancion-tabs">
+          <button class="sancion-tab active" onclick="switchSancionTab('ultima',this)">📋 Última Acta</button>
+          <button class="sancion-tab" onclick="switchSancionTab('disciplina',this)">🟡 Disciplina</button>
+          <button class="sancion-tab" onclick="switchSancionTab('historial',this)">🗂 Historial</button>
+        </div>
+        <div id="sanciones-ultima-content"></div>
+        <div id="sanciones-disciplina-content" style="display:none"></div>
+        <div id="sanciones-historial-content" style="display:none"></div>
+        <div class="adv-slot" id="adv-bottom-sanciones"></div>
+      </section>
+
     </main>
   </div>
 </div>
@@ -3806,11 +3976,13 @@ const FOTOS_KEY='lrr_fotos';
 
 function getPass(){return localStorage.getItem(PASS_KEY)||'admin123';}
 function getData(){try{const d=JSON.parse(localStorage.getItem(DATA_KEY))||defData();if(!d.playoff)d.playoff=[];return d;}catch(e){return defData();}}
-// Construye una copia de "d" sin las fotos de goleadores: van en documentos
-// individuales (golfoto_<id>) para no superar el límite de 1MB por documento de Firestore.
+// Construye una copia de "d" sin las fotos de goleadores ni las actas:
+// ambas van en documentos individuales para no superar el límite de 1MB de Firestore.
 function dataParaFirestore(d){
-  if(!d.goleadores || !d.goleadores.length) return d;
-  return { ...d, goleadores: d.goleadores.map(g => g.foto ? {...g, foto:''} : g) };
+  const out = { ...d };
+  if(out.goleadores) out.goleadores = out.goleadores.map(g => g.foto ? {...g, foto:''} : g);
+  if(out.actas) delete out.actas;   // las actas van como documentos individuales
+  return out;
 }
 function saveData(d){
   localStorage.setItem(DATA_KEY,JSON.stringify(d));
@@ -3843,7 +4015,7 @@ function saveIdentidad(i){localStorage.setItem(ID_KEY,JSON.stringify(i));if(wind
 function getFotos(){try{return JSON.parse(localStorage.getItem(FOTOS_KEY))||[];}catch(e){return[];}}
 function saveFotos(f){localStorage.setItem(FOTOS_KEY,JSON.stringify(f));if(window._fb)window._fb.set('fotos',f);}
 
-function defData(){return{partidos:[],posiciones:[],goleadores:[],equipos:[],torneos:[],playoff:[]};};
+function defData(){return{partidos:[],posiciones:[],goleadores:[],equipos:[],torneos:[],playoff:[],actas:[],discMerges:[]};};
 
 let data=getData();
 let escudos=getEscudos();
@@ -4150,6 +4322,748 @@ function actualizarNavLive(){
   if(bnDot) bnDot.classList.toggle('visible', hayEnJuego);
 }
 
+// ============================================================
+// SANCIONES – Parser PDF, admin y render público
+// ============================================================
+
+// ── Variable global del acta en proceso ──
+window._actaParsed = null;
+let currentSancionTab = 'ultima';
+
+// ── Helpers de sección ──
+function extractSection(text, from, to) {
+  const idx = text.indexOf(from);
+  if (idx === -1) return null;
+  const end = to ? text.indexOf(to, idx + from.length) : -1;
+  return end === -1 ? text.slice(idx + from.length) : text.slice(idx + from.length, end);
+}
+
+// ── Parser principal ──
+function parsearTextoActa(fullText) {
+  const r = {
+    numero:'', fechaActa:'', suspensiones:[],
+    amarillas:[], suspArt208:[],
+    amonestadosSenior:[], expulsadosSenior:[],
+    expedientes:[], citas:[]
+  };
+
+  // 1. Número y fecha del acta
+  const numM = fullText.match(/ACTA\s+N[ªa°º]\s*(\d+\/\d+)/i);
+  if (numM) r.numero = numM[1];
+  const mMap = {enero:'01',febrero:'02',marzo:'03',abril:'04',mayo:'05',junio:'06',julio:'07',agosto:'08',septiembre:'09',octubre:'10',noviembre:'11',diciembre:'12'};
+  const fM = fullText.match(/a los (\d+) d[ií]as del mes de (\w+) de (\d{4})/i);
+  if (fM) {
+    const mes = mMap[fM[2].toLowerCase()]||'00';
+    r.fechaActa = `${fM[1].padStart(2,'0')}/${mes}/${fM[3]}`;
+  }
+
+  // 2. Tabla principal de sanciones (desde "Valor" o "infractor" hasta "TARJETAS AMARILLAS")
+  const secTabla = extractSection(fullText, 'Tipo de infractor', 'TARJETAS AMARILLAS')
+                || extractSection(fullText, 'Valor\n', 'TARJETAS AMARILLAS');
+  if (secTabla) {
+    // Cada fila tiene una fecha de partido dd/m/yyyy – úsala como separador
+    const reDate = /(\d{1,2}\/\d{1,2}\/\d{4})/g;
+    const dates = [...secTabla.matchAll(reDate)];
+    for (let i = 0; i < dates.length; i++) {
+      const di = dates[i].index;
+      const dEnd = i+1 < dates.length ? dates[i+1].index : secTabla.length;
+      // Texto que precede a la fecha: competición + número de fecha
+      const pre = secTabla.slice(Math.max(0, di-400), di);
+      const fechaPartido = dates[i][1];
+      const afterDate = secTabla.slice(di + fechaPartido.length, dEnd).replace(/\n/g,' ').replace(/\s+/g,' ').trim();
+
+      // Artículo + tipo + valor
+      const artM = afterDate.match(/(ART[\s\d\wA-ZÁÉÍÓÚÑ.]+?)\s+(Jugador|Institución|Club)\s+(\d+|CITADO)/i);
+      if (!artM) continue;
+      const articulo = artM[1].replace(/\s+/g,' ').trim();
+      const tipo = artM[2];
+      const valor = artM[3];
+      const beforeArt = afterDate.slice(0, artM.index).trim();
+
+      // Competición desde el bloque previo
+      const preClean = pre.replace(/\n/g,' ').replace(/\s+/g,' ');
+      const compM = preClean.match(/(\d+[°ºª]\s*DIV[^0-9]+?|CAT\.\s*\d+[^0-9]+?|ZONA\s*"[AB]"[^0-9]+?|\d+[°ºª]\s*Div\.[^0-9]+?)(\d+)\s*$/i);
+      const competicion = compM ? compM[1].replace(/\s+/g,' ').trim() : '';
+      const nFecha = compM ? compM[2] : '';
+
+      // Club vs jugador – heurística: buscar nombres de equipos registrados
+      let club = beforeArt, jugador = '';
+      const eqs = (data.equipos||[]).map(e=>e.nombre.toUpperCase().trim());
+      let best = 0;
+      for (const eq of eqs) {
+        if (beforeArt.toUpperCase().startsWith(eq) && eq.length > best) {
+          best = eq.length;
+          club = eq;
+          jugador = beforeArt.slice(eq.length).trim();
+        }
+      }
+      if (!best) {
+        // Sin match: dividir en 40/60
+        const words = beforeArt.split(/\s+/);
+        const mid = Math.max(1, Math.ceil(words.length * 0.45));
+        club = words.slice(0,mid).join(' ');
+        jugador = words.slice(mid).join(' ');
+      }
+
+      r.suspensiones.push({ competicion, fecha: nFecha, fechaPartido, club, jugador, articulo, tipo, valor });
+    }
+  }
+
+  // 3. Tarjetas amarillas
+  const secAm = extractSection(fullText, 'TARJETAS AMARILLAS', 'LOS SIGUIENTES JUGADORES')
+             || extractSection(fullText, 'TARJETAS AMARILLAS', 'LISTADO DE AMONESTADOS');
+  if (secAm) {
+    // Formato: "CLUB NAME: jugador1, jugador2, ..."
+    // Los jugadores de un club pueden continuar en la línea siguiente sin ':'
+    let currentClub = null, buffer = '';
+    for (const line of secAm.split('\n')) {
+      const t = line.trim();
+      if (!t || t.match(/^DIV\s+|^\d+[°ºª]/i)) continue;
+      const colonIdx = t.indexOf(':');
+      if (colonIdx > 0 && t.slice(0, colonIdx).match(/^[A-ZÁÉÍÓÚÑ.\s()-]+$/) && t.slice(0,colonIdx).length < 60) {
+        if (currentClub && buffer) {
+          r.amarillas.push({ club: currentClub, jugadores: buffer.split(/,\s*/).map(j=>j.trim()).filter(j=>j.length>1) });
+        }
+        currentClub = t.slice(0, colonIdx).trim();
+        buffer = t.slice(colonIdx+1).trim();
+      } else if (currentClub) {
+        buffer += ' ' + t;
+      }
+    }
+    if (currentClub && buffer) {
+      r.amarillas.push({ club: currentClub, jugadores: buffer.split(/,\s*/).map(j=>j.trim()).filter(j=>j.length>1) });
+    }
+  }
+
+  // 4. Suspensiones ART 208
+  const sec208 = extractSection(fullText, 'ART. 208:', 'LISTADO DE AMONESTADOS')
+              || extractSection(fullText, 'CONFORME AL ART. 208', 'LISTADO DE AMONESTADOS');
+  if (sec208) {
+    const lines = sec208.split('\n').filter(l=>l.trim()&&!l.match(/^Club|^Jugador|^Competición/i));
+    for (const line of lines) {
+      // Formato: CLUB   APELLIDO, NOMBRE   COMPETICION
+      const cM = line.match(/^([A-ZÁÉÍÓÚÑÜ][A-ZÁÉÍÓÚÑÜ\s().]+?)\s{2,}([A-ZÁÉÍÓÚÑÜ][A-ZÁÉÍÓÚÑÜ\s]+,\s*[A-ZÁÉÍÓÚÑÜ][A-ZÁÉÍÓÚÑÜ\s]+)\s{2,}(.+)$/);
+      if (cM) {
+        r.suspArt208.push({ club:cM[1].trim(), jugador:cM[2].trim(), competicion:cM[3].trim() });
+      } else {
+        // Un espacio entre club, apellido, nombre, competición (fallback)
+        const m2 = line.match(/^([A-ZÁÉÍÓÚÑÜ ]+?)\s+([A-ZÁÉÍÓÚÑÜ]+,\s*[A-ZÁÉÍÓÚÑÜ ]+?)\s+(\d+\s*DIV.*)$/i);
+        if (m2) r.suspArt208.push({ club:m2[1].trim(), jugador:m2[2].trim(), competicion:m2[3].trim() });
+      }
+    }
+  }
+
+  // 5. Amonestados Senior
+  const secAS = extractSection(fullText, 'LISTADO DE AMONESTADOS SENIOR', 'LISTADO DE EXPULSADOS');
+  if (secAS) {
+    for (const line of secAS.split('\n').filter(l=>l.trim()&&!l.match(/FECHA/i))) {
+      const ci = line.indexOf(':');
+      if (ci > 0) {
+        r.amonestadosSenior.push({
+          club: line.slice(0,ci).trim(),
+          jugadores: line.slice(ci+1).split(',').map(j=>j.trim()).filter(Boolean)
+        });
+      }
+    }
+  }
+
+  // 6. Expulsados Senior
+  const secES = extractSection(fullText, 'LISTADO DE EXPULSADOS SENIOR', 'CITA');
+  if (secES) {
+    for (const line of secES.split('\n').filter(l=>l.trim()&&!l.match(/FECHA/i))) {
+      const dM = line.match(/^([A-ZÁÉÍÓÚÑÜ][A-ZÁÉÍÓÚÑÜ\s().]+?)\s*[-–]\s*([A-ZÁÉÍÓÚÑÜ][A-ZÁÉÍÓÚÑÜ\s]+?)\s*[-–]\s*(.+)$/);
+      if (dM) r.expulsadosSenior.push({ club:dM[1].trim(), jugador:dM[2].trim(), detalle:dM[3].trim() });
+    }
+  }
+
+  // 7. Expedientes
+  const expRe = /EXPEDIENTE\s+N[°º]\s*(\d+)([\s\S]+?)(?=EXPEDIENTE\s+N[°º]|AMONESTACION\b|NOTA RECIBIDA|ÚNICA COMUNICACIÓN|$)/gi;
+  let em;
+  while ((em = expRe.exec(fullText)) !== null) {
+    r.expedientes.push({ numero: em[1], texto: em[2].trim().replace(/\s+/g,' ').slice(0,1200) });
+  }
+
+  // 8. Citas
+  const citaRe = /SE LA CITA AL SR\.\s+([A-ZÁÉÍÓÚÑÜ][A-ZÁÉÍÓÚÑÜ\s]+?),?\s+JUGADOR DEL CLUB\s+([A-ZÁÉÍÓÚÑÜ][A-ZÁÉÍÓÚÑÜ\s().]+?)\s+A ASISTIR/gi;
+  let cm;
+  while ((cm = citaRe.exec(fullText)) !== null) {
+    r.citas.push({ jugador:cm[1].trim(), club:cm[2].trim() });
+  }
+
+  return r;
+}
+
+// ── Cargar y parsear PDF desde el input ──
+async function procesarPDFActa(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const estadoEl = document.getElementById('sancion-parse-estado');
+  const msgEl = document.getElementById('sancion-parse-msg');
+  const spinEl = document.getElementById('sancion-parse-spinner');
+  const textoEl = document.getElementById('sancion-parse-texto');
+  const previewEl = document.getElementById('sancion-parse-preview');
+  const actionsEl = document.getElementById('sancion-parse-actions');
+  estadoEl.style.display = '';
+  previewEl.style.display = 'none';
+  actionsEl.style.display = 'none';
+  msgEl.style.background = 'rgba(255,255,255,.04)';
+  spinEl.textContent = '⏳';
+  textoEl.textContent = 'Leyendo PDF...';
+
+  try {
+    if (!window.pdfjsLib) throw new Error('pdf.js no cargado');
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    const buffer = await file.arrayBuffer();
+    const pdf = await window.pdfjsLib.getDocument({ data: buffer }).promise;
+
+    textoEl.textContent = `Extrayendo texto (${pdf.numPages} páginas)...`;
+
+    // Extraer texto de todas las páginas conservando posiciones
+    let allItems = [];
+    for (let p = 1; p <= pdf.numPages; p++) {
+      const page = await pdf.getPage(p);
+      const vp = page.getViewport({ scale: 1 });
+      const tc = await page.getTextContent();
+      tc.items.forEach(item => {
+        const [,,,,x,y] = item.transform;
+        allItems.push({ str:item.str, x, y:vp.height-y, page:p, w:item.width });
+      });
+    }
+
+    // Ordenar: página → y (top to bottom) → x (left to right)
+    allItems.sort((a,b)=>{
+      if(a.page!==b.page) return a.page-b.page;
+      const dy = a.y - b.y;
+      if(Math.abs(dy)>4) return dy;
+      return a.x - b.x;
+    });
+
+    // Agrupar en líneas visuales (items dentro de 4px en y)
+    const lines = [];
+    let curLine = [], curY=-9999, curPage=-1;
+    for (const item of allItems) {
+      if (item.page!==curPage || Math.abs(item.y-curY)>4) {
+        if (curLine.length) lines.push(curLine.sort((a,b)=>a.x-b.x).map(i=>i.str).join(' ').trim());
+        curLine=[item]; curY=item.y; curPage=item.page;
+      } else { curLine.push(item); }
+    }
+    if (curLine.length) lines.push(curLine.sort((a,b)=>a.x-b.x).map(i=>i.str).join(' ').trim());
+
+    const fullText = lines.filter(Boolean).join('\n');
+    textoEl.textContent = 'Analizando estructura del acta...';
+
+    const parsed = parsearTextoActa(fullText);
+    parsed.id = 'acta_' + Date.now();
+    parsed.textoCompleto = fullText.slice(0, 8000); // primeros 8000 chars para referencia
+    window._actaParsed = parsed;
+
+    // Mostrar preview
+    previewEl.style.display = '';
+    previewEl.innerHTML = buildParsePreview(parsed);
+    actionsEl.style.display = 'flex';
+    spinEl.textContent = '✅';
+    textoEl.textContent = `Acta Nª ${parsed.numero} procesada — verificá los datos antes de guardar.`;
+    msgEl.style.background = 'rgba(39,174,96,.08)';
+
+  } catch(err) {
+    spinEl.textContent = '❌';
+    textoEl.textContent = 'Error al procesar el PDF: ' + err.message;
+    msgEl.style.background = 'rgba(231,76,60,.1)';
+    console.error(err);
+  }
+  input.value = '';
+}
+
+function buildParsePreview(p) {
+  let h = `<div style="font-family:'Rajdhani',sans-serif;font-size:13px;color:var(--dorado);font-weight:700">Acta Nª ${p.numero} · ${p.fechaActa}</div>`;
+
+  // Stats
+  h += `<div style="display:flex;gap:12px;flex-wrap:wrap;margin:8px 0;font-family:'Rajdhani',sans-serif;font-size:11px;color:rgba(255,255,255,.6)">
+    <span>🟥 ${p.suspensiones.length} sanciones</span>
+    <span>🟡 ${p.amarillas.length} clubes c/amarillas</span>
+    <span>📋 ${p.suspArt208.length} susp. Art.208</span>
+    <span>📄 ${p.expedientes.length} expedientes</span>
+  </div>`;
+
+  if (p.suspensiones.length) {
+    h += `<div class="parse-section-title">🟥 Sanciones / suspensiones directas</div>`;
+    p.suspensiones.slice(0,8).forEach(s=>{
+      h += `<div class="parse-row"><strong>${s.club}</strong>&nbsp;·&nbsp;${s.jugador}&nbsp;·&nbsp;${s.articulo}&nbsp;·&nbsp;<strong>${s.valor==='CITADO'?'CITADO':s.valor+' pt.'}</strong></div>`;
+    });
+    if(p.suspensiones.length>8) h+=`<div class="parse-row" style="color:var(--gris)">…y ${p.suspensiones.length-8} más</div>`;
+  }
+  if (p.amarillas.length) {
+    h += `<div class="parse-section-title">🟡 Tarjetas amarillas (${p.amarillas.reduce((a,c)=>a+c.jugadores.length,0)} jugadores en ${p.amarillas.length} clubes)</div>`;
+    p.amarillas.slice(0,4).forEach(a=>{
+      h+=`<div class="parse-row"><strong>${a.club}</strong>&nbsp;·&nbsp;${a.jugadores.slice(0,4).join(', ')}${a.jugadores.length>4?`… (+${a.jugadores.length-4})`:''}`;
+    });
+    if(p.amarillas.length>4) h+=`<div class="parse-row" style="color:var(--gris)">…y ${p.amarillas.length-4} clubes más</div>`;
+  }
+  if (p.suspArt208.length) {
+    h += `<div class="parse-section-title">📋 Suspensiones por acumulación (Art. 208)</div>`;
+    p.suspArt208.forEach(s=>{
+      h+=`<div class="parse-row"><strong>${s.club}</strong>&nbsp;·&nbsp;${s.jugador}&nbsp;·&nbsp;<em>${s.competicion}</em></div>`;
+    });
+  }
+  if (p.expedientes.length) {
+    h += `<div class="parse-section-title">📄 Expedientes</div>`;
+    p.expedientes.forEach(e=>{
+      h+=`<div class="parse-row"><strong>Exp. Nº ${e.numero}</strong>&nbsp;·&nbsp;${e.texto.slice(0,120)}...</div>`;
+    });
+  }
+  return h;
+}
+
+async function guardarActaParsed() {
+  if (!window._actaParsed) return;
+  const acta = window._actaParsed;
+  if (!data.actas) data.actas = [];
+  const idx = data.actas.findIndex(a=>a.numero===acta.numero);
+  if (idx>=0) data.actas[idx]=acta; else data.actas.push(acta);
+  data.actas.sort((a,b)=>b.id.localeCompare(a.id));
+  // Guardar en Firestore como documento individual (no entra en el doc principal)
+  if(window._fb) await window._fb.setActa(acta.id, acta);
+  saveData(data);  // saveData excluye data.actas del doc principal
+  renderAdminListaActas();
+  descartarActaParsed();
+  const msg = document.getElementById('sancion-parse-msg');
+  const sp = document.getElementById('sancion-parse-spinner');
+  const tx = document.getElementById('sancion-parse-texto');
+  sp.textContent='✅'; tx.textContent=`Acta Nª ${acta.numero} guardada correctamente.`;
+  msg.style.background='rgba(39,174,96,.1)';
+  window._actaParsed = null;
+}
+
+function eliminarActa(id) {
+  if (!confirm('¿Eliminar esta acta?')) return;
+  data.actas = (data.actas||[]).filter(a=>a.id!==id);
+  if(window._fb) window._fb.delActa(id);
+  saveData(data);
+  renderAdminListaActas();
+  if(currentSection==='sanciones') renderSanciones();
+}
+
+function renderAdminListaActas() {
+  const el = document.getElementById('lista-actas'); if(!el) return;
+  const actas = data.actas||[];
+  if(!actas.length){el.innerHTML='<div class="empty-msg">No hay actas cargadas</div>';return;}
+  el.innerHTML=`<div class="card"><div style="padding:0">${actas.map(a=>`
+    <div class="admin-acta-item">
+      <div class="admin-acta-info">
+        <div class="admin-acta-num">Acta Nª ${a.numero}</div>
+        <div class="admin-acta-meta">${a.fechaActa} · ${a.suspensiones?.length||0} sanciones · ${(a.amarillas||[]).reduce((t,c)=>t+c.jugadores.length,0)} amarillas</div>
+      </div>
+      <button class="btn-danger-sm" onclick="eliminarActa('${a.id}')">🗑</button>
+    </div>`).join('')}</div></div>`;
+  renderAdminDuplicados();
+}
+
+// ── Render público ──
+let currentSancionTabActive = 'ultima';
+let _discToggle = 'todos';
+let _discClubFiltro = '';
+
+// ── Helpers de nombre normalizado para comparación ──
+function normNombre(n){
+  return normalizar(n).split(/\s+/).filter(Boolean).sort().join(' ');
+}
+function jaccardNombre(a, b){
+  const wa = new Set(normNombre(a).split(' ').filter(Boolean));
+  const wb = new Set(normNombre(b).split(' ').filter(Boolean));
+  let inter = 0;
+  wa.forEach(w=>{ if(wb.has(w)) inter++; });
+  const union = new Set([...wa,...wb]).size;
+  return union ? inter/union : 0;
+}
+function claveJugador(club, nombre){
+  return normalizar(club) + '|||' + normNombre(nombre);
+}
+
+// ── Computar disciplina desde actas ──
+function computarDisciplina(){
+  const merges   = data.discMerges  || [];
+  const disc = {};
+
+  function getOrCreate(club, nombre){
+    let clave = claveJugador(club, nombre);
+    const merge = merges.find(m => m.drop === clave);
+    if(merge) clave = merge.keep;
+    if(!disc[clave]) disc[clave] = { nombre, club, amarillas:0, sanciones:[], _am:new Set(), _san:new Set() };
+    return clave;
+  }
+
+  for(const acta of (data.actas||[])){
+    // Amarillas (tabla principal del acta)
+    for(const clubAm of (acta.amarillas||[])){
+      for(const jug of (clubAm.jugadores||[])){
+        if(!jug) continue;
+        const c = getOrCreate(clubAm.club, jug);
+        const k = acta.id+'|am|'+normNombre(jug);
+        if(!disc[c]._am.has(k)){ disc[c].amarillas++; disc[c]._am.add(k); }
+      }
+    }
+    // Amonestados Senior
+    for(const clubAm of (acta.amonestadosSenior||[])){
+      for(const jug of (clubAm.jugadores||[])){
+        if(!jug) continue;
+        const c = getOrCreate(clubAm.club, jug);
+        const k = acta.id+'|amsen|'+normNombre(jug);
+        if(!disc[c]._am.has(k)){ disc[c].amarillas++; disc[c]._am.add(k); }
+      }
+    }
+    // Sanciones directas
+    for(const s of (acta.suspensiones||[])){
+      if(!s.jugador || s.valor==='CITADO') continue;
+      const c = getOrCreate(s.club, s.jugador);
+      const k = acta.id+'|san|'+normNombre(s.jugador)+'|'+s.articulo;
+      if(!disc[c]._san.has(k)){
+        disc[c].sanciones.push({ actaNum:acta.numero, articulo:s.articulo, valor:s.valor, competicion:s.competicion });
+        disc[c]._san.add(k);
+      }
+    }
+    // Art. 208
+    for(const s of (acta.suspArt208||[])){
+      if(!s.jugador) continue;
+      const c = getOrCreate(s.club, s.jugador);
+      const k = acta.id+'|208|'+normNombre(s.jugador);
+      if(!disc[c]._san.has(k)){
+        disc[c].sanciones.push({ actaNum:acta.numero, articulo:'Art. 208 (acum.)', valor:'1F', competicion:s.competicion });
+        disc[c]._san.add(k);
+      }
+    }
+    // Expulsados Senior
+    for(const s of (acta.expulsadosSenior||[])){
+      if(!s.jugador) continue;
+      const c = getOrCreate(s.club, s.jugador);
+      const k = acta.id+'|exp|'+normNombre(s.jugador);
+      if(!disc[c]._san.has(k)){
+        disc[c].sanciones.push({ actaNum:acta.numero, articulo:s.detalle||'Expulsión', valor:'–', competicion:'' });
+        disc[c]._san.add(k);
+      }
+    }
+  }
+
+  return Object.entries(disc).map(([clave,d])=>({ ...d, clave, _am:undefined, _san:undefined }))
+    .sort((a,b)=>(b.sanciones.length*10+b.amarillas)-(a.sanciones.length*10+a.amarillas)||a.club.localeCompare(b.club)||a.nombre.localeCompare(b.nombre));
+}
+
+// ── Detectar posibles duplicados ──
+function detectarDuplicados(players){
+  const ignoredSet = new Set((data.discIgnored||[]).map(p=>[p[0],p[1]].sort().join('|||')));
+  const dups = [];
+  for(let i=0;i<players.length;i++){
+    for(let j=i+1;j<players.length;j++){
+      const a=players[i], b=players[j];
+      if(normalizar(a.club)!==normalizar(b.club)) continue;
+      if(a.clave===b.clave) continue;
+      const pairKey=[a.clave,b.clave].sort().join('|||');
+      if(ignoredSet.has(pairKey)) continue;
+      const sim=jaccardNombre(a.nombre, b.nombre);
+      if(sim>=0.5 && sim<1.0) dups.push({a,b,sim:Math.round(sim*100),pairKey});
+    }
+  }
+  return dups;
+}
+
+// ── Fusionar / ignorar ──
+function mergeJugadores(dropClave, keepClave){
+  if(!data.discMerges) data.discMerges=[];
+  if(!data.discMerges.find(m=>m.drop===dropClave)) data.discMerges.push({drop:dropClave,keep:keepClave});
+  saveData(data); renderAdminDuplicados();
+  if(currentSection==='sanciones') renderSanciones();
+}
+function ignorarDuplicado(pairKey){
+  if(!data.discIgnored) data.discIgnored=[];
+  const [a,b]=pairKey.split('|||');
+  if(!data.discIgnored.find(p=>p[0]===a&&p[1]===b||p[0]===b&&p[1]===a)) data.discIgnored.push([a,b]);
+  saveData(data); renderAdminDuplicados();
+}
+
+// ── Render admin: panel de duplicados ──
+function renderAdminDuplicados(){
+  const el=document.getElementById('lista-duplicados'); if(!el) return;
+  const players=computarDisciplina();
+  const dups=detectarDuplicados(players);
+  if(!dups.length){el.innerHTML='<div class="empty-msg" style="font-size:12px">✅ Sin posibles duplicados detectados</div>';return;}
+  el.innerHTML=dups.map(d=>{
+    const fn=(p)=>`<div class="dup-player"><b>${p.nombre}</b><span>🟡 ${p.amarillas} · 🟥 ${p.sanciones.length}</span></div>`;
+    return `<div class="dup-card">
+      <div class="dup-card-header">⚠ ${d.sim}% similitud · ${d.a.club}</div>
+      <div class="dup-players">${fn(d.a)}<div style="color:rgba(255,255,255,.3);font-size:18px">⟺</div>${fn(d.b)}</div>
+      <div class="dup-actions">
+        <button class="btn-dup-merge" onclick="mergeJugadores('${d.b.clave}','${d.a.clave}')">✓ Mantener "${d.a.nombre.split(' ')[0]}"</button>
+        <button class="btn-dup-merge" onclick="mergeJugadores('${d.a.clave}','${d.b.clave}')">✓ Mantener "${d.b.nombre.split(' ')[0]}"</button>
+        <button class="btn-dup-ignore" onclick="ignorarDuplicado('${d.pairKey}')">✕ No son el mismo</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Render público: tabla disciplina ──
+function renderTabDisciplina(){
+  const el=document.getElementById('sanciones-disciplina-content');
+  const players=computarDisciplina();
+  if(!players.length){el.innerHTML='<div class="card"><div class="empty-msg">Cargá al menos una acta para ver la tabla disciplinaria</div></div>';return;}
+
+  const clubes=[...new Set(players.map(p=>p.club))].sort();
+  const filtrado=players.filter(p=>{
+    if(_discClubFiltro && normalizar(p.club)!==normalizar(_discClubFiltro)) return false;
+    if(_discToggle==='riesgo') return p.amarillas>=3||p.sanciones.length>0;
+    return p.amarillas>0||p.sanciones.length>0;
+  });
+
+  const totalAm=players.reduce((t,p)=>t+p.amarillas,0);
+  const totalSan=players.reduce((t,p)=>t+p.sanciones.length,0);
+  const enRiesgo=players.filter(p=>p.amarillas>=3||p.sanciones.length>0).length;
+
+  let h=`<div class="disc-toggle">
+    <button class="disc-toggle-btn ${_discToggle==='todos'?'active':''}" onclick="_discToggle='todos';renderTabDisciplina()">📋 Todos (${players.length})</button>
+    <button class="disc-toggle-btn ${_discToggle==='riesgo'?'active':''}" onclick="_discToggle='riesgo';renderTabDisciplina()">⚠ En riesgo (${enRiesgo})</button>
+  </div>
+  <div class="disc-filter">
+    <select onchange="_discClubFiltro=this.value;renderTabDisciplina()">
+      <option value="">Todos los clubes</option>
+      ${clubes.map(c=>`<option value="${c}" ${_discClubFiltro===c?'selected':''}>${c}</option>`).join('')}
+    </select>
+  </div>
+  <div class="disc-stats-bar">
+    <span>🟡 <b>${totalAm}</b> amarillas</span>
+    <span>🟥 <b>${totalSan}</b> sanciones</span>
+    <span>⚠ <b>${enRiesgo}</b> en riesgo</span>
+    <span>👤 <b>${players.length}</b> jugadores</span>
+  </div>`;
+
+  if(!filtrado.length){h+='<div class="card"><div class="empty-msg">Sin resultados para el filtro seleccionado</div></div>';el.innerHTML=h;return;}
+
+  h+=`<div class="card" style="padding:0;overflow-x:auto">
+  <table class="disc-table">
+    <thead><tr><th>#</th><th>Club / Jugador</th><th>🟡</th><th>🟥 Sanciones</th></tr></thead>
+    <tbody>${filtrado.map((p,i)=>{
+      const esRiesgo=p.amarillas>=3||p.sanciones.length>0;
+      const amPill=`<span class="disc-pill ${p.amarillas>0?'am':'zero'}">${p.amarillas}</span>`;
+      const sanHTML=p.sanciones.length
+        ? p.sanciones.map(s=>`<span class="disc-san-badge" title="Acta ${s.actaNum}${s.competicion?' · '+s.competicion:''}">${s.articulo}${s.valor&&s.valor!=='–'?' ('+s.valor+')':''}</span>`).join(' ')
+        : '<span style="color:rgba(255,255,255,.2);font-size:11px">–</span>';
+      return `<tr class="${esRiesgo?'riesgo':''}">
+        <td style="color:rgba(255,255,255,.3);font-size:11px">${i+1}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:12px">${getEscudoHTML(p.club,18)} ${p.club}</div>
+          <div style="color:rgba(255,255,255,.6);font-size:11px;margin-top:2px">${p.nombre}</div>
+        </td>
+        <td>${amPill}</td>
+        <td style="max-width:200px">${sanHTML}</td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table></div>`;
+
+  el.innerHTML=h;
+}
+
+function switchSancionTab(tab, el) {
+  currentSancionTabActive = tab;
+  document.querySelectorAll('.sancion-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('sanciones-ultima-content').style.display     = tab==='ultima'?'':'none';
+  document.getElementById('sanciones-disciplina-content').style.display = tab==='disciplina'?'':'none';
+  document.getElementById('sanciones-historial-content').style.display  = tab==='historial'?'':'none';
+  renderSanciones();
+}
+
+function renderSanciones() {
+  const actas = data.actas||[];
+  if(currentSancionTabActive==='ultima')      renderUltimaActa(actas);
+  else if(currentSancionTabActive==='disciplina') renderTabDisciplina();
+  else                                         renderHistorialActas(actas);
+}
+
+function renderUltimaActa(actas) {
+  const el = document.getElementById('sanciones-ultima-content');
+  if (!actas.length) {
+    el.innerHTML='<div class="card"><div class="empty-msg">No hay actas cargadas aún</div></div>';
+    return;
+  }
+  const a = actas[0];
+  let h = `<div class="sancion-acta-badge">Acta Nª ${a.numero} · ${a.fechaActa}</div>`;
+
+  // Suspensiones directas (excluir CITADO)
+  const susps = (a.suspensiones||[]).filter(s=>s.valor!=='CITADO');
+  const citados = (a.suspensiones||[]).filter(s=>s.valor==='CITADO');
+  if (susps.length) {
+    h += `<div class="sancion-block">
+      <div class="sancion-block-title">🟥 Sanciones <span class="sb-count">${susps.length}</span></div>
+      <div class="card" style="padding:0;overflow:hidden">
+      <table class="sancion-table">
+        <thead><tr><th>Club / Jugador</th><th>Artículo</th><th>Pts.</th><th>Comp.</th></tr></thead>
+        <tbody>
+          ${susps.map(s=>{
+            const v=parseInt(s.valor)||0;
+            const cls=v>=4?'naranja':'roja';
+            return `<tr>
+              <td><div class="s-club">${getEscudoHTML(s.club,20)} ${s.club}</div><div class="s-jugador">${s.jugador}</div></td>
+              <td><div class="s-art">${s.articulo}</div></td>
+              <td><span class="s-val ${cls}">${s.valor}</span></td>
+              <td><div class="s-comp">${s.competicion} Fecha ${s.fecha}</div></td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table></div></div>`;
+  }
+
+  // Suspensiones Art. 208
+  if ((a.suspArt208||[]).length) {
+    h += `<div class="sancion-block">
+      <div class="sancion-block-title">📋 Susp. Acumulación – Art.208 <span class="sb-count">${a.suspArt208.length}</span></div>
+      <div class="card" style="padding:0;overflow:hidden">
+      <table class="sancion-table">
+        <thead><tr><th>Club / Jugador</th><th>Competición</th></tr></thead>
+        <tbody>
+          ${a.suspArt208.map(s=>`<tr>
+            <td><div class="s-club">${getEscudoHTML(s.club,20)} ${s.club}</div><div class="s-jugador">${s.jugador}</div></td>
+            <td><div class="s-comp">${s.competicion}</div></td>
+          </tr>`).join('')}
+        </tbody>
+      </table></div></div>`;
+  }
+
+  // Tarjetas amarillas por club (colapsables)
+  if ((a.amarillas||[]).length) {
+    const totalAm = a.amarillas.reduce((t,c)=>t+c.jugadores.length,0);
+    h += `<div class="sancion-block">
+      <div class="sancion-block-title">🟡 Tarjetas Amarillas <span class="sb-count">${totalAm}</span></div>
+      <div class="card" style="padding:0;overflow:hidden">
+        ${a.amarillas.map((c,i)=>`
+          <div class="amarilla-club">
+            <div class="amarilla-club-header" onclick="toggleAmarillaClub(${i})">
+              <div class="amarilla-club-nombre">${getEscudoHTML(c.club,20)} ${c.club}</div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span class="amarilla-club-count">${c.jugadores.length}</span>
+                <span style="color:rgba(255,255,255,.3);font-size:11px" id="am-arrow-${i}">▼</span>
+              </div>
+            </div>
+            <div class="amarilla-club-lista" id="am-lista-${i}">
+              ${c.jugadores.map(j=>`<span class="amarilla-tag">${j}</span>`).join('')}
+            </div>
+          </div>`).join('')}
+      </div></div>`;
+  }
+
+  // Senior – Amonestados
+  if ((a.amonestadosSenior||[]).length) {
+    h += `<div class="sancion-block">
+      <div class="sancion-block-title">📌 Amonestados Senior</div>
+      <div class="card" style="padding:0;overflow:hidden">
+        ${a.amonestadosSenior.map((c,i)=>`
+          <div class="amarilla-club">
+            <div class="amarilla-club-header" onclick="toggleAmSenior(${i})">
+              <div class="amarilla-club-nombre">${getEscudoHTML(c.club,20)} ${c.club}</div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span class="amarilla-club-count">${c.jugadores.length}</span>
+                <span style="color:rgba(255,255,255,.3);font-size:11px" id="amsen-arrow-${i}">▼</span>
+              </div>
+            </div>
+            <div class="amarilla-club-lista" id="amsen-lista-${i}">
+              ${c.jugadores.map(j=>`<span class="amarilla-tag">${j}</span>`).join('')}
+            </div>
+          </div>`).join('')}
+      </div></div>`;
+  }
+
+  // Senior – Expulsados
+  if ((a.expulsadosSenior||[]).length) {
+    h += `<div class="sancion-block">
+      <div class="sancion-block-title">🟥 Expulsados Senior</div>
+      <div class="card" style="padding:0;overflow:hidden">
+      <table class="sancion-table">
+        <thead><tr><th>Club / Jugador</th><th>Sanción</th></tr></thead>
+        <tbody>
+          ${a.expulsadosSenior.map(s=>`<tr>
+            <td><div class="s-club">${getEscudoHTML(s.club,20)} ${s.club}</div><div class="s-jugador">${s.jugador}</div></td>
+            <td><div class="s-art">${s.detalle}</div></td>
+          </tr>`).join('')}
+        </tbody>
+      </table></div></div>`;
+  }
+
+  // Expedientes
+  if ((a.expedientes||[]).length) {
+    h += `<div class="sancion-block">
+      <div class="sancion-block-title">📄 Expedientes</div>
+      ${a.expedientes.map(e=>`
+        <div class="sancion-exp-card">
+          <div class="sancion-exp-num">Expediente Nº ${e.numero}</div>
+          <div class="sancion-exp-texto">${e.texto}</div>
+        </div>`).join('')}
+    </div>`;
+  }
+
+  // Citados
+  if (citados.length) {
+    h += `<div class="sancion-block">
+      <div class="sancion-block-title">📬 Citados</div>
+      <div class="card" style="padding:0;overflow:hidden">
+      <table class="sancion-table">
+        <thead><tr><th>Club / Jugador</th><th>Artículo</th></tr></thead>
+        <tbody>
+          ${citados.map(s=>`<tr>
+            <td><div class="s-club">${getEscudoHTML(s.club,20)} ${s.club}</div><div class="s-jugador">${s.jugador}</div></td>
+            <td><span class="s-val citado">CITADO</span></td>
+          </tr>`).join('')}
+        </tbody>
+      </table></div></div>`;
+  }
+
+  el.innerHTML = h;
+}
+
+function renderHistorialActas(actas) {
+  const el = document.getElementById('sanciones-historial-content');
+  if (!actas.length) { el.innerHTML='<div class="card"><div class="empty-msg">No hay actas cargadas aún</div></div>'; return; }
+  el.innerHTML=`<div class="card" style="padding:0;overflow:hidden">
+    ${actas.map(a=>`
+      <div class="historial-acta-item" onclick="verActaHistorial('${a.id}')">
+        <div class="historial-acta-num">Acta ${a.numero}</div>
+        <div class="historial-acta-meta">
+          <div class="historial-acta-fecha">${a.fechaActa}</div>
+          <div class="historial-acta-stats">${a.suspensiones?.length||0} sanciones · ${(a.amarillas||[]).reduce((t,c)=>t+c.jugadores.length,0)} amarillas · ${a.suspArt208?.length||0} susp. Art.208</div>
+        </div>
+        <span class="historial-acta-arrow">›</span>
+      </div>`).join('')}
+  </div>`;
+}
+
+function verActaHistorial(id) {
+  const idx = (data.actas||[]).findIndex(a=>a.id===id);
+  if (idx<0) return;
+  // Mover temporalmente al frente para usar renderUltimaActa
+  const saved = data.actas[0];
+  data.actas[0] = data.actas[idx];
+  const el = document.getElementById('sanciones-ultima-content');
+  renderUltimaActa(data.actas);
+  data.actas[0] = saved;
+  // Cambiar a tab ultima para ver el contenido
+  document.querySelectorAll('.sancion-tab').forEach((t,i)=>{t.classList.toggle('active',i===0);});
+  currentSancionTabActive='ultima';
+  document.getElementById('sanciones-ultima-content').style.display='';
+  document.getElementById('sanciones-historial-content').style.display='none';
+}
+
+function toggleAmarillaClub(i) {
+  const lista = document.getElementById('am-lista-'+i);
+  const arrow = document.getElementById('am-arrow-'+i);
+  if (!lista) return;
+  lista.classList.toggle('open');
+  if(arrow) arrow.textContent = lista.classList.contains('open')?'▲':'▼';
+}
+function toggleAmSenior(i) {
+  const lista = document.getElementById('amsen-lista-'+i);
+  const arrow = document.getElementById('amsen-arrow-'+i);
+  if (!lista) return;
+  lista.classList.toggle('open');
+  if(arrow) arrow.textContent = lista.classList.contains('open')?'▲':'▼';
+}
+
 function renderSection(s){
   if(s==='fixture') renderFixture();
   else if(s==='posiciones') renderPosiciones();
@@ -4158,6 +5072,7 @@ function renderSection(s){
   else if(s==='equipos') renderEquipos();
   else if(s==='torneos') renderTorneos();
   else if(s==='noticias') renderNoticias();
+  else if(s==='sanciones') renderSanciones();
   actualizarNavLive();
 }
 
@@ -7336,6 +8251,8 @@ function renderAdminListas(){
       <span>${t.nombre} – <em>${t.estado}</em></span>
       ${btnAcciones('torneos',t.id)}
     </div>`).join('')||'<p class="admin-empty">Sin torneos cargados</p>';
+
+  renderAdminListaActas();
 }
 
 // ============================================================
@@ -9818,6 +10735,11 @@ if(typeof saveIdentidad !== 'undefined'){
   <button class="bn-item" data-sec="equipos" onclick="showSection('equipos')">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
     Equipos
+  </button>
+
+  <button class="bn-item" data-sec="sanciones" onclick="showSection('sanciones')">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="10" rx="1"/><rect x="14" y="3" width="7" height="10" rx="1" opacity=".45"/><path d="M3 17h18M3 21h18" opacity=".6"/></svg>
+    Sanciones
   </button>
 
 </nav>
