@@ -8208,7 +8208,7 @@ function renderAdminListas(){
       ${btnAcciones('torneos',t.id)}
     </div>`).join('')||'<p class="admin-empty">Sin torneos cargados</p>';
 
-  renderAdminListaActas();
+  if(typeof renderAdminListaActasSancion==='function') renderAdminListaActasSancion();
 }
 
 // ============================================================
