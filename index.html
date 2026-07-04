@@ -8248,18 +8248,33 @@ async function doLogin(){
 
   try{
     await window._fb.signInWithEmailAndPassword(window._fb.auth, email, pass);
-    closeLogin();
-    openAdmin();
   }catch(e){
+    console.error('Error de autenticación Firebase:', e.code, e.message);
     let msg='Correo o contraseña incorrectos';
     if(e.code==='auth/too-many-requests') msg='Demasiados intentos. Intentá más tarde.';
     else if(e.code==='auth/network-request-failed') msg='Sin conexión a internet.';
+    else if(e.code==='auth/invalid-email') msg='El correo no tiene un formato válido.';
+    else if(e.code==='auth/user-disabled') msg='Este usuario fue deshabilitado.';
+    else if(e.code==='auth/user-not-found') msg='No existe un usuario con ese correo.';
+    else if(e.code==='auth/invalid-credential') msg='Correo o contraseña incorrectos.';
+    else if(e.code==='auth/operation-not-allowed') msg='El método de acceso por correo/contraseña no está habilitado en Firebase.';
     errEl.textContent=msg;
     errEl.style.display='block';
     document.getElementById('login-pass').value='';
     document.getElementById('login-pass').focus();
-  }finally{
     btn.textContent='Ingresar'; btn.disabled=false;
+    return;
+  }
+  btn.textContent='Ingresar'; btn.disabled=false;
+
+  // El login ya fue exitoso en este punto. Cualquier error de acá en adelante
+  // es de renderizado del panel, NO de credenciales — se muestra aparte.
+  try{
+    closeLogin();
+    openAdmin();
+  }catch(e){
+    console.error('Login OK pero falló al abrir el panel de administración:', e);
+    alert('Ingresaste correctamente, pero hubo un error al abrir el panel de administración:\n\n'+(e.message||e)+'\n\nRevisá la consola (F12) para más detalles y compartí este mensaje.');
   }
 }
 function openAdmin(){
