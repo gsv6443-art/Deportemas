@@ -2316,6 +2316,71 @@ table.posiciones td:nth-child(8){
 }
 .noticia-card-media-icons{display:flex;gap:5px;font-size:13px;}
 
+/* ── NOTICIA DESTACADA (última publicación) ─────────────────── */
+.noticia-destacada{
+  background:var(--negro2);
+  border:0.5px solid rgba(201,162,39,.22);
+  border-radius:var(--r-lg);
+  overflow:hidden;cursor:pointer;
+  display:flex;flex-direction:row;
+  margin-bottom:20px;
+  transition:border-color .2s,transform .2s,box-shadow .2s;
+}
+.noticia-destacada:hover{
+  border-color:rgba(201,162,39,.5);
+  transform:translateY(-3px);
+  box-shadow:0 16px 44px rgba(0,0,0,.45);
+}
+.noticia-destacada-img{
+  width:46%;max-width:520px;aspect-ratio:16/10;object-fit:cover;
+  display:block;background:var(--negro3);flex-shrink:0;
+}
+.noticia-destacada-img-placeholder{
+  width:46%;max-width:520px;aspect-ratio:16/10;flex-shrink:0;
+  background:linear-gradient(135deg,var(--negro3) 0%,var(--negro4) 100%);
+  display:flex;align-items:center;justify-content:center;
+  font-size:52px;color:rgba(255,255,255,.07);
+}
+.noticia-destacada-body{
+  padding:20px 24px;flex:1;min-width:0;
+  display:flex;flex-direction:column;gap:10px;justify-content:center;
+}
+.noticia-destacada-badge{
+  display:inline-flex;align-items:center;
+  padding:3px 11px;border-radius:20px;
+  background:rgba(201,162,39,.14);
+  border:0.5px solid rgba(201,162,39,.35);
+  font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:900;
+  letter-spacing:1.5px;text-transform:uppercase;color:var(--dorado);
+  align-self:flex-start;
+}
+.noticia-destacada-titulo{
+  font-family:'Bebas Neue',sans-serif;font-size:34px;font-weight:400;
+  color:var(--blanco);line-height:1.1;letter-spacing:.5px;
+}
+.noticia-destacada-bajada{
+  font-family:'DM Sans',sans-serif;font-size:14px;color:rgba(255,255,255,.55);
+  line-height:1.55;display:-webkit-box;-webkit-line-clamp:3;
+  -webkit-box-orient:vertical;overflow:hidden;
+}
+.noticia-destacada-footer{
+  display:flex;align-items:center;flex-wrap:wrap;gap:10px;
+  margin-top:6px;padding-top:12px;
+  border-top:0.5px solid rgba(255,255,255,.08);
+  font-family:'Rajdhani',sans-serif;font-size:11px;
+  color:rgba(255,255,255,.35);
+  text-transform:uppercase;letter-spacing:.5px;
+}
+.noticia-destacada-footer .media-icons{font-size:14px;letter-spacing:0;}
+@media(max-width:760px){
+  .noticia-destacada{flex-direction:column;}
+  .noticia-destacada-img,.noticia-destacada-img-placeholder{
+    width:100%;max-width:none;aspect-ratio:16/9;
+  }
+  .noticia-destacada-titulo{font-size:26px;}
+  .noticia-destacada-body{padding:16px 18px;}
+}
+
 /* MODAL NOTICIA */
 #noticia-modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.92);z-index:3500;align-items:flex-start;justify-content:center;padding:2rem 1rem;overflow-y:auto;}
 #noticia-modal.open{display:flex;}
@@ -3425,6 +3490,12 @@ table.posiciones td:nth-child(8){
       <!-- PLAY OFF -->
       <div class="admin-section" id="admin-playoff">
         <div class="admin-title">🏆 Play Off – Primera División</div>
+        <div class="form-group" style="margin-bottom:10px">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" id="po-es-reserva" style="width:16px;height:16px;accent-color:var(--dorado)"/>
+            Este cruce es de <b>Reserva</b>
+          </label>
+        </div>
         <div class="form-row">
           <div class="form-group"><label>Torneo</label>
             <select id="po-torneo"><option value="apertura">Apertura 2026</option><option value="clausura">Clausura 2026</option></select>
@@ -5405,6 +5476,7 @@ function calcularPosicionesReserva(div, filtroExtra){
     p.div === div &&
     p.esReserva === true &&
     p.estado === 'jugado' &&
+    !p.esPlayoff &&
     (filtroExtra ? filtroExtra(p) : true)
   );
   const map = {};
@@ -5423,16 +5495,20 @@ function calcularPosicionesReserva(div, filtroExtra){
       else { r.p++; }
     });
   });
-  return Object.values(map)
-    .map(r => ({...r, dg: (r.gf-r.gc >= 0 ? '+' : '') + (r.gf-r.gc)}))
-    .sort((a,b) => (b.pts-a.pts) || (b.gf-b.gc)-(a.gf-a.gc));
+  const tabla = Object.values(map)
+    .map(r => ({...r, dg: (r.gf-r.gc >= 0 ? '+' : '') + (r.gf-r.gc)}));
+  return ordenarConDesempate(tabla, partidos);
 }
 
-function posReservaTablaHTML(titulo, pos, divBadge, shareBtn, clasifican){
-  clasifican = clasifican||0;
+function posReservaTablaHTML(titulo, pos, divBadge, shareBtn, opts){
+  opts = opts || {};
+  const clasifican = opts.clasifican||0;
+  const zonasPlayoffPrimera = !!opts.zonasPlayoffPrimera;
   if(!pos.length) return `<div class="card"><div class="card-header"><span>${titulo}</span><span class="div-badge">${divBadge}</span></div><div class="empty-msg">No hay partidos de reserva jugados</div></div>`;
   const rows = pos.map((p,i) => {
-    const cls = i<clasifican ? 'zona-clasificacion' : '';
+    let cls='';
+    if(zonasPlayoffPrimera){ if(i===0) cls='zona-semifinal'; else if(i>=1&&i<=6) cls='zona-cuartos'; }
+    else if(clasifican) cls = i<clasifican ? 'zona-clasificacion' : '';
     return `<tr class="${cls}">
     <td class="pos-num">${i===0?'<span class="pos-num-1">1</span>':i+1}</td>
     <td><div class="pos-equipo">${getEscudoHTML(p.equipo,28)} ${p.equipo}</div></td>
@@ -5441,6 +5517,14 @@ function posReservaTablaHTML(titulo, pos, divBadge, shareBtn, clasifican){
     <td>${p.gf}</td><td>${p.gc}</td><td>${p.dg}</td>
   </tr>`;
   }).join('');
+  const leyenda = zonasPlayoffPrimera
+    ? `<div style="display:flex;gap:14px;padding:8px 14px;font-size:11px;color:var(--gris);font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px;flex-wrap:wrap">
+        <span style="border-left:3px solid var(--dorado);padding-left:6px">Clasifica a Semifinales (1°)</span>
+        <span style="border-left:3px solid #3a9bd5;padding-left:6px">Clasifica a Cuartos de Final (2° al 7°)</span>
+      </div>`
+    : (clasifican>0?`<div style="display:flex;gap:14px;padding:8px 14px;font-size:11px;color:var(--gris);font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px;flex-wrap:wrap">
+      <span style="border-left:3px solid var(--verde-clasificacion);padding-left:6px">Clasifican a semifinales (${clasifican} primeros)</span>
+    </div>`:'');
   return `<div class="card" style="margin-bottom:.8rem">
     <div class="card-header">
       <span>${titulo}</span>
@@ -5453,9 +5537,7 @@ function posReservaTablaHTML(titulo, pos, divBadge, shareBtn, clasifican){
       <thead><tr><th>#</th><th>Equipo</th><th>PTS</th><th>PJ</th><th>G</th><th>E</th><th>P</th><th>GF</th><th>GC</th><th>DG</th></tr></thead>
       <tbody>${rows}</tbody>
     </table></div>
-    ${clasifican>0?`<div style="display:flex;gap:14px;padding:8px 14px;font-size:11px;color:var(--gris);font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px;flex-wrap:wrap">
-      <span style="border-left:3px solid var(--verde-clasificacion);padding-left:6px">Clasifican a semifinales (${clasifican} primeros)</span>
-    </div>`:''}
+    ${leyenda}
   </div>`;
 }
 
@@ -5465,7 +5547,7 @@ function renderPosicionesReserva(div, el){
   // ---- SEGUNDA DIVISIÓN: tabla general única, sin fases ----
   if(div === 'segunda'){
     const pos = calcularPosicionesReserva('segunda', null);
-    el.innerHTML = posReservaTablaHTML('Reserva – Tabla General', pos, 'RESERVA · 2ª', shareBtn, 4);
+    el.innerHTML = posReservaTablaHTML('Reserva – Tabla General', pos, 'RESERVA · 2ª', shareBtn, {clasifican:4});
     return;
   }
 
@@ -5475,8 +5557,13 @@ function renderPosicionesReserva(div, el){
   const pos = calcularPosicionesReserva('primera', p => (p.torneoReserva||p.torneo||'apertura') === torneo);
   el.innerHTML = posReservaTablaHTML(
     `Reserva – ${tornLabel} / Primera División`,
-    pos, 'RESERVA · 1ª', shareBtn
+    pos, 'RESERVA · 1ª', shareBtn, {zonasPlayoffPrimera:true}
   );
+  // render playoff de Reserva debajo de la tabla
+  const playoffDiv=document.createElement('div');
+  playoffDiv.id='playoff-render-area-reserva';
+  el.appendChild(playoffDiv);
+  renderPlayoff(torneo,'playoff-render-area-reserva',true);
 }
 
 // Generador de imagen para posiciones de reserva
@@ -6101,18 +6188,63 @@ function _noSetUploading(activo){
   btn.style.cursor  = activo ? 'not-allowed' : '';
 }
 
+// Comprime un File de imagen a JPEG (máx maxW px de ancho) antes de subirlo.
+// Reduce mucho el peso de las fotos de celular, evitando subidas eternas o colgadas.
+function comprimirArchivoImagen(file, maxW=1600, q=0.82){
+  return new Promise((resolve)=>{
+    const objUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = ()=>{
+      const scale = Math.min(1, maxW/img.naturalWidth);
+      const w = Math.round(img.naturalWidth*scale);
+      const h = Math.round(img.naturalHeight*scale);
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      c.toBlob(blob=>{
+        URL.revokeObjectURL(objUrl);
+        if(blob){
+          const nombre = file.name.replace(/\.[^.]+$/,'') + '.jpg';
+          resolve(new File([blob], nombre, {type:'image/jpeg'}));
+        } else resolve(file); // fallback: si la compresión falla, subimos el original
+      }, 'image/jpeg', q);
+    };
+    img.onerror = ()=>{ URL.revokeObjectURL(objUrl); resolve(file); }; // fallback si no se puede leer
+    img.src = objUrl;
+  });
+}
+
+// Corta una promesa de subida si tarda demasiado, para no quedar "cargando" para siempre.
+function _subirConTimeout(promesa, ms=30000){
+  return Promise.race([
+    promesa,
+    new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout subiendo archivo')), ms))
+  ]);
+}
+
 async function noPreviewImg(input){
   const file=input.files[0]; if(!file) return;
   const hint = document.getElementById('no-img-size-hint');
-  if(hint) hint.textContent = '⏳ Subiendo imagen...';
   _noUploadsPendientes++; _noSetUploading(true);
-  const url = await window._fb.uploadFile(`noticias/${_noEnsureId()}/imagen_${Date.now()}_${file.name}`, file);
-  _noUploadsPendientes--; if(_noUploadsPendientes<=0) _noSetUploading(false);
-  if(!url){ if(hint) hint.textContent='✕ Error al subir la imagen'; return; }
-  _noImg = url;
-  const p=document.getElementById('no-img-preview'); if(p) p.src=url;
-  const w=document.getElementById('no-img-wrap'); if(w) w.classList.add('visible');
-  if(hint) hint.textContent = '✓ Imagen subida';
+  try{
+    if(hint) hint.textContent = '⏳ Optimizando imagen...';
+    const archivoSubir = file.type.startsWith('image/') ? await comprimirArchivoImagen(file) : file;
+    if(hint) hint.textContent = '⏳ Subiendo imagen...';
+    const url = await _subirConTimeout(
+      window._fb.uploadFile(`noticias/${_noEnsureId()}/imagen_${Date.now()}_${archivoSubir.name}`, archivoSubir)
+    );
+    if(!url){ if(hint) hint.textContent='✕ Error al subir la imagen. Probá de nuevo.'; input.value=''; return; }
+    _noImg = url;
+    const p=document.getElementById('no-img-preview'); if(p) p.src=url;
+    const w=document.getElementById('no-img-wrap'); if(w) w.classList.add('visible');
+    if(hint) hint.textContent = '✓ Imagen subida';
+  }catch(e){
+    console.error('Error subiendo imagen principal', e);
+    if(hint) hint.textContent = '✕ Se cortó la subida (revisá tu conexión). Probá de nuevo.';
+    input.value='';
+  }finally{
+    _noUploadsPendientes--; if(_noUploadsPendientes<=0) _noSetUploading(false);
+  }
 }
 
 function noPreviewGaleria(input){
@@ -6957,7 +7089,7 @@ function updateAdminPartidoDiv(){
   const esPrimera = efectivo==='primera';
   const esReservaSegunda = esReserva && efectivo==='segunda';
   document.getElementById('p-torneo-wrap').style.display=esPrimera?'':'none';
-  document.getElementById('p-playoff-wrap').style.display=(esPrimera && !esReserva)?'':'none';
+  document.getElementById('p-playoff-wrap').style.display=esPrimera?'':'none';
   document.getElementById('p-fase-wrap').style.display=(esPrimera||esReservaSegunda)?'none':'';
   const eventosWrap=document.getElementById('p-eventos-wrap');
   if(eventosWrap){
@@ -6993,7 +7125,7 @@ function edUpdateDivVis(){
   const torneoWrap=document.getElementById('ed-torneo-partido-wrap');
   if(torneoWrap) torneoWrap.style.display = esPrimera ? '' : 'none';
   const playoffWrap=document.getElementById('ed-playoff-wrap');
-  if(playoffWrap) playoffWrap.style.display = (esPrimera && !esReserva) ? '' : 'none';
+  if(playoffWrap) playoffWrap.style.display = esPrimera ? '' : 'none';
   const faseWrap=document.getElementById('ed-faseRes-wrap');
   if(faseWrap) faseWrap.style.display = (esPrimera||esReservaSegunda) ? 'none' : '';
   const zonaWrap=document.getElementById('ed-zona-wrap');
@@ -7042,7 +7174,7 @@ function agregarPartido(){
   };
   if(div==='primera'){
     d.torneo=document.getElementById('p-torneo-sel').value;
-    d.esPlayoff=esReserva ? false : document.getElementById('p-es-playoff').checked;
+    d.esPlayoff=document.getElementById('p-es-playoff').checked;
   }
   else if(!esReserva){
     d.faseRes=document.getElementById('p-fase-res').value;
@@ -7283,7 +7415,7 @@ function abrirModalEdicion(tipo,id,objOverride){
         <label>Corresponde a</label>${subdivSelect}
       </div>
       <div class="form-group" ${esPrimera?'':'style="display:none"'} id="ed-torneo-partido-wrap"><label>Torneo (Primera)</label>${torneoSelect}</div>
-      <div class="form-group" ${(esPrimera&&!esReservaObj)?'':'style="display:none"'} id="ed-playoff-wrap">
+      <div class="form-group" ${esPrimera?'':'style="display:none"'} id="ed-playoff-wrap">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
           <input type="checkbox" id="ed-es-playoff" ${obj.esPlayoff?'checked':''} style="width:16px;height:16px;accent-color:var(--dorado)"/>
           <span>Partido de Play Off <span style="color:var(--gris);font-size:11px">(no suma en tabla de posiciones, sí en goleadores)</span></span>
@@ -7712,7 +7844,7 @@ function guardarEdicion(tipo,id){
     if(divVal==='primera'){
       updated.torneo=val('ed-torneo');
       const chk=document.getElementById('ed-es-playoff');
-      updated.esPlayoff=esReserva?false:(chk?chk.checked:false);
+      updated.esPlayoff=chk?chk.checked:false;
       delete updated.faseRes;delete updated.zona;
     } else if(esReserva){
       delete updated.faseRes;delete updated.zona;delete updated.torneo;
@@ -8316,8 +8448,9 @@ function resetearDatos(){
 // ============================================================
 // PLAY OFF – RENDER
 // ============================================================
-function renderPlayoff(torneo,contenedorId){
-  const playoff=data.playoff.filter(c=>c.torneo===torneo);
+function renderPlayoff(torneo,contenedorId,esReserva){
+  esReserva = !!esReserva;
+  const playoff=data.playoff.filter(c=>c.torneo===torneo && !!c.esReserva===esReserva);
   const cuartos=playoff.filter(c=>c.etapa==='cuartos').sort((a,b)=>a.cruce-b.cruce);
   const semis=playoff.filter(c=>c.etapa==='semifinal').sort((a,b)=>a.cruce-b.cruce);
   const final=playoff.filter(c=>c.etapa==='final');
@@ -8391,8 +8524,8 @@ function renderPlayoff(torneo,contenedorId){
   cont.innerHTML=`
     <div class="playoff-section">
       <div class="playoff-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-        <span>🏆 Play Off – ${torneoLabel(torneo)}</span>
-        <button class="btn-share" onclick="abrirShare(()=>generarImagenPlayoff('${torneo}'))">${SVG_SHARE} Compartir</button>
+        <span>🏆 Play Off${esReserva?' Reserva':''} – ${torneoLabel(torneo)}</span>
+        <button class="btn-share" onclick="abrirShare(()=>generarImagenPlayoff('${torneo}',${esReserva}))">${SVG_SHARE} Compartir</button>
       </div>
       <div class="playoff-etapa">
         <div class="playoff-etapa-header">Cuartos de Final <span style="color:rgba(255,255,255,.3);font-size:10px">· Partido único en cancha del mejor clasificado</span></div>
@@ -8433,8 +8566,9 @@ function guardarCruce(){
   const visit=document.getElementById('po-visit').value.trim();
   if(!local||!visit){alert('Completá los dos equipos');return;}
   const estado=document.getElementById('po-estado').value;
+  const esReserva=document.getElementById('po-es-reserva').checked;
 
-  const obj={id:String(Date.now()),torneo,etapa,cruce,idavuelta,local,visit,estado};
+  const obj={id:String(Date.now()),torneo,etapa,cruce,idavuelta,local,visit,estado,esReserva};
   if(idavuelta){
     obj.resIda=document.getElementById('po-res-ida').value.trim();
     obj.fechaIda=document.getElementById('po-fecha-ida').value.trim();
@@ -8446,8 +8580,8 @@ function guardarCruce(){
     obj.resultado=document.getElementById('po-res').value.trim();
     obj.ganador=document.getElementById('po-ganador').value.trim();
   }
-  // reemplazar si ya existe el mismo cruce/etapa/torneo
-  const idx=data.playoff.findIndex(c=>c.torneo===torneo&&c.etapa===etapa&&c.cruce===cruce);
+  // reemplazar si ya existe el mismo cruce/etapa/torneo/reserva
+  const idx=data.playoff.findIndex(c=>c.torneo===torneo&&c.etapa===etapa&&c.cruce===cruce&&!!c.esReserva===esReserva);
   if(idx>=0) data.playoff[idx]={...data.playoff[idx],...obj,id:data.playoff[idx].id};
   else data.playoff.push(obj);
   saveData(data);
@@ -8471,7 +8605,7 @@ function renderAdminListaPlayoff(){
     const ord={cuartos:1,semifinal:2,final:3};
     return (ord[a.etapa]||0)-(ord[b.etapa]||0)||a.cruce-b.cruce;
   }).map(c=>`<div class="admin-list-item">
-    <span><b>${torneoLabel(c.torneo)}</b> | ${etapaLabel[c.etapa]||c.etapa} Cruce ${c.cruce} | ${c.local} vs ${c.visit} | <em>${c.estado}</em>${c.resultado?' | '+c.resultado:''}${c.global?' | Global: '+c.global:''}</span>
+    <span>${c.esReserva?'<b style="color:var(--dorado)">[RESERVA]</b> ':''}<b>${torneoLabel(c.torneo)}</b> | ${etapaLabel[c.etapa]||c.etapa} Cruce ${c.cruce} | ${c.local} vs ${c.visit} | <em>${c.estado}</em>${c.resultado?' | '+c.resultado:''}${c.global?' | Global: '+c.global:''}</span>
     <div style="display:flex;gap:5px;flex-shrink:0">
       <button class="btn-edit" onclick="editarCruce('${c.id}')">✏ Editar</button>
       <button class="btn-danger" onclick="eliminarCruce('${c.id}')">✕ Eliminar</button>
@@ -8482,6 +8616,7 @@ function renderAdminListaPlayoff(){
 function editarCruce(id){
   const c=data.playoff.find(x=>String(x.id)===String(id));
   if(!c)return;
+  document.getElementById('po-es-reserva').checked=!!c.esReserva;
   document.getElementById('po-torneo').value=c.torneo||'apertura';
   document.getElementById('po-etapa').value=c.etapa||'cuartos';
   updateAdminPlayoffEtapa();
@@ -10107,13 +10242,14 @@ async function generarImagenTorneo(torneoId){
 }
 
 // ── Generador: Play Off ───────────────────────────────────────
-async function generarImagenPlayoff(torneo){
+async function generarImagenPlayoff(torneo, esReserva){
+  esReserva = !!esReserva;
   await document.fonts.ready;
   const id   = getIdentidad();
   const liga = id.nombre||'DEPORTEMAS';
   const W    = CV_W;
 
-  const playoff = data.playoff.filter(c=>c.torneo===torneo);
+  const playoff = data.playoff.filter(c=>c.torneo===torneo && !!c.esReserva===esReserva);
   if(!playoff.length) return null;
 
   const etapas = [
@@ -10141,7 +10277,7 @@ async function generarImagenPlayoff(torneo){
   ctx.fillStyle=C.DORADO;
   ctx.font=`${s(22)}px "Bebas Neue", Arial, sans-serif`;
   ctx.textAlign='center';
-  ctx.fillText('PLAY OFF  ·  '+torneoLabel(torneo).toUpperCase()+'  ·  PRIMERA DIVISIÓN', W/2, y+s(36));
+  ctx.fillText('PLAY OFF  ·  '+torneoLabel(torneo).toUpperCase()+(esReserva?'  ·  RESERVA':'  ·  PRIMERA DIVISIÓN'), W/2, y+s(36));
   y+=s(56);
 
   // Precargar escudos
