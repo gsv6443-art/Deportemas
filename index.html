@@ -8976,10 +8976,10 @@ function cvFooter(ctx, W, yStart, ligaNombre){
   const H = s(40);
   ctx.fillStyle = C.NEG4;
   ctx.fillRect(0, yStart, W, H);
-  ctx.fillStyle = 'rgba(201,162,39,0.4)';
-  ctx.font = `500 ${s(13)}px "DM Sans", Arial, sans-serif`;
+  ctx.fillStyle = 'rgba(201,162,39,0.55)';
+  ctx.font = `600 ${s(16)}px "DM Sans", Arial, sans-serif`;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText((ligaNombre||'DEPORTEMAS').toUpperCase() + '  ·  deportemas.com.ar', W/2, yStart + H/2);
+  cvFillTextTrunc(ctx, (ligaNombre||'DEPORTEMAS').toUpperCase() + '  ·  deportemas.pages.dev', W/2, yStart + H/2, W - s(40));
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   return yStart + H;
 }
