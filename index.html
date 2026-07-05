@@ -5226,119 +5226,82 @@ function renderResultados(){
 function ordenarConDesempate(posArr, partidos){
   if(posArr.length <= 1) return posArr;
 
-  // ── helpers ──────────────────────────────────────────────────
-  // Partidos jugados entre un subconjunto de equipos (nombres normalizados)
-  function partidosEntre(norms, ps){
-    return ps.filter(p =>
+  // ── Desempate de un grupo de equipos empatados en puntos ─────
+  // Criterios 1+2 (mismo cálculo: puntos en los partidos jugados
+  // entre TODOS los integrantes del grupo empatado, sean 2 o más)
+  // → 3 (GF entre sí) → 4 (menor GC entre sí)
+  // → 5 (menor GC total) → 6 (mayor GF total) → 7 (menor expulsados)
+  function desempatarGrupo(grupo, todosPs){
+    if(grupo.length <= 1) return grupo;
+    const norms = new Set(grupo.map(p => normalizar(p.equipo)));
+
+    // Partidos jugados entre cualquier par de integrantes del grupo completo
+    const partidosGrupo = todosPs.filter(p =>
       p.estado === 'jugado' &&
       norms.has(normalizar(p.local)) &&
       norms.has(normalizar(p.visit))
     );
-  }
 
-  // Puntaje obtenido por un equipo en un subconjunto de partidos
-  function puntosEquipo(equipoNorm, ps){
-    let pts = 0;
-    ps.forEach(p => {
-      const res = parsearResultado(p.resultado);
-      if(!res) return;
-      const esLocal = normalizar(p.local) === equipoNorm;
-      const esVisit = normalizar(p.visit) === equipoNorm;
-      if(!esLocal && !esVisit) return;
-      const gl = res.golesLocal, gv = res.golesVisit;
-      if(esLocal)  pts += gl > gv ? 3 : gl === gv ? 1 : 0;
-      if(esVisit)  pts += gv > gl ? 3 : gl === gv ? 1 : 0;
-    });
-    return pts;
-  }
-
-  // GF y GC de un equipo en un subconjunto de partidos
-  function gfgcEquipo(equipoNorm, ps){
-    let gf = 0, gc = 0;
-    ps.forEach(p => {
-      const res = parsearResultado(p.resultado);
-      if(!res) return;
-      if(normalizar(p.local) === equipoNorm){ gf += res.golesLocal;  gc += res.golesVisit; }
-      if(normalizar(p.visit) === equipoNorm){ gf += res.golesVisit; gc += res.golesLocal;  }
-    });
-    return { gf, gc };
-  }
-
-  // Expulsados totales de un equipo en todos los partidos del contexto
-  function expulsadosEquipo(equipoNorm, ps){
-    let total = 0;
-    ps.forEach(p => {
-      const exps = p.expulsiones || [];
-      exps.forEach(e => {
-        if(normalizar(e.equipo || '') === equipoNorm ||
-           normalizar(p.local) === equipoNorm && e.equipo === 'local' ||
-           normalizar(p.visit) === equipoNorm && e.equipo === 'visit'){
-          total++;
-        }
+    function metricasEntreSi(equipoNorm){
+      let pts = 0, gf = 0, gc = 0;
+      partidosGrupo.forEach(p => {
+        const res = parsearResultado(p.resultado);
+        if(!res) return;
+        const esLocal = normalizar(p.local) === equipoNorm;
+        const esVisit = normalizar(p.visit) === equipoNorm;
+        if(!esLocal && !esVisit) return;
+        const gfP = esLocal ? res.golesLocal : res.golesVisit;
+        const gcP = esLocal ? res.golesVisit : res.golesLocal;
+        gf += gfP; gc += gcP;
+        if(gfP > gcP) pts += 3; else if(gfP === gcP) pts += 1;
       });
-    });
-    return total;
+      return { pts, gf, gc };
+    }
+
+    function expulsadosTotal(equipoNorm){
+      let total = 0;
+      todosPs.forEach(p => {
+        (p.expulsiones || []).forEach(e => {
+          if(normalizar(e.equipo || '') === equipoNorm ||
+             (normalizar(p.local) === equipoNorm && e.equipo === 'local') ||
+             (normalizar(p.visit) === equipoNorm && e.equipo === 'visit')){
+            total++;
+          }
+        });
+      });
+      return total;
+    }
+
+    return [...grupo].map(p => {
+      const n = normalizar(p.equipo);
+      const m = metricasEntreSi(n);
+      return { ...p, _dPts: m.pts, _dGf: m.gf, _dGc: m.gc, _dExp: expulsadosTotal(n) };
+    }).sort((a, b) => {
+      if(b._dPts !== a._dPts) return b._dPts - a._dPts;        // 1+2: pts entre los empatados
+      if(b._dGf  !== a._dGf ) return b._dGf  - a._dGf;         // 3: mayor GF entre sí
+      if(a._dGc  !== b._dGc ) return a._dGc  - b._dGc;         // 4: menor GC entre sí
+      const gcA=a.gc||0, gcB=b.gc||0;
+      if(gcA !== gcB) return gcA - gcB;                        // 5: menor GC total
+      const gfA=a.gf||0, gfB=b.gf||0;
+      if(gfA !== gfB) return gfB - gfA;                        // 6: mayor GF total
+      return a._dExp - b._dExp;                                // 7: menor expulsados totales
+    }).map(({_dPts,_dGf,_dGc,_dExp, ...rest}) => rest);
   }
 
-  // ── Función comparadora para dos equipos con igual pts ───────
-  function compararPorDesempate(a, b, grupoNorms, todosNorms, todosPs){
-    const aN = normalizar(a.equipo);
-    const bN = normalizar(b.equipo);
-    const pareNorms = new Set([aN, bN]);
-
-    // ── Criterio 1: puntos entre sí ──────────────────────────
-    const entreAmbosParts = partidosEntre(pareNorms, todosPs);
-    const c1 = puntosEquipo(bN, entreAmbosParts) - puntosEquipo(aN, entreAmbosParts);
-    if(c1 !== 0) return c1;
-
-    // ── Criterio 2: puntos vs todos los clasificados del grupo ─
-    const c2 = puntosEquipo(bN, todosPs.filter(p =>
-        p.estado === 'jugado' &&
-        (normalizar(p.local) === bN && todosNorms.has(normalizar(p.visit)) ||
-         normalizar(p.visit) === bN && todosNorms.has(normalizar(p.local)))
-      )) -
-      puntosEquipo(aN, todosPs.filter(p =>
-        p.estado === 'jugado' &&
-        (normalizar(p.local) === aN && todosNorms.has(normalizar(p.visit)) ||
-         normalizar(p.visit) === aN && todosNorms.has(normalizar(p.local)))
-      ));
-    if(c2 !== 0) return c2;
-
-    // ── Criterio 3: GF entre sí ──────────────────────────────
-    const gfgcA3 = gfgcEquipo(aN, entreAmbosParts);
-    const gfgcB3 = gfgcEquipo(bN, entreAmbosParts);
-    const c3 = gfgcB3.gf - gfgcA3.gf;
-    if(c3 !== 0) return c3;
-
-    // ── Criterio 4: menor GC entre sí ───────────────────────
-    const c4 = gfgcA3.gc - gfgcB3.gc;
-    if(c4 !== 0) return c4;
-
-    // ── Criterio 5: menor GC total ───────────────────────────
-    const c5 = (a.gc || 0) - (b.gc || 0);
-    if(c5 !== 0) return c5;
-
-    // ── Criterio 6: mayor GF total ───────────────────────────
-    const c6 = (b.gf || 0) - (a.gf || 0);
-    if(c6 !== 0) return c6;
-
-    // ── Criterio 7: menor expulsados totales ─────────────────
-    const c7 = expulsadosEquipo(aN, todosPs) - expulsadosEquipo(bN, todosPs);
-    return c7;
-  }
-
-  // ── Ordenamiento completo ────────────────────────────────────
-  // Primero ordenar por pts descendente para identificar grupos empatados
-  const todosNorms = new Set(posArr.map(p => normalizar(p.equipo)));
-
-  // Usamos sort estable con función que aplica desempate cuando pts son iguales
-  return [...posArr].sort((a, b) => {
-    // Diferencia de puntos primero
-    const dPts = (b.pts || 0) - (a.pts || 0);
-    if(dPts !== 0) return dPts;
-    // Mismos puntos → desempate
-    return compararPorDesempate(a, b, todosNorms, todosNorms, partidos);
+  // ── Agrupar por puntos y desempatar cada grupo ───────────────
+  const porPts = new Map();
+  posArr.forEach(p => {
+    const key = p.pts || 0;
+    if(!porPts.has(key)) porPts.set(key, []);
+    porPts.get(key).push(p);
   });
+  const gruposOrdenados = [...porPts.entries()].sort((a,b) => b[0]-a[0]);
+
+  const resultado = [];
+  gruposOrdenados.forEach(([, grupo]) => {
+    resultado.push(...desempatarGrupo(grupo, partidos));
+  });
+  return resultado;
 }
 
 function renderPosiciones(){
@@ -6188,10 +6151,9 @@ function _noSetUploading(activo){
   btn.style.cursor  = activo ? 'not-allowed' : '';
 }
 
-// Comprime un File de imagen a JPEG (máx maxW px de ancho) antes de subirlo.
-// Reduce mucho el peso de las fotos de celular, evitando subidas eternas o colgadas.
-function comprimirArchivoImagen(file, maxW=1600, q=0.82){
-  return new Promise((resolve)=>{
+// Comprime un File de imagen a JPEG (máx maxW px, calidad q) y devuelve un data URL (base64).
+function comprimirABase64(file, maxW=1600, q=0.82){
+  return new Promise((resolve,reject)=>{
     const objUrl = URL.createObjectURL(file);
     const img = new Image();
     img.onload = ()=>{
@@ -6201,17 +6163,31 @@ function comprimirArchivoImagen(file, maxW=1600, q=0.82){
       const c = document.createElement('canvas');
       c.width = w; c.height = h;
       c.getContext('2d').drawImage(img,0,0,w,h);
-      c.toBlob(blob=>{
-        URL.revokeObjectURL(objUrl);
-        if(blob){
-          const nombre = file.name.replace(/\.[^.]+$/,'') + '.jpg';
-          resolve(new File([blob], nombre, {type:'image/jpeg'}));
-        } else resolve(file); // fallback: si la compresión falla, subimos el original
-      }, 'image/jpeg', q);
+      URL.revokeObjectURL(objUrl);
+      resolve(c.toDataURL('image/jpeg', q));
     };
-    img.onerror = ()=>{ URL.revokeObjectURL(objUrl); resolve(file); }; // fallback si no se puede leer
+    img.onerror = ()=>{ URL.revokeObjectURL(objUrl); reject(new Error('No se pudo leer la imagen')); };
     img.src = objUrl;
   });
+}
+
+// Comprime en pasadas cada vez más agresivas hasta que el resultado entre
+// cómodo dentro del límite de 1MB por documento de Firestore.
+async function comprimirImagenParaFirestore(file){
+  const intentos = [
+    {maxW:1600, q:0.82},
+    {maxW:1200, q:0.75},
+    {maxW:1000, q:0.65},
+    {maxW:800,  q:0.6},
+    {maxW:600,  q:0.55},
+  ];
+  const LIMITE = 550000; // ~410KB en base64, deja lugar para galería + texto en el mismo documento
+  let ultima = null;
+  for(const cfg of intentos){
+    ultima = await comprimirABase64(file, cfg.maxW, cfg.q);
+    if(ultima.length <= LIMITE) return ultima;
+  }
+  return ultima; // si ninguna pasada entró cómoda, devolvemos la más chica igual
 }
 
 // Corta una promesa de subida si tarda demasiado, para no quedar "cargando" para siempre.
@@ -6222,50 +6198,111 @@ function _subirConTimeout(promesa, ms=30000){
   ]);
 }
 
+// Nota: la imagen principal se guarda como base64 directo en el documento de
+// Firestore (no en Firebase Storage), porque el proyecto está en plan Spark
+// y el bucket de Storage no está creado. Si en el futuro se activa Blaze o
+// se conecta otro proveedor, esta función es el único lugar a cambiar.
 async function noPreviewImg(input){
   const file=input.files[0]; if(!file) return;
   const hint = document.getElementById('no-img-size-hint');
   _noUploadsPendientes++; _noSetUploading(true);
   try{
+    if(!file.type.startsWith('image/')){
+      if(hint) hint.textContent = '✕ El archivo debe ser una imagen.';
+      input.value=''; return;
+    }
     if(hint) hint.textContent = '⏳ Optimizando imagen...';
-    const archivoSubir = file.type.startsWith('image/') ? await comprimirArchivoImagen(file) : file;
-    if(hint) hint.textContent = '⏳ Subiendo imagen...';
-    const url = await _subirConTimeout(
-      window._fb.uploadFile(`noticias/${_noEnsureId()}/imagen_${Date.now()}_${archivoSubir.name}`, archivoSubir)
-    );
-    if(!url){ if(hint) hint.textContent='✕ Error al subir la imagen. Probá de nuevo.'; input.value=''; return; }
-    _noImg = url;
-    const p=document.getElementById('no-img-preview'); if(p) p.src=url;
+    const dataUrl = await comprimirImagenParaFirestore(file);
+    if(dataUrl.length > 700000){
+      if(hint) hint.textContent = '✕ La imagen sigue siendo muy pesada incluso comprimida. Probá con otra foto.';
+      input.value=''; return;
+    }
+    _noImg = dataUrl;
+    const p=document.getElementById('no-img-preview'); if(p) p.src=dataUrl;
     const w=document.getElementById('no-img-wrap'); if(w) w.classList.add('visible');
-    if(hint) hint.textContent = '✓ Imagen subida';
+    if(hint) hint.textContent = '✓ Imagen lista';
   }catch(e){
-    console.error('Error subiendo imagen principal', e);
-    if(hint) hint.textContent = '✕ Se cortó la subida (revisá tu conexión). Probá de nuevo.';
+    console.error('Error optimizando imagen principal', e);
+    if(hint) hint.textContent = '✕ No se pudo procesar la imagen. Probá de nuevo.';
     input.value='';
   }finally{
     _noUploadsPendientes--; if(_noUploadsPendientes<=0) _noSetUploading(false);
   }
 }
 
+// Galería: igual que la imagen principal, se guarda en base64 dentro del
+// mismo documento de Firestore. Como comparte el límite de 1MB del documento
+// con la imagen principal, cada foto se comprime mucho más chica y se limita
+// la cantidad total de fotos.
+const GALERIA_MAX_FOTOS = 4;
+const GALERIA_LIMITE = 120000; // ~90KB por foto en base64
+
+async function comprimirGaleriaFoto(file){
+  const intentos = [
+    {maxW:700, q:0.55},
+    {maxW:550, q:0.5},
+    {maxW:420, q:0.45},
+    {maxW:320, q:0.4},
+  ];
+  let ultima=null;
+  for(const cfg of intentos){
+    ultima = await comprimirABase64(file, cfg.maxW, cfg.q);
+    if(ultima.length <= GALERIA_LIMITE) return ultima;
+  }
+  return ultima;
+}
+
 function noPreviewGaleria(input){
   const files=[...input.files]; if(!files.length) return;
   const prev=document.getElementById('no-galeria-preview');
+  const disponibles = GALERIA_MAX_FOTOS - _noGaleria.filter(Boolean).length;
+  if(disponibles <= 0){
+    alert(`Ya llegaste al máximo de ${GALERIA_MAX_FOTOS} fotos en la galería (comparten espacio con el resto de la noticia).`);
+    input.value=''; return;
+  }
+  const aProcesar = files.slice(0, disponibles);
+  if(files.length > disponibles){
+    alert(`Solo se van a agregar ${disponibles} foto(s): la galería admite hasta ${GALERIA_MAX_FOTOS} en total.`);
+  }
+
   const startIdx=_noGaleria.length;
-  _noUploadsPendientes += files.length; _noSetUploading(true);
-  files.forEach((file,i)=>{
+  _noUploadsPendientes += aProcesar.length; _noSetUploading(true);
+  aProcesar.forEach((file,i)=>{
     const idx=startIdx+i;
     _noGaleria[idx]='';
     const img=document.createElement('img');
     img.src=URL.createObjectURL(file);
     img.style.cssText='width:60px;height:60px;object-fit:cover;border-radius:var(--r-sm);border:1px solid rgba(255,255,255,.1);opacity:.5;transition:opacity .2s';
     prev.appendChild(img);
-    window._fb.uploadFile(`noticias/${_noEnsureId()}/galeria_${Date.now()}_${i}_${file.name}`, file).then(url=>{
-      _noUploadsPendientes--; if(_noUploadsPendientes<=0) _noSetUploading(false);
-      if(url){ _noGaleria[idx]=url; img.src=url; img.style.opacity='1'; }
-      else{ img.style.opacity='.25'; img.title='Error al subir'; }
-    });
+    comprimirGaleriaFoto(file)
+      .then(dataUrl=>{ _noGaleria[idx]=dataUrl; img.src=dataUrl; img.style.opacity='1'; })
+      .catch(()=>{ img.style.opacity='.25'; img.title='Error al procesar la foto'; })
+      .finally(()=>{ _noUploadsPendientes--; if(_noUploadsPendientes<=0) _noSetUploading(false); });
   });
   input.value='';
+}
+
+// ── Cloudinary (audio/video de Noticias) ──────────────────────
+// Firebase Storage no está disponible (plan Spark, sin bucket), así que
+// audio y video se suben directo a Cloudinary (plan gratuito, sin backend
+// propio) usando un preset "unsigned". Solo se guarda la URL en Firestore.
+const CLOUDINARY_CLOUD_NAME   = 'zgajh922';
+const CLOUDINARY_UPLOAD_PRESET = 'zgajh922';
+
+async function subirACloudinary(file, resourceType='video'){
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+  const resp = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${resourceType}/upload`, {
+    method: 'POST',
+    body: fd
+  });
+  if(!resp.ok){
+    const texto = await resp.text().catch(()=> '');
+    throw new Error(`Cloudinary respondió ${resp.status}: ${texto}`);
+  }
+  const data = await resp.json();
+  return data.secure_url;
 }
 
 async function noPreviewAudio(input){
@@ -6274,11 +6311,17 @@ async function noPreviewAudio(input){
   const prev=document.getElementById('no-audio-preview');
   prev.innerHTML=`<div style="font-size:11px;color:var(--gris);font-family:'Rajdhani',sans-serif">⏳ Subiendo audio...</div>`;
   _noUploadsPendientes++; _noSetUploading(true);
-  const url = await window._fb.uploadFile(`noticias/${_noEnsureId()}/audio_${Date.now()}_${file.name}`, file);
-  _noUploadsPendientes--; if(_noUploadsPendientes<=0) _noSetUploading(false);
-  if(!url){ prev.innerHTML='<div style="color:#e74c3c;font-size:11px;font-family:\'Rajdhani\',sans-serif">✕ Error al subir el audio</div>'; return; }
-  _noAudio=url;
-  prev.innerHTML=`<audio controls class="noticia-audio" src="${url}"></audio><div style="font-size:11px;color:var(--gris);font-family:'Rajdhani',sans-serif;margin-top:4px">🎙 ${file.name}</div>`;
+  try{
+    // Cloudinary trata el audio bajo resource_type "video"
+    const url = await _subirConTimeout(subirACloudinary(file, 'video'), 45000);
+    _noAudio=url;
+    prev.innerHTML=`<audio controls class="noticia-audio" src="${url}"></audio><div style="font-size:11px;color:var(--gris);font-family:'Rajdhani',sans-serif;margin-top:4px">🎙 ${file.name}</div>`;
+  }catch(e){
+    console.error('Error subiendo audio a Cloudinary', e);
+    prev.innerHTML='<div style="color:#e74c3c;font-size:11px;font-family:\'Rajdhani\',sans-serif">✕ Se cortó la subida del audio. Probá de nuevo.</div>';
+  }finally{
+    _noUploadsPendientes--; if(_noUploadsPendientes<=0) _noSetUploading(false);
+  }
 }
 
 async function noPreviewVideo(input){
@@ -6287,11 +6330,16 @@ async function noPreviewVideo(input){
   const prev=document.getElementById('no-video-preview');
   prev.innerHTML=`<div style="font-size:11px;color:var(--gris);font-family:'Rajdhani',sans-serif">⏳ Subiendo video...</div>`;
   _noUploadsPendientes++; _noSetUploading(true);
-  const url = await window._fb.uploadFile(`noticias/${_noEnsureId()}/video_${Date.now()}_${file.name}`, file);
-  _noUploadsPendientes--; if(_noUploadsPendientes<=0) _noSetUploading(false);
-  if(!url){ prev.innerHTML='<div style="color:#e74c3c;font-size:11px;font-family:\'Rajdhani\',sans-serif">✕ Error al subir el video</div>'; return; }
-  _noVideo=url;
-  prev.innerHTML=`<video controls class="noticia-video" src="${url}" style="max-height:180px"></video><div style="font-size:11px;color:var(--gris);font-family:'Rajdhani',sans-serif;margin-top:4px">🎬 ${file.name}</div>`;
+  try{
+    const url = await _subirConTimeout(subirACloudinary(file, 'video'), 60000);
+    _noVideo=url;
+    prev.innerHTML=`<video controls class="noticia-video" src="${url}" style="max-height:180px"></video><div style="font-size:11px;color:var(--gris);font-family:'Rajdhani',sans-serif;margin-top:4px">🎬 ${file.name}</div>`;
+  }catch(e){
+    console.error('Error subiendo video a Cloudinary', e);
+    prev.innerHTML='<div style="color:#e74c3c;font-size:11px;font-family:\'Rajdhani\',sans-serif">✕ Se cortó la subida del video. Probá de nuevo.</div>';
+  }finally{
+    _noUploadsPendientes--; if(_noUploadsPendientes<=0) _noSetUploading(false);
+  }
 }
 
 function limpiarFormNoticia(){
@@ -9087,11 +9135,18 @@ async function generarImagenPosiciones(){
     let zona = null;
     if(fase==='fase1')      zona = currentZona;
     else if(fase==='fase2') zona = currentGrupo;
-    pos = [...data.posiciones.filter(p=>{
+    const registros = [...data.posiciones.filter(p=>{
       if(p.div!=='segunda'||p.fase!==fase) return false;
       if(zona) return (p.zona||'')===(zona||'');
       return true;
-    })].sort((a,b)=>(b.pts-a.pts)||((b.gf||0)-(b.gc||0))-((a.gf||0)-(a.gc||0)));
+    })];
+    const partsSeg = data.partidos.filter(p=>{
+      if(p.div!=='segunda'||p.estado!=='jugado') return false;
+      const faseP = p.faseRes||p.fase||'fase1';
+      if(zona) return faseP===fase && (p.zona||'')===(zona||'');
+      return faseP===fase;
+    });
+    pos = ordenarConDesempate(registros, partsSeg);
     const faseLabel={'fase1':'1ª Fase','fase2':'2ª Fase','fase3':'3ª Fase'}[fase]||fase;
     let zonaLabel='';
     if(fase==='fase1') zonaLabel = zona==='sierra'?' · Zona Sierra':' · Zona Llano';
@@ -9105,12 +9160,18 @@ async function generarImagenPosiciones(){
       if(!map[k])map[k]={equipo:p.equipo,pts:0,pj:0,g:0,e:0,p:0,gf:0,gc:0};
       ['pts','pj','g','e','p','gf','gc'].forEach(f=>map[k][f]+=Number(p[f])||0);
     });
-    pos=Object.values(map).sort((a,b)=>b.pts-a.pts||(b.gf-b.gc)-(a.gf-a.gc));
+    pos = ordenarConDesempate(
+      Object.values(map).map(p=>({...p, dg:(p.gf-p.gc>=0?'+':'')+(p.gf-p.gc)})),
+      data.partidos.filter(p=>p.div==='primera')
+    );
     tituloPosiciones='Tabla General';
     subtitulo='Primera División';
   } else {
-    pos=[...data.posiciones.filter(p=>p.div===div&&(p.torneo||'apertura')===torneo)]
-      .sort((a,b)=>b.pts-a.pts);
+    const partsTorneo = data.partidos.filter(p=>p.div===div&&(p.torneo||'apertura')===torneo&&p.estado==='jugado');
+    pos = ordenarConDesempate(
+      [...data.posiciones.filter(p=>p.div===div&&(p.torneo||'apertura')===torneo)],
+      partsTorneo
+    );
     tituloPosiciones='Posiciones';
     subtitulo=torneoLabel(torneo)+' · Primera División';
   }
