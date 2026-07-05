@@ -10175,13 +10175,19 @@ async function generarImagenTransferencia(tfId){
     await new Promise(res=>{
       const img = new Image();
       img.onload = () => {
-        // Dibujar la foto escalada y centrada
+        // Dibujar la foto escalada y centrada, recortada al alto asignado
+        // (si no se recorta, una foto vertical se derrama sobre el resto del diseño)
         const ratio  = img.naturalWidth / img.naturalHeight;
         let dw = W, dh = W / ratio;
         if(dh < fotoH){ dh = fotoH; dw = fotoH * ratio; }
         const dx = (W - dw) / 2;
         const dy = y;
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, y, W, fotoH);
+        ctx.clip();
         ctx.drawImage(img, dx, dy, dw, dh);
+        ctx.restore();
         res();
       };
       img.onerror = () => res();
@@ -10240,8 +10246,8 @@ async function generarImagenTransferencia(tfId){
   ctx.fillStyle = colorPrincipal;
   ctx.font      = `${s(72)}px "Bebas Neue", Arial, sans-serif`;
   ctx.textAlign = 'left';
-  cvFillTextTrunc(ctx, t.nombre.toUpperCase(), s(40), y + s(70), W - s(80));
-  y += s(78);
+  cvFillTextTrunc(ctx, t.nombre.toUpperCase(), s(40), y + s(62), W - s(80));
+  y += s(100);
 
   // ── Posición — Rajdhani (agrandada para que se lea bien) ──────
   ctx.fillStyle = colorSecundario;
