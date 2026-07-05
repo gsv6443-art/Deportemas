@@ -455,9 +455,9 @@
     if(fbFotos)     { localStorage.setItem('lrr_fotos',     JSON.stringify(fbFotos)); }
     // Noticias: prioridad a docs individuales (nuevo), fallback al doc único (viejo)
     if(fbNoticiasNuevo && fbNoticiasNuevo.length){
-      localStorage.setItem('lrr_noticias', JSON.stringify(fbNoticiasNuevo));
+      saveNoticias(fbNoticiasNuevo);
     } else if(fbNoticiasViejo) {
-      localStorage.setItem('lrr_noticias', JSON.stringify(fbNoticiasViejo));
+      saveNoticias(fbNoticiasViejo);
       // Migrar al formato nuevo: guardar cada noticia como doc individual
       if(window._fb && fbNoticiasViejo.length){
         fbNoticiasViejo.forEach(n=>{ if(n.id) window._fb.setNoticia(n.id, n); });
@@ -6107,14 +6107,23 @@ function renderFooter(){
 // NOTICIAS
 // ============================================================
 const NOTICIAS_KEY = 'lrr_noticias';
-function getNoticias(){ try{ return JSON.parse(localStorage.getItem(NOTICIAS_KEY))||[]; }catch(e){ return []; } }
+let _noticiasMemCache = null; // respaldo en memoria por si localStorage se queda sin espacio
+function getNoticias(){
+  if(_noticiasMemCache) return _noticiasMemCache;
+  try{ _noticiasMemCache = JSON.parse(localStorage.getItem(NOTICIAS_KEY))||[]; }
+  catch(e){ _noticiasMemCache = []; }
+  return _noticiasMemCache;
+}
+// Guarda el array de noticias: siempre actualiza la memoria (fuente de verdad
+// para la sesión actual) y, si hay espacio, también localStorage como cache
+// entre recargas. Si localStorage está lleno, seguimos funcionando igual.
 function saveNoticias(arr){
-  localStorage.setItem(NOTICIAS_KEY, JSON.stringify(arr));
-  // Cada noticia va a su propio documento Firestore — nunca al doc único
-  // (llamar saveNoticiaSingle para cada noticia nueva se hace en guardarNoticia/editarNoticia)
+  _noticiasMemCache = arr;
+  try{ localStorage.setItem(NOTICIAS_KEY, JSON.stringify(arr)); return true; }
+  catch(e){ console.warn('No se pudo cachear noticias en localStorage (espacio lleno). Se sigue usando en memoria + Firestore.', e); return false; }
 }
 function saveNoticiaSingle(noticia){
-  localStorage.setItem(NOTICIAS_KEY, JSON.stringify(getNoticias()));
+  saveNoticias(getNoticias());
   if(window._fb && noticia.id) window._fb.setNoticia(noticia.id, noticia);
 }
 
@@ -6378,14 +6387,27 @@ function guardarNoticia(){
     audio:  _noAudio, audioNombre: _noAudioNombre,
     video:  _noVideo, videoNombre: _noVideoNombre,
   };
+
+  // El cache en localStorage es solo una copia rápida entre recargas; la
+  // memoria (y Firestore) son la fuente de verdad real dentro de la sesión.
+  // Si localStorage se queda sin espacio (las imágenes en base64 pesan), no
+  // dejamos que eso frene la publicación ni rompa la vista — solo avisamos.
+  let cacheOk = true;
   const noticias=getNoticias();
   noticias.unshift(noticia);
-  localStorage.setItem(NOTICIAS_KEY, JSON.stringify(noticias));
-  // Guardar en Firestore como documento individual (los archivos ya viven en Storage)
-  if(window._fb) window._fb.setNoticia(noticia.id, noticia);
+  cacheOk = saveNoticias(noticias);
+
+  // Guardar en Firestore como documento individual (esto es lo que persiste de verdad)
+  if(window._fb){
+    window._fb.setNoticia(noticia.id, noticia).catch(e=>{
+      console.error('Error guardando noticia en Firestore', e);
+      alert('✕ No se pudo guardar la noticia en el servidor. Revisá tu conexión y probá de nuevo.');
+    });
+  }
+
   limpiarFormNoticia();
   const msg=document.getElementById('no-msg');
-  msg.textContent='✓ Publicado correctamente';
+  msg.textContent = cacheOk ? '✓ Publicado correctamente' : '✓ Publicado (no se pudo cachear localmente, pero se guardó en el servidor)';
   msg.style.color='var(--dorado)'; msg.style.display='block';
   setTimeout(()=>msg.style.display='none',2800);
   renderAdminListaNoticias();
@@ -6396,10 +6418,12 @@ function eliminarNoticia(id){
   pedirConfirmacion('¿Eliminar esta publicación?',function(){
     const noticia=getNoticias().find(n=>n.id===id);
     const noticias=getNoticias().filter(n=>n.id!==id);
-    localStorage.setItem(NOTICIAS_KEY, JSON.stringify(noticias));
+    saveNoticias(noticias);
     if(window._fb){
       window._fb.delNoticia(id);
-      // Borrado best-effort de los archivos en Storage
+      // Borrado best-effort de los archivos en Storage (no aplica a imágenes
+      // base64 ni a audio/video de Cloudinary, solo queda por compatibilidad
+      // con noticias viejas que sí usaban Firebase Storage)
       if(noticia){
         if(noticia.img) window._fb.deleteFile(noticia.img);
         if(noticia.audio) window._fb.deleteFile(noticia.audio);
@@ -7962,8 +7986,11 @@ function guardarEdicion(tipo,id){
       autor:val('ed-no-autor'),
       colorTexto:val('ed-no-color')||'blanco'
     };
-    localStorage.setItem(NOTICIAS_KEY, JSON.stringify(noticias));
-    if(window._fb) window._fb.setNoticia(sid, noticias[idx]);
+    saveNoticias(noticias);
+    if(window._fb) window._fb.setNoticia(sid, noticias[idx]).catch(e=>{
+      console.error('Error actualizando noticia en Firestore', e);
+      alert('✕ No se pudo guardar el cambio en el servidor. Revisá tu conexión.');
+    });
     cerrarModalEdicion();
     renderAdminListaNoticias();
     if(currentSection==='noticias') renderNoticias();
@@ -9799,7 +9826,16 @@ async function generarImagenNoticia(noticiaId){
         const scale=Math.max(scaleX,scaleY);
         const dw=iW*scale, dh=iH*scale;
         const dx=(W-dw)/2, dy=y+(imgH-dh)/2;
+        // Recortamos al recuadro exacto de la imagen: si la foto centrada
+        // sobresale (arriba o abajo) por el cálculo de "cover", antes se
+        // colaba fuera de esta franja y se veía como una sombra/borde
+        // suelto encima del header o encima del texto de abajo.
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0,y,W,imgH);
+        ctx.clip();
         ctx.drawImage(img, dx, dy, dw, dh);
+        ctx.restore();
         res();
       };
       img.onerror=()=>res();
@@ -9828,16 +9864,16 @@ async function generarImagenNoticia(noticiaId){
     ctx.fillRect(0, y-s(10), W, CV_H - y + s(10));
   }
 
-  // Badge categoría — Rajdhani
+  // Badge categoría — Rajdhani (agrandado para que se lea bien)
   ctx.fillStyle='rgba(201,162,39,0.15)';
   const catTxt=(n.cat||'Noticias').toUpperCase();
-  ctx.font=`700 ${s(13)}px "Rajdhani", Arial, sans-serif`;
-  const catW=ctx.measureText(catTxt).width+s(24);
-  cvRoundRect(ctx,s(40),y-s(16),catW,s(28),s(6)); ctx.fill();
+  ctx.font=`700 ${s(17)}px "Rajdhani", Arial, sans-serif`;
+  const catW=ctx.measureText(catTxt).width+s(30);
+  cvRoundRect(ctx,s(40),y-s(19),catW,s(34),s(7)); ctx.fill();
   ctx.fillStyle=C.DORADO; ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillText(catTxt,s(40)+catW/2,y-s(2));
   ctx.textBaseline='alphabetic';
-  y += s(24);
+  y += s(28);
 
   // Título — Bebas Neue, grande e impactante
   const MAX_TITULO_W = W - s(80);
@@ -9855,18 +9891,35 @@ async function generarImagenNoticia(noticiaId){
   if(linea){ ctx.fillText(linea,s(40),ly); ly+=s(58); }
   y=ly+s(10);
 
-  // Bajada — DM Sans
+  // Bajada — DM Sans. Se limita a un máximo de líneas fijo (según el
+  // espacio que dejó el título) para que nunca se corte contra el pie ni
+  // se salga del canvas; si no entra completa, se recorta con "…".
   if(n.bajada){
     ctx.fillStyle=colorBajada;
     ctx.font=`400 ${s(20)}px "DM Sans", Arial, sans-serif`;
+    const LINE_H = s(28);
+    // Espacio disponible real antes de la franja de meta + footer
+    const espacioDisponible = (CV_H - s(40)) - s(48) - y; // reserva meta + footer
+    const maxLineas = Math.max(1, Math.min(4, Math.floor(espacioDisponible / LINE_H)));
     const bajadaWords=n.bajada.split(' ');
-    let bl=''; let by=y+s(22);
+    const lineas=[]; let bl='';
     bajadaWords.forEach(w=>{
       const t=bl?bl+' '+w:w;
-      if(ctx.measureText(t).width>MAX_TITULO_W&&bl){ ctx.fillText(bl,s(40),by); by+=s(28); bl=w; }
+      if(ctx.measureText(t).width>MAX_TITULO_W&&bl){ lineas.push(bl); bl=w; }
       else bl=t;
     });
-    if(bl){ ctx.fillText(bl,s(40),by); by+=s(28); }
+    if(bl) lineas.push(bl);
+    // Truncar con "…" si hay más líneas de las que entran
+    let lineasAMostrar = lineas.slice(0, maxLineas);
+    if(lineas.length > maxLineas){
+      let ultima = lineasAMostrar[maxLineas-1];
+      while(ultima.length>1 && ctx.measureText(ultima+'…').width>MAX_TITULO_W){
+        ultima = ultima.slice(0,-1);
+      }
+      lineasAMostrar[maxLineas-1] = ultima.trim()+'…';
+    }
+    let by=y+s(22);
+    lineasAMostrar.forEach(l=>{ ctx.fillText(l,s(40),by); by+=LINE_H; });
     y=by+s(12);
   }
 
