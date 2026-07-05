@@ -3223,6 +3223,23 @@ table.posiciones td:nth-child(8){
           </div>
         </div>
 
+        <div class="form-row">
+          <div class="form-group"><label>Escudo de origen <span style="color:var(--gris);font-size:10px">(si el club no está cargado)</span></label>
+            <input type="file" accept="image/*" id="tf-escudo-origen-file" onchange="tfPreviewEscudo(this,'origen')" style="font-size:11px"/>
+            <div class="preview-wrap" id="tf-escudo-origen-wrap">
+              <img id="tf-escudo-origen-preview" src="" alt="" style="max-height:60px;object-fit:contain"/>
+              <button type="button" class="btn-quitar-img" onclick="quitarImagen('tf-escudo-origen-preview','tf-escudo-origen-wrap','tf-escudo-origen-file','_tfEscudoOrigen')">✕ Quitar</button>
+            </div>
+          </div>
+          <div class="form-group"><label>Escudo de destino <span style="color:var(--gris);font-size:10px">(si el club no está cargado)</span></label>
+            <input type="file" accept="image/*" id="tf-escudo-destino-file" onchange="tfPreviewEscudo(this,'destino')" style="font-size:11px"/>
+            <div class="preview-wrap" id="tf-escudo-destino-wrap">
+              <img id="tf-escudo-destino-preview" src="" alt="" style="max-height:60px;object-fit:contain"/>
+              <button type="button" class="btn-quitar-img" onclick="quitarImagen('tf-escudo-destino-preview','tf-escudo-destino-wrap','tf-escudo-destino-file','_tfEscudoDestino')">✕ Quitar</button>
+            </div>
+          </div>
+        </div>
+
         <div class="form-group"><label>Foto del jugador</label>
           <div class="upload-area">
             <input type="file" accept="image/*" id="tf-foto-file" onchange="tfPreviewFoto(this)"/>
@@ -3232,6 +3249,14 @@ table.posiciones td:nth-child(8){
             <img id="tf-foto-preview" src="" alt="" style="max-height:180px;object-fit:cover;object-position:top"/>
             <button type="button" class="btn-quitar-img" onclick="quitarImagen('tf-foto-preview','tf-foto-wrap','tf-foto-file','_tfFoto')">✕ Quitar</button>
           </div>
+        </div>
+
+        <div class="form-group"><label>Color del texto en la imagen para compartir</label>
+          <select id="tf-color-texto">
+            <option value="blanco">Blanco</option>
+            <option value="negro">Negro</option>
+            <option value="dorado">Dorado</option>
+          </select>
         </div>
 
         <div class="form-group"><label>Descripción <span style="color:var(--gris);font-size:10px">(opcional)</span></label>
@@ -6582,6 +6607,18 @@ function renderNoticias(categoria, contentId){
 // ============================================================
 // TRANSFERENCIAS / MERCADO DE PASES
 // ============================================================
+// Muestra un mensaje breve en el elemento indicado (ej: 'tf-msg') con el color dado,
+// y lo oculta solo después de unos segundos.
+function mostrarMsg(elId, texto, color){
+  const el = document.getElementById(elId);
+  if(!el) return;
+  el.textContent = texto;
+  el.style.color = color || 'var(--dorado)';
+  el.style.display = 'block';
+  clearTimeout(el._msgTimeout);
+  el._msgTimeout = setTimeout(()=>{ el.style.display = 'none'; }, 3200);
+}
+
 const TF_KEY = 'lrr_transferencias';
 function getTransferencias(){ try{ return JSON.parse(localStorage.getItem(TF_KEY))||[]; }catch(e){ return []; } }
 function saveTransferencias(arr){
@@ -6599,6 +6636,8 @@ function saveTransferencias(arr){
 }
 
 let _tfFoto = '';
+let _tfEscudoOrigen = '';
+let _tfEscudoDestino = '';
 
 function tfPreviewFoto(input){
   const file = input.files[0]; if(!file) return;
@@ -6610,6 +6649,21 @@ function tfPreviewFoto(input){
     if(wrap){ wrap.classList.add('visible'); }
   }).catch(() => {
     mostrarMsg('tf-msg','⚠ No se pudo procesar la imagen','#e05555');
+  });
+}
+
+// Escudo cargado a mano para un movimiento puntual, por si el club no está
+// cargado en la sección Equipos. lado es 'origen' o 'destino'.
+function tfPreviewEscudo(input, lado){
+  const file = input.files[0]; if(!file) return;
+  comprimirABase64(file, 300, 0.85).then(dataUrl => {
+    if(lado==='origen') _tfEscudoOrigen = dataUrl; else _tfEscudoDestino = dataUrl;
+    const prev = document.getElementById(`tf-escudo-${lado}-preview`);
+    const wrap = document.getElementById(`tf-escudo-${lado}-wrap`);
+    if(prev){ prev.src = dataUrl; }
+    if(wrap){ wrap.classList.add('visible'); }
+  }).catch(() => {
+    mostrarMsg('tf-msg','⚠ No se pudo procesar el escudo','#e05555');
   });
 }
 
@@ -6628,7 +6682,10 @@ function guardarTransferencia(){
     mercado:  document.getElementById('tf-mercado').value,
     origen,
     destino,
+    escudoOrigen:  _tfEscudoOrigen || '',
+    escudoDestino: _tfEscudoDestino || '',
     foto:     _tfFoto || '',
+    colorTexto: document.getElementById('tf-color-texto').value,
     desc:     document.getElementById('tf-desc').value.trim(),
     fecha:    new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'}),
   };
@@ -6650,10 +6707,17 @@ function limpiarFormTransferencia(){
   ['tf-nombre','tf-origen','tf-destino','tf-desc'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.value='';
   });
+  document.getElementById('tf-color-texto').value = 'blanco';
   _tfFoto='';
   const prev=document.getElementById('tf-foto-preview'); if(prev) prev.src='';
   const wrap=document.getElementById('tf-foto-wrap'); if(wrap) wrap.classList.remove('visible');
   const fi=document.getElementById('tf-foto-file'); if(fi) fi.value='';
+  _tfEscudoOrigen=''; _tfEscudoDestino='';
+  ['origen','destino'].forEach(lado=>{
+    const p=document.getElementById(`tf-escudo-${lado}-preview`); if(p) p.src='';
+    const w=document.getElementById(`tf-escudo-${lado}-wrap`); if(w) w.classList.remove('visible');
+    const f=document.getElementById(`tf-escudo-${lado}-file`); if(f) f.value='';
+  });
 }
 
 function eliminarTransferencia(id){
@@ -6684,9 +6748,29 @@ function editarTransferencia(id){
       <div class="form-group"><label>Club origen</label><input id="ed-tf-origen" value="${t.origen}"/></div>
       <div class="form-group"><label>Club destino</label><input id="ed-tf-destino" value="${t.destino}"/></div>
     </div>
+    <div class="form-row">
+      <div class="form-group"><label>Escudo origen <span style="color:var(--gris);font-size:10px">(opcional)</span></label>
+        <input type="file" accept="image/*" id="ed-tf-escudo-origen-file" onchange="edTfPreviewEscudo(this,'origen')" style="font-size:11px"/>
+        ${t.escudoOrigen?`<img id="ed-tf-escudo-origen-preview" src="${t.escudoOrigen}" style="max-height:50px;object-fit:contain;margin-top:4px;display:block"/>`:`<img id="ed-tf-escudo-origen-preview" src="" style="max-height:50px;object-fit:contain;margin-top:4px;display:none"/>`}
+      </div>
+      <div class="form-group"><label>Escudo destino <span style="color:var(--gris);font-size:10px">(opcional)</span></label>
+        <input type="file" accept="image/*" id="ed-tf-escudo-destino-file" onchange="edTfPreviewEscudo(this,'destino')" style="font-size:11px"/>
+        ${t.escudoDestino?`<img id="ed-tf-escudo-destino-preview" src="${t.escudoDestino}" style="max-height:50px;object-fit:contain;margin-top:4px;display:block"/>`:`<img id="ed-tf-escudo-destino-preview" src="" style="max-height:50px;object-fit:contain;margin-top:4px;display:none"/>`}
+      </div>
+    </div>
+    <div class="form-group"><label>Color del texto en la imagen para compartir</label>
+      <select id="ed-tf-color-texto">
+        <option value="blanco"${(t.colorTexto||'blanco')==='blanco'?' selected':''}>Blanco</option>
+        <option value="negro"${t.colorTexto==='negro'?' selected':''}>Negro</option>
+        <option value="dorado"${t.colorTexto==='dorado'?' selected':''}>Dorado</option>
+      </select>
+    </div>
     <div class="form-group"><label>Descripción</label><input id="ed-tf-desc" value="${t.desc||''}"/></div>
     ${t.foto?`<div style="margin-top:8px"><img src="${t.foto}" style="max-height:120px;border-radius:8px;object-fit:cover"/></div>`:''}
   `;
+
+  window._edTfEscudoOrigen  = t.escudoOrigen  || '';
+  window._edTfEscudoDestino = t.escudoDestino || '';
 
   abrirModalEdicion('Editar movimiento', body, ()=>{
     const nombre = document.getElementById('ed-tf-nombre').value.trim();
@@ -6700,12 +6784,25 @@ function editarTransferencia(id){
       tipo:     document.getElementById('ed-tf-tipo').value,
       mercado:  document.getElementById('ed-tf-mercado').value,
       origen, destino,
+      escudoOrigen:  window._edTfEscudoOrigen  || '',
+      escudoDestino: window._edTfEscudoDestino || '',
+      colorTexto: document.getElementById('ed-tf-color-texto').value,
       desc:     document.getElementById('ed-tf-desc').value.trim(),
     };
     saveTransferencias(arr);
     renderAdminListaTransferencias();
     if(currentSection==='noticias') renderTransferencias();
     cerrarModalEdicion();
+  });
+}
+
+// Comprime y guarda el escudo personalizado dentro del modal de edición de transferencia
+function edTfPreviewEscudo(input, lado){
+  const file = input.files[0]; if(!file) return;
+  comprimirABase64(file, 300, 0.85).then(dataUrl=>{
+    if(lado==='origen') window._edTfEscudoOrigen = dataUrl; else window._edTfEscudoDestino = dataUrl;
+    const p = document.getElementById(`ed-tf-escudo-${lado}-preview`);
+    if(p){ p.src = dataUrl; p.style.display='block'; }
   });
 }
 
@@ -6742,7 +6839,8 @@ function switchNoticiaTab(tab, el){
   else if(tab==='entrevistas') renderNoticias('Entrevistas','entrevistas-content');
 }
 
-function tfEscudoHTML(nombre){
+function tfEscudoHTML(nombre, escudoCustom){
+  if(escudoCustom) return `<img class="tf-card-club-esc" src="${escudoCustom}" alt="${nombre}"/>`;
   const entry = escudos[nombre]||escudos[normalizar(nombre)];
   const src   = entry&&typeof entry==='object'?entry.img:entry;
   if(src) return `<img class="tf-card-club-esc" src="${src}" alt="${nombre}"/>`;
@@ -6791,12 +6889,12 @@ function renderTransferencias(){
             <div class="tf-card-pos">${t.posicion}</div>
             <div class="tf-card-clubes">
               <div class="tf-card-club">
-                ${tfEscudoHTML(t.origen)}
+                ${tfEscudoHTML(t.origen, t.escudoOrigen)}
                 <span class="tf-card-club-nombre">${t.origen}</span>
               </div>
               <span class="tf-card-arrow">→</span>
               <div class="tf-card-club">
-                ${tfEscudoHTML(t.destino)}
+                ${tfEscudoHTML(t.destino, t.escudoDestino)}
                 <span class="tf-card-club-nombre">${t.destino}</span>
               </div>
             </div>
@@ -10110,33 +10208,46 @@ async function generarImagenTransferencia(tfId){
   ctx.fillRect(0, y, W, fotoH);
   y += fotoH;
 
+  // Resolver color de texto según preferencia elegida al publicar
+  const ct = t.colorTexto || 'blanco';
+  const colorPrincipal = ct==='negro' ? '#111111' : ct==='dorado' ? C.DORADO : C.BLANCO;
+  const colorSecundario = ct==='negro' ? 'rgba(0,0,0,0.7)' : ct==='dorado' ? 'rgba(201,162,39,0.75)' : 'rgba(255,255,255,0.7)';
+  const colorTenue = ct==='negro' ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.55)';
+
+  // Si se eligió negro, ponemos un fondo claro detrás de todo el bloque de
+  // texto para que se pueda leer (si no, texto negro sobre fondo oscuro sería invisible)
+  if(ct==='negro'){
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    ctx.fillRect(0, y - s(10), W, CV_H - y - s(50));
+  }
+
   // ── Badge tipo de movimiento ──────────────────────────────────
   const tipoLabel = {alta:'INCORPORACIÓN', baja:'SALIDA', prestamo:'PRÉSTAMO'};
   const tipoCol   = {alta:'rgba(26,107,47,0.85)', baja:'rgba(192,57,43,0.85)', prestamo:'rgba(201,162,39,0.85)'};
   const tipoTxt   = {alta:'#4caf74', baja:'#ff7070', prestamo:C.NEG};
   const badgeTxt  = tipoLabel[t.tipo] || t.tipo.toUpperCase();
-  ctx.font = `700 ${s(14)}px "Rajdhani", Arial, sans-serif`;
-  const badgeW = ctx.measureText(badgeTxt).width + s(28);
-  cvRoundRect(ctx, s(40), y - s(18), badgeW, s(30), s(6));
+  ctx.font = `700 ${s(16)}px "Rajdhani", Arial, sans-serif`;
+  const badgeW = ctx.measureText(badgeTxt).width + s(30);
+  cvRoundRect(ctx, s(40), y - s(18), badgeW, s(32), s(6));
   ctx.fillStyle = tipoCol[t.tipo]||'rgba(201,162,39,0.85)'; ctx.fill();
   ctx.fillStyle = tipoTxt[t.tipo]||C.NEG;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText(badgeTxt, s(40) + badgeW/2, y - s(3));
+  ctx.fillText(badgeTxt, s(40) + badgeW/2, y - s(2));
   ctx.textBaseline = 'alphabetic';
-  y += s(20);
+  y += s(24);
 
   // ── Nombre del jugador — Bebas Neue ──────────────────────────
-  ctx.fillStyle = C.BLANCO;
+  ctx.fillStyle = colorPrincipal;
   ctx.font      = `${s(72)}px "Bebas Neue", Arial, sans-serif`;
   ctx.textAlign = 'left';
   cvFillTextTrunc(ctx, t.nombre.toUpperCase(), s(40), y + s(70), W - s(80));
   y += s(78);
 
-  // ── Posición — Rajdhani ───────────────────────────────────────
-  ctx.fillStyle = 'rgba(201,162,39,0.7)';
-  ctx.font      = `700 ${s(20)}px "Rajdhani", Arial, sans-serif`;
+  // ── Posición — Rajdhani (agrandada para que se lea bien) ──────
+  ctx.fillStyle = colorSecundario;
+  ctx.font      = `700 ${s(24)}px "Rajdhani", Arial, sans-serif`;
   ctx.fillText(t.posicion.toUpperCase(), s(40), y);
-  y += s(36);
+  y += s(38);
 
   // ── Separador dorado ─────────────────────────────────────────
   ctx.fillStyle = 'rgba(201,162,39,0.3)';
@@ -10148,7 +10259,7 @@ async function generarImagenTransferencia(tfId){
   const CX  = W / 2;
 
   // Club origen (izquierda)
-  const escOrigImg = await cvDrawEscudoPromise(t.origen, ESC);
+  const escOrigImg = await cvDrawEscudoPromise(t.origen, ESC, t.escudoOrigen);
   const oriX = CX - s(160) - ESC;
   const oriY = y;
   if(escOrigImg){
@@ -10159,10 +10270,10 @@ async function generarImagenTransferencia(tfId){
   } else {
     cvEscudoFallback(ctx, t.origen, oriX, oriY, ESC);
   }
-  ctx.fillStyle = C.BLANCO;
-  ctx.font      = `600 ${s(16)}px "DM Sans", Arial, sans-serif`;
+  ctx.fillStyle = colorPrincipal;
+  ctx.font      = `600 ${s(19)}px "DM Sans", Arial, sans-serif`;
   ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-  cvFillTextTruncCenter(ctx, t.origen, oriX + ESC/2, oriY + ESC + s(8), s(160));
+  cvFillTextTruncCenter(ctx, t.origen, oriX + ESC/2, oriY + ESC + s(10), s(170));
   ctx.textBaseline = 'alphabetic';
 
   // Flecha central — Bebas Neue
@@ -10173,7 +10284,7 @@ async function generarImagenTransferencia(tfId){
   ctx.textBaseline = 'alphabetic';
 
   // Club destino (derecha)
-  const escDestImg = await cvDrawEscudoPromise(t.destino, ESC);
+  const escDestImg = await cvDrawEscudoPromise(t.destino, ESC, t.escudoDestino);
   const destX = CX + s(160);
   const destY = y;
   if(escDestImg){
@@ -10184,18 +10295,18 @@ async function generarImagenTransferencia(tfId){
   } else {
     cvEscudoFallback(ctx, t.destino, destX, destY, ESC);
   }
-  ctx.fillStyle = C.BLANCO;
-  ctx.font      = `600 ${s(16)}px "DM Sans", Arial, sans-serif`;
+  ctx.fillStyle = colorPrincipal;
+  ctx.font      = `600 ${s(19)}px "DM Sans", Arial, sans-serif`;
   ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-  cvFillTextTruncCenter(ctx, t.destino, destX + ESC/2, destY + ESC + s(8), s(160));
+  cvFillTextTruncCenter(ctx, t.destino, destX + ESC/2, destY + ESC + s(10), s(170));
   ctx.textBaseline = 'alphabetic';
 
   y += ESC + s(52);
 
   // ── Descripción opcional — DM Sans ───────────────────────────
   if(t.desc){
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.font      = `400 ${s(18)}px "DM Sans", Arial, sans-serif`;
+    ctx.fillStyle = colorTenue;
+    ctx.font      = `400 ${s(19)}px "DM Sans", Arial, sans-serif`;
     ctx.textAlign = 'center';
     cvFillTextTrunc(ctx, t.desc, W/2, y + s(18), W - s(80));
     y += s(36);
@@ -10206,13 +10317,13 @@ async function generarImagenTransferencia(tfId){
   const mercColor = {verano:'rgba(201,162,39,0.2)', invierno:'rgba(58,155,213,0.2)'};
   const mercTxtC  = {verano:C.DORADO, invierno:'#3a9bd5'};
   const mTxt = mercLabel[t.mercado] || t.mercado.toUpperCase();
-  ctx.font = `700 ${s(14)}px "Rajdhani", Arial, sans-serif`;
-  const mW = ctx.measureText(mTxt).width + s(32);
-  cvRoundRect(ctx, W/2-mW/2, CV_H - s(90), mW, s(32), s(16));
+  ctx.font = `700 ${s(16)}px "Rajdhani", Arial, sans-serif`;
+  const mW = ctx.measureText(mTxt).width + s(34);
+  cvRoundRect(ctx, W/2-mW/2, CV_H - s(90), mW, s(34), s(17));
   ctx.fillStyle = mercColor[t.mercado]||'rgba(201,162,39,0.2)'; ctx.fill();
   ctx.fillStyle = mercTxtC[t.mercado]||C.DORADO;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText(mTxt, W/2, CV_H - s(74));
+  ctx.fillText(mTxt, W/2, CV_H - s(73));
   ctx.textBaseline = 'alphabetic';
 
   cvFooter(ctx, W, CV_H - s(40), liga);
@@ -10220,11 +10331,16 @@ async function generarImagenTransferencia(tfId){
   return canvas;
 }
 
-// Helper: carga un escudo y devuelve la imagen (o null)
-function cvDrawEscudoPromise(nombre, size){
+// Helper: carga un escudo y devuelve la imagen (o null).
+// Si se pasa escudoCustom (base64 cargado a mano para ese movimiento puntual),
+// se prioriza sobre el escudo del listado de equipos.
+function cvDrawEscudoPromise(nombre, size, escudoCustom){
   return new Promise(res=>{
-    const entry = escudos[nombre]||escudos[normalizar(nombre)];
-    const src   = entry&&typeof entry==='object'?entry.img:entry;
+    let src = escudoCustom;
+    if(!src){
+      const entry = escudos[nombre]||escudos[normalizar(nombre)];
+      src = entry&&typeof entry==='object'?entry.img:entry;
+    }
     if(!src){ res(null); return; }
     const img = new Image();
     img.onload  = () => res(img);
