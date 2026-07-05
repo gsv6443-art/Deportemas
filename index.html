@@ -948,6 +948,11 @@ nav a.active{
   box-shadow:0 2px 14px rgba(201,162,39,.35);
   letter-spacing:1px;
 }
+.marcador-penales{
+  font-size:10px;font-weight:700;font-family:'Rajdhani',sans-serif;
+  color:rgba(201,162,39,.7);letter-spacing:.5px;text-transform:uppercase;
+  margin-top:3px;text-align:center;
+}
 
 /* ── Badge de estado ── */
 .estado{
@@ -2868,9 +2873,17 @@ table.posiciones td:nth-child(8){
         <!-- playoff flag solo primera -->
         <div id="p-playoff-wrap" class="form-group" style="display:none">
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-            <input type="checkbox" id="p-es-playoff" style="width:16px;height:16px;accent-color:var(--dorado)"/>
+            <input type="checkbox" id="p-es-playoff" onchange="updateAdminPenalesVis('p')" style="width:16px;height:16px;accent-color:var(--dorado)"/>
             <span>Partido de Play Off <span style="color:var(--gris);font-size:11px">(no suma en tabla de posiciones, sí en goleadores)</span></span>
           </label>
+        </div>
+        <!-- penales: solo si es partido de Play Off -->
+        <div id="p-penales-wrap" class="form-group" style="display:none">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" id="p-tiene-penales" onchange="togglePenalesInput('p')" style="width:16px;height:16px;accent-color:var(--dorado)"/>
+            <span>Se definió por penales</span>
+          </label>
+          <input type="text" id="p-penales" placeholder="Ej: 5-4" style="display:none;margin-top:8px"/>
         </div>
         <!-- campo fase solo segunda -->
         <div id="p-fase-wrap" class="form-group" style="display:none"><label>Fase (Segunda División)</label>
@@ -3534,6 +3547,13 @@ table.posiciones td:nth-child(8){
             <div class="form-group"><label>Resultado (partido único)</label><input type="text" id="po-res" placeholder="2-1"/></div>
             <div class="form-group"><label>Ganador</label><input type="text" id="po-ganador" placeholder="Nombre del equipo que clasifica"/></div>
           </div>
+          <div class="form-group">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+              <input type="checkbox" id="po-tiene-penales" onchange="togglePenalesInput('po')" style="width:16px;height:16px;accent-color:var(--dorado)"/>
+              <span>Se definió por penales</span>
+            </label>
+            <input type="text" id="po-penales" placeholder="Ej: 5-4" style="display:none;margin-top:8px"/>
+          </div>
         </div>
         <!-- ida y vuelta (semis y final) -->
         <div id="po-idavuelta-wrap" style="display:none">
@@ -3548,8 +3568,15 @@ table.posiciones td:nth-child(8){
             <div class="form-group"><label>Fecha vuelta</label><input type="text" id="po-fecha-vuelta" placeholder="Ej: 19/07"/></div>
           </div>
           <div class="form-row">
-            <div class="form-group"><label>Global</label><input type="text" id="po-global" placeholder="2-2 (penales)"/></div>
+            <div class="form-group"><label>Global</label><input type="text" id="po-global" placeholder="2-2"/></div>
             <div class="form-group"><label>Ganador</label><input type="text" id="po-ganador-iv" placeholder="Nombre del equipo que clasifica"/></div>
+          </div>
+          <div class="form-group">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+              <input type="checkbox" id="poiv-tiene-penales" onchange="togglePenalesInput('poiv')" style="width:16px;height:16px;accent-color:var(--dorado)"/>
+              <span>Se definió por penales</span>
+            </label>
+            <input type="text" id="poiv-penales" placeholder="Ej: 5-4" style="display:none;margin-top:8px"/>
           </div>
         </div>
         <br/>
@@ -5037,8 +5064,11 @@ function toggleDetalle(btn){
 
 function partidoHTML(p,mostrarDetalle){
   const tieneDetalle=(p.goles&&p.goles.length)||(p.expulsiones&&p.expulsiones.length)||(p.dia)||(p.arbitros&&p.arbitros.length);
+  const penalesHTML=(p.estado==='jugado'&&p.esPlayoff&&p.tienePenales&&p.penales)
+    ?`<div class="marcador-penales">PEN. ${p.penales}</div>`
+    :'';
   const vsHTML=p.estado==='jugado'
-    ?`<div class="vs resultado" id="marcador-${p.id}">${p.resultado||'–'}</div>`
+    ?`<div style="display:flex;flex-direction:column;align-items:center"><div class="vs resultado" id="marcador-${p.id}">${p.resultado||'–'}</div>${penalesHTML}</div>`
     :p.estado==='en-juego'
       ?`<div class="vs resultado en-vivo" id="marcador-${p.id}">${p.resultado||'0-0'}</div>`
       :`<div class="vs" id="marcador-${p.id}">VS</div>`;
@@ -7152,6 +7182,19 @@ function buildEventoRowsHTML(eventos, tipo, listId){
     </div>`).join('');
 }
 
+// Muestra/oculta el bloque de penales según el checkbox "es Play Off" (prefijo 'p' o 'ed')
+function updateAdminPenalesVis(prefix){
+  const chkPlayoff = document.getElementById(prefix+'-es-playoff');
+  const wrap = document.getElementById(prefix+'-penales-wrap');
+  if(wrap) wrap.style.display = (chkPlayoff && chkPlayoff.checked) ? '' : 'none';
+}
+// Muestra/oculta el input de texto del resultado de penales según su checkbox
+function togglePenalesInput(prefix){
+  const chk = document.getElementById(prefix+'-tiene-penales');
+  const inp = document.getElementById(prefix+'-penales');
+  if(inp) inp.style.display = (chk && chk.checked) ? '' : 'none';
+}
+
 function updateAdminPartidoDiv(){
   const divVal = document.getElementById('p-div').value;
   const esReserva = divVal === 'reserva';
@@ -7162,6 +7205,10 @@ function updateAdminPartidoDiv(){
   const esReservaSegunda = esReserva && efectivo==='segunda';
   document.getElementById('p-torneo-wrap').style.display=esPrimera?'':'none';
   document.getElementById('p-playoff-wrap').style.display=esPrimera?'':'none';
+  if(!esPrimera){
+    const chk=document.getElementById('p-es-playoff'); if(chk) chk.checked=false;
+  }
+  updateAdminPenalesVis('p');
   document.getElementById('p-fase-wrap').style.display=(esPrimera||esReservaSegunda)?'none':'';
   const eventosWrap=document.getElementById('p-eventos-wrap');
   if(eventosWrap){
@@ -7198,6 +7245,10 @@ function edUpdateDivVis(){
   if(torneoWrap) torneoWrap.style.display = esPrimera ? '' : 'none';
   const playoffWrap=document.getElementById('ed-playoff-wrap');
   if(playoffWrap) playoffWrap.style.display = esPrimera ? '' : 'none';
+  if(!esPrimera){
+    const chk=document.getElementById('ed-es-playoff'); if(chk) chk.checked=false;
+  }
+  updateAdminPenalesVis('ed');
   const faseWrap=document.getElementById('ed-faseRes-wrap');
   if(faseWrap) faseWrap.style.display = (esPrimera||esReservaSegunda) ? 'none' : '';
   const zonaWrap=document.getElementById('ed-zona-wrap');
@@ -7247,6 +7298,8 @@ function agregarPartido(){
   if(div==='primera'){
     d.torneo=document.getElementById('p-torneo-sel').value;
     d.esPlayoff=document.getElementById('p-es-playoff').checked;
+    d.tienePenales = d.esPlayoff ? document.getElementById('p-tiene-penales').checked : false;
+    d.penales = d.tienePenales ? document.getElementById('p-penales').value.trim() : '';
   }
   else if(!esReserva){
     d.faseRes=document.getElementById('p-fase-res').value;
@@ -7260,6 +7313,9 @@ function agregarPartido(){
   document.getElementById('p-goles-list').innerHTML='';
   document.getElementById('p-exp-list').innerHTML='';
   document.getElementById('p-div').value='primera';
+  document.getElementById('p-tiene-penales').checked=false;
+  document.getElementById('p-penales').value='';
+  togglePenalesInput('p');
   updateAdminPartidoDiv();
   renderAdminListas();renderSection(currentSection);
   // Si el partido fue cargado directamente como "en juego", animar inicio
@@ -7489,9 +7545,16 @@ function abrirModalEdicion(tipo,id,objOverride){
       <div class="form-group" ${esPrimera?'':'style="display:none"'} id="ed-torneo-partido-wrap"><label>Torneo (Primera)</label>${torneoSelect}</div>
       <div class="form-group" ${esPrimera?'':'style="display:none"'} id="ed-playoff-wrap">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-          <input type="checkbox" id="ed-es-playoff" ${obj.esPlayoff?'checked':''} style="width:16px;height:16px;accent-color:var(--dorado)"/>
+          <input type="checkbox" id="ed-es-playoff" ${obj.esPlayoff?'checked':''} onchange="updateAdminPenalesVis('ed')" style="width:16px;height:16px;accent-color:var(--dorado)"/>
           <span>Partido de Play Off <span style="color:var(--gris);font-size:11px">(no suma en tabla de posiciones, sí en goleadores)</span></span>
         </label>
+      </div>
+      <div class="form-group" ${(esPrimera&&obj.esPlayoff)?'':'style="display:none"'} id="ed-penales-wrap">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" id="ed-tiene-penales" ${obj.tienePenales?'checked':''} onchange="togglePenalesInput('ed')" style="width:16px;height:16px;accent-color:var(--dorado)"/>
+          <span>Se definió por penales</span>
+        </label>
+        <input type="text" id="ed-penales" placeholder="Ej: 5-4" value="${obj.penales||''}" style="${obj.tienePenales?'':'display:none'};margin-top:8px"/>
       </div>
       <div class="form-group" ${!esPrimera?'':'style="display:none"'} id="ed-faseRes-wrap"><label>Fase (Segunda)</label><select id="ed-faseRes" onchange="edUpdateDivVis()">${faseResOpts}</select></div>
       <div class="form-group" ${(!esPrimera&&(obj.faseRes||'fase1')==='fase1')?'':'style="display:none"'} id="ed-zona-wrap"><label>Zona (1ª Fase)</label>
@@ -7917,6 +7980,9 @@ function guardarEdicion(tipo,id){
       updated.torneo=val('ed-torneo');
       const chk=document.getElementById('ed-es-playoff');
       updated.esPlayoff=chk?chk.checked:false;
+      const chkPen=document.getElementById('ed-tiene-penales');
+      updated.tienePenales = updated.esPlayoff ? (chkPen?chkPen.checked:false) : false;
+      updated.penales = updated.tienePenales ? val('ed-penales').trim() : '';
       delete updated.faseRes;delete updated.zona;
     } else if(esReserva){
       delete updated.faseRes;delete updated.zona;delete updated.torneo;
@@ -8367,7 +8433,7 @@ function renderAdminListas(){
       </div>` : '';
     return `<div class="admin-list-item" style="flex-direction:column;align-items:stretch;gap:4px">
       <div style="display:flex;align-items:center;gap:8px">
-        <span><b>${p.div==='primera'?'1ª':'2ª'}</b> | ${p.fecha}${p.dia?' | 📅 '+p.dia:''} | <b>${p.local}</b> vs <b>${p.visit}</b> | ${p.hora} | <em>${p.estado}</em>${p.resultado?' | '+p.resultado:''}</span>
+        <span><b>${p.div==='primera'?'1ª':'2ª'}</b> | ${p.fecha}${p.dia?' | 📅 '+p.dia:''} | <b>${p.local}</b> vs <b>${p.visit}</b> | ${p.hora} | <em>${p.estado}</em>${p.resultado?' | '+p.resultado:''}${p.esPlayoff&&p.tienePenales&&p.penales?' | Penales: '+p.penales:''}${p.esPlayoff?' | <b style="color:var(--dorado)">PLAY OFF</b>':''}</span>
         ${btnAcciones('partidos',p.id)}
       </div>
       ${cronoControls}
@@ -8532,6 +8598,7 @@ function renderPlayoff(torneo,contenedorId,esReserva){
 
   function cruceMarcador(c){
     if(!c.local&&!c.visit) return '';
+    const penalesTxt = (c.tienePenales&&c.penales) ? ` <span style="color:rgba(255,255,255,.45);font-weight:400">(Penales ${c.penales})</span>` : '';
     if(c.idavuelta){
       // ida y vuelta
       const idaRes=c.resIda||'';
@@ -8544,7 +8611,7 @@ function renderPlayoff(torneo,contenedorId,esReserva){
       const vueltaHTML=vueltaRes
         ?`<div class="cruce-partido-mini"><span class="cpm-label">Vuelta ${c.fechaVuelta?'· '+c.fechaVuelta:''}</span><span class="cpm-res">${vueltaRes}</span></div>`
         :`<div class="cruce-partido-mini"><span class="cpm-label">Vuelta</span><span style="color:rgba(255,255,255,.2);font-family:'Rajdhani',sans-serif">Pendiente</span></div>`;
-      const globalBadge=global?`<span style="background:rgba(201,162,39,.15);border:1px solid var(--dorado-border);border-radius:var(--r-sm);padding:2px 8px;font-size:12px;color:var(--dorado);font-weight:700">Global: ${global}</span>`:'';
+      const globalBadge=global?`<span style="background:rgba(201,162,39,.15);border:1px solid var(--dorado-border);border-radius:var(--r-sm);padding:2px 8px;font-size:12px;color:var(--dorado);font-weight:700">Global: ${global}${penalesTxt}</span>`:'';
       const ganadorBadge=ganador?`<span style="color:rgba(255,255,255,.5);font-size:11px">Clasifica: <b style="color:var(--dorado)">${ganador}</b></span>`:'';
       return `<div class="cruce-ida-vuelta">${idaHTML}${vueltaHTML}</div>
         ${global||ganador?`<div class="cruce-ganador" style="display:flex;gap:12px;align-items:center">${globalBadge}${ganadorBadge}</div>`:''}`;
@@ -8555,7 +8622,7 @@ function renderPlayoff(torneo,contenedorId,esReserva){
       const marcadorHTML=res
         ?`<div class="cruce-marcador jugado">${res}</div>`
         :`<div class="cruce-marcador pendiente">VS</div>`;
-      const ganadorBadge=ganador?`<div class="cruce-ganador">Clasifica: <b>${ganador}</b></div>`:'';
+      const ganadorBadge=ganador?`<div class="cruce-ganador">Clasifica: <b>${ganador}</b>${penalesTxt}</div>`:(penalesTxt?`<div class="cruce-ganador">Definición por penales: <b style="color:var(--dorado)">${c.penales}</b></div>`:'');
       return `${ganadorBadge}`;
     }
   }
@@ -8651,9 +8718,13 @@ function guardarCruce(){
     obj.fechaVuelta=document.getElementById('po-fecha-vuelta').value.trim();
     obj.global=document.getElementById('po-global').value.trim();
     obj.ganador=document.getElementById('po-ganador-iv').value.trim();
+    obj.tienePenales=document.getElementById('poiv-tiene-penales').checked;
+    obj.penales=obj.tienePenales?document.getElementById('poiv-penales').value.trim():'';
   } else {
     obj.resultado=document.getElementById('po-res').value.trim();
     obj.ganador=document.getElementById('po-ganador').value.trim();
+    obj.tienePenales=document.getElementById('po-tiene-penales').checked;
+    obj.penales=obj.tienePenales?document.getElementById('po-penales').value.trim():'';
   }
   // reemplazar si ya existe el mismo cruce/etapa/torneo/reserva
   const idx=data.playoff.findIndex(c=>c.torneo===torneo&&c.etapa===etapa&&c.cruce===cruce&&!!c.esReserva===esReserva);
@@ -8680,7 +8751,7 @@ function renderAdminListaPlayoff(){
     const ord={cuartos:1,semifinal:2,final:3};
     return (ord[a.etapa]||0)-(ord[b.etapa]||0)||a.cruce-b.cruce;
   }).map(c=>`<div class="admin-list-item">
-    <span>${c.esReserva?'<b style="color:var(--dorado)">[RESERVA]</b> ':''}<b>${torneoLabel(c.torneo)}</b> | ${etapaLabel[c.etapa]||c.etapa} Cruce ${c.cruce} | ${c.local} vs ${c.visit} | <em>${c.estado}</em>${c.resultado?' | '+c.resultado:''}${c.global?' | Global: '+c.global:''}</span>
+    <span>${c.esReserva?'<b style="color:var(--dorado)">[RESERVA]</b> ':''}<b>${torneoLabel(c.torneo)}</b> | ${etapaLabel[c.etapa]||c.etapa} Cruce ${c.cruce} | ${c.local} vs ${c.visit} | <em>${c.estado}</em>${c.resultado?' | '+c.resultado:''}${c.global?' | Global: '+c.global:''}${c.tienePenales&&c.penales?' | Penales: '+c.penales:''}</span>
     <div style="display:flex;gap:5px;flex-shrink:0">
       <button class="btn-edit" onclick="editarCruce('${c.id}')">✏ Editar</button>
       <button class="btn-danger" onclick="eliminarCruce('${c.id}')">✕ Eliminar</button>
@@ -8706,9 +8777,15 @@ function editarCruce(id){
     document.getElementById('po-fecha-vuelta').value=c.fechaVuelta||'';
     document.getElementById('po-global').value=c.global||'';
     document.getElementById('po-ganador-iv').value=c.ganador||'';
+    document.getElementById('poiv-tiene-penales').checked=!!c.tienePenales;
+    document.getElementById('poiv-penales').value=c.penales||'';
+    togglePenalesInput('poiv');
   } else {
     document.getElementById('po-res').value=c.resultado||'';
     document.getElementById('po-ganador').value=c.ganador||'';
+    document.getElementById('po-tiene-penales').checked=!!c.tienePenales;
+    document.getElementById('po-penales').value=c.penales||'';
+    togglePenalesInput('po');
   }
   // eliminar el viejo para que guardarCruce lo reescriba
   data.playoff=data.playoff.filter(x=>String(x.id)!==String(id));
@@ -9029,6 +9106,15 @@ async function generarImagenPartido(p){
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText(estadoTxt, CX, bY2 + s(13));
   ctx.textBaseline = 'alphabetic';
+
+  // Definición por penales (solo Play Off)
+  if(p.estado==='jugado' && p.esPlayoff && p.tienePenales && p.penales){
+    ctx.fillStyle = 'rgba(201,162,39,0.6)';
+    ctx.font = `700 ${s(13)}px "Rajdhani", Arial, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('DEFINIÓ POR PENALES  ·  '+p.penales, CX, bY2 + s(26) + s(18));
+    ctx.textBaseline = 'alphabetic';
+  }
 
   // Escudos y nombres de equipo
   const ESCUDO = s(88);
@@ -10362,6 +10448,7 @@ async function generarImagenPlayoff(torneo, esReserva){
   const id   = getIdentidad();
   const liga = id.nombre||'DEPORTEMAS';
   const W    = CV_W;
+  const CX   = W/2;
 
   const playoff = data.playoff.filter(c=>c.torneo===torneo && !!c.esReserva===esReserva);
   if(!playoff.length) return null;
@@ -10372,27 +10459,36 @@ async function generarImagenPlayoff(torneo, esReserva){
     { label:'FINAL',            cruces: playoff.filter(c=>c.etapa==='final') },
   ].filter(e=>e.cruces.length);
 
-  // Calcular altura del contenido con escala
   const totalCruces = etapas.reduce((a,e)=>a+e.cruces.length, 0);
-  const hHeader = s(64), hTitulo = s(56), hFooter = s(40);
-  const hTabla  = etapas.length*(s(38)+s(12)) + totalCruces*s(62) + s(12);
-  const hContenido = hHeader + hTitulo + hTabla + hFooter;
-  const yOffset = Math.max(0, Math.floor((CV_H - hContenido) / 2));
 
   const canvas = document.createElement('canvas');
   canvas.width=W; canvas.height=CV_H;
   const ctx=canvas.getContext('2d');
   ctx.textBaseline='alphabetic';
 
-  ctx.fillStyle=C.NEG2; ctx.fillRect(0,0,W,CV_H);
-  let y = await cvHeader(ctx,W,id,yOffset);
+  // Fondo degradado — mismo lenguaje visual que Posiciones/Goleadores/Reserva
+  const bgGrad = ctx.createLinearGradient(0,0,0,CV_H);
+  bgGrad.addColorStop(0,C.NEG3); bgGrad.addColorStop(1,C.NEG);
+  ctx.fillStyle=bgGrad; ctx.fillRect(0,0,W,CV_H);
 
-  // Título — Bebas Neue
+  let y = await cvHeader(ctx,W,id,0);
+
+  // Título — Bebas Neue grande + subtítulo DM Sans (mismo criterio que Posiciones)
   ctx.fillStyle=C.DORADO;
-  ctx.font=`${s(22)}px "Bebas Neue", Arial, sans-serif`;
+  ctx.font=`${s(28)}px "Bebas Neue", Arial, sans-serif`;
   ctx.textAlign='center';
-  ctx.fillText('PLAY OFF  ·  '+torneoLabel(torneo).toUpperCase()+(esReserva?'  ·  RESERVA':'  ·  PRIMERA DIVISIÓN'), W/2, y+s(36));
+  ctx.fillText('PLAY OFF', CX, y+s(34));
+  ctx.fillStyle='rgba(201,162,39,0.55)';
+  ctx.font=`600 ${s(14)}px "DM Sans", Arial, sans-serif`;
+  ctx.fillText(torneoLabel(torneo)+(esReserva?' · Reserva':' · Primera División'), CX, y+s(52));
   y+=s(56);
+
+  // Divisor dorado degradado
+  const dg=ctx.createLinearGradient(0,0,W,0);
+  dg.addColorStop(0,'transparent'); dg.addColorStop(0.2,C.DORADO);
+  dg.addColorStop(0.8,C.DORADO); dg.addColorStop(1,'transparent');
+  ctx.fillStyle=dg; ctx.fillRect(0,y,W,1);
+  y+=s(16);
 
   // Precargar escudos
   const equiposSet = new Set(playoff.flatMap(c=>[c.local,c.visit].filter(Boolean)));
@@ -10405,80 +10501,115 @@ async function generarImagenPlayoff(torneo, esReserva){
     img.onload=()=>{escudoImgs[nombre]=img;res();}; img.onerror=()=>res(); img.src=src;
   })));
 
-  const ECSIZE = s(32);
-  const CX = W/2;
+  // Alto disponible: llenamos el espacio restante sin estirar de más
+  const hFooter   = s(40);
+  const hEtapaHdr = s(34);
+  const hDisp     = CV_H - y - hFooter - s(10);
+  const hHeaders  = etapas.length * hEtapaHdr;
+  const ROW_H     = Math.max(s(78), Math.min(s(118), Math.floor((hDisp - hHeaders) / totalCruces)));
+  const hContenido= hHeaders + totalCruces*ROW_H;
+  // Si sobra espacio (pocos cruces, ej. solo la Final), centramos el bloque en el alto disponible
+  y += Math.max(0, Math.floor((hDisp - hContenido) / 2));
+
+  const ECSIZE = s(48);
 
   for(const etapa of etapas){
-    // Header etapa — Rajdhani
-    ctx.fillStyle='rgba(201,162,39,0.12)';
-    ctx.fillRect(0,y,W,s(32));
+    // Header etapa — Rajdhani, con franja dorada
+    ctx.fillStyle='rgba(201,162,39,0.10)';
+    ctx.fillRect(s(24),y,W-s(48),hEtapaHdr);
     ctx.fillStyle=C.DORADO;
-    ctx.font=`700 ${s(14)}px "Rajdhani", Arial, sans-serif`;
+    ctx.font=`700 ${s(15)}px "Rajdhani", Arial, sans-serif`;
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(etapa.label, CX, y+s(16));
+    ctx.fillText((etapa.label==='FINAL'?'🏆 ':'')+etapa.label, CX, y+hEtapaHdr/2);
     ctx.textBaseline='alphabetic';
-    y+=s(38);
+    y+=hEtapaHdr+s(8);
 
     for(const c of etapa.cruces){
-      const ROW=s(62);
-      const fy=y+ROW/2;
+      const ROW = ROW_H - s(10);
+      const fy  = y+ROW/2;
 
-      ctx.fillStyle='rgba(255,255,255,0.02)';
-      ctx.fillRect(0,y,W,ROW);
+      // Card del cruce
+      cvRoundRect(ctx,s(24),y,W-s(48),ROW,s(10));
+      ctx.fillStyle='rgba(255,255,255,0.03)'; ctx.fill();
+      ctx.lineWidth=1; ctx.strokeStyle='rgba(201,162,39,0.18)'; ctx.stroke();
 
-      // Local — Bebas Neue
+      const esGanL = c.ganador && normalizar(c.ganador)===normalizar(c.local||'');
+      const esGanV = c.ganador && normalizar(c.ganador)===normalizar(c.visit||'');
+
+      // Local — escudo + nombre
       const eImgL=escudoImgs[c.local||''];
-      const escLX=CX-s(30)-s(16)-ECSIZE;
+      const escLX=CX-s(46)-ECSIZE;
       const escLY=y+(ROW-ECSIZE)/2;
       if(eImgL){
         ctx.save(); ctx.beginPath(); ctx.arc(escLX+ECSIZE/2,escLY+ECSIZE/2,ECSIZE/2,0,Math.PI*2); ctx.clip();
         ctx.drawImage(eImgL,escLX,escLY,ECSIZE,ECSIZE); ctx.restore();
       } else if(c.local){ cvEscudoFallback(ctx,c.local,escLX,escLY,ECSIZE); }
-      ctx.fillStyle=C.BLANCO;
-      ctx.font=`${s(16)}px "Bebas Neue", Arial, sans-serif`;
+      ctx.fillStyle=esGanL?C.DORADO:C.BLANCO;
+      ctx.font=`${s(17)}px "Bebas Neue", Arial, sans-serif`;
       ctx.textAlign='right'; ctx.textBaseline='middle';
-      cvFillTextTrunc(ctx,(c.local||'–').toUpperCase(), escLX-s(10), fy, escLX-s(20));
+      cvFillTextTrunc(ctx,(c.local||'–').toUpperCase(), escLX-s(12), fy, escLX-s(40));
 
-      // Visitante — Bebas Neue
+      // Visitante — escudo + nombre
       const eImgV=escudoImgs[c.visit||''];
-      const escVX=CX+s(30)+s(16);
+      const escVX=CX+s(46);
       const escVY=y+(ROW-ECSIZE)/2;
       if(eImgV){
         ctx.save(); ctx.beginPath(); ctx.arc(escVX+ECSIZE/2,escVY+ECSIZE/2,ECSIZE/2,0,Math.PI*2); ctx.clip();
         ctx.drawImage(eImgV,escVX,escVY,ECSIZE,ECSIZE); ctx.restore();
       } else if(c.visit){ cvEscudoFallback(ctx,c.visit,escVX,escVY,ECSIZE); }
-      ctx.fillStyle=C.BLANCO;
-      ctx.font=`${s(16)}px "Bebas Neue", Arial, sans-serif`;
+      ctx.fillStyle=esGanV?C.DORADO:C.BLANCO;
+      ctx.font=`${s(17)}px "Bebas Neue", Arial, sans-serif`;
       ctx.textAlign='left'; ctx.textBaseline='middle';
-      cvFillTextTrunc(ctx,(c.visit||'–').toUpperCase(), escVX+ECSIZE+s(10), fy, W-escVX-ECSIZE-s(20));
+      cvFillTextTrunc(ctx,(c.visit||'–').toUpperCase(), escVX+ECSIZE+s(12), fy, W-escVX-ECSIZE-s(40));
 
-      // Marcador / VS — Bebas Neue para número, Rajdhani para VS
-      const marcTxt = c.idavuelta ? (c.global||'IDA/VTA') : (c.resultado||'VS');
+      // Marcador central — caja con degradado dorado (jugado) o neutro (pendiente/en juego)
+      const marcTxt = c.idavuelta ? (c.global||'VS') : (c.resultado||'VS');
       const estadoCls = c.estado||'pendiente';
-      const mBg = estadoCls==='jugado'?'rgba(26,107,47,0.7)':estadoCls==='en-juego'?'rgba(192,57,43,0.7)':'rgba(35,35,48,0.9)';
-      const mTxt= estadoCls==='jugado'?'#4caf74':estadoCls==='en-juego'?'#ff6655':C.DORADO;
-      const mW=s(68), mH=s(32);
-      cvRoundRect(ctx,CX-mW/2,fy-mH/2,mW,mH,s(6));
-      ctx.fillStyle=mBg; ctx.fill();
-      ctx.fillStyle=mTxt;
-      ctx.font=`${s(18)}px "Bebas Neue", Arial, sans-serif`;
+      const mW=s(84), mH=s(38);
+      cvRoundRect(ctx,CX-mW/2,fy-mH/2,mW,mH,s(8));
+      if(estadoCls==='jugado'){
+        const mg=ctx.createLinearGradient(CX-mW/2,0,CX+mW/2,0);
+        mg.addColorStop(0,C.DORADO); mg.addColorStop(1,C.DORADO2);
+        ctx.fillStyle=mg; ctx.fill();
+        ctx.fillStyle=C.NEG;
+      } else if(estadoCls==='en-juego'){
+        ctx.fillStyle='rgba(192,57,43,0.75)'; ctx.fill();
+        ctx.fillStyle='#ffffff';
+      } else {
+        ctx.fillStyle='rgba(255,255,255,0.06)'; ctx.fill();
+        ctx.strokeStyle='rgba(201,162,39,0.3)'; ctx.stroke();
+        ctx.fillStyle=C.DORADO;
+      }
+      ctx.font=`${s(20)}px "Bebas Neue", Arial, sans-serif`;
       ctx.textAlign='center'; ctx.textBaseline='middle';
       ctx.fillText(marcTxt,CX,fy+1);
       ctx.textBaseline='alphabetic';
 
-      // Ganador — DM Sans
-      if(c.ganador){
-        ctx.fillStyle='rgba(201,162,39,0.55)';
-        ctx.font=`500 ${s(12)}px "DM Sans", Arial, sans-serif`;
+      // Etiqueta ida/vta o estado en vivo, chica arriba del marcador
+      if(c.idavuelta || estadoCls==='en-juego'){
+        ctx.fillStyle='rgba(255,255,255,0.4)';
+        ctx.font=`600 ${s(10)}px "Rajdhani", Arial, sans-serif`;
         ctx.textAlign='center';
-        ctx.fillText('✓ '+c.ganador, CX, fy+s(22));
+        ctx.fillText(estadoCls==='en-juego'?'EN JUEGO':'IDA Y VUELTA', CX, fy-mH/2-s(6));
       }
 
-      ctx.fillStyle='rgba(255,255,255,0.04)';
-      ctx.fillRect(0,y+ROW-1,W,1);
-      y+=ROW;
+      // Ganador — DM Sans, debajo del marcador
+      if(c.ganador){
+        const penalesSuf = (c.tienePenales && c.penales) ? '  (PEN. '+c.penales+')' : '';
+        ctx.fillStyle='rgba(201,162,39,0.6)';
+        ctx.font=`600 ${s(11)}px "DM Sans", Arial, sans-serif`;
+        ctx.textAlign='center';
+        ctx.fillText('✓ CLASIFICA '+c.ganador.toUpperCase()+penalesSuf, CX, fy+mH/2+s(16));
+      } else if(c.tienePenales && c.penales){
+        ctx.fillStyle='rgba(255,255,255,0.45)';
+        ctx.font=`600 ${s(11)}px "DM Sans", Arial, sans-serif`;
+        ctx.textAlign='center';
+        ctx.fillText('PENALES: '+c.penales, CX, fy+mH/2+s(16));
+      }
+
+      y+=ROW_H;
     }
-    y+=s(12);
+    y+=s(6);
   }
 
   cvFooter(ctx,W,CV_H - s(40),liga);
