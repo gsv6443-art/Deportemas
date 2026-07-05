@@ -4165,6 +4165,23 @@ const ID_KEY='lrr_identidad';
 const FOTOS_KEY='lrr_fotos';
 
 function getPass(){return localStorage.getItem(PASS_KEY)||'admin123';}
+
+// Guarda en localStorage; si no hay espacio (QuotaExceededError), avisa con un
+// alert en vez de romper la app en silencio. Devuelve true/false según el resultado.
+function setLSSafe(key, value){
+  try{
+    localStorage.setItem(key, value);
+    return true;
+  }catch(e){
+    if(e && e.name === 'QuotaExceededError'){
+      alert('⚠ No hay espacio de almacenamiento local disponible. Borrá contenido viejo con fotos (transferencias, goleadores, fotos, etc.) para poder guardar cambios nuevos.');
+    } else {
+      alert('⚠ No se pudo guardar el cambio.');
+    }
+    return false;
+  }
+}
+
 function getData(){try{const d=JSON.parse(localStorage.getItem(DATA_KEY))||defData();if(!d.playoff)d.playoff=[];return d;}catch(e){return defData();}}
 // Construye una copia de "d" sin las fotos de goleadores:
 // van en documentos individuales para no superar el límite de 1MB de Firestore.
@@ -4174,7 +4191,7 @@ function dataParaFirestore(d){
   return out;
 }
 function saveData(d){
-  localStorage.setItem(DATA_KEY,JSON.stringify(d));
+  if(!setLSSafe(DATA_KEY, JSON.stringify(d))) return;
   if(window._fb){
     // Activar flag para que el listener ignore el echo de esta escritura
     window._fbEscribiendoData = true;
@@ -4187,7 +4204,7 @@ function saveData(d){
 function getEscudos(){try{return JSON.parse(localStorage.getItem(ESCUDOS_KEY))||{};}catch(e){return {};}}
 function saveEscudos(nuevoEscudos, nombreModificado){
   // Guardar siempre en localStorage completo (rápido, sin límite práctico para escudos)
-  localStorage.setItem(ESCUDOS_KEY, JSON.stringify(nuevoEscudos));
+  if(!setLSSafe(ESCUDOS_KEY, JSON.stringify(nuevoEscudos))) return;
   // En Firebase: guardar SOLO el escudo que cambió (doc individual), no todo el objeto
   if(window._fb && nombreModificado !== undefined){
     const val = nuevoEscudos[nombreModificado];
@@ -4200,9 +4217,9 @@ function saveEscudos(nuevoEscudos, nombreModificado){
   }
 }
 function getIdentidad(){try{return JSON.parse(localStorage.getItem(ID_KEY))||{};}catch(e){return {};}}
-function saveIdentidad(i){localStorage.setItem(ID_KEY,JSON.stringify(i));if(window._fb)window._fb.set('identidad',i);}
+function saveIdentidad(i){if(!setLSSafe(ID_KEY,JSON.stringify(i)))return;if(window._fb)window._fb.set('identidad',i);}
 function getFotos(){try{return JSON.parse(localStorage.getItem(FOTOS_KEY))||[];}catch(e){return[];}}
-function saveFotos(f){localStorage.setItem(FOTOS_KEY,JSON.stringify(f));if(window._fb)window._fb.set('fotos',f);}
+function saveFotos(f){if(!setLSSafe(FOTOS_KEY,JSON.stringify(f)))return;if(window._fb)window._fb.set('fotos',f);}
 
 function defData(){return{partidos:[],posiciones:[],goleadores:[],equipos:[],torneos:[],playoff:[]};};
 
@@ -4283,7 +4300,11 @@ function aplicarIdentidad(){
 }
 function previewLogo(input){
   const file=input.files[0];if(!file)return;
-  const r=new FileReader();r.onload=e=>{_logoB64=e.target.result;const p=document.getElementById('id-logo-preview');if(p)p.src=_logoB64;const w=document.getElementById('id-logo-wrap-prev');if(w)w.classList.add('visible');};r.readAsDataURL(file);
+  comprimirABase64(file, 400, 0.85).then(dataUrl=>{
+    _logoB64=dataUrl;
+    const p=document.getElementById('id-logo-preview');if(p)p.src=_logoB64;
+    const w=document.getElementById('id-logo-wrap-prev');if(w)w.classList.add('visible');
+  });
 }
 function guardarIdentidad(){
   const id=getIdentidad();
@@ -5964,11 +5985,11 @@ let _dmRadioLogoB64 = '';
 
 function dmPreviewLogo(input){
   const file=input.files[0]; if(!file) return;
-  const r=new FileReader(); r.onload=e=>{
-    _dmRadioLogoB64=e.target.result;
+  comprimirABase64(file, 300, 0.85).then(dataUrl=>{
+    _dmRadioLogoB64=dataUrl;
     const p=document.getElementById('dm-radio-logo-preview'); if(p) p.src=_dmRadioLogoB64;
     const w=document.getElementById('dm-radio-logo-wrap'); if(w) w.classList.add('visible');
-  }; r.readAsDataURL(file);
+  });
 }
 
 // REDES: lista en memoria durante la edición
@@ -6563,21 +6584,33 @@ function renderNoticias(categoria, contentId){
 // ============================================================
 const TF_KEY = 'lrr_transferencias';
 function getTransferencias(){ try{ return JSON.parse(localStorage.getItem(TF_KEY))||[]; }catch(e){ return []; } }
-function saveTransferencias(arr){ localStorage.setItem(TF_KEY, JSON.stringify(arr)); if(window._fb) window._fb.set('transferencias',arr); }
+function saveTransferencias(arr){
+  try{
+    localStorage.setItem(TF_KEY, JSON.stringify(arr));
+    if(window._fb) window._fb.set('transferencias',arr);
+  }catch(e){
+    if(e && e.name === 'QuotaExceededError'){
+      mostrarMsg('tf-msg','⚠ No hay espacio para guardar. Borrá movimientos viejos con foto o subí una imagen más liviana.','#e05555');
+    } else {
+      mostrarMsg('tf-msg','⚠ No se pudo guardar el movimiento.','#e05555');
+    }
+    throw e;
+  }
+}
 
 let _tfFoto = '';
 
 function tfPreviewFoto(input){
   const file = input.files[0]; if(!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    _tfFoto = e.target.result;
+  comprimirABase64(file, 500, 0.72).then(dataUrl => {
+    _tfFoto = dataUrl;
     const prev = document.getElementById('tf-foto-preview');
     const wrap = document.getElementById('tf-foto-wrap');
     if(prev){ prev.src = _tfFoto; }
     if(wrap){ wrap.classList.add('visible'); }
-  };
-  reader.readAsDataURL(file);
+  }).catch(() => {
+    mostrarMsg('tf-msg','⚠ No se pudo procesar la imagen','#e05555');
+  });
 }
 
 function guardarTransferencia(){
@@ -6602,7 +6635,11 @@ function guardarTransferencia(){
 
   const arr = getTransferencias();
   arr.unshift(tf);
-  saveTransferencias(arr);
+  try{
+    saveTransferencias(arr);
+  }catch(e){
+    return; // el mensaje de error ya lo muestra saveTransferencias
+  }
   limpiarFormTransferencia();
   mostrarMsg('tf-msg','✅ Movimiento publicado','var(--dorado)');
   renderAdminListaTransferencias();
@@ -7359,24 +7396,20 @@ function updateAdminGolDiv(){
 let _gFoto = '';
 function gPreviewFoto(input){
   const file=input.files[0]; if(!file) return;
-  const r=new FileReader();
-  r.onload=e=>{
-    _gFoto=e.target.result;
+  comprimirABase64(file, 500, 0.75).then(dataUrl=>{
+    _gFoto=dataUrl;
     const p=document.getElementById('g-foto-preview'); if(p) p.src=_gFoto;
     const w=document.getElementById('g-foto-wrap'); if(w) w.classList.add('visible');
-  };
-  r.readAsDataURL(file);
+  });
 }
 
 function edGPreviewFoto(input){
   const file=input.files[0]; if(!file) return;
-  const r=new FileReader();
-  r.onload=e=>{
-    window._edGFoto=e.target.result;
+  comprimirABase64(file, 500, 0.75).then(dataUrl=>{
+    window._edGFoto=dataUrl;
     const w=document.getElementById('ed-g-foto-wrap');
     if(w) w.innerHTML=`<div class="preview-wrap visible" style="margin-top:6px"><img src="${window._edGFoto}" style="max-height:120px;max-width:none;object-fit:cover;object-position:top"/><button type="button" class="btn-quitar-img" onclick="edQuitarFotoGol()">✕ Quitar</button></div>`;
-  };
-  r.readAsDataURL(file);
+  });
 }
 
 function agregarGoleador(){
@@ -7401,7 +7434,7 @@ function agregarGoleador(){
 
 function previewEscudo(input){
   const file=input.files[0];if(!file)return;
-  const r=new FileReader();r.onload=e=>{_escudoB64=e.target.result;const p=document.getElementById('eq-escudo-preview');if(p)p.src=_escudoB64;const w=document.getElementById('eq-escudo-wrap');if(w)w.classList.add('visible');};r.readAsDataURL(file);
+  comprimirABase64(file, 300, 0.85).then(dataUrl=>{_escudoB64=dataUrl;const p=document.getElementById('eq-escudo-preview');if(p)p.src=_escudoB64;const w=document.getElementById('eq-escudo-wrap');if(w)w.classList.add('visible');});
 }
 
 function agregarEquipo(){
@@ -7693,7 +7726,7 @@ function abrirModalEdicion(tipo,id,objOverride){
 
 function editPreviewEscudo(input){
   const file=input.files[0];if(!file)return;
-  const r=new FileReader();r.onload=e=>{_editEscudoB64=e.target.result;const p=document.getElementById('ed-escudo-preview');p.src=_editEscudoB64;p.style.display='block';};r.readAsDataURL(file);
+  comprimirABase64(file, 300, 0.85).then(dataUrl=>{_editEscudoB64=dataUrl;const p=document.getElementById('ed-escudo-preview');p.src=_editEscudoB64;p.style.display='block';});
 }
 
 function cerrarModalEdicion(){document.getElementById('edit-modal').style.display='none';_editEscudoB64='';}
@@ -8798,13 +8831,11 @@ let _fotoPrevB64='';
 
 function previewFotoAdmin(input){
   const file=input.files[0];if(!file)return;
-  const r=new FileReader();
-  r.onload=e=>{
-    _fotoPrevB64=e.target.result;
+  comprimirABase64(file, 900, 0.75).then(dataUrl=>{
+    _fotoPrevB64=dataUrl;
     const p=document.getElementById('foto-preview-img');
     if(p)p.src=_fotoPrevB64;const fw=document.getElementById('foto-preview-wrap');if(fw)fw.classList.add('visible');
-  };
-  r.readAsDataURL(file);
+  });
 }
 
 function agregarFoto(){
