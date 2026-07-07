@@ -2727,6 +2727,9 @@ table.posiciones td:nth-child(8){
 .san-card-img{max-width:100%;max-height:220px;border-radius:var(--r-sm);margin-top:10px;cursor:pointer;display:block;object-fit:cover;}
 /* Admin: lista de amonestaciones/expulsiones (una fila por tarjeta) */
 .san-admin-row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;background:var(--negro3);border:1px solid rgba(255,255,255,.07);border-radius:var(--r-md);padding:10px 14px;margin-bottom:7px;}
+/* Aviso automático de suspensión por acumulación (Art. 208) */
+.san-aviso-suspension{background:rgba(231,76,60,.08);border:1px solid rgba(231,76,60,.3);border-left:3px solid #e74c3c;border-radius:var(--r-sm);padding:12px 14px;margin-bottom:14px;font-family:'DM Sans',sans-serif;font-size:12.5px;line-height:1.7;color:rgba(255,255,255,.85);}
+.san-aviso-suspension button{margin-top:8px;}
 </style>
 </head>
 <body>
@@ -3695,17 +3698,23 @@ table.posiciones td:nth-child(8){
         <div id="san-admin-amonestaciones">
           <div class="form-row">
             <div class="form-group"><label>División</label>
-              <select id="am-div" onchange="poblarSelectClubSancion('am')">
+              <select id="am-div" onchange="poblarSelectClubSancion('am');onCambioClubSancion('am')">
                 <option value="primera">Primera División</option>
                 <option value="segunda">Segunda División</option>
               </select>
             </div>
             <div class="form-group"><label>Club</label>
-              <select id="am-club"><option value="">— Seleccioná un club —</option></select>
+              <select id="am-club" onchange="onCambioClubSancion('am')"><option value="">— Seleccioná un club —</option></select>
             </div>
           </div>
+          <div class="form-group" id="am-partido-wrap" style="display:none">
+            <label>Partido <span style="color:var(--gris);font-size:10px">(opcional — autocompleta el motivo)</span></label>
+            <select id="am-partido" onchange="aplicarPartidoSancion('am')">
+              <option value="">— Seleccioná un partido o cargá el motivo manual —</option>
+            </select>
+          </div>
           <div class="form-row">
-            <div class="form-group"><label>Jugador</label><input type="text" id="am-jugador" placeholder="Nombre y apellido"/></div>
+            <div class="form-group"><label>Jugador</label><input type="text" id="am-jugador" list="am-jugador-dl" placeholder="Nombre y apellido"/><datalist id="am-jugador-dl"></datalist></div>
             <div class="form-group"><label>Fecha</label><input type="date" id="am-fecha"/></div>
           </div>
           <div class="form-group"><label>Motivo / Partido <span style="color:var(--gris);font-size:10px">(opcional)</span></label>
@@ -3715,6 +3724,7 @@ table.posiciones td:nth-child(8){
             <button class="btn-primary" id="am-submit-btn" onclick="agregarAmonestacion()">+ Agregar Amarilla</button>
             <button class="btn-secondary" onclick="limpiarFormAmonestacion()">Cancelar edición</button>
           </div>
+          <div id="am-aviso-suspension" class="san-aviso-suspension" style="display:none"></div>
           <div class="admin-list" id="lista-amonestaciones"></div>
         </div>
 
@@ -3722,21 +3732,30 @@ table.posiciones td:nth-child(8){
         <div id="san-admin-expulsiones" style="display:none">
           <div class="form-row">
             <div class="form-group"><label>División</label>
-              <select id="ex-div" onchange="poblarSelectClubSancion('ex')">
+              <select id="ex-div" onchange="poblarSelectClubSancion('ex');onCambioClubSancion('ex')">
                 <option value="primera">Primera División</option>
                 <option value="segunda">Segunda División</option>
               </select>
             </div>
             <div class="form-group"><label>Club</label>
-              <select id="ex-club"><option value="">— Seleccioná un club —</option></select>
+              <select id="ex-club" onchange="onCambioClubSancion('ex')"><option value="">— Seleccioná un club —</option></select>
             </div>
           </div>
+          <div class="form-group" id="ex-partido-wrap" style="display:none">
+            <label>Partido <span style="color:var(--gris);font-size:10px">(opcional — autocompleta el motivo)</span></label>
+            <select id="ex-partido" onchange="aplicarPartidoSancion('ex')">
+              <option value="">— Seleccioná un partido o cargá el motivo manual —</option>
+            </select>
+          </div>
           <div class="form-row">
-            <div class="form-group"><label>Jugador</label><input type="text" id="ex-jugador" placeholder="Nombre y apellido"/></div>
+            <div class="form-group"><label>Jugador</label><input type="text" id="ex-jugador" list="ex-jugador-dl" placeholder="Nombre y apellido"/><datalist id="ex-jugador-dl"></datalist></div>
             <div class="form-group"><label>Fecha</label><input type="date" id="ex-fecha"/></div>
           </div>
           <div class="form-group"><label>Motivo / Artículo <span style="color:var(--gris);font-size:10px">(opcional)</span></label>
             <input type="text" id="ex-motivo" placeholder="Ej: Doble amarilla / Art. 208"/>
+          </div>
+          <div class="form-group"><label>Partidos de suspensión <span style="color:var(--gris);font-size:10px">(opcional)</span></label>
+            <input type="number" id="ex-suspension" min="0" step="1" placeholder="Ej: 2"/>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <button class="btn-primary" id="ex-submit-btn" onclick="agregarExpulsion()">+ Agregar Roja</button>
@@ -4588,8 +4607,8 @@ function switchSanAdminTab(tab, el){
     const d=document.getElementById('san-admin-'+t);
     if(d) d.style.display = (t===tab) ? '' : 'none';
   });
-  if(tab==='amonestaciones'){ poblarSelectClubSancion('am'); renderAdminListaAmonestaciones(); }
-  else if(tab==='expulsiones'){ poblarSelectClubSancion('ex'); renderAdminListaExpulsiones(); }
+  if(tab==='amonestaciones'){ poblarSelectClubSancion('am'); onCambioClubSancion('am'); renderAdminListaAmonestaciones(); }
+  else if(tab==='expulsiones'){ poblarSelectClubSancion('ex'); onCambioClubSancion('ex'); renderAdminListaExpulsiones(); }
   else if(tab==='expedientes'){ renderAdminListaExpedientes(); }
   else if(tab==='actas'){ renderAdminListaActasSancion(); }
 }
@@ -4605,6 +4624,95 @@ function poblarSelectClubSancion(prefix){
   clubSel.innerHTML = '<option value="">— Seleccioná un club —</option>' +
     clubes.map(e=>`<option value="${e.nombre.replace(/"/g,'&quot;')}">${e.nombre}</option>`).join('');
   if(actual && clubes.some(e=>e.nombre===actual)) clubSel.value = actual;
+}
+
+// ── Se dispara al elegir club: arma el selector de partidos y el autocompletado de jugadores ──
+function onCambioClubSancion(prefix){
+  poblarSelectPartidoSancion(prefix);
+  poblarDatalistJugadores(prefix);
+}
+
+// ── Selector de partido: lista los partidos ya cargados del club elegido ──
+function poblarSelectPartidoSancion(prefix){
+  const clubSel    = document.getElementById(prefix+'-club');
+  const partidoWrap= document.getElementById(prefix+'-partido-wrap');
+  const partidoSel = document.getElementById(prefix+'-partido');
+  if(!clubSel||!partidoSel) return;
+  const club = clubSel.value;
+  const vacio = '<option value="">— Seleccioná un partido o cargá el motivo manual —</option>';
+  if(!club){ if(partidoWrap) partidoWrap.style.display='none'; partidoSel.innerHTML=vacio; return; }
+  const partidos = (data.partidos||[])
+    .filter(p=>p.local===club || p.visit===club)
+    .slice()
+    .sort((a,b)=>String(b.id).localeCompare(String(a.id)));
+  if(partidoWrap) partidoWrap.style.display = partidos.length ? '' : 'none';
+  partidoSel.innerHTML = vacio + partidos.map(p=>{
+    const rival = p.local===club ? p.visit : p.local;
+    const marcador = p.resultado ? ` (${p.resultado})` : '';
+    return `<option value="${p.id}">${p.fecha||'Sin fecha'} vs ${rival}${marcador}</option>`;
+  }).join('');
+  partidoSel.value = '';
+}
+
+// ── Al elegir un partido del selector, autocompleta el campo Motivo ──
+function aplicarPartidoSancion(prefix){
+  const partidoSel = document.getElementById(prefix+'-partido');
+  const motivoInp  = document.getElementById(prefix+'-motivo');
+  const clubSel    = document.getElementById(prefix+'-club');
+  if(!partidoSel||!motivoInp||!clubSel) return;
+  const id = partidoSel.value;
+  if(!id) return;
+  const club = clubSel.value;
+  const p = (data.partidos||[]).find(x=>String(x.id)===String(id));
+  if(!p) return;
+  const rival = p.local===club ? p.visit : p.local;
+  motivoInp.value = `vs ${rival} — ${p.fecha||''}`.trim();
+}
+
+// ── Autocompletado de nombres de jugador ya cargados para ese club (evita variantes por tipeo) ──
+function poblarDatalistJugadores(prefix){
+  const clubSel = document.getElementById(prefix+'-club');
+  const dl = document.getElementById(prefix+'-jugador-dl');
+  if(!clubSel||!dl) return;
+  const club = clubSel.value;
+  const nombres = new Set();
+  [...getAmonestaciones(), ...getExpulsiones()].forEach(r=>{
+    if(r.club===club && r.jugador) nombres.add(r.jugador);
+  });
+  dl.innerHTML = [...nombres].sort((a,b)=>a.localeCompare(b))
+    .map(n=>`<option value="${n.replace(/"/g,'&quot;')}"></option>`).join('');
+}
+
+// ── Art. 208 del Reglamento de Transgresiones y Penas: 5 amonestaciones en la temporada ⇒ suspensión 1 a 4 partidos ──
+const UMBRAL_SUSPENSION_ART208 = 5;
+function verificarAcumulacionAmarillas(club, jugador){
+  const banner = document.getElementById('am-aviso-suspension');
+  if(!banner) return;
+  const jugadorNorm = (jugador||'').trim().toLowerCase();
+  const count = getAmonestaciones().filter(a=> a.club===club && (a.jugador||'').trim().toLowerCase()===jugadorNorm).length;
+  if(count>0 && count % UMBRAL_SUSPENSION_ART208 === 0){
+    banner.style.display='';
+    banner.innerHTML = `⚠ <b>${jugador}</b> (${club}) acumula <b>${count} amonestaciones</b> en la temporada, impuestas por árbitros en partidos oficiales diferentes.
+      Según el <b>Art. 208</b> del Reglamento de Transgresiones y Penas, corresponde suspensión de 1 a 4 partidos.<br/>
+      <button class="btn-primary" onclick="cargarSuspensionPorAcumulacion('${club.replace(/'/g,"\\'")}','${jugador.replace(/'/g,"\\'")}')">Cargar expulsión por Art. 208</button>
+      <button class="btn-secondary" onclick="document.getElementById('am-aviso-suspension').style.display='none'">Descartar</button>`;
+  } else {
+    banner.style.display='none';
+  }
+}
+
+// ── Pasa directo a Expulsiones con los datos precargados para labrar la suspensión ──
+function cargarSuspensionPorAcumulacion(club, jugador){
+  const divVal = document.getElementById('am-div').value;
+  switchSanAdminTab('expulsiones', document.getElementById('san-admin-tab-expulsiones'));
+  document.getElementById('ex-div').value = divVal;
+  poblarSelectClubSancion('ex');
+  document.getElementById('ex-club').value = club;
+  onCambioClubSancion('ex');
+  document.getElementById('ex-jugador').value = jugador;
+  document.getElementById('ex-motivo').value = 'Suspensión Art. 208 — acumulación de amonestaciones';
+  document.getElementById('am-aviso-suspension').style.display='none';
+  document.getElementById('ex-div').scrollIntoView({behavior:'smooth'});
 }
 
 // ============================================================
@@ -4633,6 +4741,7 @@ function agregarAmonestacion(){
   }
   localStorage.setItem(AMONESTACIONES_KEY, JSON.stringify(lista));
   if(window._fb) window._fb.setItem('amonestacion', item.id, item);
+  verificarAcumulacionAmarillas(club, jugador);
   limpiarFormAmonestacion();
   renderAdminListaAmonestaciones();
   if(currentSection==='sanciones') renderSanciones();
@@ -4642,6 +4751,7 @@ function limpiarFormAmonestacion(){
   const j=document.getElementById('am-jugador'); if(j) j.value='';
   const m=document.getElementById('am-motivo');  if(m) m.value='';
   const f=document.getElementById('am-fecha');   if(f) f.value='';
+  const p=document.getElementById('am-partido'); if(p) p.value='';
   const btn=document.getElementById('am-submit-btn'); if(btn) btn.textContent='+ Agregar Amarilla';
 }
 function editarAmonestacion(id){
@@ -4651,6 +4761,7 @@ function editarAmonestacion(id){
   document.getElementById('am-div').value = item.div;
   poblarSelectClubSancion('am');
   document.getElementById('am-club').value = item.club;
+  onCambioClubSancion('am');
   document.getElementById('am-jugador').value = item.jugador;
   document.getElementById('am-fecha').value = item.fecha;
   document.getElementById('am-motivo').value = item.motivo||'';
@@ -4694,6 +4805,8 @@ function agregarExpulsion(){
   const jugador = document.getElementById('ex-jugador').value.trim();
   const fecha   = document.getElementById('ex-fecha').value;
   const motivo  = document.getElementById('ex-motivo').value.trim();
+  const suspVal = document.getElementById('ex-suspension').value;
+  const suspension = suspVal!=='' ? Math.max(0, parseInt(suspVal,10)||0) : null;
   if(!club){ alert('Seleccioná un club'); return; }
   if(!jugador){ alert('Ingresá el nombre del jugador'); return; }
   if(!fecha){ alert('Ingresá la fecha'); return; }
@@ -4702,10 +4815,10 @@ function agregarExpulsion(){
   if(_exEditId){
     const idx = lista.findIndex(a=>a.id===_exEditId);
     if(idx<0){ alert('No se encontró el registro a editar'); return; }
-    item = {...lista[idx], div, club, jugador, fecha, motivo};
+    item = {...lista[idx], div, club, jugador, fecha, motivo, suspension};
     lista[idx] = item;
   } else {
-    item = {id:String(Date.now())+Math.floor(Math.random()*999), div, club, jugador, fecha, motivo};
+    item = {id:String(Date.now())+Math.floor(Math.random()*999), div, club, jugador, fecha, motivo, suspension};
     lista.unshift(item);
   }
   localStorage.setItem(EXPULSIONES_KEY, JSON.stringify(lista));
@@ -4719,6 +4832,8 @@ function limpiarFormExpulsion(){
   const j=document.getElementById('ex-jugador'); if(j) j.value='';
   const m=document.getElementById('ex-motivo');  if(m) m.value='';
   const f=document.getElementById('ex-fecha');   if(f) f.value='';
+  const p=document.getElementById('ex-partido'); if(p) p.value='';
+  const s=document.getElementById('ex-suspension'); if(s) s.value='';
   const btn=document.getElementById('ex-submit-btn'); if(btn) btn.textContent='+ Agregar Roja';
 }
 function editarExpulsion(id){
@@ -4728,9 +4843,11 @@ function editarExpulsion(id){
   document.getElementById('ex-div').value = item.div;
   poblarSelectClubSancion('ex');
   document.getElementById('ex-club').value = item.club;
+  onCambioClubSancion('ex');
   document.getElementById('ex-jugador').value = item.jugador;
   document.getElementById('ex-fecha').value = item.fecha;
   document.getElementById('ex-motivo').value = item.motivo||'';
+  document.getElementById('ex-suspension').value = (item.suspension!=null) ? item.suspension : '';
   const btn=document.getElementById('ex-submit-btn'); if(btn) btn.textContent='💾 Guardar cambios';
   document.getElementById('ex-div').scrollIntoView({behavior:'smooth'});
 }
@@ -4748,17 +4865,20 @@ function renderAdminListaExpulsiones(){
   const el = document.getElementById('lista-expulsiones'); if(!el) return;
   const lista = [...getExpulsiones()].sort((a,b)=> (b.fecha||'').localeCompare(a.fecha||'') || String(b.id).localeCompare(String(a.id)));
   if(!lista.length){ el.innerHTML='<p class="admin-empty">Sin expulsiones cargadas</p>'; return; }
-  el.innerHTML = lista.map(a=>`
+  el.innerHTML = lista.map(a=>{
+    const suspTxt = (a.suspension!=null && a.suspension!=='') ? ` · 🚫 ${a.suspension} partido${a.suspension==1?'':'s'} de suspensión` : '';
+    return `
     <div class="san-admin-row">
       <div>
         <div style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:13px;color:#fff">🟥 ${a.jugador} <span style="color:rgba(255,255,255,.4);font-weight:400">— ${a.club}</span></div>
-        <div class="noticia-admin-item-meta">${a.div==='primera'?'1ª':'2ª'} División · ${fechaVisual(a.fecha)}${a.motivo?' · '+a.motivo:''}</div>
+        <div class="noticia-admin-item-meta">${a.div==='primera'?'1ª':'2ª'} División · ${fechaVisual(a.fecha)}${a.motivo?' · '+a.motivo:''}${suspTxt}</div>
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0">
         <button class="btn-secondary" style="padding:5px 10px;font-size:11px" onclick="editarExpulsion('${a.id}')">✏ Editar</button>
         <button class="btn-danger" onclick="eliminarExpulsion('${a.id}')">✕</button>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 // ============================================================
@@ -4994,7 +5114,10 @@ function renderSancionFolders(tipo){
     const idSuf = tipo+'-'+i;
     const jugadoresHTML = Object.keys(jugadores).sort((a,b)=>a.localeCompare(b)).map(nombre=>{
       const cartones = jugadores[nombre].sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
-      const tags = cartones.map(c=>`<span class="san-tag ${clase}" title="${c.motivo?c.motivo.replace(/"/g,'&quot;'):''}">${fechaVisual(c.fecha)}</span>`).join('');
+      const tags = cartones.map(c=>{
+        const suspSuf = (!esAm && c.suspension!=null && c.suspension!=='') ? ` · 🚫${c.suspension}` : '';
+        return `<span class="san-tag ${clase}" title="${c.motivo?c.motivo.replace(/"/g,'&quot;'):''}">${fechaVisual(c.fecha)}${suspSuf}</span>`;
+      }).join('');
       return `<div class="san-player-row">
         <div class="san-player-nombre">${nombre} <span style="color:rgba(255,255,255,.4)">(${cartones.length})</span></div>
         <div class="san-player-tags">${tags}</div>
