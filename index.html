@@ -6325,11 +6325,25 @@ function getNoticias(){
   return _noticiasMemCache;
 }
 // Guarda el array de noticias: siempre actualiza la memoria (fuente de verdad
-// para la sesión actual) y, si hay espacio, también localStorage como cache
-// entre recargas. Si localStorage está lleno, seguimos funcionando igual.
+// para la sesión actual, CON imágenes) y, además, un cache liviano en
+// localStorage para tener algo instantáneo entre recargas mientras llega
+// Firestore. Ese cache NUNCA guarda las imágenes en base64: son las que
+// llenan la cuota de localStorage (~5-10MB por sitio) apenas se acumulan
+// unas pocas noticias con fotos, y una vez llena queda rota para siempre.
+// Excepción: una noticia marcada _pendienteSync (creada en este dispositivo
+// pero todavía no confirmada en el servidor) sí guarda su imagen completa,
+// porque es la única copia que existe hasta que se sincronice.
 function saveNoticias(arr){
   _noticiasMemCache = arr;
-  try{ localStorage.setItem(NOTICIAS_KEY, JSON.stringify(arr)); return true; }
+  try{
+    const liviano = arr.map(n=>{
+      if(n._pendienteSync) return n; // sin sincronizar: la necesitamos completa
+      const {img, galeria, ...resto} = n;
+      return resto; // el resto de las noticias no necesita guardar imágenes acá
+    });
+    localStorage.setItem(NOTICIAS_KEY, JSON.stringify(liviano));
+    return true;
+  }
   catch(e){ console.warn('No se pudo cachear noticias en localStorage (espacio lleno). Se sigue usando en memoria + Firestore.', e); return false; }
 }
 function saveNoticiaSingle(noticia){
