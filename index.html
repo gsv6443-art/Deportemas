@@ -489,11 +489,11 @@
     if(fbEscudosNuevo && Object.keys(fbEscudosNuevo).length > 0){
       // Ya están en el formato nuevo (docs individuales)
       escudos = fbEscudosNuevo;
-      localStorage.setItem('lrr_escudos', JSON.stringify(fbEscudosNuevo));
+      _guardarEscudosLiviano(fbEscudosNuevo);
     } else if(fbEscudosViejo && Object.keys(fbEscudosViejo).length > 0){
       // Formato viejo: migrar automáticamente a docs individuales
       escudos = fbEscudosViejo;
-      localStorage.setItem('lrr_escudos', JSON.stringify(fbEscudosViejo));
+      _guardarEscudosLiviano(fbEscudosViejo);
       window._fb.migrarEscudos(fbEscudosViejo); // migración en background, no bloquea
     }
 
@@ -4259,9 +4259,27 @@ function saveData(d){
   }
 }
 function getEscudos(){try{return JSON.parse(localStorage.getItem(ESCUDOS_KEY))||{};}catch(e){return {};}}
+// Guarda los escudos: Firestore (documento individual por equipo) es la
+// fuente real; la variable en memoria "escudos" tiene siempre los datos
+// completos durante la sesión. En localStorage solo dejamos una versión
+// LIVIANA sin las imágenes en base64: guardar el escudo de cada equipo del
+// torneo ahí llegó a ocupar ~4MB de los ~5-10MB de cuota total del
+// navegador (compartida con TODO lo demás: noticias, data, etc.), dejando
+// la app sin espacio para guardar casi nada más.
+function _escudoSinImagen(entry){
+  if(!entry) return entry;
+  if(typeof entry === 'string') return ''; // formato viejo: la entrada era directamente el base64
+  const {img, ...resto} = entry;
+  return resto;
+}
+function _guardarEscudosLiviano(todosLosEscudos){
+  const liviano = {};
+  for(const k in todosLosEscudos) liviano[k] = _escudoSinImagen(todosLosEscudos[k]);
+  try{ localStorage.setItem(ESCUDOS_KEY, JSON.stringify(liviano)); }
+  catch(e){ console.warn('No se pudo cachear escudos en localStorage (espacio lleno). Se sigue usando en memoria + Firestore.', e); }
+}
 function saveEscudos(nuevoEscudos, nombreModificado){
-  // Guardar siempre en localStorage completo (rápido, sin límite práctico para escudos)
-  if(!setLSSafe(ESCUDOS_KEY, JSON.stringify(nuevoEscudos))) return;
+  _guardarEscudosLiviano(nuevoEscudos);
   // En Firebase: guardar SOLO el escudo que cambió (doc individual), no todo el objeto
   if(window._fb && nombreModificado !== undefined){
     const val = nuevoEscudos[nombreModificado];
@@ -7816,7 +7834,7 @@ function agregarEquipo(){
   if(!nombre){alert('Completá el nombre del equipo');return;}
   const div=document.getElementById('eq-div').value;
   const ini=document.getElementById('eq-ini').value.toUpperCase()||(nombre.substr(0,3).toUpperCase());
-  const e=getEscudos();
+  const e={...escudos}; // copia de la variable en memoria (con imágenes completas)
   const nombreNorm = normalizar(nombre);
   if(_escudoB64) e[nombreNorm]={ini,img:_escudoB64};
   else if(!e[nombreNorm]) e[nombreNorm]={ini};
@@ -7888,7 +7906,7 @@ function eliminar(tipo,id){
 function eliminarEscudo(nombre){
   pedirConfirmacion('¿Quitar el escudo de "'+nombre+'"?',function(){
     const nombreNorm = normalizar(nombre);
-    const e=getEscudos(); delete e[nombreNorm];
+    const e={...escudos}; delete e[nombreNorm];
     saveEscudos(e, nombreNorm); escudos=e;
     renderAdminListas();renderSection(currentSection);
   });
@@ -8438,7 +8456,7 @@ function guardarEdicion(tipo,id){
     const nombreNuevo=val('ed-nombre');
     const ini=val('ed-ini').toUpperCase()||nombreNuevo.substr(0,3).toUpperCase();
     data.equipos[idx]={...data.equipos[idx],nombre:nombreNuevo,div:val('ed-div'),ini};
-    const e=getEscudos();const escViejo=e[normalizar(nombreViejo)]||{};
+    const e={...escudos};const escViejo=e[normalizar(nombreViejo)]||{};
     if(_editEscudoB64)escViejo.img=_editEscudoB64;
     escViejo.ini=ini;
     const normViejo=normalizar(nombreViejo), normNuevo=normalizar(nombreNuevo);
