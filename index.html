@@ -444,7 +444,7 @@
                       if(data.goleadores && window._golFotosCache){
                         data.goleadores.forEach(g=>{ if(window._golFotosCache[g.id]) g.foto=window._golFotosCache[g.id]; });
                       }
-                      localStorage.setItem('lrr_data2', JSON.stringify(data));
+                      _guardarDataLiviano(data);
                       // Recalcular posiciones y goleadores desde los partidos al cargar
                       recalcularTodo();
                       // ── Penalizaciones del tribunal disciplinario ────────────
@@ -530,7 +530,7 @@
       }
       recalcularTodo();
       aplicarTodasLasPenalizaciones();
-      localStorage.setItem('lrr_data2', JSON.stringify(data));
+      _guardarDataLiviano(data);
       actualizarNavLive();
       renderSection(currentSection);
       // Disparar animaciones para partidos que cambiaron
@@ -4247,8 +4247,18 @@ function dataParaFirestore(d){
   if(out.goleadores) out.goleadores = out.goleadores.map(g => g.foto ? {...g, foto:''} : g);
   return out;
 }
+// Igual que dataParaFirestore, pero para el cache liviano de localStorage:
+// las fotos de goleadores (una por cada uno, en base64) pueden acumular
+// varios MB con el tiempo si se guardan acá. Como ya viven completas en la
+// variable en memoria "data" (reincorporadas desde window._golFotosCache /
+// Firestore) y en Firestore como documentos individuales, no hace falta
+// duplicarlas en localStorage.
+function _guardarDataLiviano(d){
+  try{ localStorage.setItem('lrr_data2', JSON.stringify(dataParaFirestore(d))); }
+  catch(e){ console.warn('No se pudo cachear "data" en localStorage (espacio lleno). Se sigue usando en memoria + Firestore.', e); }
+}
 function saveData(d){
-  if(!setLSSafe(DATA_KEY, JSON.stringify(d))) return;
+  _guardarDataLiviano(d);
   if(window._fb){
     // Activar flag para que el listener ignore el echo de esta escritura
     window._fbEscribiendoData = true;
