@@ -3189,6 +3189,8 @@ table.posiciones td:nth-child(8){
         </div>
         <button class="btn-primary" id="no-submit-btn" onclick="guardarNoticia()">📰 Publicar</button>
         <div id="no-msg" style="margin-top:8px;font-size:12px;display:none;font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px"></div>
+        <button class="btn-secondary" style="margin-top:6px;font-size:11px;padding:6px 10px" onclick="mostrarDiagnosticoAlmacenamiento()">📊 Ver uso de almacenamiento local</button>
+        <div id="storage-diag" style="margin-top:8px;font-size:11px;font-family:monospace;white-space:pre-wrap;display:none;background:rgba(255,255,255,.04);border-radius:var(--r-sm);padding:8px"></div>
         <hr style="margin:22px 0;border:none;border-top:1px solid rgba(255,255,255,.08)"/>
         <div class="admin-title" style="font-size:14px">Publicaciones</div>
         <div class="admin-list" id="lista-noticias"></div>
@@ -6318,6 +6320,38 @@ function renderFooter(){
 // ============================================================
 const NOTICIAS_KEY = 'lrr_noticias';
 let _noticiasMemCache = null; // respaldo en memoria por si localStorage se queda sin espacio
+
+// ── Diagnóstico de almacenamiento local ─────────────────────────────────
+// localStorage tiene una cuota total por sitio (~5-10MB según navegador),
+// compartida por TODAS las claves (noticias, escudos, fotos, data principal,
+// etc.). Si una clave grande (por ejemplo escudos o fotos con muchas
+// imágenes) ya ocupa casi todo el espacio, hasta un guardado chico de
+// noticias puede fallar. Esta función muestra cuánto pesa cada clave para
+// saber exactamente dónde está el problema.
+function diagnosticoAlmacenamiento(){
+  const filas = [];
+  let total = 0;
+  for(let i=0;i<localStorage.length;i++){
+    const key = localStorage.key(i);
+    const val = localStorage.getItem(key) || '';
+    const bytes = new Blob([val]).size;
+    total += bytes;
+    filas.push({key, bytes});
+  }
+  filas.sort((a,b)=>b.bytes-a.bytes);
+  return {filas, total};
+}
+
+function mostrarDiagnosticoAlmacenamiento(){
+  const {filas, total} = diagnosticoAlmacenamiento();
+  const el = document.getElementById('storage-diag');
+  if(!el) return;
+  const kb = b => (b/1024).toFixed(1)+' KB';
+  const lineas = filas.map(f => `${f.key.padEnd(22)} ${kb(f.bytes)}`).join('\n');
+  el.textContent = `TOTAL usado: ${kb(total)} (la cuota típica del navegador es de 5-10MB)\n\n${lineas}`;
+  el.style.display = 'block';
+  console.table(filas.map(f=>({clave:f.key, KB:(f.bytes/1024).toFixed(1)})));
+}
 function getNoticias(){
   if(_noticiasMemCache) return _noticiasMemCache;
   try{ _noticiasMemCache = JSON.parse(localStorage.getItem(NOTICIAS_KEY))||[]; }
