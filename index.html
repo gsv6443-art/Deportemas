@@ -10237,7 +10237,20 @@ async function generarImagenProximos(ids){
   // Espacio disponible dividido entre partidos
   const disponible = CV_H - y - s(40);
   const ROW_H = Math.floor(disponible / ps.length);
-  const ECSIZE = s(80);
+
+  // Tamaño de escudo adaptado al espacio real de cada fila: si hay muchos
+  // partidos y/o se muestran día+hora+árbitro, el bloque completo puede no
+  // entrar en ROW_H con un escudo de tamaño fijo, y el texto del árbitro
+  // termina superpuesto con el día del partido siguiente. Por eso el
+  // tamaño del escudo se recalcula en función de lo que realmente sobra.
+  const tieneAlgunDia  = ps.some(p=>!!p.dia);
+  const tieneAlgunHora = ps.some(p=>!!p.hora);
+  const tieneAlgunArb  = ps.some(p=>(p.arbitros||[]).length>0);
+  const infoHmax = (tieneAlgunDia?s(26):0) + (tieneAlgunHora?s(34):0);
+  const arbHmax  = tieneAlgunArb ? s(36) : 0;
+  const gapNombre = s(28); // espacio reservado para el nombre del club bajo el escudo
+  const maxBloqueH = ROW_H - infoHmax - arbHmax;
+  const ECSIZE = Math.max(s(46), Math.min(s(80), maxBloqueH - gapNombre));
 
   ps.forEach((p,i)=>{
     const fy = y + ROW_H/2;
