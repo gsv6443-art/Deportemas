@@ -2903,8 +2903,8 @@ table.posiciones td:nth-child(8){
             <option value="fase3">3ª Fase</option>
           </select>
         </div>
-        <!-- campo zona solo segunda fase1 -->
-        <div id="p-zona-wrap" class="form-group" style="display:none"><label>Zona (1ª Fase)</label>
+        <!-- campo zona/grupo: segunda fase1 (Sierra/Llano) o fase2 (Campeonato/Repechaje) -->
+        <div id="p-zona-wrap" class="form-group" style="display:none"><label id="p-zona-label">Zona</label>
           <select id="p-zona">
             <option value="sierra">Zona Sierra</option>
             <option value="llano">Zona Llano</option>
@@ -7662,8 +7662,20 @@ function updateAdminZonaVis(){
   const efectivo = esReserva ? document.getElementById('p-reserva-subdiv').value : divVal;
   const fase=document.getElementById('p-fase-res').value;
   const zonaWrap=document.getElementById('p-zona-wrap');
+  const zonaLabel=document.getElementById('p-zona-label');
+  const zonaSelect=document.getElementById('p-zona');
   const esReservaSegunda = esReserva && efectivo==='segunda';
-  if(zonaWrap) zonaWrap.style.display=(efectivo==='segunda'&&fase==='fase1'&&!esReservaSegunda)?'':'none';
+  const mostrar = efectivo==='segunda' && (fase==='fase1'||fase==='fase2') && !esReservaSegunda;
+  if(zonaWrap) zonaWrap.style.display = mostrar ? '' : 'none';
+  if(mostrar && zonaLabel && zonaSelect){
+    if(fase==='fase1'){
+      zonaLabel.textContent='Zona (1ª Fase)';
+      zonaSelect.innerHTML=`<option value="sierra">Zona Sierra</option><option value="llano">Zona Llano</option><option value="">Sin zona</option>`;
+    } else {
+      zonaLabel.textContent='Grupo (2ª Fase)';
+      zonaSelect.innerHTML=`<option value="campeonato">Campeonato</option><option value="repechaje">Repechaje</option><option value="">Sin grupo</option>`;
+    }
+  }
 }
 
 function edUpdateDivVis(){
@@ -7689,7 +7701,19 @@ function edUpdateDivVis(){
   const zonaWrap=document.getElementById('ed-zona-wrap');
   if(zonaWrap){
     const fase = document.getElementById('ed-faseRes')?.value || 'fase1';
-    zonaWrap.style.display = (!esPrimera && fase==='fase1' && !esReservaSegunda) ? '' : 'none';
+    const mostrarZona = (!esPrimera && (fase==='fase1'||fase==='fase2') && !esReservaSegunda);
+    zonaWrap.style.display = mostrarZona ? '' : 'none';
+    const zonaLabel=document.getElementById('ed-zona-label');
+    const zonaSelect=document.getElementById('ed-zona');
+    if(mostrarZona && zonaLabel && zonaSelect){
+      if(fase==='fase2'){
+        zonaLabel.textContent='Grupo (2ª Fase)';
+        zonaSelect.innerHTML=`<option value="campeonato">Campeonato</option><option value="repechaje">Repechaje</option><option value="">Sin grupo</option>`;
+      } else {
+        zonaLabel.textContent='Zona (1ª Fase)';
+        zonaSelect.innerHTML=`<option value="sierra">Zona Sierra</option><option value="llano">Zona Llano</option><option value="">Sin zona</option>`;
+      }
+    }
   }
   const eventosWrap=document.getElementById('ed-eventos-wrap');
   if(eventosWrap){
@@ -7738,7 +7762,8 @@ function agregarPartido(){
   }
   else if(!esReserva){
     d.faseRes=document.getElementById('p-fase-res').value;
-    if(d.faseRes==='fase1') d.zona=document.getElementById('p-zona').value||'';
+    if(d.faseRes==='fase1'||d.faseRes==='fase2') d.zona=document.getElementById('p-zona').value||'';
+    else d.zona='';
   }
   if(!d.local||!d.visit){alert('Completá local y visitante');return;}
   data.partidos.push(d);
@@ -7988,11 +8013,17 @@ function abrirModalEdicion(tipo,id,objOverride){
         <input type="text" id="ed-penales" placeholder="Ej: 5-4" value="${obj.penales||''}" style="${obj.tienePenales?'':'display:none'};margin-top:8px"/>
       </div>
       <div class="form-group" ${!esPrimera?'':'style="display:none"'} id="ed-faseRes-wrap"><label>Fase (Segunda)</label><select id="ed-faseRes" onchange="edUpdateDivVis()">${faseResOpts}</select></div>
-      <div class="form-group" ${(!esPrimera&&(obj.faseRes||'fase1')==='fase1')?'':'style="display:none"'} id="ed-zona-wrap"><label>Zona (1ª Fase)</label>
+      <div class="form-group" ${(!esPrimera&&((obj.faseRes||'fase1')==='fase1'||(obj.faseRes||'fase1')==='fase2'))?'':'style="display:none"'} id="ed-zona-wrap"><label id="ed-zona-label">${(obj.faseRes||'fase1')==='fase2'?'Grupo (2ª Fase)':'Zona (1ª Fase)'}</label>
         <select id="ed-zona">
+          ${(obj.faseRes||'fase1')==='fase2' ? `
+          <option value="campeonato" ${(obj.zona||'')==='campeonato'?'selected':''}>Campeonato</option>
+          <option value="repechaje" ${(obj.zona||'')==='repechaje'?'selected':''}>Repechaje</option>
+          <option value="" ${!(obj.zona)?'selected':''}>Sin grupo</option>
+          ` : `
           <option value="sierra" ${(obj.zona||'')==='sierra'?'selected':''}>Zona Sierra</option>
           <option value="llano" ${(obj.zona||'')==='llano'?'selected':''}>Zona Llano</option>
           <option value="" ${!(obj.zona)?'selected':''}>Sin zona</option>
+          `}
         </select>
       </div>
       <div id="ed-eventos-wrap" style="${esReservaObj?'display:none':''}">
@@ -8419,7 +8450,7 @@ function guardarEdicion(tipo,id){
       delete updated.faseRes;delete updated.zona;delete updated.torneo;
     } else {
       updated.faseRes=val('ed-faseRes')||'fase1';
-      if(updated.faseRes==='fase1') updated.zona=val('ed-zona')||'';
+      if(updated.faseRes==='fase1'||updated.faseRes==='fase2') updated.zona=val('ed-zona')||'';
       else delete updated.zona;
       delete updated.torneo;
     }
