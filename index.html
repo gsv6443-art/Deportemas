@@ -2737,6 +2737,18 @@ table.posiciones td:nth-child(8){
 /* Aviso automático de suspensión por acumulación (Art. 208) */
 .san-aviso-suspension{background:rgba(231,76,60,.08);border:1px solid rgba(231,76,60,.3);border-left:3px solid #e74c3c;border-radius:var(--r-sm);padding:12px 14px;margin-bottom:14px;font-family:'DM Sans',sans-serif;font-size:12.5px;line-height:1.7;color:rgba(255,255,255,.85);}
 .san-aviso-suspension button{margin-top:8px;}
+.san-bulk-box{background:rgba(201,162,39,.05);border:1px solid rgba(201,162,39,.2);border-radius:var(--r-md);padding:14px;margin:14px 0;}
+.san-bulk-box>label{display:block;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:.5px;text-transform:uppercase;color:var(--dorado);margin-bottom:6px;}
+.san-bulk-help{font-size:11px;color:rgba(255,255,255,.45);margin-bottom:8px;line-height:1.6;}
+.san-bulk-equipos{font-size:11.5px;color:var(--dorado-light);margin-bottom:8px;font-family:'Rajdhani',sans-serif;font-weight:700;}
+.san-bulk-box textarea{width:100%;font-family:'DM Mono','DM Sans',monospace;font-size:12.5px;resize:vertical;background:var(--negro3);border:1px solid rgba(255,255,255,.1);border-radius:var(--r-sm);color:var(--blanco);padding:10px;}
+.san-bulk-preview{margin-top:10px;}
+.san-bulk-row{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:var(--r-sm);background:var(--negro3);margin-bottom:5px;font-size:12px;font-family:'Rajdhani',sans-serif;}
+.san-bulk-row.err{background:rgba(192,57,43,.12);border:1px solid rgba(192,57,43,.35);color:#ff9d90;}
+.san-bulk-row .n{flex:1;color:rgba(255,255,255,.85);}
+.san-bulk-row .c{color:var(--dorado-light);font-weight:700;}
+.san-bulk-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+.san-bulk-summary{font-size:11.5px;color:rgba(255,255,255,.55);margin-top:8px;}
 </style>
 </head>
 <body>
@@ -3734,6 +3746,21 @@ table.posiciones td:nth-child(8){
             <button class="btn-secondary" onclick="limpiarFormAmonestacion()">Cancelar edición</button>
           </div>
           <div id="am-aviso-suspension" class="san-aviso-suspension" style="display:none"></div>
+
+          <div class="san-bulk-box">
+            <label>⚡ Carga masiva de amarillas</label>
+            <div class="san-bulk-help">
+              Un jugador por línea. Usá <b>Enter</b> entre jugadores. Para indicar el equipo agregá " - L" (Local) o " - V" (Visitante) al final; si no lo indicás, se usa el club seleccionado arriba. Podés sumar un motivo distinto con "|", ej: <i>Pérez, Juan - L | Reclamo</i>
+            </div>
+            <div class="san-bulk-equipos" id="am-bulk-equipos" style="display:none"></div>
+            <textarea id="am-bulk-input" rows="5" placeholder="Pérez, Juan - L&#10;González, Martín - L&#10;Rodríguez, Pablo - V"></textarea>
+            <div class="san-bulk-actions">
+              <button class="btn-secondary" onclick="previsualizarCargaMasiva('am')">👁 Previsualizar</button>
+              <button class="btn-secondary" onclick="document.getElementById('am-bulk-input').value='';document.getElementById('am-bulk-preview').innerHTML='';">Limpiar</button>
+            </div>
+            <div class="san-bulk-preview" id="am-bulk-preview"></div>
+          </div>
+
           <div class="admin-list" id="lista-amonestaciones"></div>
         </div>
 
@@ -3770,6 +3797,21 @@ table.posiciones td:nth-child(8){
             <button class="btn-primary" id="ex-submit-btn" onclick="agregarExpulsion()">+ Agregar Roja</button>
             <button class="btn-secondary" onclick="limpiarFormExpulsion()">Cancelar edición</button>
           </div>
+
+          <div class="san-bulk-box">
+            <label>⚡ Carga masiva de rojas</label>
+            <div class="san-bulk-help">
+              Un jugador por línea. Usá " - L" (Local) o " - V" (Visitante) para indicar el equipo; si no lo indicás, se usa el club seleccionado arriba. Sumá motivo y partidos de suspensión con "|", ej: <i>Pérez, Juan - L | Doble amarilla | 1</i>
+            </div>
+            <div class="san-bulk-equipos" id="ex-bulk-equipos" style="display:none"></div>
+            <textarea id="ex-bulk-input" rows="5" placeholder="Pérez, Juan - L | Doble amarilla | 1&#10;Gómez, Ariel - V | Agresión | 3"></textarea>
+            <div class="san-bulk-actions">
+              <button class="btn-secondary" onclick="previsualizarCargaMasiva('ex')">👁 Previsualizar</button>
+              <button class="btn-secondary" onclick="document.getElementById('ex-bulk-input').value='';document.getElementById('ex-bulk-preview').innerHTML='';">Limpiar</button>
+            </div>
+            <div class="san-bulk-preview" id="ex-bulk-preview"></div>
+          </div>
+
           <div class="admin-list" id="lista-expulsiones"></div>
         </div>
 
@@ -4677,6 +4719,7 @@ function poblarSelectPartidoSancion(prefix){
   if(!clubSel||!partidoSel) return;
   const club = clubSel.value;
   const vacio = '<option value="">— Seleccioná un partido o cargá el motivo manual —</option>';
+  const bulkEq = document.getElementById(prefix+'-bulk-equipos'); if(bulkEq){ bulkEq.style.display='none'; bulkEq.innerHTML=''; }
   if(!club){ if(partidoWrap) partidoWrap.style.display='none'; partidoSel.innerHTML=vacio; return; }
   const partidos = (data.partidos||[])
     .filter(p=>p.local===club || p.visit===club)
@@ -4696,14 +4739,20 @@ function aplicarPartidoSancion(prefix){
   const partidoSel = document.getElementById(prefix+'-partido');
   const motivoInp  = document.getElementById(prefix+'-motivo');
   const clubSel    = document.getElementById(prefix+'-club');
+  const bulkEq     = document.getElementById(prefix+'-bulk-equipos');
   if(!partidoSel||!motivoInp||!clubSel) return;
   const id = partidoSel.value;
-  if(!id) return;
+  if(!id){ if(bulkEq){ bulkEq.style.display='none'; bulkEq.innerHTML=''; } return; }
   const club = clubSel.value;
   const p = (data.partidos||[]).find(x=>String(x.id)===String(id));
   if(!p) return;
   const rival = p.local===club ? p.visit : p.local;
   motivoInp.value = `vs ${rival} — ${p.fecha||''}`.trim();
+  if(bulkEq){
+    bulkEq.style.display='';
+    bulkEq.innerHTML = `Local (L): <b>${p.local}</b> &nbsp;·&nbsp; Visitante (V): <b>${p.visit}</b>`;
+    bulkEq.dataset.local = p.local; bulkEq.dataset.visit = p.visit;
+  }
 }
 
 // ── Autocompletado de nombres de jugador ya cargados para ese club (evita variantes por tipeo) ──
@@ -4753,6 +4802,127 @@ function cargarSuspensionPorAcumulacion(club, jugador){
 }
 
 // ============================================================
+// CARGA MASIVA (amonestaciones y expulsiones desde una lista pegada)
+// ============================================================
+function normalizarTexto(s){
+  return (s||'').toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+}
+
+// Resuelve a qué club corresponde el token de equipo escrito en la línea ("L","V","Local","Visitante" o nombre de club)
+function resolverClubBulk(prefix, token, divVal){
+  const bulkEq = document.getElementById(prefix+'-bulk-equipos');
+  const local = bulkEq ? bulkEq.dataset.local : '';
+  const visit = bulkEq ? bulkEq.dataset.visit : '';
+  const t = normalizarTexto(token);
+  if(!t) return null;
+  if(local && (t==='l' || t==='local')) return local;
+  if(visit && (t==='v' || t==='visitante' || t==='visita')) return visit;
+  // buscar coincidencia por nombre real de club dentro de la división elegida
+  const clubes = (data.equipos||[]).filter(e=>e.div===divVal);
+  const match = clubes.find(e=>normalizarTexto(e.nombre)===t);
+  if(match) return match.nombre;
+  const parcial = clubes.find(e=>normalizarTexto(e.nombre).includes(t) || t.includes(normalizarTexto(e.nombre)));
+  return parcial ? parcial.nombre : null;
+}
+
+// Parsea el texto pegado línea por línea. Formato: "Jugador - L|V|Club | Motivo | Suspensión(solo ex)"
+let _bulkParsed = {am:[], ex:[]};
+function parsearCargaMasiva(prefix){
+  const divVal   = document.getElementById(prefix+'-div').value;
+  const clubSel  = document.getElementById(prefix+'-club').value;
+  const raw      = document.getElementById(prefix+'-bulk-input').value;
+  const lineas = raw.split('\n').map(l=>l.trim()).filter(Boolean);
+  return lineas.map(linea=>{
+    const partes = linea.split('|').map(p=>p.trim());
+    let nombreEquipo = partes[0];
+    let motivoOverride = partes[1] || '';
+    let suspOverride = partes[2] !== undefined ? partes[2].trim() : '';
+    let jugador = nombreEquipo, club = null, error = '';
+    const guionIdx = nombreEquipo.lastIndexOf(' - ');
+    if(guionIdx > -1){
+      jugador = nombreEquipo.slice(0, guionIdx).trim();
+      const token = nombreEquipo.slice(guionIdx+3).trim();
+      club = resolverClubBulk(prefix, token, divVal);
+      if(!club) error = `No pude identificar el equipo "${token}"`;
+    } else {
+      club = clubSel || null;
+      if(!club) error = 'Sin equipo indicado y sin club seleccionado arriba';
+    }
+    if(!jugador) error = 'Falta el nombre del jugador';
+    return {jugador, club, div: divVal, motivo: motivoOverride, suspension: suspOverride, error};
+  });
+}
+
+function previsualizarCargaMasiva(prefix){
+  const fecha = document.getElementById(prefix+'-fecha').value;
+  const filas = parsearCargaMasiva(prefix);
+  const preview = document.getElementById(prefix+'-bulk-preview');
+  if(!filas.length){ preview.innerHTML = '<p class="admin-empty">Pegá al menos un jugador en la lista</p>'; return; }
+  if(!fecha){ preview.innerHTML = '<p class="admin-empty" style="color:#ff9d90">⚠ Ingresá la fecha arriba antes de confirmar</p>'; }
+  const motivoDefault = document.getElementById(prefix+'-motivo').value.trim();
+  const suspDefault = prefix==='ex' ? document.getElementById('ex-suspension').value : '';
+  _bulkParsed[prefix] = filas.map(f=>({
+    ...f,
+    motivoFinal: f.motivo || motivoDefault,
+    suspFinal: f.suspension !== '' ? f.suspension : suspDefault
+  }));
+  const validas = _bulkParsed[prefix].filter(f=>!f.error).length;
+  const rowsHtml = _bulkParsed[prefix].map(f=>{
+    if(f.error) return `<div class="san-bulk-row err">⚠ <span class="n">${f.jugador||'(sin nombre)'}</span> — ${f.error}</div>`;
+    const suspTxt = (prefix==='ex' && f.suspFinal!=='') ? ` · 🚫 ${f.suspFinal} p.` : '';
+    return `<div class="san-bulk-row">${prefix==='am'?'🟡':'🟥'} <span class="n">${f.jugador}</span> <span class="c">${f.club}</span>${f.motivoFinal?' · '+f.motivoFinal:''}${suspTxt}</div>`;
+  }).join('');
+  preview.innerHTML = rowsHtml + `
+    <div class="san-bulk-summary">${validas} de ${filas.length} listos para cargar${fecha?'':' — falta la fecha'}</div>
+    <div class="san-bulk-actions">
+      <button class="btn-primary" ${(!validas||!fecha)?'disabled':''} onclick="confirmarCargaMasiva('${prefix}')">✓ Confirmar carga de ${validas} registro${validas===1?'':'s'}</button>
+    </div>`;
+}
+
+function confirmarCargaMasiva(prefix){
+  const fecha = document.getElementById(prefix+'-fecha').value;
+  if(!fecha){ alert('Ingresá la fecha'); return; }
+  const filas = (_bulkParsed[prefix]||[]).filter(f=>!f.error);
+  if(!filas.length){ alert('No hay registros válidos para cargar'); return; }
+  const esAm = prefix==='am';
+  const KEY = esAm ? AMONESTACIONES_KEY : EXPULSIONES_KEY;
+  const lista = esAm ? getAmonestaciones() : getExpulsiones();
+  const jugadoresUmbral = [];
+  filas.forEach(f=>{
+    const item = esAm
+      ? {id:String(Date.now())+Math.floor(Math.random()*999), div:f.div, club:f.club, jugador:f.jugador, fecha, motivo:f.motivoFinal}
+      : {id:String(Date.now())+Math.floor(Math.random()*999), div:f.div, club:f.club, jugador:f.jugador, fecha, motivo:f.motivoFinal, suspension: f.suspFinal!=='' ? Math.max(0,parseInt(f.suspFinal,10)||0) : null};
+    lista.unshift(item);
+    if(window._fb) window._fb.setItem(esAm?'amonestacion':'expulsion', item.id, item);
+  });
+  localStorage.setItem(KEY, JSON.stringify(lista));
+  if(esAm){
+    filas.forEach(f=>{
+      const jugadorNorm = f.jugador.trim().toLowerCase();
+      const count = getAmonestaciones().filter(a=>a.club===f.club && (a.jugador||'').trim().toLowerCase()===jugadorNorm).length;
+      if(count>0 && count % UMBRAL_SUSPENSION_ART208 === 0) jugadoresUmbral.push({club:f.club, jugador:f.jugador, count});
+    });
+  }
+  document.getElementById(prefix+'-bulk-input').value = '';
+  document.getElementById(prefix+'-bulk-preview').innerHTML = '';
+  _bulkParsed[prefix] = [];
+  if(esAm){
+    renderAdminListaAmonestaciones();
+    const banner = document.getElementById('am-aviso-suspension');
+    if(jugadoresUmbral.length && banner){
+      banner.style.display='';
+      banner.innerHTML = jugadoresUmbral.map(j=>`⚠ <b>${j.jugador}</b> (${j.club}) acumula <b>${j.count} amonestaciones</b>. Según el <b>Art. 208</b> corresponde suspensión de 1 a 4 partidos.<br/>
+        <button class="btn-primary" onclick="cargarSuspensionPorAcumulacion('${j.club.replace(/'/g,"\\'")}','${j.jugador.replace(/'/g,"\\'")}')">Cargar expulsión por Art. 208</button>`).join('<hr style="border-color:rgba(255,255,255,.1);margin:10px 0"/>')
+        + `<button class="btn-secondary" onclick="document.getElementById('am-aviso-suspension').style.display='none'">Descartar</button>`;
+    }
+  } else {
+    renderAdminListaExpulsiones();
+  }
+  poblarDatalistJugadores(prefix);
+  if(currentSection==='sanciones') renderSanciones();
+}
+
+// ============================================================
 // AMONESTACIONES (tarjetas amarillas — se acumulan por jugador)
 // ============================================================
 let _amEditId = '';
@@ -4789,6 +4959,8 @@ function limpiarFormAmonestacion(){
   const m=document.getElementById('am-motivo');  if(m) m.value='';
   const f=document.getElementById('am-fecha');   if(f) f.value='';
   const p=document.getElementById('am-partido'); if(p) p.value='';
+  const bi=document.getElementById('am-bulk-input'); if(bi) bi.value='';
+  const bp=document.getElementById('am-bulk-preview'); if(bp) bp.innerHTML='';
   const btn=document.getElementById('am-submit-btn'); if(btn) btn.textContent='+ Agregar Amarilla';
 }
 function editarAmonestacion(id){
@@ -4871,6 +5043,8 @@ function limpiarFormExpulsion(){
   const f=document.getElementById('ex-fecha');   if(f) f.value='';
   const p=document.getElementById('ex-partido'); if(p) p.value='';
   const s=document.getElementById('ex-suspension'); if(s) s.value='';
+  const bi=document.getElementById('ex-bulk-input'); if(bi) bi.value='';
+  const bp=document.getElementById('ex-bulk-preview'); if(bp) bp.innerHTML='';
   const btn=document.getElementById('ex-submit-btn'); if(btn) btn.textContent='+ Agregar Roja';
 }
 function editarExpulsion(id){
