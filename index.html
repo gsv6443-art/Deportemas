@@ -479,7 +479,7 @@
     if(fbPubs)      { localStorage.setItem('lrr_publicidad', JSON.stringify(fbPubs)); }
     if(fbFichas)    { localStorage.setItem('lrr_fichas',    JSON.stringify(fbFichas)); }
     if(fbCronos)    { localStorage.setItem('lrr_cronos',    JSON.stringify(fbCronos)); }
-    if(fbDM)        { localStorage.setItem('lrr_deportemas',JSON.stringify(fbDM)); }
+    if(fbDM)        { localStorage.setItem('lrr_deportemas',JSON.stringify(fbDM)); if(typeof renderFooter==='function') renderFooter(); }
 
     // ── Escudos: prioridad al formato nuevo, fallback al viejo, migrar si aplica ──
     if(fbEscudosNuevo && Object.keys(fbEscudosNuevo).length > 0){
@@ -6164,7 +6164,7 @@ function renderGoleadores(){
 // ============================================================
 const DM_KEY = 'lrr_deportemas';
 function getDM(){ try{ return JSON.parse(localStorage.getItem(DM_KEY))||{}; }catch(e){ return {}; } }
-function saveDM(d){ localStorage.setItem(DM_KEY, JSON.stringify(d)); }
+function saveDM(d){ localStorage.setItem(DM_KEY, JSON.stringify(d)); if(window._fb) window._fb.set('deportemas', d); }
 
 let _dmRadioLogoB64 = '';
 
