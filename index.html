@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="/favicon.png">
 
 <!-- ============================================================
      SEO PRIMARIO
@@ -411,7 +412,7 @@
       fbNoticiasViejo, fbPubs, fbFichas, fbCronos, fbDM,
       fbEscudosNuevo, fbTransferencias, fbGolFotos,
       fbNoticiasNuevo, fbAmonestaciones, fbExpulsiones,
-      fbExpedientesSan, fbActasSan
+      fbExpedientesSan, fbActasSan, fbSancionesVigentes
     ] = await Promise.all([
       window._fb.get('data'),
       window._fb.get('escudos'),
@@ -430,6 +431,7 @@
       window._fb.getAllItems('expulsion'),
       window._fb.getAllItems('expedientesan'),
       window._fb.getAllItems('actasan'),
+      window._fb.getAllItems('sancionvigente'),
     ]);
 
     // Cache en memoria de fotos de goleadores (id → base64), usado también por el listener en tiempo real
@@ -476,6 +478,7 @@
     if(fbExpulsiones)    { localStorage.setItem(EXPULSIONES_KEY,    JSON.stringify(fbExpulsiones)); }
     if(fbExpedientesSan) { localStorage.setItem(EXPEDIENTES_SAN_KEY,JSON.stringify(fbExpedientesSan)); }
     if(fbActasSan)       { localStorage.setItem(ACTAS_SAN_KEY,      JSON.stringify(fbActasSan)); }
+    if(fbSancionesVigentes) { localStorage.setItem(SANCIONES_VIGENTES_KEY, JSON.stringify(fbSancionesVigentes)); }
     if(fbPubs)      { localStorage.setItem('lrr_publicidad', JSON.stringify(fbPubs)); }
     if(fbFichas)    { localStorage.setItem('lrr_fichas',    JSON.stringify(fbFichas)); }
     if(fbCronos)    { localStorage.setItem('lrr_cronos',    JSON.stringify(fbCronos)); }
@@ -504,6 +507,8 @@
     aplicarIdentidad();
     renderFotosSidebar();
     if(typeof renderTodasLasPubs==='function') renderTodasLasPubs();
+    actualizarNavLive();
+    renderSection(currentSection);
     if(window._splashFallback) clearTimeout(window._splashFallback);
     if(window._ocultarSplash) window._ocultarSplash();
 
@@ -2749,6 +2754,21 @@ table.posiciones td:nth-child(8){
 .san-bulk-row .c{color:var(--dorado-light);font-weight:700;}
 .san-bulk-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
 .san-bulk-summary{font-size:11.5px;color:rgba(255,255,255,.55);margin-top:8px;}
+/* Tabla de "Próximas ausencias" (suspendidos vigentes: acumulación de amarillas o roja) */
+.san-vigentes-box{background:rgba(231,76,60,.06);border:1px solid rgba(231,76,60,.28);border-radius:var(--r-md);padding:14px 16px;margin-bottom:1rem;}
+.san-vigentes-box .san-vigentes-title{display:flex;align-items:center;gap:8px;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:#ff6b5e;margin-bottom:10px;}
+.san-vigentes-empty{font-size:12px;color:rgba(255,255,255,.4);font-family:'DM Sans',sans-serif;}
+.san-vigente-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid rgba(255,255,255,.06);flex-wrap:wrap;}
+.san-vigente-row:first-of-type{border-top:none;}
+.san-vigente-izq{display:flex;align-items:center;gap:9px;min-width:0;}
+.san-vigente-nombre{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:13px;color:#fff;white-space:nowrap;}
+.san-vigente-club{font-size:11px;color:rgba(255,255,255,.45);font-family:'Rajdhani',sans-serif;}
+.san-vigente-motivo{font-size:10.5px;color:rgba(255,255,255,.4);font-family:'DM Sans',sans-serif;}
+.san-vigente-badge{flex-shrink:0;border-radius:20px;padding:4px 12px;font-size:11px;font-family:'Rajdhani',sans-serif;font-weight:700;background:rgba(231,76,60,.15);color:#ff6b5e;border:1px solid rgba(231,76,60,.3);white-space:nowrap;}
+.san-vigente-admin-actions{display:flex;gap:5px;flex-shrink:0;}
+.san-vigente-admin-actions button{padding:4px 9px;font-size:11px;border-radius:var(--r-sm);border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:rgba(255,255,255,.75);cursor:pointer;font-family:'Rajdhani',sans-serif;font-weight:700;}
+.san-vigente-admin-actions button:hover{background:rgba(255,255,255,.08);}
+.san-vigente-admin-actions button.danger{color:#ff6b5e;border-color:rgba(231,76,60,.3);}
 </style>
 </head>
 <body>
@@ -3708,6 +3728,8 @@ table.posiciones td:nth-child(8){
       <div class="admin-section" id="admin-sanciones">
         <div class="admin-title">🟥 Sanciones</div>
 
+        <div id="san-vigentes-admin"></div>
+
         <div class="sancion-tabs">
           <button class="sancion-tab active" id="san-admin-tab-amonestaciones" onclick="switchSanAdminTab('amonestaciones',this)">🟡 Amonestaciones</button>
           <button class="sancion-tab" id="san-admin-tab-expulsiones" onclick="switchSanAdminTab('expulsiones',this)">🟥 Expulsiones</button>
@@ -3972,6 +3994,7 @@ table.posiciones td:nth-child(8){
     <div style="height:100%;background:linear-gradient(90deg,#c9a227,#f0c040);border-radius:2px;animation:splash-load .6s ease forwards .1s;width:0%"></div>
   </div>
 </div>
+<script>window._splashStart = Date.now();</script>
 
 <header>
   <div class="logo-wrap">
@@ -4662,11 +4685,14 @@ const AMONESTACIONES_KEY  = 'lrr_amonestaciones';
 const EXPULSIONES_KEY     = 'lrr_expulsiones';
 const EXPEDIENTES_SAN_KEY = 'lrr_expedientes_san';
 const ACTAS_SAN_KEY       = 'lrr_actas_san';
+const SANCIONES_VIGENTES_KEY = 'lrr_sanciones_vigentes';
 
 function getAmonestaciones(){ try{ return JSON.parse(localStorage.getItem(AMONESTACIONES_KEY))||[]; }catch(e){ return []; } }
 function getExpulsiones(){    try{ return JSON.parse(localStorage.getItem(EXPULSIONES_KEY))||[];    }catch(e){ return []; } }
 function getExpedientesSan(){ try{ return JSON.parse(localStorage.getItem(EXPEDIENTES_SAN_KEY))||[];}catch(e){ return []; } }
 function getActasSan(){       try{ return JSON.parse(localStorage.getItem(ACTAS_SAN_KEY))||[];      }catch(e){ return []; } }
+function getSancionesVigentes(){ try{ return JSON.parse(localStorage.getItem(SANCIONES_VIGENTES_KEY))||[]; }catch(e){ return []; } }
+function guardarSancionesVigentes(lista){ localStorage.setItem(SANCIONES_VIGENTES_KEY, JSON.stringify(lista)); }
 
 // Convierte fecha ISO (yyyy-mm-dd, la que entrega <input type="date">) a formato visual dd/mm/aaaa
 function fechaVisual(iso){
@@ -4690,6 +4716,7 @@ function switchSanAdminTab(tab, el){
   else if(tab==='expulsiones'){ poblarSelectClubSancion('ex'); onCambioClubSancion('ex'); renderAdminListaExpulsiones(); }
   else if(tab==='expedientes'){ renderAdminListaExpedientes(); }
   else if(tab==='actas'){ renderAdminListaActasSancion(); }
+  renderAdminSancionesVigentes();
 }
 
 // ── Poblar el select de clubes según la división elegida (usa data.equipos) ──
@@ -4801,12 +4828,204 @@ function cargarSuspensionPorAcumulacion(club, jugador){
   document.getElementById('ex-div').scrollIntoView({behavior:'smooth'});
 }
 
-// ============================================================
-// CARGA MASIVA (amonestaciones y expulsiones desde una lista pegada)
-// ============================================================
 function normalizarTexto(s){
   return (s||'').toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
 }
+
+// ============================================================
+// SANCIONES VIGENTES — tabla automática de "próximas ausencias"
+// ------------------------------------------------------------
+// Un jugador entra automáticamente a esta tabla cuando:
+//   • acumula amonestaciones múltiplo de 5 (Art. 208 → 1 partido base), o
+//   • es cargado en Expulsiones con "Partidos de suspensión" > 0.
+// Cada club puede tener varias "contribuciones" activas a la vez
+// (ej: acumulación de amarillas + una roja); se suman en un mismo
+// registro por jugador. Al marcarse un partido de su equipo como
+// "Jugado" (no reserva), se descuenta 1 partido cumplido de todas
+// las sanciones vigentes de ese club. Si se revierte un partido de
+// "Jugado" a otro estado, se revierte también el descuento.
+// ============================================================
+
+// Recalcula partidosTotal a partir de las contribuciones y evita que
+// partidosCumplidos quede por encima del nuevo total.
+function _recalcularSancionVigente(entry){
+  entry.contribuciones = entry.contribuciones || [];
+  entry.partidosTotal = entry.contribuciones.reduce((t,c)=>t+(c.partidos||0),0);
+  if(entry.partidosCumplidos > entry.partidosTotal) entry.partidosCumplidos = entry.partidosTotal;
+  if(entry.partidosCumplidos < 0) entry.partidosCumplidos = 0;
+}
+
+// Agrega o actualiza (si ya existe ese refId en cualquier lado) una contribución
+// de sanción para un jugador/club. Si partidos<=0 y no existía, no hace nada.
+function actualizarOcrearContribucionSancion(div, club, jugador, refId, origen, motivo, partidos, fecha){
+  if(!club || !jugador || !refId) return;
+  const lista = getSancionesVigentes();
+  const clubN = normalizarTexto(club), jugN = normalizarTexto(jugador);
+
+  // ¿Ya existe esta contribución en algún registro? (edición de una expulsión ya cargada)
+  for(const entry of lista){
+    const idx = (entry.contribuciones||[]).findIndex(c=>c.refId===refId);
+    if(idx>=0){
+      if(partidos>0){ entry.contribuciones[idx] = {refId, origen, motivo, partidos}; entry.fecha = fecha||entry.fecha; }
+      else { entry.contribuciones.splice(idx,1); }
+      _recalcularSancionVigente(entry);
+      if(entry.partidosTotal<=0){
+        const filtrada = lista.filter(e=>e!==entry);
+        guardarSancionesVigentes(filtrada);
+        if(window._fb) window._fb.delItem('sancionvigente', entry.id);
+      } else {
+        guardarSancionesVigentes(lista);
+        if(window._fb) window._fb.setItem('sancionvigente', entry.id, entry);
+      }
+      return;
+    }
+  }
+
+  if(partidos<=0) return; // nada que crear
+
+  // ¿Hay un registro activo (aún cumpliendo sanción) para ese jugador/club? Se suma ahí.
+  let entry = lista.find(e=> normalizarTexto(e.club)===clubN && normalizarTexto(e.jugador)===jugN && e.partidosCumplidos < e.partidosTotal);
+  if(!entry){
+    entry = {id:String(Date.now())+Math.floor(Math.random()*999), div, club, jugador, contribuciones:[], partidosTotal:0, partidosCumplidos:0, fecha};
+    lista.unshift(entry);
+  }
+  entry.div = div; entry.club = club; entry.jugador = jugador; entry.fecha = fecha || entry.fecha;
+  entry.contribuciones.push({refId, origen, motivo, partidos});
+  _recalcularSancionVigente(entry);
+  guardarSancionesVigentes(lista);
+  if(window._fb) window._fb.setItem('sancionvigente', entry.id, entry);
+}
+
+// Quita una contribución puntual (ej: se eliminó la expulsión que la generó)
+function quitarContribucionSancion(refId){
+  actualizarOcrearContribucionSancion(null,null,null,refId,null,null,0,null);
+}
+// Variante segura para usar desde eliminar* sin necesitar club/jugador: busca y quita donde aparezca.
+function quitarContribucionSancionPorRef(refId){
+  const lista = getSancionesVigentes();
+  let cambiado = false;
+  const restante = [];
+  lista.forEach(entry=>{
+    const idx = (entry.contribuciones||[]).findIndex(c=>c.refId===refId);
+    if(idx>=0){
+      entry.contribuciones.splice(idx,1);
+      _recalcularSancionVigente(entry);
+      cambiado = true;
+      if(entry.partidosTotal<=0){ if(window._fb) window._fb.delItem('sancionvigente', entry.id); return; }
+      if(window._fb) window._fb.setItem('sancionvigente', entry.id, entry);
+    }
+    if(entry.partidosTotal>0) restante.push(entry);
+  });
+  if(cambiado) guardarSancionesVigentes(restante);
+}
+
+// Se llama cuando un partido pasa a "jugado" (delta=+1) o se revierte desde "jugado" (delta=-1).
+// Descuenta/repone 1 partido cumplido en todas las sanciones vigentes de los dos clubes del partido.
+function marcarPartidoParaSancionesVigentes(partido, delta){
+  if(!partido || partido.esReserva) return; // la suspensión aplica al plantel principal
+  const clubes = [partido.local, partido.visit].filter(Boolean).map(normalizarTexto);
+  if(!clubes.length) return;
+  const lista = getSancionesVigentes();
+  let cambiado = false;
+  lista.forEach(entry=>{
+    if(entry.div !== partido.div) return;
+    if(!clubes.includes(normalizarTexto(entry.club))) return;
+    const nuevo = Math.max(0, Math.min(entry.partidosTotal, entry.partidosCumplidos + delta));
+    if(nuevo !== entry.partidosCumplidos){
+      entry.partidosCumplidos = nuevo;
+      cambiado = true;
+      if(window._fb) window._fb.setItem('sancionvigente', entry.id, entry);
+    }
+  });
+  if(cambiado) guardarSancionesVigentes(lista);
+}
+
+// Sanciones vigentes (aún sin cumplir) de una división, ordenadas por partidos restantes
+function getSancionesVigentesActivas(div){
+  return getSancionesVigentes()
+    .filter(e=>e.div===div && e.partidosCumplidos < e.partidosTotal)
+    .sort((a,b)=> (b.fecha||'').localeCompare(a.fecha||''));
+}
+
+// ── Render público: tabla de "Próximas ausencias" (arriba de Amonestaciones y Expulsiones) ──
+function renderTablaSancionesVigentes(div){
+  const activas = getSancionesVigentesActivas(div);
+  if(!activas.length){
+    return `<div class="san-vigentes-box"><div class="san-vigentes-title">🚫 Próximas ausencias</div><div class="san-vigentes-empty">No hay jugadores cumpliendo suspensión en esta división</div></div>`;
+  }
+  const filas = activas.map(e=>{
+    const restantes = e.partidosTotal - e.partidosCumplidos;
+    const motivos = [...new Set((e.contribuciones||[]).map(c=>c.motivo).filter(Boolean))].join(' + ');
+    return `<div class="san-vigente-row">
+      <div class="san-vigente-izq">
+        ${getEscudoHTML(e.club,18)}
+        <div>
+          <div class="san-vigente-nombre">${e.jugador} <span class="san-vigente-club">— ${e.club}</span></div>
+          ${motivos?`<div class="san-vigente-motivo">${motivos}</div>`:''}
+        </div>
+      </div>
+      <div class="san-vigente-badge">🚫 ${restantes} partido${restantes===1?'':'s'}</div>
+    </div>`;
+  }).join('');
+  return `<div class="san-vigentes-box"><div class="san-vigentes-title">🚫 Próximas ausencias (${activas.length})</div>${filas}</div>`;
+}
+
+// ── Render admin: mismo listado con controles manuales por si hace falta corregir algo a mano ──
+function renderAdminSancionesVigentes(){
+  const el = document.getElementById('san-vigentes-admin'); if(!el) return;
+  const todas = getSancionesVigentes().filter(e=>e.partidosCumplidos < e.partidosTotal)
+    .sort((a,b)=> (a.div||'').localeCompare(b.div||'') || (b.fecha||'').localeCompare(a.fecha||''));
+  if(!todas.length){
+    el.innerHTML = `<div class="san-vigentes-box"><div class="san-vigentes-title">🚫 Sancionados vigentes</div><div class="san-vigentes-empty">No hay jugadores cumpliendo suspensión actualmente</div></div>`;
+    return;
+  }
+  const filas = todas.map(e=>{
+    const restantes = e.partidosTotal - e.partidosCumplidos;
+    const motivos = [...new Set((e.contribuciones||[]).map(c=>c.motivo).filter(Boolean))].join(' + ');
+    return `<div class="san-vigente-row">
+      <div class="san-vigente-izq">
+        ${getEscudoHTML(e.club,18)}
+        <div>
+          <div class="san-vigente-nombre">${e.jugador} <span class="san-vigente-club">— ${e.club} · ${e.div==='primera'?'1ª':'2ª'}</span></div>
+          ${motivos?`<div class="san-vigente-motivo">${motivos}</div>`:''}
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        <div class="san-vigente-badge">🚫 ${restantes} restante${restantes===1?'':'s'}</div>
+        <div class="san-vigente-admin-actions">
+          <button title="Descontar 1 partido cumplido manualmente" onclick="ajustarCumplidoSancionVigente('${e.id}',1)">-1</button>
+          <button title="Revertir 1 partido cumplido" onclick="ajustarCumplidoSancionVigente('${e.id}',-1)">+1</button>
+          <button class="danger" title="Eliminar esta sanción vigente" onclick="eliminarSancionVigente('${e.id}')">✕</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  el.innerHTML = `<div class="san-vigentes-box"><div class="san-vigentes-title">🚫 Sancionados vigentes (${todas.length})</div>${filas}</div>`;
+}
+
+function ajustarCumplidoSancionVigente(id, delta){
+  const lista = getSancionesVigentes();
+  const entry = lista.find(e=>e.id===id); if(!entry) return;
+  entry.partidosCumplidos = Math.max(0, Math.min(entry.partidosTotal, entry.partidosCumplidos + delta));
+  guardarSancionesVigentes(lista);
+  if(window._fb) window._fb.setItem('sancionvigente', entry.id, entry);
+  renderAdminSancionesVigentes();
+  if(currentSection==='sanciones') renderSanciones();
+}
+
+function eliminarSancionVigente(id){
+  pedirConfirmacion('¿Eliminar esta sanción vigente? Esto no borra la amonestación/expulsión original, solo el descuento de partidos.', function(){
+    const lista = getSancionesVigentes().filter(e=>e.id!==id);
+    guardarSancionesVigentes(lista);
+    if(window._fb) window._fb.delItem('sancionvigente', id);
+    renderAdminSancionesVigentes();
+    if(currentSection==='sanciones') renderSanciones();
+  });
+}
+
+// ============================================================
+// CARGA MASIVA (amonestaciones y expulsiones desde una lista pegada)
+// ============================================================
 
 // Resuelve a qué club corresponde el token de equipo escrito en la línea ("L","V","Local","Visitante" o nombre de club)
 function resolverClubBulk(prefix, token, divVal){
@@ -4893,6 +5112,7 @@ function confirmarCargaMasiva(prefix){
       ? {id:String(Date.now())+Math.floor(Math.random()*999), div:f.div, club:f.club, jugador:f.jugador, fecha, motivo:f.motivoFinal}
       : {id:String(Date.now())+Math.floor(Math.random()*999), div:f.div, club:f.club, jugador:f.jugador, fecha, motivo:f.motivoFinal, suspension: f.suspFinal!=='' ? Math.max(0,parseInt(f.suspFinal,10)||0) : null};
     lista.unshift(item);
+    f._itemCreado = item;
     if(window._fb) window._fb.setItem(esAm?'amonestacion':'expulsion', item.id, item);
   });
   localStorage.setItem(KEY, JSON.stringify(lista));
@@ -4900,7 +5120,17 @@ function confirmarCargaMasiva(prefix){
     filas.forEach(f=>{
       const jugadorNorm = f.jugador.trim().toLowerCase();
       const count = getAmonestaciones().filter(a=>a.club===f.club && (a.jugador||'').trim().toLowerCase()===jugadorNorm).length;
-      if(count>0 && count % UMBRAL_SUSPENSION_ART208 === 0) jugadoresUmbral.push({club:f.club, jugador:f.jugador, count});
+      if(count>0 && count % UMBRAL_SUSPENSION_ART208 === 0){
+        jugadoresUmbral.push({club:f.club, jugador:f.jugador, count});
+        actualizarOcrearContribucionSancion(f.div, f.club, f.jugador, 'amciclo_'+normalizarTexto(f.club)+'_'+normalizarTexto(f.jugador)+'_'+count, 'amarillas', `Suspensión Art. 208 — acumulación de ${count} amonestaciones`, 1, fecha);
+      }
+    });
+  } else {
+    filas.forEach(f=>{
+      const suspNum = f.suspFinal!=='' ? Math.max(0,parseInt(f.suspFinal,10)||0) : 0;
+      if(f._itemCreado && suspNum>0){
+        actualizarOcrearContribucionSancion(f.div, f.club, f.jugador, 'ex_'+f._itemCreado.id, 'roja', f.motivoFinal||'Expulsión', suspNum, fecha);
+      }
     });
   }
   document.getElementById(prefix+'-bulk-input').value = '';
@@ -4919,6 +5149,7 @@ function confirmarCargaMasiva(prefix){
     renderAdminListaExpulsiones();
   }
   poblarDatalistJugadores(prefix);
+  renderAdminSancionesVigentes();
   if(currentSection==='sanciones') renderSanciones();
 }
 
@@ -4949,8 +5180,13 @@ function agregarAmonestacion(){
   localStorage.setItem(AMONESTACIONES_KEY, JSON.stringify(lista));
   if(window._fb) window._fb.setItem('amonestacion', item.id, item);
   verificarAcumulacionAmarillas(club, jugador);
+  const _count = getAmonestaciones().filter(a=>normalizarTexto(a.club)===normalizarTexto(club)&&normalizarTexto(a.jugador)===normalizarTexto(jugador)).length;
+  if(_count>0 && _count % UMBRAL_SUSPENSION_ART208 === 0){
+    actualizarOcrearContribucionSancion(div, club, jugador, 'amciclo_'+normalizarTexto(club)+'_'+normalizarTexto(jugador)+'_'+_count, 'amarillas', `Suspensión Art. 208 — acumulación de ${_count} amonestaciones`, 1, fecha);
+  }
   limpiarFormAmonestacion();
   renderAdminListaAmonestaciones();
+  renderAdminSancionesVigentes();
   if(currentSection==='sanciones') renderSanciones();
 }
 function limpiarFormAmonestacion(){
@@ -4979,11 +5215,27 @@ function editarAmonestacion(id){
 }
 function eliminarAmonestacion(id){
   pedirConfirmacion('¿Eliminar esta amonestación?', function(){
+    const item = getAmonestaciones().find(a=>a.id===id);
     const lista = getAmonestaciones().filter(a=>a.id!==id);
     localStorage.setItem(AMONESTACIONES_KEY, JSON.stringify(lista));
     if(window._fb) window._fb.delItem('amonestacion', id);
+    // Si al borrar esta tarjeta el jugador queda por debajo de algún múltiplo de 5 ya
+    // registrado como sanción vigente por acumulación, se quita esa contribución.
+    if(item){
+      const nuevoCount = lista.filter(a=>normalizarTexto(a.club)===normalizarTexto(item.club)&&normalizarTexto(a.jugador)===normalizarTexto(item.jugador)).length;
+      getSancionesVigentes().forEach(entry=>{
+        if(normalizarTexto(entry.club)!==normalizarTexto(item.club) || normalizarTexto(entry.jugador)!==normalizarTexto(item.jugador)) return;
+        (entry.contribuciones||[]).forEach(c=>{
+          if(c.origen==='amarillas' && c.refId.startsWith('amciclo_')){
+            const n = parseInt(c.refId.split('_').pop(),10);
+            if(n && n>nuevoCount) quitarContribucionSancionPorRef(c.refId);
+          }
+        });
+      });
+    }
     if(_amEditId===id) limpiarFormAmonestacion();
     renderAdminListaAmonestaciones();
+    renderAdminSancionesVigentes();
     if(currentSection==='sanciones') renderSanciones();
   });
 }
@@ -5032,8 +5284,10 @@ function agregarExpulsion(){
   }
   localStorage.setItem(EXPULSIONES_KEY, JSON.stringify(lista));
   if(window._fb) window._fb.setItem('expulsion', item.id, item);
+  actualizarOcrearContribucionSancion(div, club, jugador, 'ex_'+item.id, 'roja', motivo||'Expulsión', suspension||0, fecha);
   limpiarFormExpulsion();
   renderAdminListaExpulsiones();
+  renderAdminSancionesVigentes();
   if(currentSection==='sanciones') renderSanciones();
 }
 function limpiarFormExpulsion(){
@@ -5067,8 +5321,10 @@ function eliminarExpulsion(id){
     const lista = getExpulsiones().filter(a=>a.id!==id);
     localStorage.setItem(EXPULSIONES_KEY, JSON.stringify(lista));
     if(window._fb) window._fb.delItem('expulsion', id);
+    quitarContribucionSancionPorRef('ex_'+id);
     if(_exEditId===id) limpiarFormExpulsion();
     renderAdminListaExpulsiones();
+    renderAdminSancionesVigentes();
     if(currentSection==='sanciones') renderSanciones();
   });
 }
@@ -5304,9 +5560,10 @@ function renderSancionFolders(tipo){
       <button class="san-div-tab ${sancionDiv==='primera'?'active':''}" onclick="switchSancionDiv('primera')">Primera División</button>
       <button class="san-div-tab ${sancionDiv==='segunda'?'active':''}" onclick="switchSancionDiv('segunda')">Segunda División</button>
     </div>`;
+  const tablaVigentes = renderTablaSancionesVigentes(sancionDiv);
 
   if(!registros.length){
-    el.innerHTML = divTabs + `<div class="card"><div class="empty-msg">No hay ${etiqueta}s cargadas para esta división</div></div>`;
+    el.innerHTML = divTabs + tablaVigentes + `<div class="card"><div class="empty-msg">No hay ${etiqueta}s cargadas para esta división</div></div>`;
     return;
   }
 
@@ -5346,7 +5603,7 @@ function renderSancionFolders(tipo){
     </div>`;
   }).join('');
 
-  el.innerHTML = divTabs + foldersHTML;
+  el.innerHTML = divTabs + tablaVigentes + foldersHTML;
 }
 
 function toggleSanFolder(idSuf){
@@ -7943,6 +8200,7 @@ function agregarPartido(){
   data.partidos.push(d);
   recalcularTodo();   // recalcular siempre: puede que haya partidos jugados anteriores
   aplicarTodasLasPenalizaciones();
+  if(d.estado==='jugado') marcarPartidoParaSancionesVigentes(d, 1);
   saveData(data);
   document.getElementById('p-goles-list').innerHTML='';
   document.getElementById('p-exp-list').innerHTML='';
@@ -8090,9 +8348,12 @@ function eliminar(tipo,id){
   const sid=String(id);
   pedirConfirmacion('¿Eliminar este elemento?',function(){
     if(tipo==='partidos'){
+      const pViejo = data.partidos.find(p=>String(p.id)===sid);
+      if(pViejo && pViejo.estado==='jugado') marcarPartidoParaSancionesVigentes(pViejo, -1);
       data.partidos=data.partidos.filter(p=>String(p.id)!==sid);
       recalcularTodo();
       aplicarTodasLasPenalizaciones();
+      renderAdminSancionesVigentes();
     }
     else if(tipo==='posiciones')  data.posiciones =data.posiciones.filter(p=>String(p.id)!==sid);
     else if(tipo==='goleadores') {
@@ -8635,6 +8896,10 @@ function guardarEdicion(tipo,id){
     // Recalcular posiciones y goleadores desde todos los partidos jugados
     recalcularTodo();
     aplicarTodasLasPenalizaciones();
+    // Si el partido pasó a "jugado" (o se revirtió desde ahí), ajustar sanciones vigentes de ambos clubes
+    if(partidoViejo.estado!=='jugado' && updated.estado==='jugado') marcarPartidoParaSancionesVigentes(updated, 1);
+    else if(partidoViejo.estado==='jugado' && updated.estado!=='jugado') marcarPartidoParaSancionesVigentes(updated, -1);
+    renderAdminSancionesVigentes();
     // Guardar el evento detectado para disparar la animación DESPUÉS del re-render
     window._animPendiente = { pid: updated.id, evento: detectarEventoPartido(partidoViejo, updated) };
   } else if(tipo==='posiciones'){
@@ -9215,7 +9480,7 @@ function switchAdminTab(tab,el){
   if(tab==='publicidad'){ renderAdminListaPubs(); }
   if(tab==='deportemas'){ cargarFormDM(); }
   if(tab==='estadisticas'){ renderEstadisticas(); }
-  if(tab==='sanciones'){ poblarSelectClubSancion('am'); renderAdminListaAmonestaciones(); }
+  if(tab==='sanciones'){ poblarSelectClubSancion('am'); renderAdminListaAmonestaciones(); renderAdminSancionesVigentes(); }
   if(tab==='notificaciones'){ actualizarContadorSubs(); }}
 function cambiarPassword(){
   // La contraseña se gestiona desde Firebase Console → Authentication
@@ -11539,12 +11804,27 @@ renderFooter();
     }
   }
 
-  // Función que oculta el splash
+  // Duración mínima del splash (ms) para que no desaparezca antes de que el
+  // contenido (escudos, fixture, etc.) esté realmente pintado en pantalla.
+  const SPLASH_MIN_MS = 1100;
+
+  // Función que oculta el splash — respeta la duración mínima y espera
+  // a que el navegador termine de pintar el contenido ya renderizado.
   window._ocultarSplash = function(){
     const splash = document.getElementById('splash');
     if(!splash || splash.style.display === 'none') return;
-    splash.style.opacity = '0';
-    setTimeout(function(){ splash.style.display = 'none'; }, 450);
+    const transcurrido = Date.now() - (window._splashStart || Date.now());
+    const espera = Math.max(0, SPLASH_MIN_MS - transcurrido);
+    setTimeout(function(){
+      // Doble requestAnimationFrame: asegura que el navegador ya hizo
+      // al menos un ciclo completo de pintado del contenido de fondo.
+      requestAnimationFrame(function(){
+        requestAnimationFrame(function(){
+          splash.style.opacity = '0';
+          setTimeout(function(){ splash.style.display = 'none'; }, 450);
+        });
+      });
+    }, espera);
   };
 
   // Ocultar splash una vez que Firebase haya terminado de cargar
