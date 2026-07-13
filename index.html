@@ -4864,8 +4864,9 @@ function recalcularSancionesVigentes(){
 }
 
 // Junta amonestaciones (cada 5ª cuenta) + expulsiones (con suspensión), cada
-// una con su jornada, agrupadas por jugador. Devuelve también las que no se
-// pudieron ubicar en ninguna Fecha.
+// una con su jornada (si se puede determinar). Ninguna se descarta del conteo:
+// las que no tienen Fecha determinable igual suman para el total de tarjetas
+// y quedan marcadas como "a confirmar" en vez de desaparecer del cálculo.
 function _construirEventosSancion(){
   const sinFecha = [];
   const eventosPorJugador = {}; // key div|club|jugador -> {div,club,jugador,eventos:[{jornada,partidos,origen,tipo}]}
@@ -4876,34 +4877,39 @@ function _construirEventosSancion(){
     eventosPorJugador[key].eventos.push({jornada,partidos,origen,tipo});
   }
 
-  // Amonestaciones: agrupar por jugador, ordenar por jornada y detectar múltiplos de 5
+  // Amonestaciones: agrupar por jugador (TODAS, tengan o no Fecha), ordenar
+  // (las que sí tienen Fecha van primero, en orden; las que no, al final por
+  // fecha real) y detectar múltiplos de 5.
   const amPorJugador = {};
   getAmonestaciones().forEach(a=>{
     if(!a.club || !a.jugador) return;
     const jr = jornadaEfectiva(a);
-    if(jr==null){ sinFecha.push({tipo:'🟡 Amarilla', jugador:a.jugador, club:a.club, motivo:a.motivo||'(sin motivo)'}); return; }
+    if(jr==null) sinFecha.push({tipo:'🟡 Amarilla', jugador:a.jugador, club:a.club, motivo:a.motivo||'(sin motivo)'});
     const key = (a.div||'')+'|'+normalizarTexto(a.club)+'|'+normalizarTexto(a.jugador);
     if(!amPorJugador[key]) amPorJugador[key] = {div:a.div, club:a.club, jugador:a.jugador, cards:[]};
     amPorJugador[key].cards.push({...a, _jornada:jr});
   });
   Object.values(amPorJugador).forEach(grp=>{
-    const ordenadas = grp.cards.slice().sort((a,b)=> a._jornada-b._jornada || String(a.id).localeCompare(String(b.id)));
+    const ordenadas = grp.cards.slice().sort((a,b)=>
+      (a._jornada??Infinity)-(b._jornada??Infinity) || (a.fecha||'').localeCompare(b.fecha||'') || String(a.id).localeCompare(String(b.id)));
     ordenadas.forEach((card,idx)=>{
       const n = idx+1;
       if(n % UMBRAL_SUSPENSION_ART208 === 0){
-        addEvento(grp.div, grp.club, grp.jugador, card._jornada, 1, `Art. 208 — acumulación de ${n} amarillas`, 'amarillas');
+        const motivo = `Art. 208 — acumulación de ${n} amarillas` + (card._jornada==null ? ' (Fecha sin confirmar)' : '');
+        addEvento(grp.div, grp.club, grp.jugador, card._jornada, 1, motivo, 'amarillas');
       }
     });
   });
 
-  // Expulsiones con suspensión > 0
+  // Expulsiones con suspensión > 0 (TODAS, tengan o no Fecha)
   getExpulsiones().forEach(ex=>{
     if(!ex.club || !ex.jugador) return;
     const susp = ex.suspension||0;
     if(susp<=0) return;
     const jr = jornadaEfectiva(ex);
-    if(jr==null){ sinFecha.push({tipo:'🟥 Roja', jugador:ex.jugador, club:ex.club, motivo:ex.motivo||'(sin motivo)'}); return; }
-    addEvento(ex.div, ex.club, ex.jugador, jr, susp, ex.motivo||'Expulsión', 'roja');
+    if(jr==null) sinFecha.push({tipo:'🟥 Roja', jugador:ex.jugador, club:ex.club, motivo:ex.motivo||'(sin motivo)'});
+    const motivo = (ex.motivo||'Expulsión') + (jr==null ? ' (Fecha sin confirmar)' : '');
+    addEvento(ex.div, ex.club, ex.jugador, jr, susp, motivo, 'roja');
   });
 
   return {eventosPorJugador, sinFecha};
@@ -4911,6 +4917,9 @@ function _construirEventosSancion(){
 
 // Simula, jornada a jornada, para cada jugador con sanciones, cuánto debe y
 // cuánto ya cumplió (según los partidos de su club marcados como "Jugado").
+// Los eventos sin Fecha determinada no se pueden ubicar en la simulación, así
+// que quedan siempre como pendientes (no se puede confirmar que ya se hayan
+// cumplido) para no perder de vista al jugador.
 // Devuelve solo los que TODAVÍA deben cumplir partidos, con el detalle de qué
 // tipo de sanción (amarillas y/o roja) compone lo que le queda pendiente.
 function _calcularNoHabilitados(eventosPorJugador){
@@ -4930,7 +4939,8 @@ function _calcularNoHabilitados(eventosPorJugador){
 
   const resultado = [];
   Object.values(eventosPorJugador).forEach(pl=>{
-    const eventos = pl.eventos.slice().sort((a,b)=>a.jornada-b.jornada);
+    const eventosConFecha = pl.eventos.filter(e=>e.jornada!=null).sort((a,b)=>a.jornada-b.jornada);
+    const eventosSinFecha = pl.eventos.filter(e=>e.jornada==null);
     const clubKey = normalizarTexto(pl.club);
     const fx = fixturePorClub[clubKey] || {jugadas:new Set(), todas:new Set()};
     const jornadasConocidas = Array.from(fx.todas).sort((a,b)=>a-b);
@@ -4941,32 +4951,43 @@ function _calcularNoHabilitados(eventosPorJugador){
       const jugado = fx.jugadas.has(jr);
       if(pendientes.length>0 && jugado){ pendientes.shift(); ultimaJugada = jr; }
       else if(jugado){ ultimaJugada = jr; }
-      eventos.filter(e=>e.jornada===jr).forEach(e=>{
+      eventosConFecha.filter(e=>e.jornada===jr).forEach(e=>{
         for(let i=0;i<e.partidos;i++) pendientes.push({tipo:e.tipo, origen:e.origen, jornada:jr});
       });
     });
     // Sanciones cuya jornada quedó fuera del fixture conocido del club (caso raro): igual se suman
-    eventos.forEach(e=>{
+    eventosConFecha.forEach(e=>{
       if(!jornadasConocidas.includes(e.jornada)){
         for(let i=0;i<e.partidos;i++) pendientes.push({tipo:e.tipo, origen:e.origen, jornada:e.jornada});
       }
     });
 
-    if(pendientes.length>0){
+    // Sanciones sin Fecha determinada: no se pueden ubicar en la simulación, así
+    // que no se puede confirmar que ya se hayan cumplido. Quedan pendientes de
+    // revisión manual (no se descuentan solas).
+    const pendientesSinFecha = [];
+    eventosSinFecha.forEach(e=>{
+      for(let i=0;i<e.partidos;i++) pendientesSinFecha.push({tipo:e.tipo, origen:e.origen});
+    });
+
+    const totalPendiente = pendientes.length + pendientesSinFecha.length;
+    if(totalPendiente>0){
       // Próxima fecha en que se vuelve a estar habilitado, usando el fixture futuro conocido
-      const debt = pendientes.length;
+      // (solo se puede calcular si no hay pendientes "sin Fecha" de por medio)
+      const debtConFecha = pendientes.length;
       const futuras = jornadasConocidas.filter(jr => ultimaJugada==null || jr>ultimaJugada);
       let pierdeHasta = null, vuelveEn = null;
-      if(futuras.length>=debt){
-        pierdeHasta = futuras[debt-1];
-        vuelveEn = futuras[debt] ?? null;
+      if(pendientesSinFecha.length===0 && debtConFecha>0 && futuras.length>=debtConFecha){
+        pierdeHasta = futuras[debtConFecha-1];
+        vuelveEn = futuras[debtConFecha] ?? null;
       }
       resultado.push({
         div: pl.div, club: pl.club, jugador: pl.jugador,
-        pendientes: debt,
+        pendientes: totalPendiente,
         motivos: [...new Set(pendientes.map(p=>`Fecha ${p.jornada}: ${p.origen}`))],
-        tipos: new Set(pendientes.map(p=>p.tipo)),
-        pierdeHasta, vuelveEn
+        tipos: new Set([...pendientes.map(p=>p.tipo), ...pendientesSinFecha.map(p=>p.tipo)]),
+        pierdeHasta, vuelveEn,
+        necesitaRevision: pendientesSinFecha.length>0
       });
     }
   });
@@ -4992,7 +5013,9 @@ function renderTablaProximasAusencias(div, tipoFiltro){
     return `<div class="san-vigentes-box"><div class="san-vigentes-title">🚫 Próximas ausencias</div><div class="san-vigentes-empty">No hay jugadores cumpliendo suspensión en esta división</div></div>`;
   }
   const filas = activas.map(r=>{
-    const vuelve = r.vuelveEn!=null ? `Vuelve en Fecha ${r.vuelveEn}` : (r.pierdeHasta!=null ? `Se pierde hasta Fecha ${r.pierdeHasta}` : `Faltan cargar próximas fechas`);
+    const vuelve = r.necesitaRevision
+      ? `⚠ Fecha sin confirmar en alguna tarjeta/roja — revisar`
+      : (r.vuelveEn!=null ? `Vuelve en Fecha ${r.vuelveEn}` : (r.pierdeHasta!=null ? `Se pierde hasta Fecha ${r.pierdeHasta}` : `Faltan cargar próximas fechas`));
     return `<div class="san-vigente-row">
       <div class="san-vigente-izq">
         ${getEscudoHTML(r.club,18)}
@@ -5017,7 +5040,9 @@ function _mostrarResultadoRecalculo(noHabilitados, sinFecha){
   } else {
     html += `<div style="margin:6px 0 10px;font-family:'Rajdhani',sans-serif;font-weight:700;color:#fff">🚫 Jugadores no habilitados (${noHabilitados.length})</div>`;
     html += noHabilitados.map(r=>{
-      const vuelve = r.vuelveEn!=null ? `Vuelve a jugar en Fecha ${r.vuelveEn}` : (r.pierdeHasta!=null ? `Se pierde hasta Fecha ${r.pierdeHasta} (aún no se cargó la fecha en que vuelve)` : `Faltan cargar próximas fechas del club para saber cuándo vuelve`);
+      const vuelve = r.necesitaRevision
+        ? `⚠ tiene tarjeta(s)/roja(s) sin Fecha confirmada — no se puede asegurar si ya cumplió todo, revisar a mano`
+        : (r.vuelveEn!=null ? `Vuelve a jugar en Fecha ${r.vuelveEn}` : (r.pierdeHasta!=null ? `Se pierde hasta Fecha ${r.pierdeHasta} (aún no se cargó la fecha en que vuelve)` : `Faltan cargar próximas fechas del club para saber cuándo vuelve`));
       return `
       <div class="san-admin-row">
         <div>
@@ -6125,8 +6150,9 @@ function calcularPosicionesReserva(div, filtroExtra){
     if(!res) return;
     const {golesLocal: gl, golesVisit: gv} = res;
     [p.local, p.visit].forEach((eq, lado) => {
-      if(!map[eq]) map[eq] = {equipo:eq, pj:0, g:0, e:0, p:0, gf:0, gc:0, pts:0};
-      const r = map[eq];
+      const key = normalizar(eq);
+      if(!map[key]) map[key] = {equipo:eq, pj:0, g:0, e:0, p:0, gf:0, gc:0, pts:0};
+      const r = map[key];
       const gf = lado===0 ? gl : gv;
       const gc = lado===0 ? gv : gl;
       r.pj++; r.gf += gf; r.gc += gc;
