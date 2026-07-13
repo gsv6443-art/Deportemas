@@ -4895,7 +4895,7 @@ function _construirEventosSancion(){
     ordenadas.forEach((card,idx)=>{
       const n = idx+1;
       if(n % UMBRAL_SUSPENSION_ART208 === 0){
-        const motivo = `Art. 208 — acumulación de ${n} amarillas` + (card._jornada==null ? ' (Fecha sin confirmar)' : '');
+        const motivo = `Art. 208 — acumulación de ${n} amarillas` + (card._jornada==null ? ' (Fecha sin confirmar)' : ` (${etiquetaOrdenCronologico(grp.div, card._jornada)})`);
         addEvento(grp.div, grp.club, grp.jugador, card._jornada, 1, motivo, 'amarillas');
       }
     });
@@ -4908,7 +4908,7 @@ function _construirEventosSancion(){
     if(susp<=0) return;
     const jr = jornadaEfectiva(ex);
     if(jr==null) sinFecha.push({tipo:'🟥 Roja', jugador:ex.jugador, club:ex.club, motivo:ex.motivo||'(sin motivo)'});
-    const motivo = (ex.motivo||'Expulsión') + (jr==null ? ' (Fecha sin confirmar)' : '');
+    const motivo = (ex.motivo||'Expulsión') + (jr==null ? ' (Fecha sin confirmar)' : ` (${etiquetaOrdenCronologico(ex.div, jr)})`);
     addEvento(ex.div, ex.club, ex.jugador, jr, susp, motivo, 'roja');
   });
 
@@ -4924,16 +4924,17 @@ function _construirEventosSancion(){
 // tipo de sanción (amarillas y/o roja) compone lo que le queda pendiente.
 function _calcularNoHabilitados(eventosPorJugador){
   // Fixture por club (sin reserva): todas las jornadas conocidas + cuáles se jugaron
-  const fixturePorClub = {}; // clubNorm -> {jugadas:Set<jornada>, todas:Set<jornada>}
+  // (usando el orden cronológico global, que cruza Apertura/Clausura y playoffs)
+  const fixturePorClub = {}; // "div|clubNorm" -> {jugadas:Set<orden>, todas:Set<orden>}
   (data.partidos||[]).filter(p=>!p.esReserva).forEach(p=>{
-    const jr = extraerNumeroJornada(p.fecha);
-    if(jr==null) return;
+    const ord = ordenCronologicoPartido(p);
+    if(ord==null) return;
     [p.local, p.visit].forEach(club=>{
       if(!club) return;
-      const key = normalizarTexto(club);
+      const key = (p.div||'')+'|'+normalizarTexto(club);
       if(!fixturePorClub[key]) fixturePorClub[key] = {jugadas:new Set(), todas:new Set()};
-      fixturePorClub[key].todas.add(jr);
-      if(p.estado==='jugado') fixturePorClub[key].jugadas.add(jr);
+      fixturePorClub[key].todas.add(ord);
+      if(p.estado==='jugado') fixturePorClub[key].jugadas.add(ord);
     });
   });
 
@@ -4941,7 +4942,7 @@ function _calcularNoHabilitados(eventosPorJugador){
   Object.values(eventosPorJugador).forEach(pl=>{
     const eventosConFecha = pl.eventos.filter(e=>e.jornada!=null).sort((a,b)=>a.jornada-b.jornada);
     const eventosSinFecha = pl.eventos.filter(e=>e.jornada==null);
-    const clubKey = normalizarTexto(pl.club);
+    const clubKey = (pl.div||'')+'|'+normalizarTexto(pl.club);
     const fx = fixturePorClub[clubKey] || {jugadas:new Set(), todas:new Set()};
     const jornadasConocidas = Array.from(fx.todas).sort((a,b)=>a-b);
 
@@ -4984,7 +4985,7 @@ function _calcularNoHabilitados(eventosPorJugador){
       resultado.push({
         div: pl.div, club: pl.club, jugador: pl.jugador,
         pendientes: totalPendiente,
-        motivos: [...new Set(pendientes.map(p=>`Fecha ${p.jornada}: ${p.origen}`))],
+        motivos: [...new Set(pendientes.map(p=>p.origen))],
         tipos: new Set([...pendientes.map(p=>p.tipo), ...pendientesSinFecha.map(p=>p.tipo)]),
         pierdeHasta, vuelveEn,
         necesitaRevision: pendientesSinFecha.length>0
@@ -5015,7 +5016,7 @@ function renderTablaProximasAusencias(div, tipoFiltro){
   const filas = activas.map(r=>{
     const vuelve = r.necesitaRevision
       ? `⚠ Fecha sin confirmar en alguna tarjeta/roja — revisar`
-      : (r.vuelveEn!=null ? `Vuelve en Fecha ${r.vuelveEn}` : (r.pierdeHasta!=null ? `Se pierde hasta Fecha ${r.pierdeHasta}` : `Faltan cargar próximas fechas`));
+      : (r.vuelveEn!=null ? `Vuelve en ${etiquetaOrdenCronologico(r.div, r.vuelveEn)}` : (r.pierdeHasta!=null ? `Se pierde hasta ${etiquetaOrdenCronologico(r.div, r.pierdeHasta)}` : `Faltan cargar próximas fechas`));
     return `<div class="san-vigente-row">
       <div class="san-vigente-izq">
         ${getEscudoHTML(r.club,18)}
@@ -5042,7 +5043,7 @@ function _mostrarResultadoRecalculo(noHabilitados, sinFecha){
     html += noHabilitados.map(r=>{
       const vuelve = r.necesitaRevision
         ? `⚠ tiene tarjeta(s)/roja(s) sin Fecha confirmada — no se puede asegurar si ya cumplió todo, revisar a mano`
-        : (r.vuelveEn!=null ? `Vuelve a jugar en Fecha ${r.vuelveEn}` : (r.pierdeHasta!=null ? `Se pierde hasta Fecha ${r.pierdeHasta} (aún no se cargó la fecha en que vuelve)` : `Faltan cargar próximas fechas del club para saber cuándo vuelve`));
+        : (r.vuelveEn!=null ? `Vuelve a jugar en ${etiquetaOrdenCronologico(r.div, r.vuelveEn)}` : (r.pierdeHasta!=null ? `Se pierde hasta ${etiquetaOrdenCronologico(r.div, r.pierdeHasta)} (aún no se cargó la fecha en que vuelve)` : `Faltan cargar próximas fechas del club para saber cuándo vuelve`));
       return `
       <div class="san-admin-row">
         <div>
@@ -5185,16 +5186,104 @@ function confirmarCargaMasiva(prefix){
 }
 
 // ============================================================
-// AMONESTACIONES (tarjetas amarillas — se acumulan por jugador)
 // ============================================================
-let _amEditId = '';
+// ORDEN CRONOLÓGICO — un solo número por partido que respeta el
+// calendario real completo de la temporada (las sanciones cruzan
+// de una etapa a la otra, así que necesitamos un eje único):
+//   PRIMERA:  Apertura Fecha 1‑16 → Playoff Apertura → Clausura Fecha 1‑16 → Playoff Clausura
+//   SEGUNDA:  1ª Fase Fecha 1‑14 → 2ª Fase Fecha 1‑14 → Playoff 3ª Fase
+// Playoff Primera:  Cuartos de Final → Semifinal Ida → Semifinal Vuelta → Final Ida → Final Vuelta
+// Playoff Segunda:  Cuartos Ida → Cuartos Vuelta → Semifinal Ida → Semifinal Vuelta → Final Ida → Final Vuelta
+// ============================================================
+
 // ── Extrae el número de jornada de un texto tipo "Fecha 6" -> 6 ──
 function extraerNumeroJornada(txt){
   if(txt==null) return null;
   const m = String(txt).match(/(\d+)/);
   return m ? parseInt(m[1],10) : null;
 }
-// ── Si se eligió un partido del selector (am-partido / ex-partido), devuelve su jornada.
+
+// ── Identifica la etapa de playoff a partir del texto de "Fecha" (ej: "Semifinal - Ida") ──
+function _etapaPlayoffDesdeTexto(txt){
+  const t = normalizar(txt||'');
+  const ida = /\bida\b/.test(t), vuelta = /\bvuelta\b/.test(t);
+  if(/cuartos/.test(t))    return {etapa:'cuartos',    leg: vuelta?'vuelta':(ida?'ida':null)};
+  if(/semifinal/.test(t))  return {etapa:'semifinal',  leg: vuelta?'vuelta':(ida?'ida':null)};
+  if(/final/.test(t))      return {etapa:'final',      leg: vuelta?'vuelta':(ida?'ida':null)};
+  return null;
+}
+// ── Orden dentro del playoff (1..5 en Primera, 1..6 en Segunda) ──
+function _ordinalEtapaPlayoff(divisionPlayoff, etapaInfo){
+  if(!etapaInfo) return null;
+  const {etapa, leg} = etapaInfo;
+  if(divisionPlayoff==='primera'){
+    if(etapa==='cuartos')   return 1;
+    if(etapa==='semifinal') return leg==='vuelta' ? 3 : 2;
+    if(etapa==='final')     return leg==='vuelta' ? 5 : 4;
+  } else { // segunda (3ª Fase)
+    if(etapa==='cuartos')   return leg==='vuelta' ? 2 : 1;
+    if(etapa==='semifinal') return leg==='vuelta' ? 4 : 3;
+    if(etapa==='final')     return leg==='vuelta' ? 6 : 5;
+  }
+  return null;
+}
+// ── Nombre legible de la etapa de playoff, para mostrar en pantalla ──
+function _nombreEtapaPlayoff(divisionPlayoff, ordinal){
+  const nombres = divisionPlayoff==='primera'
+    ? {1:'Cuartos de Final', 2:'Semifinal Ida', 3:'Semifinal Vuelta', 4:'Final Ida', 5:'Final Vuelta'}
+    : {1:'Cuartos de Final Ida', 2:'Cuartos de Final Vuelta', 3:'Semifinal Ida', 4:'Semifinal Vuelta', 5:'Final Ida', 6:'Final Vuelta'};
+  return nombres[ordinal] || 'Playoff';
+}
+
+// Bases del eje único por división (suficiente margen para que ninguna etapa se pise)
+const ORDEN_BASE_PRIMERA  = {apertura_regular:0, apertura_playoff:1000, clausura_regular:2000, clausura_playoff:3000};
+const ORDEN_BASE_SEGUNDA  = {fase1:0, fase2:1000, fase3_playoff:2000};
+
+// ── Devuelve el número de orden cronológico global de un PARTIDO, o null si no se puede determinar ──
+function ordenCronologicoPartido(p){
+  if(!p) return null;
+  if(p.div === 'primera'){
+    const torneo = p.torneo || 'apertura';
+    const base = torneo==='clausura' ? ORDEN_BASE_PRIMERA.clausura_regular : ORDEN_BASE_PRIMERA.apertura_regular;
+    if(p.esPlayoff){
+      const ord = _ordinalEtapaPlayoff('primera', _etapaPlayoffDesdeTexto(p.fecha));
+      if(ord==null) return null;
+      return base + 1000 + ord;
+    }
+    const n = extraerNumeroJornada(p.fecha);
+    return n==null ? null : base + n;
+  } else {
+    const fase = p.faseRes || p.fase || 'fase1';
+    if(fase==='fase3' || p.esPlayoff){
+      const ord = _ordinalEtapaPlayoff('segunda', _etapaPlayoffDesdeTexto(p.fecha));
+      return ord==null ? null : ORDEN_BASE_SEGUNDA.fase3_playoff + ord;
+    }
+    const base = fase==='fase2' ? ORDEN_BASE_SEGUNDA.fase2 : ORDEN_BASE_SEGUNDA.fase1;
+    const n = extraerNumeroJornada(p.fecha);
+    return n==null ? null : base + n;
+  }
+}
+
+// ── Convierte un número de orden cronológico global de vuelta a texto legible ──
+function etiquetaOrdenCronologico(div, ord){
+  if(ord==null) return '(fecha sin confirmar)';
+  if(div==='primera'){
+    if(ord < ORDEN_BASE_PRIMERA.apertura_playoff)   return `Fecha ${ord} (Apertura)`;
+    if(ord < ORDEN_BASE_PRIMERA.clausura_regular)   return `${_nombreEtapaPlayoff('primera', ord-ORDEN_BASE_PRIMERA.apertura_playoff)} (Playoff Apertura)`;
+    if(ord < ORDEN_BASE_PRIMERA.clausura_playoff)   return `Fecha ${ord-ORDEN_BASE_PRIMERA.clausura_regular} (Clausura)`;
+    return `${_nombreEtapaPlayoff('primera', ord-ORDEN_BASE_PRIMERA.clausura_playoff)} (Playoff Clausura)`;
+  } else {
+    if(ord < ORDEN_BASE_SEGUNDA.fase2)        return `Fecha ${ord} (1ª Fase)`;
+    if(ord < ORDEN_BASE_SEGUNDA.fase3_playoff) return `Fecha ${ord-ORDEN_BASE_SEGUNDA.fase2} (2ª Fase)`;
+    return `${_nombreEtapaPlayoff('segunda', ord-ORDEN_BASE_SEGUNDA.fase3_playoff)} (3ª Fase)`;
+  }
+}
+
+// ============================================================
+// AMONESTACIONES (tarjetas amarillas — se acumulan por jugador)
+// ============================================================
+let _amEditId = '';
+// ── Si se eligió un partido del selector (am-partido / ex-partido), devuelve su orden cronológico global.
 //    Devuelve undefined si el selector no tiene nada elegido (para no pisar un valor
 //    guardado previamente al editar un registro sin volver a elegir el partido) ──
 function jornadaDesdeSelectorPartido(prefix){
@@ -5202,10 +5291,12 @@ function jornadaDesdeSelectorPartido(prefix){
   if(!sel || !sel.value) return undefined;
   const p = (data.partidos||[]).find(x=>String(x.id)===String(sel.value));
   if(!p) return undefined;
-  return extraerNumeroJornada(p.fecha);
+  return ordenCronologicoPartido(p);
 }
-// ── Jornada "efectiva" de una amonestación/expulsión: usa el campo estructurado si existe,
-//    y si no, intenta rescatarla del texto del motivo (ej: "vs Rival — Fecha 6") ──
+// ── Jornada "efectiva" (orden cronológico global) de una amonestación/expulsión: usa el
+//    campo estructurado si existe, y si no, intenta rescatarla del texto del motivo (solo
+//    sirve para partidos de fecha regular tipo "Fecha 6"; si el motivo menciona una etapa
+//    de playoff no se puede reconstruir el orden global de forma confiable desde ahí) ──
 function jornadaEfectiva(item){
   if(item.jornada!=null && !isNaN(item.jornada)) return item.jornada;
   return extraerNumeroJornada(item.motivo);
