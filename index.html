@@ -4857,6 +4857,30 @@ function normalizarTexto(s){
 // las corrijas (editá esa amonestación/expulsión y elegí el partido
 // correspondiente en el desplegable).
 // ============================================================
+// ── Vincula manualmente un partido a una amonestación/expulsión que había
+//    quedado sin Fecha determinada (típicamente cargada por carga masiva
+//    antes de esta corrección), y refresca el panel de recálculo ──
+function asignarJornadaManual(coleccion, id){
+  const sel = document.getElementById(`sinfecha-sel-${coleccion}-${id}`);
+  if(!sel || !sel.value){ alert('Elegí un partido de la lista'); return; }
+  const p = (data.partidos||[]).find(x=>String(x.id)===String(sel.value));
+  if(!p){ alert('No se encontró ese partido'); return; }
+  const ord = ordenCronologicoPartido(p);
+  if(ord==null){ alert('Ese partido tampoco tiene una Fecha/etapa reconocible (revisá el campo "Fecha" del partido)'); return; }
+
+  const esAm = coleccion === 'amonestacion';
+  const KEY = esAm ? AMONESTACIONES_KEY : EXPULSIONES_KEY;
+  const lista = esAm ? getAmonestaciones() : getExpulsiones();
+  const item = lista.find(x=>x.id===id);
+  if(!item){ alert('No se encontró el registro'); return; }
+  item.jornada = ord;
+  localStorage.setItem(KEY, JSON.stringify(lista));
+  if(window._fb) window._fb.setItem(coleccion, item.id, item);
+
+  recalcularSancionesVigentes();
+  if(currentSection==='sanciones') renderSanciones();
+}
+
 function recalcularSancionesVigentes(){
   const eventos = _construirEventosSancion();
   const noHabilitados = _calcularNoHabilitados(eventos.eventosPorJugador);
@@ -4884,7 +4908,7 @@ function _construirEventosSancion(){
   getAmonestaciones().forEach(a=>{
     if(!a.club || !a.jugador) return;
     const jr = jornadaEfectiva(a);
-    if(jr==null) sinFecha.push({tipo:'🟡 Amarilla', jugador:a.jugador, club:a.club, motivo:a.motivo||'(sin motivo)'});
+    if(jr==null) sinFecha.push({tipo:'🟡 Amarilla', coleccion:'amonestacion', id:a.id, div:a.div, jugador:a.jugador, club:a.club, motivo:a.motivo||'(sin motivo)'});
     const key = (a.div||'')+'|'+normalizarTexto(a.club)+'|'+normalizarTexto(a.jugador);
     if(!amPorJugador[key]) amPorJugador[key] = {div:a.div, club:a.club, jugador:a.jugador, cards:[]};
     amPorJugador[key].cards.push({...a, _jornada:jr});
@@ -4907,7 +4931,7 @@ function _construirEventosSancion(){
     const susp = ex.suspension||0;
     if(susp<=0) return;
     const jr = jornadaEfectiva(ex);
-    if(jr==null) sinFecha.push({tipo:'🟥 Roja', jugador:ex.jugador, club:ex.club, motivo:ex.motivo||'(sin motivo)'});
+    if(jr==null) sinFecha.push({tipo:'🟥 Roja', coleccion:'expulsion', id:ex.id, div:ex.div, jugador:ex.jugador, club:ex.club, motivo:ex.motivo||'(sin motivo)'});
     const motivo = (ex.motivo||'Expulsión') + (jr==null ? ' (Fecha sin confirmar)' : ` (${etiquetaOrdenCronologico(ex.div, jr)})`);
     addEvento(ex.div, ex.club, ex.jugador, jr, susp, motivo, 'roja');
   });
@@ -5056,8 +5080,26 @@ function _mostrarResultadoRecalculo(noHabilitados, sinFecha){
 
   if(sinFecha.length){
     html += `<div style="margin:14px 0 6px;font-family:'Rajdhani',sans-serif;font-weight:700;color:#ff9d90">⚠ No se pudo determinar la Fecha de ${sinFecha.length} registro(s)</div>`;
-    html += `<div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:6px">No entran en el cálculo de arriba. Editalos y elegí el partido correspondiente en el desplegable para que quede vinculada la Fecha.</div>`;
-    html += sinFecha.map(s=>`<div class="san-admin-row"><div style="font-size:12px;color:rgba(255,255,255,.7)">${s.tipo} — ${s.jugador} (${s.club})${s.motivo?' · '+s.motivo:''}</div></div>`).join('');
+    html += `<div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:6px">Estos sí entran en el cálculo de arriba (por eso ves el aviso "revisar a mano" en algunos jugadores), pero no se puede confirmar si ya se cumplieron. Elegí el partido correspondiente acá abajo y tocá "Vincular" para corregirlo.</div>`;
+    html += sinFecha.map(s=>{
+      const partidos = (data.partidos||[])
+        .filter(p=>p.local===s.club || p.visit===s.club)
+        .slice()
+        .sort((a,b)=>String(b.id).localeCompare(String(a.id)));
+      const opciones = '<option value="">— Elegir partido —</option>' + partidos.map(p=>{
+        const rival = p.local===s.club ? p.visit : p.local;
+        return `<option value="${p.id}">${p.fecha||'Sin fecha'} vs ${rival}</option>`;
+      }).join('');
+      return `<div class="san-admin-row">
+        <div style="width:100%">
+          <div style="font-size:12px;color:rgba(255,255,255,.7)">${s.tipo} — ${s.jugador} (${s.club})${s.motivo?' · '+s.motivo:''}</div>
+          <div style="display:flex;gap:6px;margin-top:6px">
+            <select id="sinfecha-sel-${s.coleccion}-${s.id}" style="flex:1;min-width:0">${opciones}</select>
+            <button class="btn-secondary" onclick="asignarJornadaManual('${s.coleccion}','${s.id}')">Vincular</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
   }
 
   cont.innerHTML = html;
@@ -5147,11 +5189,13 @@ function confirmarCargaMasiva(prefix){
   const esAm = prefix==='am';
   const KEY = esAm ? AMONESTACIONES_KEY : EXPULSIONES_KEY;
   const lista = esAm ? getAmonestaciones() : getExpulsiones();
+  const jornadaSel = jornadaDesdeSelectorPartido(prefix); // mismo partido para todo el lote (un solo informe de árbitro)
   const jugadoresUmbral = [];
   filas.forEach(f=>{
     const item = esAm
       ? {id:String(Date.now())+Math.floor(Math.random()*999), div:f.div, club:f.club, jugador:f.jugador, fecha, motivo:f.motivoFinal}
       : {id:String(Date.now())+Math.floor(Math.random()*999), div:f.div, club:f.club, jugador:f.jugador, fecha, motivo:f.motivoFinal, suspension: f.suspFinal!=='' ? Math.max(0,parseInt(f.suspFinal,10)||0) : null};
+    if(jornadaSel !== undefined) item.jornada = jornadaSel;
     lista.unshift(item);
     f._itemCreado = item;
     if(window._fb) window._fb.setItem(esAm?'amonestacion':'expulsion', item.id, item);
