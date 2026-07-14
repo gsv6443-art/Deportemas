@@ -2095,6 +2095,78 @@ table.posiciones td:nth-child(8){
 /* audio oculto */
 #radio-player{display:none;}
 
+/* ============================================================
+   REPRODUCTOR DE ENTREVISTAS (audio con URL) — mismo lenguaje
+   visual que el reproductor de radio, pero con barra de progreso
+   arrastrable (no es un stream en vivo) y botón de retroceso.
+   ============================================================ */
+.ent-player{
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  background:rgba(255,255,255,.03);border:1px solid rgba(201,162,39,.15);
+  border-radius:var(--r-sm);padding:12px 16px;
+}
+.ent-btn-play{
+  width:42px;height:42px;border-radius:50%;flex-shrink:0;
+  background:linear-gradient(135deg,var(--dorado),var(--dorado-light));
+  border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;color:var(--negro);
+  box-shadow:0 0 14px rgba(201,162,39,.4);
+  transition:transform .15s,box-shadow .15s;
+}
+.ent-btn-play:hover{transform:scale(1.08);box-shadow:0 0 20px rgba(201,162,39,.6);}
+.ent-btn-play:active{transform:scale(.95);}
+.ent-btn-rw{
+  width:34px;height:34px;border-radius:50%;flex-shrink:0;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-size:14px;color:rgba(255,255,255,.7);
+  transition:background .15s,color .15s;
+}
+.ent-btn-rw:hover{background:rgba(201,162,39,.15);color:var(--dorado);}
+.ent-player-info{flex:1;min-width:140px;}
+.ent-progress-wrap{
+  height:6px;background:rgba(255,255,255,.1);border-radius:3px;
+  cursor:pointer;position:relative;
+}
+.ent-progress-fill{
+  height:100%;width:0%;border-radius:3px;
+  background:linear-gradient(90deg,var(--dorado),var(--dorado-light));
+  pointer-events:none;
+}
+.ent-time-row{
+  display:flex;justify-content:space-between;margin-top:5px;
+  font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;
+  color:rgba(255,255,255,.4);
+}
+.ent-vol-wrap{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.ent-vol-icon{
+  font-size:16px;cursor:pointer;color:rgba(255,255,255,.5);
+  transition:color .15s;user-select:none;
+}
+.ent-vol-icon:hover{color:var(--dorado);}
+.ent-vol-slider{
+  -webkit-appearance:none;appearance:none;
+  width:80px;height:4px;border-radius:2px;cursor:pointer;
+  background:rgba(255,255,255,.15);outline:none;
+}
+.ent-vol-slider::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;
+  width:13px;height:13px;border-radius:50%;
+  background:var(--dorado);cursor:pointer;
+  box-shadow:0 0 6px rgba(201,162,39,.5);
+  transition:transform .1s;
+}
+.ent-vol-slider::-webkit-slider-thumb:hover{transform:scale(1.2);}
+.ent-vol-slider::-moz-range-thumb{
+  width:13px;height:13px;border-radius:50%;border:none;
+  background:var(--dorado);cursor:pointer;
+}
+@media (max-width:520px){
+  .ent-vol-wrap{display:none;}
+  .ent-player{gap:10px;padding:10px 12px;}
+}
+
 /* ── Radio responsive en mobile ── */
 /* ══════════════════════════════════════════════════════
    BOTTOM NAV — solo mobile (≤760px)
@@ -3200,11 +3272,13 @@ table.posiciones td:nth-child(8){
           </div>
           <div id="no-galeria-preview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px"></div>
         </div>
-        <div class="form-group"><label>Audio <span style="color:var(--gris);font-size:10px">(sin límite de peso)</span></label>
+        <div class="form-group"><label>Audio <span style="color:var(--gris);font-size:10px">(sin límite de peso — ideal para entrevistas)</span></label>
           <div class="upload-area">
             <input type="file" accept="audio/*" id="no-audio-file" onchange="noPreviewAudio(this)"/>
             <span class="icon">🎙</span><p>Subí un archivo de audio</p>
           </div>
+          <div style="margin:8px 0;font-size:11px;color:var(--gris);font-family:'Rajdhani',sans-serif;text-align:center">— o —</div>
+          <input type="text" id="no-audio-url" placeholder="Pegá la URL de un audio (mp3, etc.)" oninput="noAudioDesdeUrl(this.value)"/>
           <div id="no-audio-preview" style="margin-top:8px"></div>
         </div>
         <div class="form-group"><label>Video <span style="color:var(--gris);font-size:10px">(sin límite de peso)</span></label>
@@ -7229,6 +7303,104 @@ async function subirACloudinary(file, resourceType='video'){
   return data.secure_url;
 }
 
+// ============================================================
+// REPRODUCTOR DE ENTREVISTAS (audio) — mismo lenguaje visual que
+// el reproductor de radio, con play/pausa, retroceso, barra de
+// progreso arrastrable y control de volumen.
+// ============================================================
+function renderEntrevistaPlayerHTML(src, uid){
+  if(!src) return '';
+  return `<div class="ent-player" id="ent-player-${uid}">
+    <button class="ent-btn-play" id="ent-btn-${uid}" onclick="entPlayerToggle('${uid}')" title="Reproducir/Pausar">▶</button>
+    <button class="ent-btn-rw" onclick="entPlayerRewind('${uid}')" title="Retroceder 10 segundos">⏪</button>
+    <div class="ent-player-info">
+      <div class="ent-progress-wrap" onclick="entPlayerSeek(event,'${uid}')">
+        <div class="ent-progress-fill" id="ent-fill-${uid}"></div>
+      </div>
+      <div class="ent-time-row">
+        <span id="ent-cur-${uid}">0:00</span>
+        <span id="ent-dur-${uid}">0:00</span>
+      </div>
+    </div>
+    <div class="ent-vol-wrap">
+      <span class="ent-vol-icon" id="ent-vol-icon-${uid}" onclick="entPlayerToggleMute('${uid}')" title="Silenciar">🔊</span>
+      <input type="range" class="ent-vol-slider" min="0" max="1" step="0.01" value="0.9" oninput="entPlayerSetVolume('${uid}', this.value)"/>
+    </div>
+    <audio id="ent-audio-${uid}" src="${src}" preload="metadata"
+      ontimeupdate="entPlayerTick('${uid}')"
+      onloadedmetadata="entPlayerTick('${uid}')"
+      onended="entPlayerEnded('${uid}')"></audio>
+  </div>`;
+}
+function _entFormatTime(s){
+  if(!isFinite(s)||s<0) s=0;
+  const m=Math.floor(s/60), sec=Math.floor(s%60);
+  return `${m}:${String(sec).padStart(2,'0')}`;
+}
+function entPlayerToggle(uid){
+  const audio=document.getElementById('ent-audio-'+uid); if(!audio) return;
+  const btn=document.getElementById('ent-btn-'+uid);
+  if(audio.paused){
+    // Pausa cualquier otro reproductor de entrevista que esté sonando (evita audios superpuestos)
+    document.querySelectorAll('audio[id^="ent-audio-"]').forEach(a=>{ if(a!==audio && !a.paused) a.pause(); });
+    audio.play().catch(()=>{});
+    if(btn) btn.textContent='❚❚';
+  } else {
+    audio.pause();
+    if(btn) btn.textContent='▶';
+  }
+}
+function entPlayerRewind(uid){
+  const audio=document.getElementById('ent-audio-'+uid); if(!audio) return;
+  audio.currentTime=Math.max(0, audio.currentTime-10);
+}
+function entPlayerSeek(ev, uid){
+  const audio=document.getElementById('ent-audio-'+uid); if(!audio||!isFinite(audio.duration)) return;
+  const rect=ev.currentTarget.getBoundingClientRect();
+  const ratio=Math.min(1, Math.max(0, (ev.clientX-rect.left)/rect.width));
+  audio.currentTime=ratio*audio.duration;
+  entPlayerTick(uid);
+}
+function entPlayerSetVolume(uid, val){
+  const audio=document.getElementById('ent-audio-'+uid); if(!audio) return;
+  audio.volume=parseFloat(val); audio.muted=false;
+  const icon=document.getElementById('ent-vol-icon-'+uid);
+  if(icon) icon.textContent = audio.volume===0 ? '🔇' : (audio.volume<0.5 ? '🔉' : '🔊');
+}
+function entPlayerToggleMute(uid){
+  const audio=document.getElementById('ent-audio-'+uid); if(!audio) return;
+  audio.muted=!audio.muted;
+  const icon=document.getElementById('ent-vol-icon-'+uid);
+  if(icon) icon.textContent = audio.muted ? '🔇' : (audio.volume<0.5 ? '🔉' : '🔊');
+}
+function entPlayerTick(uid){
+  const audio=document.getElementById('ent-audio-'+uid); if(!audio) return;
+  const fill=document.getElementById('ent-fill-'+uid);
+  const cur=document.getElementById('ent-cur-'+uid);
+  const dur=document.getElementById('ent-dur-'+uid);
+  const d=audio.duration;
+  if(fill && isFinite(d) && d>0) fill.style.width=(audio.currentTime/d*100)+'%';
+  if(cur) cur.textContent=_entFormatTime(audio.currentTime);
+  if(dur) dur.textContent=isFinite(d) ? _entFormatTime(d) : '0:00';
+}
+function entPlayerEnded(uid){
+  const btn=document.getElementById('ent-btn-'+uid); if(btn) btn.textContent='▶';
+}
+
+// ── Pegar una URL de audio directamente (alternativa a subir un archivo) ──
+let _noAudioUrlDebounce=null;
+function noAudioDesdeUrl(url){
+  if(_noAudioUrlDebounce) clearTimeout(_noAudioUrlDebounce);
+  _noAudioUrlDebounce=setTimeout(()=>{
+    url=(url||'').trim();
+    _noAudio=url;
+    _noAudioNombre='';
+    const prev=document.getElementById('no-audio-preview');
+    if(!prev) return;
+    prev.innerHTML = url ? renderEntrevistaPlayerHTML(url,'preview') : '';
+  }, 500);
+}
+
 async function noPreviewAudio(input){
   const file=input.files[0]; if(!file) return;
   _noAudioNombre=file.name;
@@ -7239,7 +7411,8 @@ async function noPreviewAudio(input){
     // Cloudinary trata el audio bajo resource_type "video"
     const url = await _subirConTimeout(subirACloudinary(file, 'video'), 45000);
     _noAudio=url;
-    prev.innerHTML=`<audio controls class="noticia-audio" src="${url}"></audio><div style="font-size:11px;color:var(--gris);font-family:'Rajdhani',sans-serif;margin-top:4px">🎙 ${file.name}</div>`;
+    prev.innerHTML=renderEntrevistaPlayerHTML(url,'preview')+`<div style="font-size:11px;color:var(--gris);font-family:'Rajdhani',sans-serif;margin-top:4px">🎙 ${file.name}</div>`;
+    const urlInp=document.getElementById('no-audio-url'); if(urlInp) urlInp.value='';
   }catch(e){
     console.error('Error subiendo audio a Cloudinary', e);
     prev.innerHTML='<div style="color:#e74c3c;font-size:11px;font-family:\'Rajdhani\',sans-serif">✕ Se cortó la subida del audio. Probá de nuevo.</div>';
@@ -7278,7 +7451,7 @@ function limpiarFormNoticia(){
   document.getElementById('no-galeria-preview').innerHTML='';
   document.getElementById('no-audio-preview').innerHTML='';
   document.getElementById('no-video-preview').innerHTML='';
-  ['no-img-file','no-galeria-file','no-audio-file','no-video-file'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['no-img-file','no-galeria-file','no-audio-file','no-audio-url','no-video-file'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
 }
 
 // Tamaño real en bytes del documento tal cual se mandaría a Firestore.
@@ -7853,8 +8026,8 @@ function abrirNoticiaModal(id){
   // Audio
   if(n.audio){
     body+=`<div class="noticia-media-section">
-      <div class="noticia-media-label">🎙 Audio</div>
-      <audio controls class="noticia-audio" src="${n.audio}"></audio>
+      <div class="noticia-media-label">🎙 ${n.cat==='Entrevistas'?'Entrevista':'Audio'}</div>
+      ${renderEntrevistaPlayerHTML(n.audio, n.id)}
       ${n.audioNombre?`<div style="font-size:11px;color:var(--gris);margin-top:5px;font-family:'Rajdhani',sans-serif">${n.audioNombre}</div>`:''}
     </div>`;
   }
