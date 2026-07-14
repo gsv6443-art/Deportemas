@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="icon" type="image/png" href="/favicon.ico">
+<link rel="icon" type="image/png" href="/favicon.png">
 
 <!-- ============================================================
      SEO PRIMARIO
@@ -7430,17 +7430,22 @@ async function noPreviewAudio(input){
   const file=input.files[0]; if(!file) return;
   _noAudioNombre=file.name;
   const prev=document.getElementById('no-audio-preview');
-  prev.innerHTML=`<div style="font-size:11px;color:var(--gris);font-family:'Rajdhani',sans-serif">⏳ Subiendo audio...</div>`;
+  const pesoMB = (file.size/1024/1024).toFixed(1);
+  prev.innerHTML=`<div style="font-size:11px;color:var(--gris);font-family:'Rajdhani',sans-serif">⏳ Subiendo audio (${pesoMB}MB)...</div>`;
   _noUploadsPendientes++; _noSetUploading(true);
   try{
-    // Cloudinary trata el audio bajo resource_type "video"
-    const url = await _subirConTimeout(subirACloudinary(file, 'video'), 45000);
+    // Cloudinary trata el audio bajo resource_type "video".
+    // El límite de tiempo se ajusta al peso del archivo (mínimo 90s, sumando
+    // ~20s extra por cada MB) para no cortar audios largos en conexiones lentas.
+    const timeoutMs = Math.max(90000, Math.round(file.size/1024/1024)*20000);
+    const url = await _subirConTimeout(subirACloudinary(file, 'video'), timeoutMs);
     _noAudio=url;
     prev.innerHTML=renderEntrevistaPlayerHTML(url,'preview')+`<div style="font-size:11px;color:var(--gris);font-family:'Rajdhani',sans-serif;margin-top:4px">🎙 ${file.name}</div>`;
     const urlInp=document.getElementById('no-audio-url'); if(urlInp) urlInp.value='';
   }catch(e){
     console.error('Error subiendo audio a Cloudinary', e);
-    prev.innerHTML='<div style="color:#e74c3c;font-size:11px;font-family:\'Rajdhani\',sans-serif">✕ Se cortó la subida del audio. Probá de nuevo.</div>';
+    const detalle = (e && e.message) ? e.message : 'error desconocido';
+    prev.innerHTML=`<div style="color:#e74c3c;font-size:11px;font-family:'Rajdhani',sans-serif">✕ Se cortó la subida del audio. Probá de nuevo.<br/><span style="color:rgba(255,255,255,.4)">Detalle: ${detalle}</span></div>`;
   }finally{
     _noUploadsPendientes--; if(_noUploadsPendientes<=0) _noSetUploading(false);
   }
