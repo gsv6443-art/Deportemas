@@ -256,6 +256,34 @@
       }catch(e){ console.warn('FB getAllGolFotos error', e); return {}; }
     },
 
+    // ── FOTO DE PLANTEL DE CLUB: un documento individual por club para evitar el límite de 1MB ──
+
+    // Guarda la foto de plantel de un club: /lrr/clubfoto_<key>
+    async setClubFoto(key, base64){
+      try{
+        await setDoc(doc(db, COL, 'clubfoto_' + key), { value: base64 });
+      }catch(e){ console.error('FB setClubFoto error', key, e); }
+    },
+    // Borra la foto de plantel de un club
+    async delClubFoto(key){
+      try{
+        await deleteDoc(doc(db, COL, 'clubfoto_' + key));
+      }catch(e){ console.warn('FB delClubFoto error', key, e); }
+    },
+    // Lee todos los documentos clubfoto_* y reconstruye el mapa {key: base64}
+    async getAllClubFotos(){
+      try{
+        const snap = await getDocs(collection(db, COL));
+        const result = {};
+        snap.forEach(d => {
+          if(d.id.startsWith('clubfoto_')){
+            result[d.id.slice(9)] = d.data().value;
+          }
+        });
+        return result;
+      }catch(e){ console.warn('FB getAllClubFotos error', e); return {}; }
+    },
+
     // ── SANCIONES: helpers genéricos, cada registro en su propio documento
     //    (/lrr/<prefijo>_<id>) para evitar el límite de 1MB y permitir listas grandes.
     //    Usado por Amonestaciones, Expulsiones, Expedientes y Actas. ──
@@ -412,7 +440,8 @@
       fbNoticiasViejo, fbPubs, fbFichas, fbCronos, fbDM,
       fbEscudosNuevo, fbTransferencias, fbGolFotos,
       fbNoticiasNuevo, fbAmonestaciones, fbExpulsiones,
-      fbExpedientesSan, fbActasSan, fbSancionesVigentes
+      fbExpedientesSan, fbActasSan, fbSancionesVigentes,
+      fbClubFotos
     ] = await Promise.all([
       window._fb.get('data'),
       window._fb.get('escudos'),
@@ -432,10 +461,13 @@
       window._fb.getAllItems('expedientesan'),
       window._fb.getAllItems('actasan'),
       window._fb.getAllItems('sancionvigente'),
+      window._fb.getAllClubFotos(),
     ]);
 
     // Cache en memoria de fotos de goleadores (id → base64), usado también por el listener en tiempo real
     window._golFotosCache = fbGolFotos || {};
+    // Cache en memoria de fotos de plantel de clubes (key normalizada → base64)
+    window._clubFotosCache = fbClubFotos || {};
 
     if(fbData)      { data = fbData; if(!data.playoff) data.playoff=[];
                       // Reincorporar fotos de goleadores (guardadas en docs individuales aparte)
@@ -3221,6 +3253,16 @@ table.posiciones td:nth-child(8){
         </div>
         <div class="form-group"><label>Dato extra / lema del club</label>
           <input type="text" id="fc-lema" placeholder="Ej: 100 años de gloria"/>
+        </div>
+        <div class="form-group"><label>Foto de plantel <span style="color:var(--gris);font-size:10px">(opcional — se usa como fondo en la imagen de Campeón del Play Off)</span></label>
+          <div class="upload-area">
+            <input type="file" accept="image/*" id="fc-foto-file" onchange="fcPreviewFoto(this)"/>
+            <span class="icon">📸</span><p>Hacé clic o arrastrá la foto</p>
+          </div>
+          <div class="preview-wrap" id="fc-foto-wrap">
+            <img id="fc-foto-preview" src="" alt="" style="max-height:140px;object-fit:cover;object-position:top"/>
+            <button type="button" class="btn-quitar-img" onclick="quitarFotoFicha()">✕ Quitar</button>
+          </div>
         </div>
         <button class="btn-primary" onclick="guardarFicha()">💾 Guardar Ficha</button>
         <div id="fc-msg" style="margin-top:8px;font-size:12px;display:none;font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px"></div>
@@ -8173,7 +8215,8 @@ function poblarSelectFichas(){
 function cargarFichaEnForm(){
   const nombre = document.getElementById('fc-equipo').value;
   const fichas = getFichas();
-  const f = nombre ? (fichas[normalizar(nombre)] || {}) : {};
+  const key = nombre ? normalizar(nombre) : '';
+  const f = nombre ? (fichas[key] || {}) : {};
   document.getElementById('fc-fundacion').value  = f.fundacion  || '';
   document.getElementById('fc-estadio').value    = f.estadio    || '';
   document.getElementById('fc-colores').value    = f.colores    || '';
@@ -8185,11 +8228,20 @@ function cargarFichaEnForm(){
   document.getElementById('fc-titulos').value    = (f.titulos||[]).join('\n');
   document.getElementById('fc-plantel').value    = (f.plantel||[]).join('\n');
   document.getElementById('fc-lema').value       = f.lema       || '';
+
+  // Foto de plantel: se lee del cache aparte (documento individual en Firestore), no de la ficha
+  _fcFoto=''; _fcFotoEliminada=false;
+  const fotoExistente = key && window._clubFotosCache ? window._clubFotosCache[key] : '';
+  const fp=document.getElementById('fc-foto-preview'), fw=document.getElementById('fc-foto-wrap'), ff=document.getElementById('fc-foto-file');
+  if(ff) ff.value='';
+  if(fotoExistente){ if(fp) fp.src=fotoExistente; if(fw) fw.classList.add('visible'); }
+  else { if(fp) fp.src=''; if(fw) fw.classList.remove('visible'); }
 }
 
 function guardarFicha(){
   const nombre = document.getElementById('fc-equipo').value;
   if(!nombre){ alert('Seleccioná un equipo'); return; }
+  const key = normalizar(nombre);
   const titulosRaw = document.getElementById('fc-titulos').value.trim();
   const plantelRaw = document.getElementById('fc-plantel').value.trim();
   const ficha = {
@@ -8207,8 +8259,20 @@ function guardarFicha(){
     lema:       document.getElementById('fc-lema').value.trim(),
   };
   const fichas = getFichas();
-  fichas[normalizar(nombre)] = ficha;
+  fichas[key] = ficha;
   saveFichas(fichas);
+
+  // Foto de plantel: se guarda aparte, en su propio documento de Firestore
+  if(_fcFoto){
+    if(window._fb) window._fb.setClubFoto(key, _fcFoto);
+    if(!window._clubFotosCache) window._clubFotosCache={};
+    window._clubFotosCache[key]=_fcFoto;
+  } else if(_fcFotoEliminada){
+    if(window._fb) window._fb.delClubFoto(key);
+    if(window._clubFotosCache) delete window._clubFotosCache[key];
+  }
+  _fcFoto=''; _fcFotoEliminada=false;
+
   const msg = document.getElementById('fc-msg');
   msg.textContent = '✓ Ficha guardada correctamente';
   msg.style.color = 'var(--dorado)';
@@ -8220,8 +8284,11 @@ function guardarFicha(){
 function eliminarFicha(nombre){
   pedirConfirmacion('¿Eliminar la ficha de "'+nombre+'"?', function(){
     const fichas = getFichas();
-    delete fichas[normalizar(nombre)];
+    const key = normalizar(nombre);
+    delete fichas[key];
     saveFichas(fichas);
+    if(window._fb) window._fb.delClubFoto(key);
+    if(window._clubFotosCache) delete window._clubFotosCache[key];
     renderAdminListaFichas();
   });
 }
@@ -8681,6 +8748,26 @@ function gPreviewFoto(input){
     const p=document.getElementById('g-foto-preview'); if(p) p.src=_gFoto;
     const w=document.getElementById('g-foto-wrap'); if(w) w.classList.add('visible');
   });
+}
+
+// Foto de plantel de club (usada como fondo en la imagen de Campeón del Play Off)
+let _fcFoto = '';          // nueva foto elegida en este formulario (base64), vacío si no se tocó
+let _fcFotoEliminada = false; // true si el usuario quitó explícitamente la foto existente
+function fcPreviewFoto(input){
+  const file=input.files[0]; if(!file) return;
+  comprimirABase64(file, 900, 0.8).then(dataUrl=>{
+    _fcFoto=dataUrl;
+    _fcFotoEliminada=false;
+    const p=document.getElementById('fc-foto-preview'); if(p) p.src=_fcFoto;
+    const w=document.getElementById('fc-foto-wrap'); if(w) w.classList.add('visible');
+  });
+}
+function quitarFotoFicha(){
+  _fcFoto='';
+  _fcFotoEliminada=true;
+  const p=document.getElementById('fc-foto-preview'); if(p) p.src='';
+  const w=document.getElementById('fc-foto-wrap'); if(w) w.classList.remove('visible');
+  const f=document.getElementById('fc-foto-file'); if(f) f.value='';
 }
 
 function edGPreviewFoto(input){
@@ -9986,6 +10073,14 @@ function renderPlayoff(torneo,contenedorId,esReserva){
     ?cruceHTML(final[0],1)
     :`<div class="playoff-empty">La Final no ha sido cargada</div>`;
 
+  const hayGanCuartos = cuartos.some(c=>c.ganador);
+  const hayGanSemis   = semis.some(c=>c.ganador);
+  const hayGanFinal   = !!(final.length && final[0].ganador);
+
+  const btnEtapa = (etapa, hayGan, titulo) => hayGan
+    ? `<button class="btn-share" style="padding:3px 9px;font-size:10px" onclick="abrirShare(()=>generarImagenEtapaPlayoff('${torneo}',${esReserva},'${etapa}'))" title="Compartir ${titulo}">${SVG_SHARE} Compartir</button>`
+    : '';
+
   const cont=document.getElementById(contenedorId);
   if(!cont) return;
   cont.innerHTML=`
@@ -9995,15 +10090,24 @@ function renderPlayoff(torneo,contenedorId,esReserva){
         <button class="btn-share" onclick="abrirShare(()=>generarImagenPlayoff('${torneo}',${esReserva}))">${SVG_SHARE} Compartir</button>
       </div>
       <div class="playoff-etapa">
-        <div class="playoff-etapa-header">Cuartos de Final <span style="color:rgba(255,255,255,.3);font-size:10px">· Partido único en cancha del mejor clasificado</span></div>
+        <div class="playoff-etapa-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
+          <span>Cuartos de Final <span style="color:rgba(255,255,255,.3);font-size:10px">· Partido único en cancha del mejor clasificado</span></span>
+          ${btnEtapa('cuartos', hayGanCuartos, 'Cuartos de Final')}
+        </div>
         <div class="playoff-cruces">${cuartosHTML}</div>
       </div>
       <div class="playoff-etapa">
-        <div class="playoff-etapa-header">Semifinales <span style="color:rgba(255,255,255,.3);font-size:10px">· Ida y vuelta</span></div>
+        <div class="playoff-etapa-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
+          <span>Semifinales <span style="color:rgba(255,255,255,.3);font-size:10px">· Ida y vuelta</span></span>
+          ${btnEtapa('semifinal', hayGanSemis, 'Semifinales')}
+        </div>
         <div class="playoff-cruces">${semisHTML}</div>
       </div>
       <div class="playoff-etapa">
-        <div class="playoff-etapa-header">Final <span style="color:rgba(255,255,255,.3);font-size:10px">· Ida y vuelta</span></div>
+        <div class="playoff-etapa-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
+          <span>Final <span style="color:rgba(255,255,255,.3);font-size:10px">· Ida y vuelta</span></span>
+          ${btnEtapa('final', hayGanFinal, 'la Final')}
+        </div>
         <div class="playoff-cruces">${finalHTML}</div>
       </div>
     </div>`;
@@ -11970,6 +12074,198 @@ async function generarImagenPlayoff(torneo, esReserva){
       y+=ROW_H;
     }
     y+=s(6);
+  }
+
+  cvFooter(ctx,W,CV_H - s(40),liga);
+  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+  return canvas;
+}
+
+// ── Generador: Felicitación por etapa de Play Off (Cuartos/Semis/Final) ──
+async function generarImagenEtapaPlayoff(torneo, esReserva, etapa){
+  esReserva = !!esReserva;
+  await document.fonts.ready;
+  const id   = getIdentidad();
+  const liga = id.nombre || 'DEPORTEMAS';
+  const W    = CV_W;
+  const CX   = W/2;
+
+  const cruces = data.playoff
+    .filter(c=>c.torneo===torneo && !!c.esReserva===esReserva && c.etapa===etapa)
+    .sort((a,b)=>a.cruce-b.cruce);
+
+  const ganadores = cruces.map(c=>c.ganador).filter(Boolean);
+  if(!ganadores.length) return null;
+
+  const escudoImgs={};
+  await Promise.all(ganadores.map(nombre=>new Promise(res=>{
+    const entry=escudos[nombre]||escudos[normalizar(nombre)];
+    const src=entry&&typeof entry==='object'?entry.img:entry;
+    if(!src){res();return;}
+    const img=new Image();
+    img.onload=()=>{escudoImgs[nombre]=img;res();}; img.onerror=()=>res(); img.src=src;
+  })));
+
+  const canvas = document.createElement('canvas');
+  canvas.width=W; canvas.height=CV_H;
+  const ctx=canvas.getContext('2d');
+  ctx.textBaseline='alphabetic';
+
+  const bgGrad = ctx.createLinearGradient(0,0,0,CV_H);
+  bgGrad.addColorStop(0,C.NEG3); bgGrad.addColorStop(1,C.NEG);
+  ctx.fillStyle=bgGrad; ctx.fillRect(0,0,W,CV_H);
+
+  // Foto de plantel del campeón de fondo (si el club tiene una cargada en su ficha)
+  if(etapa==='final'){
+    const fotoCampeon = window._clubFotosCache && window._clubFotosCache[normalizar(ganadores[0])];
+    if(fotoCampeon){
+      await new Promise(res=>{
+        const img=new Image();
+        img.onload=()=>{
+          const iW=img.naturalWidth, iH=img.naturalHeight;
+          const scale=Math.max(W/iW, CV_H/iH);
+          const dw=iW*scale, dh=iH*scale;
+          const dx=(W-dw)/2, dy=(CV_H-dh)/2;
+          ctx.globalAlpha=0.5;
+          ctx.drawImage(img,dx,dy,dw,dh);
+          ctx.globalAlpha=1;
+          const g2=ctx.createLinearGradient(0,0,0,CV_H);
+          g2.addColorStop(0,'rgba(8,8,8,.35)');
+          g2.addColorStop(0.45,'rgba(8,8,8,.55)');
+          g2.addColorStop(1,'rgba(8,8,8,.93)');
+          ctx.fillStyle=g2; ctx.fillRect(0,0,W,CV_H);
+          res();
+        };
+        img.onerror=()=>res();
+        img.src=fotoCampeon;
+      });
+    }
+  }
+
+  let y = await cvHeader(ctx,W,id,0);
+  const subLiga = torneoLabel(torneo)+(esReserva?' · Reserva':' · Primera División');
+
+  if(etapa==='final'){
+    // ── Diseño especial de Campeón ──
+    const campeon = ganadores[0];
+    const cuerpoH = CV_H - y - s(40);
+
+    // Confeti decorativo (puntos dorados fijos, discretos)
+    const confPos=[[60,0.18],[110,0.42],[980,0.16],[1020,0.5],[140,0.72],[950,0.75],[70,0.9],[1010,0.85]];
+    confPos.forEach(([px,pf],i)=>{
+      ctx.beginPath();
+      ctx.arc(s(px), y+cuerpoH*pf, s(i%2?3:4), 0, Math.PI*2);
+      ctx.fillStyle = i%3===0 ? 'rgba(240,192,64,0.5)' : 'rgba(201,162,39,0.3)';
+      ctx.fill();
+    });
+
+    let cy = y + s(56);
+
+    // Trofeo
+    ctx.font=`${s(90)}px sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('🏆', CX, cy);
+    cy += s(78);
+
+    // "CAMPEÓN"
+    ctx.fillStyle=C.DORADO;
+    ctx.font=`${s(46)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.textBaseline='alphabetic';
+    ctx.fillText('CAMPEÓN', CX, cy);
+    cy += s(30);
+
+    ctx.fillStyle='rgba(255,255,255,0.5)';
+    ctx.font=`600 ${s(15)}px "DM Sans", Arial, sans-serif`;
+    ctx.fillText(subLiga, CX, cy);
+    cy += s(50);
+
+    // Divisor dorado
+    const dg=ctx.createLinearGradient(0,0,W,0);
+    dg.addColorStop(0,'transparent'); dg.addColorStop(0.25,C.DORADO);
+    dg.addColorStop(0.75,C.DORADO); dg.addColorStop(1,'transparent');
+    ctx.fillStyle=dg; ctx.fillRect(0,cy,W,1);
+    cy += s(46);
+
+    // Escudo grande
+    const ECSZ = s(140);
+    const eImg = escudoImgs[campeon];
+    if(eImg){
+      ctx.save(); ctx.beginPath(); ctx.arc(CX,cy+ECSZ/2,ECSZ/2,0,Math.PI*2); ctx.clip();
+      ctx.drawImage(eImg, CX-ECSZ/2, cy, ECSZ, ECSZ); ctx.restore();
+      ctx.lineWidth=s(3); ctx.strokeStyle=C.DORADO;
+      ctx.beginPath(); ctx.arc(CX,cy+ECSZ/2,ECSZ/2,0,Math.PI*2); ctx.stroke();
+    } else {
+      cvEscudoFallback(ctx, campeon, CX-ECSZ/2, cy, ECSZ);
+    }
+    cy += ECSZ + s(36);
+
+    // Nombre del equipo — grande
+    ctx.fillStyle=C.BLANCO;
+    ctx.font=`${s(44)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.textAlign='center';
+    cvFillTextTrunc(ctx, campeon.toUpperCase(), CX, cy, W-s(80));
+    cy += s(34);
+
+    ctx.fillStyle='rgba(201,162,39,0.7)';
+    ctx.font=`600 ${s(14)}px "DM Sans", Arial, sans-serif`;
+    ctx.fillText('¡Felicitaciones, campeón del torneo!', CX, cy);
+
+  } else {
+    // ── Cuartos de Final / Semifinales: equipos que avanzan ──
+    const label    = etapa==='cuartos' ? 'CUARTOS DE FINAL' : 'SEMIFINALES';
+    const subtitulo= etapa==='cuartos' ? 'Avanzan a Semifinales' : 'Finalistas del torneo';
+
+    ctx.fillStyle=C.DORADO;
+    ctx.font=`${s(30)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.textAlign='center';
+    ctx.fillText(label, CX, y+s(38));
+    ctx.fillStyle='rgba(201,162,39,0.6)';
+    ctx.font=`600 ${s(14)}px "DM Sans", Arial, sans-serif`;
+    ctx.fillText(subtitulo+' · '+subLiga, CX, y+s(58));
+    y += s(64);
+
+    const dg=ctx.createLinearGradient(0,0,W,0);
+    dg.addColorStop(0,'transparent'); dg.addColorStop(0.2,C.DORADO);
+    dg.addColorStop(0.8,C.DORADO); dg.addColorStop(1,'transparent');
+    ctx.fillStyle=dg; ctx.fillRect(0,y,W,1);
+    y += s(20);
+
+    const hFooter  = s(40);
+    const hDisp    = CV_H - y - hFooter - s(10);
+    const ROW_H    = Math.max(s(110), Math.min(s(200), Math.floor(hDisp / ganadores.length)));
+    const hContenido = ganadores.length*ROW_H;
+    y += Math.max(0, Math.floor((hDisp - hContenido)/2));
+
+    const ECSIZE = s(64);
+    ganadores.forEach(nombre=>{
+      const ROW = ROW_H - s(16);
+      const fy  = y + ROW/2;
+
+      cvRoundRect(ctx, s(60), y, W-s(120), ROW, s(14));
+      ctx.fillStyle='rgba(201,162,39,0.07)'; ctx.fill();
+      ctx.lineWidth=1; ctx.strokeStyle='rgba(201,162,39,0.3)'; ctx.stroke();
+
+      const eImg = escudoImgs[nombre];
+      const ex = s(96), ey = fy-ECSIZE/2;
+      if(eImg){
+        ctx.save(); ctx.beginPath(); ctx.arc(ex+ECSIZE/2,ey+ECSIZE/2,ECSIZE/2,0,Math.PI*2); ctx.clip();
+        ctx.drawImage(eImg, ex, ey, ECSIZE, ECSIZE); ctx.restore();
+      } else {
+        cvEscudoFallback(ctx, nombre, ex, ey, ECSIZE);
+      }
+
+      ctx.fillStyle=C.BLANCO;
+      ctx.font=`${s(26)}px "Bebas Neue", Arial, sans-serif`;
+      ctx.textAlign='left'; ctx.textBaseline='middle';
+      cvFillTextTrunc(ctx, nombre.toUpperCase(), ex+ECSIZE+s(20), fy-s(10), W-ex-ECSIZE-s(120));
+
+      ctx.fillStyle='rgba(201,162,39,0.75)';
+      ctx.font=`600 ${s(13)}px "DM Sans", Arial, sans-serif`;
+      ctx.fillText((etapa==='cuartos'?'✓ Avanza a Semifinales':'✓ Avanza a la Final'), ex+ECSIZE+s(20), fy+s(16));
+      ctx.textBaseline='alphabetic';
+
+      y += ROW_H;
+    });
   }
 
   cvFooter(ctx,W,CV_H - s(40),liga);
