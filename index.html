@@ -8,8 +8,8 @@
 <!-- ============================================================
      SEO PRIMARIO
      ============================================================ -->
-<title>DeporteMás – Liga Regional Riotercerense de Fútbol</title>
-<meta name="description" content="Resultados, posiciones, goleadores y fixture en vivo de la Liga Regional Riotercerense de Fútbol. Río Tercero, Córdoba.">
+<title>DeporteMás Río Tercero – Tabla de Posiciones, Resultados y Fixture | Liga Regional Riotercerense</title>
+<meta name="description" content="Tabla de posiciones actualizada, resultados en vivo, goleadores y fixture de la Liga Regional Riotercerense de Fútbol. Toda la info del fútbol de Río Tercero, Córdoba.">
 <meta name="google-site-verification" content="r-AoIB25vTqGjqBoJ4__21P1Os3Q-WwMotqyTq7E0UE" />
 <meta name="keywords" content="liga regional riotercerense, fútbol río tercero, tabla de posiciones río tercero, resultados fútbol córdoba, deportemas, liga de fútbol córdoba, fixture río tercero">
 <meta name="author" content="DeporteMás">
@@ -2879,6 +2879,14 @@ table.posiciones td:nth-child(8){
 </head>
 <body>
 
+<!-- BLOQUE ESTÁTICO SEO — contenido textual disponible sin esperar JS/Firestore -->
+<div id="seo-intro" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;">
+  <h1>Fútbol Amateur de Río Tercero y la Región</h1>
+  <p>Seguí la tabla de posiciones, resultados, fixture y goleadores del fútbol
+  regional de Río Tercero y la zona, con equipos de Primera A, Primera B y
+  categoría Senior. Actualizado en tiempo real.</p>
+</div>
+
 <!-- MODAL PERFIL DE CLUB -->
 <div id="club-modal">
   <div class="club-modal-box">
@@ -4537,7 +4545,9 @@ function torneoLabel(t){return t==='apertura'?'Apertura 2026':'Clausura 2026';}
 // ============================================================
 function aplicarIdentidad(){
   const id=getIdentidad();
-  if(id.nombre){document.getElementById('header-nombre').textContent=id.nombre;document.title=id.nombre;}
+  if(id.nombre){document.getElementById('header-nombre').textContent=id.nombre;}
+  // NOTA SEO: ya no pisamos document.title acá — se deja el <title> estático
+  // optimizado del <head> para que Google indexe ese texto en vez del nombre simple.
   if(id.subtitulo) document.getElementById('header-subtitulo').textContent=id.subtitulo;
 
   // ── Actualizar splash ────────────────────────────────────
