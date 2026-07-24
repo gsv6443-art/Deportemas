@@ -430,6 +430,29 @@
     }
   });
 
+  // ── Progreso real del splash ──────────────────────────────────
+  // Cada una de las N consultas a Firestore, más el paso final de
+  // renderizado, cuenta como un "paso". El % mostrado es siempre el
+  // progreso real de pasos completados, nunca una animación simulada.
+  window._splashPasosTotal = 20; // 19 consultas + 1 paso de render final
+  window._splashPasosHechos = 0;
+  window._splashActualizarProgreso = function(texto){
+    const total = window._splashPasosTotal || 1;
+    const pct = Math.min(100, Math.round((window._splashPasosHechos/total)*100));
+    const bar = document.getElementById('splash-progress-bar');
+    const txt = document.getElementById('splash-status');
+    if(bar) bar.style.width = pct + '%';
+    if(txt) txt.textContent = (texto || 'Cargando datos...') + ' ' + pct + '%';
+  };
+  // Envuelve una promesa de Firebase: cuando resuelve (o falla), suma un
+  // paso al contador de progreso y refresca la barra/mensaje del splash.
+  function _trackCarga(promesa){
+    return promesa.finally(function(){
+      window._splashPasosHechos++;
+      window._splashActualizarProgreso();
+    });
+  }
+
   // ── Carga inicial de datos ───────────────────────────────────
   // Esperar a que el DOM esté listo; el script principal ya cargó data desde localStorage,
   // aquí lo sobreescribimos con los datos de Firestore.
@@ -443,26 +466,27 @@
       fbExpedientesSan, fbActasSan, fbSancionesVigentes,
       fbClubFotos
     ] = await Promise.all([
-      window._fb.get('data'),
-      window._fb.get('escudos'),
-      window._fb.get('identidad'),
-      window._fb.get('fotos'),
-      window._fb.get('noticias'),     // doc viejo (migración)
-      window._fb.get('pubs'),
-      window._fb.get('fichas'),
-      window._fb.get('cronos'),
-      window._fb.get('deportemas'),
-      window._fb.getAllEscudos(),
-      window._fb.get('transferencias'),
-      window._fb.getAllGolFotos(),
-      window._fb.getAllNoticias(),    // docs individuales (nuevo)
-      window._fb.getAllItems('amonestacion'),
-      window._fb.getAllItems('expulsion'),
-      window._fb.getAllItems('expedientesan'),
-      window._fb.getAllItems('actasan'),
-      window._fb.getAllItems('sancionvigente'),
-      window._fb.getAllClubFotos(),
+      _trackCarga(window._fb.get('data')),
+      _trackCarga(window._fb.get('escudos')),
+      _trackCarga(window._fb.get('identidad')),
+      _trackCarga(window._fb.get('fotos')),
+      _trackCarga(window._fb.get('noticias')),     // doc viejo (migración)
+      _trackCarga(window._fb.get('pubs')),
+      _trackCarga(window._fb.get('fichas')),
+      _trackCarga(window._fb.get('cronos')),
+      _trackCarga(window._fb.get('deportemas')),
+      _trackCarga(window._fb.getAllEscudos()),
+      _trackCarga(window._fb.get('transferencias')),
+      _trackCarga(window._fb.getAllGolFotos()),
+      _trackCarga(window._fb.getAllNoticias()),    // docs individuales (nuevo)
+      _trackCarga(window._fb.getAllItems('amonestacion')),
+      _trackCarga(window._fb.getAllItems('expulsion')),
+      _trackCarga(window._fb.getAllItems('expedientesan')),
+      _trackCarga(window._fb.getAllItems('actasan')),
+      _trackCarga(window._fb.getAllItems('sancionvigente')),
+      _trackCarga(window._fb.getAllClubFotos()),
     ]);
+
 
     // Cache en memoria de fotos de goleadores (id → base64), usado también por el listener en tiempo real
     window._golFotosCache = fbGolFotos || {};
@@ -540,6 +564,9 @@
     if(typeof renderTodasLasPubs==='function') renderTodasLasPubs();
     actualizarNavLive();
     renderSection(currentSection);
+    // Último paso: el contenido ya está pintado en pantalla → progreso 100%
+    window._splashPasosHechos = window._splashPasosTotal;
+    window._splashActualizarProgreso('¡Listo!');
     if(window._splashFallback) clearTimeout(window._splashFallback);
     if(window._ocultarSplash) window._ocultarSplash();
 
@@ -2726,6 +2753,10 @@ table.posiciones td:nth-child(8){
 .share-red-btn.instagram{background:linear-gradient(135deg,#f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%);color:#fff;}
 .share-red-btn.descargar{background:var(--negro4);color:var(--dorado);border:1px solid var(--dorado-border);grid-column:1/-1;}
 .share-note{text-align:center;font-family:'Rajdhani',sans-serif;font-size:11px;color:rgba(255,255,255,.25);letter-spacing:.4px;padding:0 16px 12px;line-height:1.5;}
+.share-img-nav{display:flex;align-items:center;justify-content:center;gap:14px;margin:0 16px 10px;}
+.share-img-nav button{background:rgba(201,162,39,.12);border:1px solid rgba(201,162,39,.3);color:var(--dorado,#c9a227);width:32px;height:32px;border-radius:50%;font-size:18px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;}
+.share-img-nav button:hover{background:rgba(201,162,39,.25);}
+.share-img-nav span{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:600;color:rgba(255,255,255,.55);letter-spacing:.4px;min-width:38px;text-align:center;}
 .share-card-row{display:flex;align-items:center;justify-content:flex-end;padding:6px 16px 2px;}
 
 /* ── PWA INSTALL BANNER ── */
@@ -2927,6 +2958,11 @@ table.posiciones td:nth-child(8){
         Generando imagen...
       </div>
       <img id="share-img-preview" src="" alt="" style="display:none"/>
+    </div>
+    <div class="share-img-nav" id="share-img-nav" style="display:none">
+      <button type="button" onclick="shareCambiarImagen(-1)" aria-label="Imagen anterior">‹</button>
+      <span id="share-img-contador">1 / 2</span>
+      <button type="button" onclick="shareCambiarImagen(1)" aria-label="Imagen siguiente">›</button>
     </div>
     <div class="share-redes">
       <button class="share-red-btn whatsapp" onclick="compartirImgEn('whatsapp')">
@@ -4121,9 +4157,9 @@ table.posiciones td:nth-child(8){
     <div id="splash-logo-ini" style="width:100%;height:100%;background:#c9a227;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:30px;color:#080808">DM</div>
   </div>
   <div id="splash-nombre" style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:#c9a227;letter-spacing:4px;text-transform:uppercase">DEPORTEMAS</div>
-  <div style="font-family:'Rajdhani',sans-serif;font-size:11px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:2px">Cargando...</div>
+  <div id="splash-status" style="font-family:'Rajdhani',sans-serif;font-size:11px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:2px">Cargando datos... 0%</div>
   <div style="width:140px;height:3px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden">
-    <div style="height:100%;background:linear-gradient(90deg,#c9a227,#f0c040);border-radius:2px;animation:splash-load .6s ease forwards .1s;width:0%"></div>
+    <div id="splash-progress-bar" style="height:100%;background:linear-gradient(90deg,#c9a227,#f0c040);border-radius:2px;width:0%;transition:width .25s ease"></div>
   </div>
 </div>
 <script>window._splashStart = Date.now();</script>
@@ -10307,7 +10343,9 @@ function toggleFotosSidebar(seccion){
 // ============================================================
 // COMPARTIR EN REDES SOCIALES  (imágenes via Canvas)
 // ============================================================
-let _shareCanvas = null;   // canvas con la imagen generada
+let _shareCanvas = null;   // canvas con la imagen generada (imagen actualmente visible)
+let _shareCanvases = null; // array de canvas cuando hay más de una imagen (p.ej. Próximos Partidos con +4)
+let _shareIdx = 0;         // índice de la imagen actual dentro de _shareCanvases
 
 function cerrarShare(){
   document.getElementById('share-modal').classList.remove('open');
@@ -11155,7 +11193,24 @@ async function generarImagenGoleadores(){
   return canvas;
 }
 
+// Genera la(s) imagen(es) de "Próximos Partidos". Si hay más de 4 partidos,
+// devuelve un ARRAY con 2 canvas (imagen 1: los primeros 4, imagen 2: el resto).
+// Si hay 4 o menos, devuelve un único canvas (comportamiento anterior).
 async function generarImagenProximos(ids){
+  if(ids.length > 4){
+    const grupo1 = ids.slice(0,4);
+    const grupo2 = ids.slice(4);
+    const canvases = [];
+    const c1 = await _generarImagenProximosGrupo(grupo1);
+    if(c1) canvases.push(c1);
+    const c2 = await _generarImagenProximosGrupo(grupo2);
+    if(c2) canvases.push(c2);
+    return canvases.length ? canvases : null;
+  }
+  return await _generarImagenProximosGrupo(ids);
+}
+
+async function _generarImagenProximosGrupo(ids){
   await document.fonts.ready;
   const id   = getIdentidad();
   const liga = id.nombre||'DEPORTEMAS';
@@ -12301,23 +12356,35 @@ async function generarImagenEtapaPlayoff(torneo, esReserva, etapa){
 // ── Apertura del modal ───────────────────────────────────────
 
 async function abrirShareCanvas(generadorFn){
-  _shareCanvas = null;
+  _shareCanvas   = null;
+  _shareCanvases = null;
+  _shareIdx      = 0;
   const imgEl  = document.getElementById('share-img-preview');
   const loadEl = document.getElementById('share-img-loading');
   const noteEl = document.getElementById('share-note');
+  const navEl  = document.getElementById('share-img-nav');
   imgEl.style.display  = 'none';
   loadEl.style.display = 'flex';
   noteEl.textContent   = '';
+  if(navEl) navEl.style.display = 'none';
 
   document.getElementById('share-modal').classList.add('open');
 
   // Generar en el siguiente frame para que el spinner se vea
   requestAnimationFrame(async () => {
     try {
-      const canvas = await generadorFn();
-      if(!canvas){ cerrarShare(); return; }
-      _shareCanvas = canvas;
-      imgEl.src    = canvas.toDataURL('image/png');
+      const resultado = await generadorFn();
+      if(!resultado || (Array.isArray(resultado) && !resultado.length)){ cerrarShare(); return; }
+
+      if(Array.isArray(resultado)){
+        _shareCanvases = resultado;
+        _shareIdx = 0;
+        _shareMostrarImagen();
+      } else {
+        _shareCanvases = null;
+        _shareCanvas = resultado;
+        imgEl.src = resultado.toDataURL('image/png');
+      }
       imgEl.style.display  = 'block';
       loadEl.style.display = 'none';
 
@@ -12334,6 +12401,30 @@ async function abrirShareCanvas(generadorFn){
       console.error(e);
     }
   });
+}
+
+// Muestra en el preview la imagen actual (_shareIdx) cuando hay varias, y
+// actualiza el contador / habilita los botones de navegación del modal.
+function _shareMostrarImagen(){
+  if(!_shareCanvases || !_shareCanvases.length) return;
+  const imgEl = document.getElementById('share-img-preview');
+  const navEl = document.getElementById('share-img-nav');
+  const cntEl = document.getElementById('share-img-contador');
+  _shareCanvas = _shareCanvases[_shareIdx];
+  imgEl.src = _shareCanvas.toDataURL('image/png');
+  if(_shareCanvases.length > 1 && navEl){
+    navEl.style.display = 'flex';
+    if(cntEl) cntEl.textContent = (_shareIdx+1) + ' / ' + _shareCanvases.length;
+  } else if(navEl){
+    navEl.style.display = 'none';
+  }
+}
+
+// Navega entre las imágenes generadas (usado por los botones ◀ ▶ del modal)
+function shareCambiarImagen(delta){
+  if(!_shareCanvases || !_shareCanvases.length) return;
+  _shareIdx = (_shareIdx + delta + _shareCanvases.length) % _shareCanvases.length;
+  _shareMostrarImagen();
 }
 
 // Reemplaza abrirShare (llamado desde los botones de las cards)
@@ -12388,6 +12479,15 @@ async function compartirImgEn(red){
 }
 
 function descargarImagen(){
+  if(_shareCanvases && _shareCanvases.length > 1){
+    _shareCanvases.forEach((cv,i)=>{
+      const a = document.createElement('a');
+      a.href     = cv.toDataURL('image/png');
+      a.download = 'deportemas-' + Date.now() + '-' + (i+1) + '.png';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    });
+    return;
+  }
   if(!_shareCanvas) return;
   const a = document.createElement('a');
   a.href     = _shareCanvas.toDataURL('image/png');
@@ -12569,6 +12669,10 @@ renderFooter();
   // Ocultar splash una vez que Firebase haya terminado de cargar
   // Fallback: si Firebase no respondió en 5s, ocultarlo y renderizar igual con los datos locales
   window._splashFallback = setTimeout(function(){
+    if(window._splashActualizarProgreso){
+      window._splashPasosHechos = window._splashPasosTotal || 20;
+      window._splashActualizarProgreso('Usando datos guardados...');
+    }
     window._ocultarSplash();
     // Forzar render con datos locales (localStorage) por si Firebase no llegó
     try {
