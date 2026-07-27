@@ -284,6 +284,19 @@
       }catch(e){ console.warn('FB getAllClubFotos error', e); return {}; }
     },
 
+    // Migra transferencias del formato viejo (doc único con array completo,
+    // limitado a 1MB por Firestore) al nuevo (un doc por movimiento: transferencia_<id>)
+    async migrarTransferencias(arr){
+      if(!arr || !arr.length) return;
+      console.log(`Migrando ${arr.length} transferencias a documentos individuales...`);
+      await Promise.all(arr.map(t => t.id ? window._fb.setItem('transferencia', t.id, t) : Promise.resolve()));
+      try{
+        const { deleteDoc: dd } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+        await dd(doc(db, COL, 'transferencias'));
+        console.log('Migración completa. Documento viejo "transferencias" eliminado.');
+      }catch(e){}
+    },
+
     // ── SANCIONES: helpers genéricos, cada registro en su propio documento
     //    (/lrr/<prefijo>_<id>) para evitar el límite de 1MB y permitir listas grandes.
     //    Usado por Amonestaciones, Expulsiones, Expedientes y Actas. ──
@@ -461,7 +474,7 @@
     const [
       fbData, fbEscudosViejo, fbIdentidad, fbFotos,
       fbNoticiasViejo, fbPubs, fbFichas, fbCronos, fbDM,
-      fbEscudosNuevo, fbTransferencias, fbGolFotos,
+      fbEscudosNuevo, fbTransferenciasNuevo, fbTransferenciasViejo, fbGolFotos,
       fbNoticiasNuevo, fbAmonestaciones, fbExpulsiones,
       fbExpedientesSan, fbActasSan, fbSancionesVigentes,
       fbClubFotos
@@ -476,7 +489,8 @@
       _trackCarga(window._fb.get('cronos')),
       _trackCarga(window._fb.get('deportemas')),
       _trackCarga(window._fb.getAllEscudos()),
-      _trackCarga(window._fb.get('transferencias')),
+      _trackCarga(window._fb.getAllItems('transferencia')),
+      _trackCarga(window._fb.get('transferencias')), // doc viejo (migración)
       _trackCarga(window._fb.getAllGolFotos()),
       _trackCarga(window._fb.getAllNoticias()),    // docs individuales (nuevo)
       _trackCarga(window._fb.getAllItems('amonestacion')),
@@ -529,7 +543,15 @@
     if(noticiasLocalesPendientes.length && window._fb){
       reintentarSincronizarNoticias().then(()=>{ if(currentSection==='noticias') renderNoticias(); });
     }
-    if(fbTransferencias) { localStorage.setItem(TF_KEY, JSON.stringify(fbTransferencias)); }
+    // Transferencias: prioridad a docs individuales (nuevo), fallback al doc único (viejo).
+    if(fbTransferenciasNuevo && fbTransferenciasNuevo.length){
+      const ordenadas = [...fbTransferenciasNuevo].sort((a,b)=>(b.id||'').localeCompare(a.id||''));
+      localStorage.setItem(TF_KEY, JSON.stringify(ordenadas));
+    } else if(fbTransferenciasViejo && fbTransferenciasViejo.length){
+      localStorage.setItem(TF_KEY, JSON.stringify(fbTransferenciasViejo));
+      // Migrar al formato nuevo: un documento por movimiento (evita el límite de 1MB)
+      if(window._fb) window._fb.migrarTransferencias(fbTransferenciasViejo);
+    }
     if(fbAmonestaciones) { localStorage.setItem(AMONESTACIONES_KEY, JSON.stringify(fbAmonestaciones)); }
     if(fbExpulsiones)    { localStorage.setItem(EXPULSIONES_KEY,    JSON.stringify(fbExpulsiones)); }
     if(fbExpedientesSan) { localStorage.setItem(EXPEDIENTES_SAN_KEY,JSON.stringify(fbExpedientesSan)); }
@@ -624,12 +646,6 @@
         localStorage.setItem('lrr_noticias', JSON.stringify(fbVal));
         if(currentSection==='noticias') renderNoticias();
       }
-    });
-    // Suscribir cambios en tiempo real a transferencias
-    window._fb.listen('transferencias', fbVal => {
-      if(!fbVal) return;
-      localStorage.setItem(TF_KEY, JSON.stringify(fbVal));
-      if(currentSection==='transferencias') renderTransferencias();
     });
     // Suscribir cambios en tiempo real a fichas
     window._fb.listen('fichas', fbVal => {
@@ -6206,6 +6222,31 @@ function renderResultados(){
 // RENDER POSICIONES (filtrado por torneo)
 // ============================================================
 // ============================================================
+// COMPLETAR EQUIPOS SIN PARTIDOS — para que la tabla nunca arranque vacía
+// ============================================================
+/**
+ * Agrega a una tabla de posiciones ya calculada los equipos de una división
+ * que todavía no tienen ningún partido cargado, con todas sus estadísticas
+ * en cero. Es puramente para MOSTRAR: no se guarda en data.posiciones ni en
+ * ningún otro lado, así que no afecta el recálculo, los desempates, las
+ * penalizaciones del tribunal disciplinario ni la carga/edición de partidos.
+ * @param {Array}  pos - registros de posiciones ya calculados (de partidos jugados)
+ * @param {string} div - 'primera' o 'segunda'
+ * @returns {Array} pos + equipos faltantes con estadísticas en cero
+ */
+function completarConEquiposSinPartidos(pos, div){
+  const yaEstan = new Set(pos.map(p => normalizar(p.equipo)));
+  const faltantes = (data.equipos || [])
+    .filter(eq => eq.div === div && !yaEstan.has(normalizar(eq.nombre)))
+    .sort((a,b) => a.nombre.localeCompare(b.nombre))
+    .map(eq => ({
+      equipo: eq.nombre, pj:0, g:0, e:0, p:0, gf:0, gc:0, pts:0, dg:'+0',
+      ptsDesc:0, ptsDescMotivo:''
+    }));
+  return [...pos, ...faltantes];
+}
+
+// ============================================================
 // DESEMPATE – 7 criterios en cascada
 // ============================================================
 /**
@@ -6335,7 +6376,10 @@ function renderPosiciones(){
       if(p.ptsDescMotivo) map[k].ptsDescMotivo=p.ptsDescMotivo;
     });
     const gen = ordenarConDesempate(
-      Object.values(map).map(p=>({...p, dg:(p.gf-p.gc>=0?'+':'')+(p.gf-p.gc)})),
+      completarConEquiposSinPartidos(
+        Object.values(map).map(p=>({...p, dg:(p.gf-p.gc>=0?'+':'')+(p.gf-p.gc)})),
+        'primera'
+      ),
       data.partidos.filter(p=>p.div==='primera')
     );
 
@@ -6389,7 +6433,10 @@ function renderPosiciones(){
   // ---- PRIMERA DIVISIÓN: por torneo ----
   const partsTorneo = data.partidos.filter(p=>p.div===div&&(p.torneo||'apertura')===torneo&&p.estado==='jugado');
   const pos = ordenarConDesempate(
-    [...data.posiciones.filter(p=>p.div===div&&(p.torneo||'apertura')===torneo)],
+    completarConEquiposSinPartidos(
+      [...data.posiciones.filter(p=>p.div===div&&(p.torneo||'apertura')===torneo)],
+      div
+    ),
     partsTorneo
   );
   if(!pos.length){el.innerHTML=`<div class="card"><div class="card-header"><span>Posiciones – ${torneoLabel(torneo)}</span><span class="div-badge">${div==='primera'?'1ª':'2ª'}</span></div><div class="empty-msg">No hay posiciones cargadas para este torneo</div></div>`;return;}
@@ -6463,7 +6510,7 @@ function calcularPosicionesReserva(div, filtroExtra){
   });
   const tabla = Object.values(map)
     .map(r => ({...r, dg: (r.gf-r.gc >= 0 ? '+' : '') + (r.gf-r.gc)}));
-  return ordenarConDesempate(tabla, partidos);
+  return ordenarConDesempate(completarConEquiposSinPartidos(tabla, div), partidos);
 }
 
 function posReservaTablaHTML(titulo, pos, divBadge, shareBtn, opts){
@@ -7866,18 +7913,24 @@ function mostrarMsg(elId, texto, color){
 
 const TF_KEY = 'lrr_transferencias';
 function getTransferencias(){ try{ return JSON.parse(localStorage.getItem(TF_KEY))||[]; }catch(e){ return []; } }
+// Guarda el cache local (array completo, para lectura rápida en esta sesión).
+// Ya NO sincroniza el array entero a Firestore (eso se hace por movimiento individual
+// con _fbSyncTransferencia/_fbBorrarTransferencia, evitando el límite de 1MB por documento).
 function saveTransferencias(arr){
   try{
     localStorage.setItem(TF_KEY, JSON.stringify(arr));
-    if(window._fb) window._fb.set('transferencias',arr);
+    return true;
   }catch(e){
-    if(e && e.name === 'QuotaExceededError'){
-      mostrarMsg('tf-msg','⚠ No hay espacio para guardar. Borrá movimientos viejos con foto o subí una imagen más liviana.','#e05555');
-    } else {
-      mostrarMsg('tf-msg','⚠ No se pudo guardar el movimiento.','#e05555');
-    }
-    throw e;
+    mostrarMsg('tf-msg','⚠ No se pudo guardar el cache local, pero se sincroniza igual con el servidor.','#e05555');
+    return false;
   }
+}
+// Sincroniza UN movimiento a su propio documento en Firestore (transferencia_<id>)
+function _fbSyncTransferencia(tf){
+  if(window._fb) window._fb.setItem('transferencia', tf.id, tf);
+}
+function _fbBorrarTransferencia(id){
+  if(window._fb) window._fb.delItem('transferencia', id);
 }
 
 let _tfFoto = '';
@@ -7937,11 +7990,8 @@ function guardarTransferencia(){
 
   const arr = getTransferencias();
   arr.unshift(tf);
-  try{
-    saveTransferencias(arr);
-  }catch(e){
-    return; // el mensaje de error ya lo muestra saveTransferencias
-  }
+  saveTransferencias(arr);
+  _fbSyncTransferencia(tf);
   limpiarFormTransferencia();
   mostrarMsg('tf-msg','✅ Movimiento publicado','var(--dorado)');
   renderAdminListaTransferencias();
@@ -7968,6 +8018,7 @@ function limpiarFormTransferencia(){
 function eliminarTransferencia(id){
   if(!confirm('¿Eliminar este movimiento?')) return;
   saveTransferencias(getTransferencias().filter(t=>t.id!==id));
+  _fbBorrarTransferencia(id);
   renderAdminListaTransferencias();
   if(currentSection==='noticias') renderTransferencias();
 }
@@ -8035,6 +8086,7 @@ function editarTransferencia(id){
       desc:     document.getElementById('ed-tf-desc').value.trim(),
     };
     saveTransferencias(arr);
+    _fbSyncTransferencia(arr[idx]);
     renderAdminListaTransferencias();
     if(currentSection==='noticias') renderTransferencias();
     cerrarModalEdicion();
@@ -10752,7 +10804,10 @@ async function generarImagenPosiciones(){
       ['pts','pj','g','e','p','gf','gc'].forEach(f=>map[k][f]+=Number(p[f])||0);
     });
     pos = ordenarConDesempate(
-      Object.values(map).map(p=>({...p, dg:(p.gf-p.gc>=0?'+':'')+(p.gf-p.gc)})),
+      completarConEquiposSinPartidos(
+        Object.values(map).map(p=>({...p, dg:(p.gf-p.gc>=0?'+':'')+(p.gf-p.gc)})),
+        'primera'
+      ),
       data.partidos.filter(p=>p.div==='primera')
     );
     tituloPosiciones='Tabla General';
@@ -10760,7 +10815,10 @@ async function generarImagenPosiciones(){
   } else {
     const partsTorneo = data.partidos.filter(p=>p.div===div&&(p.torneo||'apertura')===torneo&&p.estado==='jugado');
     pos = ordenarConDesempate(
-      [...data.posiciones.filter(p=>p.div===div&&(p.torneo||'apertura')===torneo)],
+      completarConEquiposSinPartidos(
+        [...data.posiciones.filter(p=>p.div===div&&(p.torneo||'apertura')===torneo)],
+        div
+      ),
       partsTorneo
     );
     tituloPosiciones='Posiciones';
