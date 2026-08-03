@@ -284,6 +284,62 @@
       }catch(e){ console.warn('FB getAllClubFotos error', e); return {}; }
     },
 
+    // ── LOGO DE TORNEO: un documento individual por torneo para evitar el límite de 1MB ──
+
+    // Guarda el logo de un torneo: /lrr/torneologo_<id>
+    async setTorneoLogo(id, base64){
+      try{
+        await setDoc(doc(db, COL, 'torneologo_' + id), { value: base64 });
+      }catch(e){ console.error('FB setTorneoLogo error', id, e); }
+    },
+    // Borra el logo de un torneo
+    async delTorneoLogo(id){
+      try{
+        await deleteDoc(doc(db, COL, 'torneologo_' + id));
+      }catch(e){ console.warn('FB delTorneoLogo error', id, e); }
+    },
+    // Lee todos los documentos torneologo_* y reconstruye el mapa {id: base64}
+    async getAllTorneoLogos(){
+      try{
+        const snap = await getDocs(collection(db, COL));
+        const result = {};
+        snap.forEach(d => {
+          if(d.id.startsWith('torneologo_')){
+            result[d.id.slice(11)] = d.data().value;
+          }
+        });
+        return result;
+      }catch(e){ console.warn('FB getAllTorneoLogos error', e); return {}; }
+    },
+
+    // ── FOTO DEL CAMPEÓN DE TORNEO: un documento individual por torneo para evitar el límite de 1MB ──
+
+    // Guarda la foto del campeón de un torneo: /lrr/torneofoto_<id>
+    async setTorneoFoto(id, base64){
+      try{
+        await setDoc(doc(db, COL, 'torneofoto_' + id), { value: base64 });
+      }catch(e){ console.error('FB setTorneoFoto error', id, e); }
+    },
+    // Borra la foto del campeón de un torneo
+    async delTorneoFoto(id){
+      try{
+        await deleteDoc(doc(db, COL, 'torneofoto_' + id));
+      }catch(e){ console.warn('FB delTorneoFoto error', id, e); }
+    },
+    // Lee todos los documentos torneofoto_* y reconstruye el mapa {id: base64}
+    async getAllTorneoFotos(){
+      try{
+        const snap = await getDocs(collection(db, COL));
+        const result = {};
+        snap.forEach(d => {
+          if(d.id.startsWith('torneofoto_')){
+            result[d.id.slice(11)] = d.data().value;
+          }
+        });
+        return result;
+      }catch(e){ console.warn('FB getAllTorneoFotos error', e); return {}; }
+    },
+
     // Migra transferencias del formato viejo (doc único con array completo,
     // limitado a 1MB por Firestore) al nuevo (un doc por movimiento: transferencia_<id>)
     async migrarTransferencias(arr){
@@ -477,7 +533,7 @@
       fbEscudosNuevo, fbTransferenciasNuevo, fbTransferenciasViejo, fbGolFotos,
       fbNoticiasNuevo, fbAmonestaciones, fbExpulsiones,
       fbExpedientesSan, fbActasSan, fbSancionesVigentes,
-      fbClubFotos
+      fbClubFotos, fbTorneoLogos, fbTorneoFotos
     ] = await Promise.all([
       _trackCarga(window._fb.get('data')),
       _trackCarga(window._fb.get('escudos')),
@@ -499,6 +555,8 @@
       _trackCarga(window._fb.getAllItems('actasan')),
       _trackCarga(window._fb.getAllItems('sancionvigente')),
       _trackCarga(window._fb.getAllClubFotos()),
+      _trackCarga(window._fb.getAllTorneoLogos()),
+      _trackCarga(window._fb.getAllTorneoFotos()),
     ]);
 
 
@@ -506,11 +564,21 @@
     window._golFotosCache = fbGolFotos || {};
     // Cache en memoria de fotos de plantel de clubes (key normalizada → base64)
     window._clubFotosCache = fbClubFotos || {};
+    // Cache en memoria de logos y fotos de campeón de torneos (id → base64)
+    window._torneoLogosCache = fbTorneoLogos || {};
+    window._torneoFotosCache = fbTorneoFotos || {};
 
     if(fbData)      { data = fbData; if(!data.playoff) data.playoff=[];
                       // Reincorporar fotos de goleadores (guardadas en docs individuales aparte)
                       if(data.goleadores && window._golFotosCache){
                         data.goleadores.forEach(g=>{ if(window._golFotosCache[g.id]) g.foto=window._golFotosCache[g.id]; });
+                      }
+                      // Reincorporar logos y fotos de campeón de torneos (guardados en docs individuales aparte)
+                      if(data.torneos){
+                        data.torneos.forEach(t=>{
+                          if(window._torneoLogosCache && window._torneoLogosCache[t.id]) t.logo=window._torneoLogosCache[t.id];
+                          if(window._torneoFotosCache && window._torneoFotosCache[t.id]) t.campeonFoto=window._torneoFotosCache[t.id];
+                        });
                       }
                       _guardarDataLiviano(data);
                       // Recalcular posiciones y goleadores desde los partidos al cargar
@@ -608,6 +676,12 @@
       // Reincorporar las fotos de goleadores (no viajan en el doc "data", están aparte)
       if(data.goleadores && window._golFotosCache){
         data.goleadores.forEach(g=>{ if(window._golFotosCache[g.id]) g.foto=window._golFotosCache[g.id]; });
+      }
+      if(data.torneos){
+        data.torneos.forEach(t=>{
+          if(window._torneoLogosCache && window._torneoLogosCache[t.id]) t.logo=window._torneoLogosCache[t.id];
+          if(window._torneoFotosCache && window._torneoFotosCache[t.id]) t.campeonFoto=window._torneoFotosCache[t.id];
+        });
       }
       recalcularTodo();
       aplicarTodasLasPenalizaciones();
@@ -1444,6 +1518,19 @@ table.posiciones td:nth-child(8){
 .torneo-estado.activo{background:rgba(26,107,47,.3);color:#4caf74;}
 .torneo-estado.finalizado{background:rgba(192,57,43,.2);color:#e74c3c;}
 .torneo-estado.proximo{background:rgba(201,162,39,.2);color:var(--dorado);}
+.torneo-logo-chip{width:44px;height:44px;border-radius:8px;object-fit:cover;background:var(--negro4);border:1px solid var(--dorado-border);flex-shrink:0;}
+.torneo-clubes-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+.torneo-club-chip{background:var(--negro4);border:1px solid var(--dorado-border);color:rgba(255,255,255,.8);font-size:11px;font-family:'Rajdhani',sans-serif;font-weight:700;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.3px;}
+.torneo-campeon-box{display:flex;align-items:center;gap:12px;margin-top:12px;padding:12px;background:linear-gradient(90deg,rgba(201,162,39,.12),transparent);border:1px solid var(--dorado-border);border-radius:var(--r-sm);}
+.torneo-campeon-box img{width:56px;height:56px;border-radius:8px;object-fit:cover;border:1px solid var(--dorado-border);}
+.torneo-campeon-box .tc-txt label{color:var(--gris);font-size:10px;text-transform:uppercase;letter-spacing:.5px;display:block;font-weight:700;}
+.torneo-campeon-box .tc-txt span{color:var(--dorado);font-weight:900;font-family:'Rajdhani',sans-serif;font-size:16px;}
+.clubes-checklist{max-height:180px;overflow-y:auto;border:1px solid var(--dorado-border);border-radius:var(--r-sm);padding:8px;display:grid;grid-template-columns:1fr 1fr;gap:4px;background:var(--negro4);}
+.clubes-check-item{display:flex;align-items:center;gap:6px;font-size:12px;padding:3px 4px;}
+.clubes-check-item input{width:14px;height:14px;accent-color:var(--dorado);flex-shrink:0;}
+.mini-logo-preview{width:36px;height:36px;border-radius:6px;object-fit:cover;background:var(--negro4);border:1px solid var(--dorado-border);flex-shrink:0;}
+.add-club-toggle{background:none;border:none;color:var(--dorado);font-size:11px;font-family:'Rajdhani',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.4px;cursor:pointer;padding:6px 2px;text-decoration:underline;text-underline-offset:2px;}
+.add-club-form{margin-top:8px;padding:10px;border:1px dashed var(--dorado-border);border-radius:var(--r-sm);background:var(--negro3);}
 
 /* EMPTY */
 .empty-msg{padding:32px 20px;text-align:center;color:rgba(255,255,255,.3);font-size:12px;font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px;}
@@ -3710,15 +3797,54 @@ table.posiciones td:nth-child(8){
         <div class="admin-title">Torneos</div>
         <div class="form-row">
           <div class="form-group"><label>Nombre del torneo</label><input type="text" id="to-nombre" placeholder="Ej: Torneo Apertura 2026"/></div>
-          <div class="form-group"><label>Estado</label>
-            <select id="to-estado"><option value="activo">En curso</option><option value="proximo">Próximo</option><option value="finalizado">Finalizado</option></select>
+          <div class="form-group"><label>Edición</label><input type="text" id="to-edicion" placeholder="Ej: Apertura 2026 / 15ª Edición"/></div>
+        </div>
+        <div class="form-group"><label>Logo del torneo</label>
+          <div class="upload-area" style="padding:12px">
+            <input type="file" accept="image/*" id="to-logo-file" onchange="toPreviewLogo(this)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%"/>
+            <p style="pointer-events:none;font-size:11px">Hacé clic para subir el logo</p>
           </div>
+          <div class="preview-wrap" id="to-logo-wrap"><img id="to-logo-preview" style="max-height:80px;border-radius:8px"/><button type="button" class="btn-quitar-img" onclick="toQuitarLogo()">✕ Quitar</button></div>
         </div>
         <div class="form-row">
-          <div class="form-group"><label>Fecha de inicio</label><input type="text" id="to-inicio" placeholder="Marzo 2026"/></div>
-          <div class="form-group"><label>Fecha de cierre</label><input type="text" id="to-cierre" placeholder="Julio 2026"/></div>
+          <div class="form-group"><label>Estado</label>
+            <select id="to-estado" onchange="toActualizarVisEstado()"><option value="activo">En curso</option><option value="proximo">Próximo</option><option value="finalizado">Finalizado</option></select>
+          </div>
+          <div class="form-group"><label>Dónde se disputa (sede)</label><input type="text" id="to-sede" placeholder="Ej: Cancha Municipal, Río Tercero"/></div>
         </div>
-        <div class="form-group"><label>Descripción</label><textarea id="to-desc" rows="2" style="resize:vertical"></textarea></div>
+        <div class="form-row">
+          <div class="form-group"><label>Fecha de inicio</label><input type="date" id="to-inicio"/></div>
+          <div class="form-group"><label>Fecha de finalización</label><input type="date" id="to-cierre"/></div>
+        </div>
+        <div class="form-group"><label>Clubes participantes</label>
+          <div class="clubes-checklist" id="to-clubes-list"></div>
+          <button type="button" class="add-club-toggle" onclick="toToggleAddClub()">+ ¿No está en la lista? Agregar club nuevo</button>
+          <div class="add-club-form" id="to-add-club-form" style="display:none">
+            <div class="form-row">
+              <div class="form-group"><label>Nombre del club</label><input type="text" id="to-nuevo-club-nombre" placeholder="Ej: Sportivo Belgrano"/></div>
+              <div class="form-group"><label>División</label><select id="to-nuevo-club-div"><option value="primera">Primera</option><option value="segunda">Segunda</option></select></div>
+            </div>
+            <div class="form-group"><label>Escudo (opcional)</label>
+              <input type="file" accept="image/*" id="to-nuevo-club-escudo-file" onchange="toPreviewNuevoClubEscudo(this)" style="font-size:11px"/>
+              <div class="preview-wrap" id="to-nuevo-club-escudo-wrap"><img id="to-nuevo-club-escudo-preview" src="" alt="" style="max-height:60px;object-fit:contain"/></div>
+            </div>
+            <button type="button" class="btn-primary" style="padding:6px 14px;font-size:12px" onclick="toAgregarClubNuevo()">+ Agregar y sumar al torneo</button>
+          </div>
+        </div>
+        <div id="to-campeon-wrap" style="display:none">
+          <hr style="margin:12px 0;border:none;border-top:1px solid rgba(255,255,255,.08)"/>
+          <div class="form-group"><label>🏆 Campeón</label>
+            <select id="to-campeon"><option value="">Seleccioná el club campeón</option></select>
+          </div>
+          <div class="form-group"><label>Fotografía del campeón</label>
+            <div class="upload-area" style="padding:12px">
+              <input type="file" accept="image/*" id="to-campeon-foto-file" onchange="toPreviewCampeonFoto(this)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%"/>
+              <p style="pointer-events:none;font-size:11px">Hacé clic para subir la foto (ej: levantando el trofeo)</p>
+            </div>
+            <div class="preview-wrap" id="to-campeon-foto-wrap"><img id="to-campeon-foto-preview" style="max-height:120px;border-radius:8px"/><button type="button" class="btn-quitar-img" onclick="toQuitarCampeonFoto()">✕ Quitar</button></div>
+          </div>
+        </div>
+        <div class="form-group"><label>Descripción (opcional)</label><textarea id="to-desc" rows="2" style="resize:vertical"></textarea></div>
         <button class="btn-primary" onclick="agregarTorneo()">+ Agregar Torneo</button>
         <div class="admin-list" id="lista-torneos"></div>
       </div>
@@ -4490,6 +4616,7 @@ function getData(){try{const d=JSON.parse(localStorage.getItem(DATA_KEY))||defDa
 function dataParaFirestore(d){
   const out = { ...d };
   if(out.goleadores) out.goleadores = out.goleadores.map(g => g.foto ? {...g, foto:''} : g);
+  if(out.torneos) out.torneos = out.torneos.map(t => (t.logo||t.campeonFoto) ? {...t, logo:'', campeonFoto:''} : t);
   return out;
 }
 // Igual que dataParaFirestore, pero para el cache liviano de localStorage:
@@ -8543,21 +8670,42 @@ function renderEquipos(){
 // ============================================================
 // RENDER TORNEOS
 // ============================================================
+function torneoFechaLegible(iso){
+  if(!iso) return '';
+  const [y,m,d]=iso.split('-');
+  if(!y||!m||!d) return iso;
+  const meses=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  return `${+d} ${meses[+m-1]||''} ${y}`;
+}
 function renderTorneos(){
   const el=document.getElementById('torneos-content');
   if(!data.torneos.length){el.innerHTML='<div class="card"><div class="empty-msg">No hay torneos cargados</div></div>';return;}
-  el.innerHTML=data.torneos.map(t=>`
+  el.innerHTML=data.torneos.map(t=>{
+    const logoHTML = t.logo ? `<img class="torneo-logo-chip" src="${t.logo}"/>` : `<div class="torneo-icon">🏆</div>`;
+    const clubesHTML = (t.clubes&&t.clubes.length) ? `<div class="torneo-clubes-chips">${t.clubes.map(c=>`<span class="torneo-club-chip">${c}</span>`).join('')}</div>` : '';
+    const campeonHTML = (t.estado==='finalizado' && t.campeon) ? `
+      <div class="torneo-campeon-box">
+        ${t.campeonFoto?`<img src="${t.campeonFoto}"/>`:''}
+        <div class="tc-txt"><label>Campeón</label><span>🏆 ${t.campeon}</span></div>
+      </div>` : '';
+    return `
     <div class="torneo-card">
-      <div class="torneo-header"><div class="torneo-icon">🏆</div>
-        <div style="flex:1"><h3>${t.nombre}</h3><p>${t.desc||''}</p></div>
+      <div class="torneo-header">${logoHTML}
+        <div style="flex:1"><h3>${t.nombre}</h3><p>${t.edicion||t.desc||''}</p></div>
         <button class="btn-share" onclick="abrirShare(()=>generarImagenTorneo('${String(t.id).replace(/'/g,"\\'")}'))">${SVG_SHARE} Compartir</button>
       </div>
       <div class="torneo-body"><div class="torneo-info">
         <div class="torneo-info-item"><label>Estado</label><span class="torneo-estado ${t.estado}">${t.estado==='activo'?'En curso':t.estado==='proximo'?'Próximo':'Finalizado'}</span></div>
-        <div class="torneo-info-item"><label>Inicio</label><span>${t.inicio||'–'}</span></div>
-        <div class="torneo-info-item"><label>Cierre</label><span>${t.cierre||'–'}</span></div>
-      </div></div>
-    </div>`).join('');
+        <div class="torneo-info-item"><label>Inicio</label><span>${torneoFechaLegible(t.inicio)||'–'}</span></div>
+        <div class="torneo-info-item"><label>Finalización</label><span>${torneoFechaLegible(t.cierre)||'–'}</span></div>
+        <div class="torneo-info-item"><label>Sede</label><span>${t.sede||'–'}</span></div>
+      </div>
+      ${clubesHTML}
+      ${campeonHTML}
+      ${t.desc&&t.edicion?`<p style="color:rgba(255,255,255,.6);font-size:12px;margin-top:10px">${t.desc}</p>`:''}
+      </div>
+    </div>`;
+  }).join('');
 }
 
 // ============================================================
@@ -8877,6 +9025,74 @@ function edGPreviewFoto(input){
   });
 }
 
+let _edToNuevoClubEscudo='';
+function edToToggleAddClub(){
+  const f=document.getElementById('ed-to-add-club-form'); if(f) f.style.display=(f.style.display==='none')?'':'none';
+}
+function edToPreviewNuevoClubEscudo(input){
+  const file=input.files[0]; if(!file) return;
+  comprimirABase64(file,300,0.85).then(dataUrl=>{
+    _edToNuevoClubEscudo=dataUrl;
+    const p=document.getElementById('ed-to-nuevo-club-escudo-preview'); if(p) p.src=_edToNuevoClubEscudo;
+    const w=document.getElementById('ed-to-nuevo-club-escudo-wrap'); if(w) w.classList.add('visible');
+  });
+}
+function edToAgregarClubNuevo(){
+  const nombre=document.getElementById('ed-to-nuevo-club-nombre').value.trim();
+  if(!nombre){alert('Completá el nombre del club');return;}
+  const div=document.getElementById('ed-to-nuevo-club-div').value;
+  const equipo=crearClubEnEquipos(nombre,div,_edToNuevoClubEscudo);
+  if(!equipo) return;
+  _edToNuevoClubEscudo='';
+  document.getElementById('ed-to-nuevo-club-nombre').value='';
+  const fEl=document.getElementById('ed-to-nuevo-club-escudo-file'); if(fEl) fEl.value='';
+  const p=document.getElementById('ed-to-nuevo-club-escudo-preview'); if(p) p.src='';
+  const w=document.getElementById('ed-to-nuevo-club-escudo-wrap'); if(w) w.classList.remove('visible');
+  const cont=document.getElementById('ed-to-clubes-list');
+  if(cont){
+    const vacio=cont.querySelector('.admin-empty'); if(vacio) vacio.remove();
+    cont.insertAdjacentHTML('beforeend',`<label class="clubes-check-item"><input type="checkbox" value="${equipo.nombre.replace(/"/g,'&quot;')}" class="ed-to-club-chk" checked onchange="edToPoblarSelectCampeon()"/> ${equipo.nombre}</label>`);
+  }
+  edToPoblarSelectCampeon();
+  const form=document.getElementById('ed-to-add-club-form'); if(form) form.style.display='none';
+}
+function edToPreviewLogo(input){
+  const file=input.files[0]; if(!file) return;
+  comprimirABase64(file, 400, 0.85).then(dataUrl=>{
+    window._edToLogo=dataUrl;
+    const w=document.getElementById('ed-to-logo-wrap');
+    if(w) w.innerHTML=`<div class="preview-wrap visible" style="margin-top:6px"><img src="${window._edToLogo}" style="max-height:80px;border-radius:8px"/><button type="button" class="btn-quitar-img" onclick="edToQuitarLogo()">✕ Quitar</button></div>`;
+  });
+}
+function edToQuitarLogo(){
+  window._edToLogo='';
+  const w=document.getElementById('ed-to-logo-wrap'); if(w) w.innerHTML='';
+}
+function edToPreviewCampeonFoto(input){
+  const file=input.files[0]; if(!file) return;
+  comprimirABase64(file, 900, 0.8).then(dataUrl=>{
+    window._edToCampeonFoto=dataUrl;
+    const w=document.getElementById('ed-to-campeon-foto-wrap');
+    if(w) w.innerHTML=`<div class="preview-wrap visible" style="margin-top:6px"><img src="${window._edToCampeonFoto}" style="max-height:120px;border-radius:8px"/><button type="button" class="btn-quitar-img" onclick="edToQuitarCampeonFoto()">✕ Quitar</button></div>`;
+  });
+}
+function edToQuitarCampeonFoto(){
+  window._edToCampeonFoto='';
+  const w=document.getElementById('ed-to-campeon-foto-wrap'); if(w) w.innerHTML='';
+}
+function edToActualizarVisEstado(){
+  const esFinal=document.getElementById('ed-estado').value==='finalizado';
+  const w=document.getElementById('ed-to-campeon-wrap'); if(w) w.style.display=esFinal?'':'none';
+  if(esFinal) edToPoblarSelectCampeon();
+}
+function edToPoblarSelectCampeon(){
+  const sel=document.getElementById('ed-campeon'); if(!sel) return;
+  const actual=sel.value;
+  const seleccionados=Array.from(document.querySelectorAll('.ed-to-club-chk:checked')).map(c=>c.value);
+  const clubes=seleccionados.length?seleccionados:data.equipos.map(e=>e.nombre);
+  sel.innerHTML='<option value="">Seleccioná el club campeón</option>'+clubes.map(n=>`<option value="${n.replace(/"/g,'&quot;')}" ${actual===n?'selected':''}>${n}</option>`).join('');
+}
+
 function agregarGoleador(){
   const nombre=document.getElementById('g-nombre').value.trim();
   if(!nombre){alert('Completá el nombre');return;}
@@ -8921,11 +9137,148 @@ function agregarEquipo(){
   renderAdminListas();renderSection(currentSection);
 }
 
+// ============================================================
+// TORNEOS – logo, clubes participantes y campeón
+// ============================================================
+// Crea (o reutiliza) un club en Equipos + su escudo — usado desde Torneos para
+// dar de alta un club "al vuelo" sin salir del formulario, igual que en Transferencias.
+function crearClubEnEquipos(nombre, div, escudoB64){
+  nombre=nombre.trim(); if(!nombre) return null;
+  const nombreNorm=normalizar(nombre);
+  const existing=data.equipos.findIndex(x=>normalizar(x.nombre)===nombreNorm&&x.div===div);
+  if(existing>=0){
+    if(escudoB64){
+      const e={...escudos}; const esc=e[nombreNorm]||{ini:data.equipos[existing].ini};
+      esc.img=escudoB64; e[nombreNorm]=esc; saveEscudos(e,nombreNorm); escudos=e;
+    }
+    return data.equipos[existing];
+  }
+  const ini=nombre.substr(0,3).toUpperCase();
+  const e={...escudos};
+  if(escudoB64) e[nombreNorm]={ini,img:escudoB64}; else if(!e[nombreNorm]) e[nombreNorm]={ini};
+  saveEscudos(e,nombreNorm); escudos=e;
+  const nuevo={id:String(Date.now())+Math.floor(Math.random()*1000),nombre,div,ini};
+  data.equipos.push(nuevo); saveData(data);
+  return nuevo;
+}
+
+let _toNuevoClubEscudo='';
+function toToggleAddClub(){
+  const f=document.getElementById('to-add-club-form'); if(f) f.style.display=(f.style.display==='none')?'':'none';
+}
+function toPreviewNuevoClubEscudo(input){
+  const file=input.files[0]; if(!file) return;
+  comprimirABase64(file,300,0.85).then(dataUrl=>{
+    _toNuevoClubEscudo=dataUrl;
+    const p=document.getElementById('to-nuevo-club-escudo-preview'); if(p) p.src=_toNuevoClubEscudo;
+    const w=document.getElementById('to-nuevo-club-escudo-wrap'); if(w) w.classList.add('visible');
+  });
+}
+function toAgregarClubNuevo(){
+  const nombre=document.getElementById('to-nuevo-club-nombre').value.trim();
+  if(!nombre){alert('Completá el nombre del club');return;}
+  const div=document.getElementById('to-nuevo-club-div').value;
+  const equipo=crearClubEnEquipos(nombre,div,_toNuevoClubEscudo);
+  if(!equipo) return;
+  _toNuevoClubEscudo='';
+  document.getElementById('to-nuevo-club-nombre').value='';
+  const fEl=document.getElementById('to-nuevo-club-escudo-file'); if(fEl) fEl.value='';
+  const p=document.getElementById('to-nuevo-club-escudo-preview'); if(p) p.src='';
+  const w=document.getElementById('to-nuevo-club-escudo-wrap'); if(w) w.classList.remove('visible');
+  const cont=document.getElementById('to-clubes-list');
+  if(cont){
+    const vacio=cont.querySelector('.admin-empty'); if(vacio) vacio.remove();
+    cont.insertAdjacentHTML('beforeend',`<label class="clubes-check-item"><input type="checkbox" value="${equipo.nombre.replace(/"/g,'&quot;')}" class="to-club-chk" checked onchange="toPoblarSelectCampeon()"/> ${equipo.nombre}</label>`);
+  }
+  toPoblarSelectCampeon();
+  const form=document.getElementById('to-add-club-form'); if(form) form.style.display='none';
+  renderAdminListas(); // refleja el club nuevo en la lista de Equipos también
+}
+let _toLogo='', _toCampeonFoto='';
+function toPreviewLogo(input){
+  const file=input.files[0]; if(!file) return;
+  comprimirABase64(file, 400, 0.85).then(dataUrl=>{
+    _toLogo=dataUrl;
+    const p=document.getElementById('to-logo-preview'); if(p) p.src=_toLogo;
+    const w=document.getElementById('to-logo-wrap'); if(w) w.classList.add('visible');
+  });
+}
+function toQuitarLogo(){
+  _toLogo='';
+  const p=document.getElementById('to-logo-preview'); if(p) p.src='';
+  const w=document.getElementById('to-logo-wrap'); if(w) w.classList.remove('visible');
+  const f=document.getElementById('to-logo-file'); if(f) f.value='';
+}
+function toPreviewCampeonFoto(input){
+  const file=input.files[0]; if(!file) return;
+  comprimirABase64(file, 900, 0.8).then(dataUrl=>{
+    _toCampeonFoto=dataUrl;
+    const p=document.getElementById('to-campeon-foto-preview'); if(p) p.src=_toCampeonFoto;
+    const w=document.getElementById('to-campeon-foto-wrap'); if(w) w.classList.add('visible');
+  });
+}
+function toQuitarCampeonFoto(){
+  _toCampeonFoto='';
+  const p=document.getElementById('to-campeon-foto-preview'); if(p) p.src='';
+  const w=document.getElementById('to-campeon-foto-wrap'); if(w) w.classList.remove('visible');
+  const f=document.getElementById('to-campeon-foto-file'); if(f) f.value='';
+}
+function toActualizarVisEstado(){
+  const esFinal=document.getElementById('to-estado').value==='finalizado';
+  const w=document.getElementById('to-campeon-wrap'); if(w) w.style.display=esFinal?'':'none';
+  if(esFinal) toPoblarSelectCampeon();
+}
+// Lista de checkboxes de clubes participantes (se regenera con los clubes cargados en Equipos)
+function renderTorneoClubesChecklist(){
+  const cont=document.getElementById('to-clubes-list'); if(!cont) return;
+  if(!data.equipos.length){ cont.innerHTML='<p class="admin-empty" style="grid-column:1/-1">Cargá clubes en la sección Equipos primero</p>'; return; }
+  cont.innerHTML=data.equipos.map(e=>`
+    <label class="clubes-check-item"><input type="checkbox" value="${e.nombre.replace(/"/g,'&quot;')}" class="to-club-chk" onchange="toPoblarSelectCampeon()"/> ${e.nombre}</label>
+  `).join('');
+}
+function toPoblarSelectCampeon(){
+  const sel=document.getElementById('to-campeon'); if(!sel) return;
+  const seleccionados=Array.from(document.querySelectorAll('.to-club-chk:checked')).map(c=>c.value);
+  const clubes=seleccionados.length?seleccionados:data.equipos.map(e=>e.nombre);
+  sel.innerHTML='<option value="">Seleccioná el club campeón</option>'+clubes.map(n=>`<option value="${n.replace(/"/g,'&quot;')}">${n}</option>`).join('');
+}
 function agregarTorneo(){
   const nombre=document.getElementById('to-nombre').value.trim();
   if(!nombre){alert('Completá el nombre');return;}
-  data.torneos.push({id:String(Date.now()),nombre,estado:document.getElementById('to-estado').value,inicio:document.getElementById('to-inicio').value,cierre:document.getElementById('to-cierre').value,desc:document.getElementById('to-desc').value});
-  saveData(data);renderAdminListas();renderSection(currentSection);
+  const estado=document.getElementById('to-estado').value;
+  const clubes=Array.from(document.querySelectorAll('.to-club-chk:checked')).map(c=>c.value);
+  const id=String(Date.now());
+  const obj={
+    id, nombre,
+    edicion:document.getElementById('to-edicion').value.trim(),
+    estado,
+    inicio:document.getElementById('to-inicio').value,
+    cierre:document.getElementById('to-cierre').value,
+    sede:document.getElementById('to-sede').value.trim(),
+    clubes,
+    campeon:estado==='finalizado'?(document.getElementById('to-campeon').value||''):'',
+    desc:document.getElementById('to-desc').value,
+    logo:_toLogo||'',
+    campeonFoto:estado==='finalizado'?(_toCampeonFoto||''):''
+  };
+  data.torneos.push(obj);
+  if(window._fb){
+    if(obj.logo){ window._fb.setTorneoLogo(id,obj.logo); if(!window._torneoLogosCache)window._torneoLogosCache={}; window._torneoLogosCache[id]=obj.logo; }
+    if(obj.campeonFoto){ window._fb.setTorneoFoto(id,obj.campeonFoto); if(!window._torneoFotosCache)window._torneoFotosCache={}; window._torneoFotosCache[id]=obj.campeonFoto; }
+  }
+  saveData(data);
+  // limpiar formulario
+  document.getElementById('to-nombre').value='';
+  document.getElementById('to-edicion').value='';
+  document.getElementById('to-sede').value='';
+  document.getElementById('to-inicio').value='';
+  document.getElementById('to-cierre').value='';
+  document.getElementById('to-desc').value='';
+  document.getElementById('to-estado').value='activo';
+  toActualizarVisEstado();
+  toQuitarLogo(); toQuitarCampeonFoto();
+  renderTorneoClubesChecklist();
+  renderAdminListas();renderSection(currentSection);
 }
 
 // ============================================================
@@ -8969,7 +9322,12 @@ function eliminar(tipo,id){
       if(window._golFotosCache) delete window._golFotosCache[sid];
     }
     else if(tipo==='equipos')    data.equipos    =data.equipos.filter(p=>String(p.id)!==sid);
-    else if(tipo==='torneos')    data.torneos    =data.torneos.filter(p=>String(p.id)!==sid);
+    else if(tipo==='torneos')    {
+      data.torneos    =data.torneos.filter(p=>String(p.id)!==sid);
+      if(window._fb){ window._fb.delTorneoLogo(sid); window._fb.delTorneoFoto(sid); }
+      if(window._torneoLogosCache) delete window._torneoLogosCache[sid];
+      if(window._torneoFotosCache) delete window._torneoFotosCache[sid];
+    }
     saveData(data);
     renderAdminListas();
     renderSection(currentSection);
@@ -9157,16 +9515,61 @@ function abrirModalEdicion(tipo,id,objOverride){
         </div>
       </div>`;
   } else if(tipo==='torneos'){
+    window._edToClubes = Array.isArray(obj.clubes)?[...obj.clubes]:[];
+    const logoActual = obj.logo ? `<div class="preview-wrap visible" style="margin-top:6px"><img src="${obj.logo}" style="max-height:80px;border-radius:8px"/><button type="button" class="btn-quitar-img" onclick="edToQuitarLogo()">✕ Quitar</button></div>` : '';
+    const clubesChecklist = !data.equipos.length ? '<p class="admin-empty" style="grid-column:1/-1">Cargá clubes en la sección Equipos primero</p>' : data.equipos.map(e=>{
+      const marcado = (obj.clubes||[]).includes(e.nombre);
+      return `<label class="clubes-check-item"><input type="checkbox" value="${e.nombre.replace(/"/g,'&quot;')}" class="ed-to-club-chk" ${marcado?'checked':''} onchange="edToPoblarSelectCampeon()"/> ${e.nombre}</label>`;
+    }).join('');
+    const campeonOpts = (obj.clubes&&obj.clubes.length?obj.clubes:data.equipos.map(e=>e.nombre)).map(n=>`<option value="${n.replace(/"/g,'&quot;')}" ${obj.campeon===n?'selected':''}>${n}</option>`).join('');
+    const campeonFotoActual = obj.campeonFoto ? `<div class="preview-wrap visible" style="margin-top:6px"><img src="${obj.campeonFoto}" style="max-height:120px;border-radius:8px"/><button type="button" class="btn-quitar-img" onclick="edToQuitarCampeonFoto()">✕ Quitar</button></div>` : '';
     bodyHTML=`
       <div class="form-row"><div class="form-group"><label>Nombre</label><input type="text" id="ed-nombre" value="${obj.nombre||''}"/></div>
-        <div class="form-group"><label>Estado</label><select id="ed-estado">
+        <div class="form-group"><label>Edición</label><input type="text" id="ed-edicion" value="${obj.edicion||''}"/></div></div>
+      <div class="form-group"><label>Logo del torneo</label>
+        <div class="upload-area" style="padding:12px">
+          <input type="file" accept="image/*" onchange="edToPreviewLogo(this)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%"/>
+          <p style="pointer-events:none;font-size:11px">Hacé clic para cambiar el logo</p>
+        </div>
+        <div id="ed-to-logo-wrap">${logoActual}</div>
+      </div>
+      <div class="form-row"><div class="form-group"><label>Estado</label><select id="ed-estado" onchange="edToActualizarVisEstado()">
           <option value="activo" ${obj.estado==='activo'?'selected':''}>En curso</option>
           <option value="proximo" ${obj.estado==='proximo'?'selected':''}>Próximo</option>
           <option value="finalizado" ${obj.estado==='finalizado'?'selected':''}>Finalizado</option>
-        </select></div></div>
-      <div class="form-row"><div class="form-group"><label>Inicio</label><input type="text" id="ed-inicio" value="${obj.inicio||''}"/></div>
-        <div class="form-group"><label>Cierre</label><input type="text" id="ed-cierre" value="${obj.cierre||''}"/></div></div>
-      <div class="form-group"><label>Descripción</label><textarea id="ed-desc" rows="2" style="resize:vertical">${obj.desc||''}</textarea></div>`;
+        </select></div>
+        <div class="form-group"><label>Dónde se disputa (sede)</label><input type="text" id="ed-sede" value="${obj.sede||''}"/></div></div>
+      <div class="form-row"><div class="form-group"><label>Fecha de inicio</label><input type="date" id="ed-inicio" value="${obj.inicio||''}"/></div>
+        <div class="form-group"><label>Fecha de finalización</label><input type="date" id="ed-cierre" value="${obj.cierre||''}"/></div></div>
+      <div class="form-group"><label>Clubes participantes</label>
+        <div class="clubes-checklist" id="ed-to-clubes-list">${clubesChecklist}</div>
+        <button type="button" class="add-club-toggle" onclick="edToToggleAddClub()">+ ¿No está en la lista? Agregar club nuevo</button>
+        <div class="add-club-form" id="ed-to-add-club-form" style="display:none">
+          <div class="form-row">
+            <div class="form-group"><label>Nombre del club</label><input type="text" id="ed-to-nuevo-club-nombre" placeholder="Ej: Sportivo Belgrano"/></div>
+            <div class="form-group"><label>División</label><select id="ed-to-nuevo-club-div"><option value="primera">Primera</option><option value="segunda">Segunda</option></select></div>
+          </div>
+          <div class="form-group"><label>Escudo (opcional)</label>
+            <input type="file" accept="image/*" id="ed-to-nuevo-club-escudo-file" onchange="edToPreviewNuevoClubEscudo(this)" style="font-size:11px"/>
+            <div class="preview-wrap" id="ed-to-nuevo-club-escudo-wrap"><img id="ed-to-nuevo-club-escudo-preview" src="" alt="" style="max-height:60px;object-fit:contain"/></div>
+          </div>
+          <button type="button" class="btn-primary" style="padding:6px 14px;font-size:12px" onclick="edToAgregarClubNuevo()">+ Agregar y sumar al torneo</button>
+        </div>
+      </div>
+      <div id="ed-to-campeon-wrap" style="${obj.estado==='finalizado'?'':'display:none'}">
+        <hr style="margin:12px 0;border:none;border-top:1px solid rgba(255,255,255,.08)"/>
+        <div class="form-group"><label>🏆 Campeón</label>
+          <select id="ed-campeon"><option value="">Seleccioná el club campeón</option>${campeonOpts}</select>
+        </div>
+        <div class="form-group"><label>Fotografía del campeón</label>
+          <div class="upload-area" style="padding:12px">
+            <input type="file" accept="image/*" onchange="edToPreviewCampeonFoto(this)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%"/>
+            <p style="pointer-events:none;font-size:11px">Hacé clic para cambiar la foto</p>
+          </div>
+          <div id="ed-to-campeon-foto-wrap">${campeonFotoActual}</div>
+        </div>
+      </div>
+      <div class="form-group"><label>Descripción (opcional)</label><textarea id="ed-desc" rows="2" style="resize:vertical">${obj.desc||''}</textarea></div>`;
   } else if(tipo==='noticias'){
     bodyHTML=`
       <div class="form-group"><label>Título</label><input type="text" id="ed-no-titulo" value="${(obj.titulo||'').replace(/"/g,'&quot;')}"/></div>
@@ -9543,7 +9946,34 @@ function guardarEdicion(tipo,id){
     e[normNuevo]=escViejo; saveEscudos(e, normNuevo); escudos=e;
   } else if(tipo==='torneos'){
     const idx=data.torneos.findIndex(p=>String(p.id)===sid);if(idx<0)return;
-    data.torneos[idx]={...data.torneos[idx],nombre:val('ed-nombre'),estado:val('ed-estado'),inicio:val('ed-inicio'),cierre:val('ed-cierre'),desc:val('ed-desc')};
+    const estado=val('ed-estado');
+    const clubes=Array.from(document.querySelectorAll('.ed-to-club-chk:checked')).map(c=>c.value);
+    const nuevoLogo = window._edToLogo !== undefined ? window._edToLogo : (data.torneos[idx].logo||'');
+    const nuevaCampeonFoto = estado==='finalizado' ? (window._edToCampeonFoto !== undefined ? window._edToCampeonFoto : (data.torneos[idx].campeonFoto||'')) : '';
+    data.torneos[idx]={...data.torneos[idx],
+      nombre:val('ed-nombre'),
+      edicion:val('ed-edicion'),
+      estado,
+      inicio:val('ed-inicio'),
+      cierre:val('ed-cierre'),
+      sede:val('ed-sede'),
+      clubes,
+      campeon:estado==='finalizado'?val('ed-campeon'):'',
+      desc:val('ed-desc'),
+      logo:nuevoLogo,
+      campeonFoto:nuevaCampeonFoto
+    };
+    if(window._fb){
+      if(window._edToLogo !== undefined){
+        if(nuevoLogo){ window._fb.setTorneoLogo(sid,nuevoLogo); if(!window._torneoLogosCache)window._torneoLogosCache={}; window._torneoLogosCache[sid]=nuevoLogo; }
+        else { window._fb.delTorneoLogo(sid); if(window._torneoLogosCache) delete window._torneoLogosCache[sid]; }
+      }
+      if(estado!=='finalizado' || window._edToCampeonFoto !== undefined){
+        if(nuevaCampeonFoto){ window._fb.setTorneoFoto(sid,nuevaCampeonFoto); if(!window._torneoFotosCache)window._torneoFotosCache={}; window._torneoFotosCache[sid]=nuevaCampeonFoto; }
+        else { window._fb.delTorneoFoto(sid); if(window._torneoFotosCache) delete window._torneoFotosCache[sid]; }
+      }
+    }
+    window._edToLogo = undefined; window._edToCampeonFoto = undefined;
   } else if(tipo==='noticias'){
     // Las noticias son documentos individuales en Firestore — no van en data
     const noticias=getNoticias();
@@ -9985,11 +10415,17 @@ function renderAdminListas(){
     </div>`;
   }).join('')||'<p class="admin-empty">Sin equipos cargados</p>';
 
-  document.getElementById('lista-torneos').innerHTML=data.torneos.map(t=>`
-    <div class="admin-list-item">
-      <span>${t.nombre} – <em>${t.estado}</em></span>
+  document.getElementById('lista-torneos').innerHTML=data.torneos.map(t=>{
+    const estadoTxt=t.estado==='activo'?'En curso':t.estado==='proximo'?'Próximo':'Finalizado';
+    const logoImg=t.logo?`<img class="mini-logo-preview" src="${t.logo}"/>`:`<div class="mini-logo-preview" style="display:flex;align-items:center;justify-content:center;font-size:16px">🏆</div>`;
+    const nClubes=(t.clubes||[]).length;
+    const detalles=[t.edicion,t.sede,nClubes?`${nClubes} clubes`:'',t.estado==='finalizado'&&t.campeon?`🏆 ${t.campeon}`:''].filter(Boolean).join(' · ');
+    return `<div class="admin-list-item">
+      ${logoImg}
+      <span><b>${t.nombre}</b> – <em>${estadoTxt}</em>${detalles?'<br><span style="color:var(--gris);font-size:11px">'+detalles+'</span>':''}</span>
       ${btnAcciones('torneos',t.id)}
-    </div>`).join('')||'<p class="admin-empty">Sin torneos cargados</p>';
+    </div>`;
+  }).join('')||'<p class="admin-empty">Sin torneos cargados</p>';
 
   if(typeof renderAdminListaActasSancion==='function') renderAdminListaActasSancion();
 }
@@ -10084,6 +10520,7 @@ function switchAdminTab(tab,el){
   if(tab==='deportemas'){ cargarFormDM(); }
   if(tab==='estadisticas'){ renderEstadisticas(); }
   if(tab==='sanciones'){ poblarSelectClubSancion('am'); renderAdminListaAmonestaciones(); recalcularSancionesVigentes(); }
+  if(tab==='torneos'){ renderTorneoClubesChecklist(); toActualizarVisEstado(); }
   if(tab==='notificaciones'){ actualizarContadorSubs(); }}
 function cambiarPassword(){
   // La contraseña se gestiona desde Firebase Console → Authentication
@@ -11998,8 +12435,12 @@ async function generarImagenTorneo(torneoId){
   ctx.textAlign='center'; ctx.textBaseline='alphabetic';
   cvFillTextTrunc(ctx,t.nombre.toUpperCase(),W/2,y+s(140),W-s(80));
 
-  // Descripción — DM Sans
-  if(t.desc){
+  // Campeón (si finalizó) o Descripción — DM Sans
+  if(t.estado==='finalizado' && t.campeon){
+    ctx.fillStyle=C.DORADO;
+    ctx.font=`700 ${s(16)}px "DM Sans", Arial, sans-serif`;
+    cvFillTextTrunc(ctx,'🏆 CAMPEÓN: '+t.campeon.toUpperCase(),W/2,y+s(166),W-s(120));
+  } else if(t.desc){
     ctx.fillStyle='rgba(255,255,255,0.5)';
     ctx.font=`400 ${s(16)}px "DM Sans", Arial, sans-serif`;
     cvFillTextTrunc(ctx,t.desc,W/2,y+s(166),W-s(120));
@@ -12022,7 +12463,7 @@ async function generarImagenTorneo(torneoId){
     ctx.fillStyle='rgba(201,162,39,0.6)';
     ctx.font=`500 ${s(14)}px "DM Sans", Arial, sans-serif`;
     ctx.textAlign='center';
-    const fechas=[(t.inicio?'Inicio: '+t.inicio:''),(t.cierre?'Cierre: '+t.cierre:'')].filter(Boolean).join('  ·  ');
+    const fechas=[(t.inicio?'Inicio: '+torneoFechaLegible(t.inicio):''),(t.cierre?'Cierre: '+torneoFechaLegible(t.cierre):'')].filter(Boolean).join('  ·  ');
     ctx.fillText(fechas,W/2,y+s(222));
   }
 
