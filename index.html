@@ -1531,6 +1531,40 @@ table.posiciones td:nth-child(8){
 .mini-logo-preview{width:36px;height:36px;border-radius:6px;object-fit:cover;background:var(--negro4);border:1px solid var(--dorado-border);flex-shrink:0;}
 .add-club-toggle{background:none;border:none;color:var(--dorado);font-size:11px;font-family:'Rajdhani',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.4px;cursor:pointer;padding:6px 2px;text-decoration:underline;text-underline-offset:2px;}
 .add-club-form{margin-top:8px;padding:10px;border:1px dashed var(--dorado-border);border-radius:var(--r-sm);background:var(--negro3);}
+.diseno-picker{display:flex;gap:10px;}
+.diseno-opcion{position:relative;cursor:pointer;flex:1;}
+.diseno-opcion input{position:absolute;opacity:0;width:0;height:0;}
+.diseno-opcion-box{border:1px solid var(--dorado-border);border-radius:var(--r-md);padding:10px;display:flex;flex-direction:column;align-items:center;gap:8px;background:var(--negro4);transition:border-color .15s,background .15s;}
+.diseno-opcion input:checked + .diseno-opcion-box{border-color:var(--dorado);background:rgba(201,162,39,.1);}
+.diseno-mini{width:100%;height:46px;border-radius:6px;background:var(--negro2);border:1px solid rgba(201,162,39,.15);position:relative;overflow:hidden;}
+.diseno-mini span{position:absolute;background:rgba(201,162,39,.35);border-radius:2px;}
+.diseno-mini-banner span:nth-child(1){top:6px;left:6px;right:6px;height:8px;}
+.diseno-mini-banner span:nth-child(2){bottom:6px;left:6px;right:6px;height:16px;background:rgba(201,162,39,.55);}
+.diseno-mini-lateral span:nth-child(1){top:6px;left:6px;width:18px;bottom:6px;background:rgba(201,162,39,.55);}
+.diseno-mini-lateral span:nth-child(2){top:6px;left:30px;right:6px;height:10px;}
+.diseno-opcion-txt{font-size:11px;color:rgba(255,255,255,.75);text-align:center;font-family:'Rajdhani',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.3px;}
+.torneo-crest{width:44px;height:44px;border-radius:50%;background:var(--negro4);border:1px solid var(--dorado-border);display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:13px;color:var(--dorado);object-fit:cover;flex-shrink:0;}
+.torneo-crest img{width:100%;height:100%;border-radius:50%;object-fit:cover;}
+.torneo-crests-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;}
+.torneo-crest-item{display:flex;flex-direction:column;align-items:center;gap:6px;width:66px;}
+.torneo-crest-item span{font-size:10px;color:rgba(255,255,255,.6);text-align:center;line-height:1.2;}
+.torneo-crest-chip{display:flex;align-items:center;gap:8px;background:var(--negro3);border:1px solid rgba(201,162,39,.15);border-radius:8px;padding:6px 8px;}
+.torneo-crest-chip span{font-size:11px;color:rgba(255,255,255,.75);}
+.torneo-crests-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;}
+.torneo-banner-campeon{margin-top:14px;border-radius:10px;overflow:hidden;position:relative;height:150px;border:1px solid var(--dorado-border);background:var(--negro4);}
+.torneo-banner-campeon img.tb-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.torneo-banner-campeon .tb-fade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(8,8,8,.15) 0%,rgba(8,8,8,.94) 100%);}
+.torneo-banner-campeon .tb-tag{position:absolute;top:10px;left:12px;background:rgba(201,162,39,.9);color:#241c04;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:11px;letter-spacing:.4px;padding:4px 10px;border-radius:5px;text-transform:uppercase;}
+.torneo-banner-campeon .tb-foot{position:absolute;bottom:12px;left:14px;right:14px;display:flex;align-items:flex-end;justify-content:space-between;gap:10px;}
+.torneo-banner-campeon .tb-nombre{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:24px;color:#fff;text-transform:uppercase;letter-spacing:.3px;}
+.torneo-banner-campeon .tb-sub{font-size:12px;color:rgba(255,255,255,.6);}
+.torneo-lateral{display:grid;grid-template-columns:1.1fr 1fr;gap:16px;margin-top:12px;}
+.torneo-lateral-campeon{background:linear-gradient(160deg,rgba(201,162,39,.14),transparent);border:1px solid var(--dorado-border);border-radius:10px;padding:14px;display:flex;flex-direction:column;align-items:center;text-align:center;}
+.torneo-lateral-campeon .tl-label{color:var(--dorado);font-family:'Rajdhani',sans-serif;font-weight:700;font-size:11px;letter-spacing:.5px;text-transform:uppercase;margin-bottom:8px;}
+.torneo-lateral-campeon .tl-foto{width:100%;height:170px;border-radius:8px;background:var(--negro2);border:1px solid rgba(201,162,39,.25);margin-bottom:10px;object-fit:cover;}
+.torneo-lateral-campeon .tl-foto-empty{width:100%;height:170px;border-radius:8px;background:var(--negro2);border:1px solid rgba(201,162,39,.25);margin-bottom:10px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.25);font-size:26px;}
+.torneo-lateral-campeon .tl-nombre{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:18px;color:#fff;text-transform:uppercase;}
+.torneo-lateral-info{display:flex;flex-direction:column;gap:12px;}
 
 /* EMPTY */
 .empty-msg{padding:32px 20px;text-align:center;color:rgba(255,255,255,.3);font-size:12px;font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px;}
@@ -3346,9 +3380,10 @@ table.posiciones td:nth-child(8){
         <div class="form-row">
           <div class="form-group"><label>Nombre del equipo</label><input type="text" id="eq-nombre" placeholder="Ej: Belgrano FC"/></div>
           <div class="form-group"><label>División</label>
-            <select id="eq-div"><option value="primera">Primera División</option><option value="segunda">Segunda División</option></select>
+            <select id="eq-div" onchange="eqActualizarVisLiga()"><option value="primera">Primera División</option><option value="segunda">Segunda División</option><option value="extraliga">Club extra-liga</option></select>
           </div>
         </div>
+        <div class="form-group" id="eq-liga-wrap" style="display:none"><label>Liga a la que pertenece</label><input type="text" id="eq-liga" placeholder="Ej: Liga Calamuchita"/></div>
         <div class="form-group"><label>Iniciales (máx. 3)</label><input type="text" id="eq-ini" placeholder="Ej: BFC" maxlength="3"/></div>
         <div class="form-group">
           <label>Escudo del equipo (imagen)</label>
@@ -3806,6 +3841,16 @@ table.posiciones td:nth-child(8){
           </div>
           <div class="preview-wrap" id="to-logo-wrap"><img id="to-logo-preview" style="max-height:80px;border-radius:8px"/><button type="button" class="btn-quitar-img" onclick="toQuitarLogo()">✕ Quitar</button></div>
         </div>
+        <div class="form-group"><label>Diseño de la tarjeta</label>
+          <div class="diseno-picker" id="to-diseno-picker">
+            <label class="diseno-opcion"><input type="radio" name="to-diseno" value="banner" checked/>
+              <div class="diseno-opcion-box"><div class="diseno-mini diseno-mini-banner"><span></span><span></span></div><span class="diseno-opcion-txt">Banner con campeón</span></div>
+            </label>
+            <label class="diseno-opcion"><input type="radio" name="to-diseno" value="lateral"/>
+              <div class="diseno-opcion-box"><div class="diseno-mini diseno-mini-lateral"><span></span><span></span></div><span class="diseno-opcion-txt">Campeón lateral</span></div>
+            </label>
+          </div>
+        </div>
         <div class="form-row">
           <div class="form-group"><label>Estado</label>
             <select id="to-estado" onchange="toActualizarVisEstado()"><option value="activo">En curso</option><option value="proximo">Próximo</option><option value="finalizado">Finalizado</option></select>
@@ -3822,8 +3867,9 @@ table.posiciones td:nth-child(8){
           <div class="add-club-form" id="to-add-club-form" style="display:none">
             <div class="form-row">
               <div class="form-group"><label>Nombre del club</label><input type="text" id="to-nuevo-club-nombre" placeholder="Ej: Sportivo Belgrano"/></div>
-              <div class="form-group"><label>División</label><select id="to-nuevo-club-div"><option value="primera">Primera</option><option value="segunda">Segunda</option></select></div>
+              <div class="form-group"><label>División</label><select id="to-nuevo-club-div" onchange="toActualizarVisLigaNuevoClub()"><option value="primera">Primera</option><option value="segunda">Segunda</option><option value="extraliga">Club extra-liga</option></select></div>
             </div>
+            <div class="form-group" id="to-nuevo-club-liga-wrap" style="display:none"><label>Liga a la que pertenece</label><input type="text" id="to-nuevo-club-liga" placeholder="Ej: Liga Calamuchita"/></div>
             <div class="form-group"><label>Escudo (opcional)</label>
               <input type="file" accept="image/*" id="to-nuevo-club-escudo-file" onchange="toPreviewNuevoClubEscudo(this)" style="font-size:11px"/>
               <div class="preview-wrap" id="to-nuevo-club-escudo-wrap"><img id="to-nuevo-club-escudo-preview" src="" alt="" style="max-height:60px;object-fit:contain"/></div>
@@ -8573,7 +8619,7 @@ function abrirClubModal(nombreEquipo){
   const subs = [];
   if(f.fundacion) subs.push(`<span>⚽ Fundado: ${f.fundacion}</span>`);
   if(f.colores)   subs.push(`<span>🎨 ${f.colores}</span>`);
-  if(eq.div)      subs.push(`<span>${eq.div==='primera'?'🥇 Primera División':'🥈 Segunda División'}</span>`);
+  if(eq.div)      subs.push(`<span>${eq.div==='primera'?'🥇 Primera División':eq.div==='segunda'?'🥈 Segunda División':'🏳️ Club extra-liga'+(eq.liga?' · '+eq.liga:'')}</span>`);
   if(f.ciudad)    subs.push(`<span>📍 ${f.ciudad}</span>`);
   document.getElementById('club-modal-subtitulo').innerHTML = subs.join('') || '';
 
@@ -8661,7 +8707,7 @@ function renderEquipos(){
     return `<div class="equipo-card" onclick="abrirClubModal('${nombreEsc}')">
       ${escHTML}
       <div class="equipo-nombre">${e.nombre}</div>
-      <div class="equipo-div">${e.div==='primera'?'Primera División':'Segunda División'}</div>
+      <div class="equipo-div">${e.div==='primera'?'Primera División':e.div==='segunda'?'Segunda División':'Club extra-liga'+(e.liga?' · '+e.liga:'')}</div>
       ${fichaBadge}
     </div>`;
   }).join('');
@@ -8677,35 +8723,87 @@ function torneoFechaLegible(iso){
   const meses=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
   return `${+d} ${meses[+m-1]||''} ${y}`;
 }
+function torneoCrestHTML(nombre, size){
+  const esc=escudos[normalizar(nombre)];
+  const ini=(esc&&esc.ini)?esc.ini:(nombre||'').substr(0,3).toUpperCase();
+  const styleAttr=size?` style="width:${size}px;height:${size}px;font-size:${Math.round(size*0.3)}px"`:'';
+  return (esc&&esc.img)?`<div class="torneo-crest"${styleAttr}><img src="${esc.img}" alt="${nombre}"/></div>`:`<div class="torneo-crest"${styleAttr}>${ini}</div>`;
+}
+function torneoClubLigaSub(nombre){
+  const club=data.equipos.find(e=>normalizar(e.nombre)===normalizar(nombre));
+  return (club&&club.div==='extraliga'&&club.liga)?`<small style="display:block;color:var(--dorado);opacity:.75;font-size:9px">${club.liga}</small>`:'';
+}
+function renderTorneoBanner(t){
+  const logoHTML = t.logo ? `<img class="torneo-logo-chip" src="${t.logo}"/>` : `<div class="torneo-icon">🏆</div>`;
+  const crestsHTML = (t.clubes&&t.clubes.length) ? `<div class="torneo-crests-row">${t.clubes.map(c=>`<div class="torneo-crest-item">${torneoCrestHTML(c)}<span>${c}${torneoClubLigaSub(c)}</span></div>`).join('')}</div>` : '';
+  const campeonHTML = (t.estado==='finalizado' && t.campeon) ? `
+    <div class="torneo-banner-campeon">
+      ${t.campeonFoto?`<img class="tb-bg" src="${t.campeonFoto}" alt="${t.campeon}"/>`:''}
+      <div class="tb-fade"></div>
+      <div class="tb-tag">🏆 Campeón</div>
+      <div class="tb-foot">
+        <div><div class="tb-nombre">${t.campeon}</div><div class="tb-sub">Campeón ${t.nombre}${t.edicion?' · '+t.edicion:''}</div></div>
+        ${torneoCrestHTML(t.campeon)}
+      </div>
+    </div>` : '';
+  return `
+  <div class="torneo-card">
+    <div class="torneo-header">${logoHTML}
+      <div style="flex:1"><h3>${t.nombre}</h3><p>${t.edicion||t.desc||''}</p></div>
+      <button class="btn-share" onclick="abrirShare(()=>generarImagenTorneo('${String(t.id).replace(/'/g,"\\'")}'))">${SVG_SHARE} Compartir</button>
+    </div>
+    <div class="torneo-body"><div class="torneo-info">
+      <div class="torneo-info-item"><label>Estado</label><span class="torneo-estado ${t.estado}">${t.estado==='activo'?'En curso':t.estado==='proximo'?'Próximo':'Finalizado'}</span></div>
+      <div class="torneo-info-item"><label>Inicio</label><span>${torneoFechaLegible(t.inicio)||'–'}</span></div>
+      <div class="torneo-info-item"><label>Finalización</label><span>${torneoFechaLegible(t.cierre)||'–'}</span></div>
+      <div class="torneo-info-item"><label>Sede</label><span>${t.sede||'–'}</span></div>
+    </div>
+    ${crestsHTML}
+    ${campeonHTML}
+    ${t.desc&&t.edicion?`<p style="color:rgba(255,255,255,.6);font-size:12px;margin-top:10px">${t.desc}</p>`:''}
+    </div>
+  </div>`;
+}
+function renderTorneoLateral(t){
+  const logoHTML = t.logo ? `<img class="torneo-logo-chip" src="${t.logo}"/>` : `<div class="torneo-icon">🏆</div>`;
+  const campeonBloque = (t.estado==='finalizado' && t.campeon) ? `
+    <div class="torneo-lateral-campeon">
+      <div class="tl-label">🏆 Campeón del torneo</div>
+      ${t.campeonFoto?`<img class="tl-foto" src="${t.campeonFoto}" alt="${t.campeon}"/>`:`<div class="tl-foto-empty">🏆</div>`}
+      <div style="display:flex;align-items:center;gap:8px">${torneoCrestHTML(t.campeon)}<div class="tl-nombre">${t.campeon}</div></div>
+    </div>` : `
+    <div class="torneo-lateral-campeon">
+      <div class="tl-label">🏆 Campeón del torneo</div>
+      <div class="tl-foto-empty">🏆</div>
+      <div class="tl-nombre" style="color:rgba(255,255,255,.4);font-size:13px">${t.estado==='proximo'?'Aún no comenzó':'En disputa'}</div>
+    </div>`;
+  const crestsGrid = (t.clubes&&t.clubes.length) ? `<div class="torneo-crests-grid">${t.clubes.map(c=>`<div class="torneo-crest-chip">${torneoCrestHTML(c,26)}<span>${c}${torneoClubLigaSub(c)}</span></div>`).join('')}</div>` : '';
+  return `
+  <div class="torneo-card">
+    <div class="torneo-header">${logoHTML}
+      <div style="flex:1"><h3>${t.nombre}</h3><p>${t.edicion||t.desc||''} ${t.sede?' · '+t.sede:''}</p></div>
+      <span class="torneo-estado ${t.estado}">${t.estado==='activo'?'En curso':t.estado==='proximo'?'Próximo':'Finalizado'}</span>
+      <button class="btn-share" onclick="abrirShare(()=>generarImagenTorneo('${String(t.id).replace(/'/g,"\\'")}'))">${SVG_SHARE} Compartir</button>
+    </div>
+    <div class="torneo-body">
+      <div class="torneo-lateral">
+        ${campeonBloque}
+        <div class="torneo-lateral-info">
+          <div class="torneo-info" style="grid-template-columns:1fr 1fr">
+            <div class="torneo-info-item"><label>Inicio</label><span>${torneoFechaLegible(t.inicio)||'–'}</span></div>
+            <div class="torneo-info-item"><label>Finalización</label><span>${torneoFechaLegible(t.cierre)||'–'}</span></div>
+          </div>
+          <div><label style="color:var(--gris);font-size:10px;text-transform:uppercase;letter-spacing:.4px;font-family:'Rajdhani',sans-serif;font-weight:700">Clubes participantes</label>${crestsGrid}</div>
+        </div>
+      </div>
+      ${t.desc&&t.edicion?`<p style="color:rgba(255,255,255,.6);font-size:12px;margin-top:10px">${t.desc}</p>`:''}
+    </div>
+  </div>`;
+}
 function renderTorneos(){
   const el=document.getElementById('torneos-content');
   if(!data.torneos.length){el.innerHTML='<div class="card"><div class="empty-msg">No hay torneos cargados</div></div>';return;}
-  el.innerHTML=data.torneos.map(t=>{
-    const logoHTML = t.logo ? `<img class="torneo-logo-chip" src="${t.logo}"/>` : `<div class="torneo-icon">🏆</div>`;
-    const clubesHTML = (t.clubes&&t.clubes.length) ? `<div class="torneo-clubes-chips">${t.clubes.map(c=>`<span class="torneo-club-chip">${c}</span>`).join('')}</div>` : '';
-    const campeonHTML = (t.estado==='finalizado' && t.campeon) ? `
-      <div class="torneo-campeon-box">
-        ${t.campeonFoto?`<img src="${t.campeonFoto}"/>`:''}
-        <div class="tc-txt"><label>Campeón</label><span>🏆 ${t.campeon}</span></div>
-      </div>` : '';
-    return `
-    <div class="torneo-card">
-      <div class="torneo-header">${logoHTML}
-        <div style="flex:1"><h3>${t.nombre}</h3><p>${t.edicion||t.desc||''}</p></div>
-        <button class="btn-share" onclick="abrirShare(()=>generarImagenTorneo('${String(t.id).replace(/'/g,"\\'")}'))">${SVG_SHARE} Compartir</button>
-      </div>
-      <div class="torneo-body"><div class="torneo-info">
-        <div class="torneo-info-item"><label>Estado</label><span class="torneo-estado ${t.estado}">${t.estado==='activo'?'En curso':t.estado==='proximo'?'Próximo':'Finalizado'}</span></div>
-        <div class="torneo-info-item"><label>Inicio</label><span>${torneoFechaLegible(t.inicio)||'–'}</span></div>
-        <div class="torneo-info-item"><label>Finalización</label><span>${torneoFechaLegible(t.cierre)||'–'}</span></div>
-        <div class="torneo-info-item"><label>Sede</label><span>${t.sede||'–'}</span></div>
-      </div>
-      ${clubesHTML}
-      ${campeonHTML}
-      ${t.desc&&t.edicion?`<p style="color:rgba(255,255,255,.6);font-size:12px;margin-top:10px">${t.desc}</p>`:''}
-      </div>
-    </div>`;
-  }).join('');
+  el.innerHTML=data.torneos.map(t=> t.diseno==='lateral' ? renderTorneoLateral(t) : renderTorneoBanner(t)).join('');
 }
 
 // ============================================================
@@ -9029,6 +9127,10 @@ let _edToNuevoClubEscudo='';
 function edToToggleAddClub(){
   const f=document.getElementById('ed-to-add-club-form'); if(f) f.style.display=(f.style.display==='none')?'':'none';
 }
+function edToActualizarVisLigaNuevoClub(){
+  const w=document.getElementById('ed-to-nuevo-club-liga-wrap'); if(!w) return;
+  w.style.display = document.getElementById('ed-to-nuevo-club-div').value==='extraliga' ? '' : 'none';
+}
 function edToPreviewNuevoClubEscudo(input){
   const file=input.files[0]; if(!file) return;
   comprimirABase64(file,300,0.85).then(dataUrl=>{
@@ -9041,10 +9143,13 @@ function edToAgregarClubNuevo(){
   const nombre=document.getElementById('ed-to-nuevo-club-nombre').value.trim();
   if(!nombre){alert('Completá el nombre del club');return;}
   const div=document.getElementById('ed-to-nuevo-club-div').value;
-  const equipo=crearClubEnEquipos(nombre,div,_edToNuevoClubEscudo);
+  const liga=div==='extraliga'?document.getElementById('ed-to-nuevo-club-liga').value.trim():'';
+  const equipo=crearClubEnEquipos(nombre,div,_edToNuevoClubEscudo,liga);
   if(!equipo) return;
   _edToNuevoClubEscudo='';
   document.getElementById('ed-to-nuevo-club-nombre').value='';
+  document.getElementById('ed-to-nuevo-club-liga').value='';
+  edToActualizarVisLigaNuevoClub();
   const fEl=document.getElementById('ed-to-nuevo-club-escudo-file'); if(fEl) fEl.value='';
   const p=document.getElementById('ed-to-nuevo-club-escudo-preview'); if(p) p.src='';
   const w=document.getElementById('ed-to-nuevo-club-escudo-wrap'); if(w) w.classList.remove('visible');
@@ -9118,10 +9223,19 @@ function previewEscudo(input){
   comprimirABase64(file, 300, 0.85).then(dataUrl=>{_escudoB64=dataUrl;const p=document.getElementById('eq-escudo-preview');if(p)p.src=_escudoB64;const w=document.getElementById('eq-escudo-wrap');if(w)w.classList.add('visible');});
 }
 
+function eqActualizarVisLiga(){
+  const w=document.getElementById('eq-liga-wrap'); if(!w) return;
+  w.style.display = document.getElementById('eq-div').value==='extraliga' ? '' : 'none';
+}
+function edEqActualizarVisLiga(){
+  const w=document.getElementById('ed-eq-liga-wrap'); if(!w) return;
+  w.style.display = document.getElementById('ed-div').value==='extraliga' ? '' : 'none';
+}
 function agregarEquipo(){
   const nombre=document.getElementById('eq-nombre').value.trim();
   if(!nombre){alert('Completá el nombre del equipo');return;}
   const div=document.getElementById('eq-div').value;
+  const liga=div==='extraliga'?document.getElementById('eq-liga').value.trim():'';
   const ini=document.getElementById('eq-ini').value.toUpperCase()||(nombre.substr(0,3).toUpperCase());
   const e={...escudos}; // copia de la variable en memoria (con imágenes completas)
   const nombreNorm = normalizar(nombre);
@@ -9129,11 +9243,13 @@ function agregarEquipo(){
   else if(!e[nombreNorm]) e[nombreNorm]={ini};
   saveEscudos(e, nombreNorm); escudos=e;
   const existing=data.equipos.findIndex(x=>normalizar(x.nombre)===normalizar(nombre)&&x.div===div);
-  const nuevo={id:String(Date.now()),nombre,div,ini};
+  const nuevo={id:String(Date.now()),nombre,div,ini,liga};
   if(existing>=0)data.equipos[existing]=nuevo;else data.equipos.push(nuevo);
   saveData(data);_escudoB64='';
   document.getElementById('eq-escudo-preview').style.display='none';
   document.getElementById('eq-escudo-file').value='';
+  document.getElementById('eq-liga').value='';
+  eqActualizarVisLiga();
   renderAdminListas();renderSection(currentSection);
 }
 
@@ -9142,7 +9258,7 @@ function agregarEquipo(){
 // ============================================================
 // Crea (o reutiliza) un club en Equipos + su escudo — usado desde Torneos para
 // dar de alta un club "al vuelo" sin salir del formulario, igual que en Transferencias.
-function crearClubEnEquipos(nombre, div, escudoB64){
+function crearClubEnEquipos(nombre, div, escudoB64, liga){
   nombre=nombre.trim(); if(!nombre) return null;
   const nombreNorm=normalizar(nombre);
   const existing=data.equipos.findIndex(x=>normalizar(x.nombre)===nombreNorm&&x.div===div);
@@ -9151,6 +9267,7 @@ function crearClubEnEquipos(nombre, div, escudoB64){
       const e={...escudos}; const esc=e[nombreNorm]||{ini:data.equipos[existing].ini};
       esc.img=escudoB64; e[nombreNorm]=esc; saveEscudos(e,nombreNorm); escudos=e;
     }
+    if(div==='extraliga' && liga) data.equipos[existing].liga=liga.trim();
     return data.equipos[existing];
   }
   const ini=nombre.substr(0,3).toUpperCase();
@@ -9158,6 +9275,7 @@ function crearClubEnEquipos(nombre, div, escudoB64){
   if(escudoB64) e[nombreNorm]={ini,img:escudoB64}; else if(!e[nombreNorm]) e[nombreNorm]={ini};
   saveEscudos(e,nombreNorm); escudos=e;
   const nuevo={id:String(Date.now())+Math.floor(Math.random()*1000),nombre,div,ini};
+  if(div==='extraliga' && liga) nuevo.liga=liga.trim();
   data.equipos.push(nuevo); saveData(data);
   return nuevo;
 }
@@ -9165,6 +9283,10 @@ function crearClubEnEquipos(nombre, div, escudoB64){
 let _toNuevoClubEscudo='';
 function toToggleAddClub(){
   const f=document.getElementById('to-add-club-form'); if(f) f.style.display=(f.style.display==='none')?'':'none';
+}
+function toActualizarVisLigaNuevoClub(){
+  const w=document.getElementById('to-nuevo-club-liga-wrap'); if(!w) return;
+  w.style.display = document.getElementById('to-nuevo-club-div').value==='extraliga' ? '' : 'none';
 }
 function toPreviewNuevoClubEscudo(input){
   const file=input.files[0]; if(!file) return;
@@ -9178,10 +9300,13 @@ function toAgregarClubNuevo(){
   const nombre=document.getElementById('to-nuevo-club-nombre').value.trim();
   if(!nombre){alert('Completá el nombre del club');return;}
   const div=document.getElementById('to-nuevo-club-div').value;
-  const equipo=crearClubEnEquipos(nombre,div,_toNuevoClubEscudo);
+  const liga=div==='extraliga'?document.getElementById('to-nuevo-club-liga').value.trim():'';
+  const equipo=crearClubEnEquipos(nombre,div,_toNuevoClubEscudo,liga);
   if(!equipo) return;
   _toNuevoClubEscudo='';
   document.getElementById('to-nuevo-club-nombre').value='';
+  document.getElementById('to-nuevo-club-liga').value='';
+  toActualizarVisLigaNuevoClub();
   const fEl=document.getElementById('to-nuevo-club-escudo-file'); if(fEl) fEl.value='';
   const p=document.getElementById('to-nuevo-club-escudo-preview'); if(p) p.src='';
   const w=document.getElementById('to-nuevo-club-escudo-wrap'); if(w) w.classList.remove('visible');
@@ -9247,11 +9372,13 @@ function agregarTorneo(){
   if(!nombre){alert('Completá el nombre');return;}
   const estado=document.getElementById('to-estado').value;
   const clubes=Array.from(document.querySelectorAll('.to-club-chk:checked')).map(c=>c.value);
+  const disenoSel=document.querySelector('input[name="to-diseno"]:checked');
   const id=String(Date.now());
   const obj={
     id, nombre,
     edicion:document.getElementById('to-edicion').value.trim(),
     estado,
+    diseno:disenoSel?disenoSel.value:'banner',
     inicio:document.getElementById('to-inicio').value,
     cierre:document.getElementById('to-cierre').value,
     sede:document.getElementById('to-sede').value.trim(),
@@ -9275,6 +9402,7 @@ function agregarTorneo(){
   document.getElementById('to-cierre').value='';
   document.getElementById('to-desc').value='';
   document.getElementById('to-estado').value='activo';
+  const bannerRadio=document.querySelector('input[name="to-diseno"][value="banner"]'); if(bannerRadio) bannerRadio.checked=true;
   toActualizarVisEstado();
   toQuitarLogo(); toQuitarCampeonFoto();
   renderTorneoClubesChecklist();
@@ -9503,9 +9631,15 @@ function abrirModalEdicion(tipo,id,objOverride){
   } else if(tipo==='equipos'){
     const esc=escudos[normalizar(obj.nombre)];
     const curImg=esc&&esc.img?`<img id="ed-escudo-preview" src="${esc.img}" style="max-height:60px;margin-top:6px;border-radius:var(--r-sm);border:1px solid var(--dorado-border);display:block"/>`:`<img id="ed-escudo-preview" style="display:none;max-height:60px;margin-top:6px"/>`;
+    const divSelectEquipo=`<select id="ed-div" onchange="edEqActualizarVisLiga()">
+      <option value="primera" ${obj.div==='primera'?'selected':''}>Primera División</option>
+      <option value="segunda" ${obj.div==='segunda'?'selected':''}>Segunda División</option>
+      <option value="extraliga" ${obj.div==='extraliga'?'selected':''}>Club extra-liga</option>
+    </select>`;
     bodyHTML=`
       <div class="form-row"><div class="form-group"><label>Nombre</label><input type="text" id="ed-nombre" value="${obj.nombre||''}"/></div>
-        <div class="form-group"><label>División</label>${divSelect}</div></div>
+        <div class="form-group"><label>División</label>${divSelectEquipo}</div></div>
+      <div class="form-group" id="ed-eq-liga-wrap" style="${obj.div==='extraliga'?'':'display:none'}"><label>Liga a la que pertenece</label><input type="text" id="ed-eq-liga" value="${obj.liga||''}" placeholder="Ej: Liga Calamuchita"/></div>
       <div class="form-group"><label>Iniciales</label><input type="text" id="ed-ini" value="${obj.ini||''}" maxlength="3"/></div>
       <div class="form-group"><label>Escudo (nueva imagen)</label>
         <div class="upload-area" style="padding:12px">
@@ -9533,6 +9667,16 @@ function abrirModalEdicion(tipo,id,objOverride){
         </div>
         <div id="ed-to-logo-wrap">${logoActual}</div>
       </div>
+      <div class="form-group"><label>Diseño de la tarjeta</label>
+        <div class="diseno-picker">
+          <label class="diseno-opcion"><input type="radio" name="ed-diseno" value="banner" ${obj.diseno!=='lateral'?'checked':''}/>
+            <div class="diseno-opcion-box"><div class="diseno-mini diseno-mini-banner"><span></span><span></span></div><span class="diseno-opcion-txt">Banner con campeón</span></div>
+          </label>
+          <label class="diseno-opcion"><input type="radio" name="ed-diseno" value="lateral" ${obj.diseno==='lateral'?'checked':''}/>
+            <div class="diseno-opcion-box"><div class="diseno-mini diseno-mini-lateral"><span></span><span></span></div><span class="diseno-opcion-txt">Campeón lateral</span></div>
+          </label>
+        </div>
+      </div>
       <div class="form-row"><div class="form-group"><label>Estado</label><select id="ed-estado" onchange="edToActualizarVisEstado()">
           <option value="activo" ${obj.estado==='activo'?'selected':''}>En curso</option>
           <option value="proximo" ${obj.estado==='proximo'?'selected':''}>Próximo</option>
@@ -9547,8 +9691,9 @@ function abrirModalEdicion(tipo,id,objOverride){
         <div class="add-club-form" id="ed-to-add-club-form" style="display:none">
           <div class="form-row">
             <div class="form-group"><label>Nombre del club</label><input type="text" id="ed-to-nuevo-club-nombre" placeholder="Ej: Sportivo Belgrano"/></div>
-            <div class="form-group"><label>División</label><select id="ed-to-nuevo-club-div"><option value="primera">Primera</option><option value="segunda">Segunda</option></select></div>
+            <div class="form-group"><label>División</label><select id="ed-to-nuevo-club-div" onchange="edToActualizarVisLigaNuevoClub()"><option value="primera">Primera</option><option value="segunda">Segunda</option><option value="extraliga">Club extra-liga</option></select></div>
           </div>
+          <div class="form-group" id="ed-to-nuevo-club-liga-wrap" style="display:none"><label>Liga a la que pertenece</label><input type="text" id="ed-to-nuevo-club-liga" placeholder="Ej: Liga Calamuchita"/></div>
           <div class="form-group"><label>Escudo (opcional)</label>
             <input type="file" accept="image/*" id="ed-to-nuevo-club-escudo-file" onchange="edToPreviewNuevoClubEscudo(this)" style="font-size:11px"/>
             <div class="preview-wrap" id="ed-to-nuevo-club-escudo-wrap"><img id="ed-to-nuevo-club-escudo-preview" src="" alt="" style="max-height:60px;object-fit:contain"/></div>
@@ -9937,7 +10082,10 @@ function guardarEdicion(tipo,id){
     const nombreViejo=data.equipos[idx].nombre;
     const nombreNuevo=val('ed-nombre');
     const ini=val('ed-ini').toUpperCase()||nombreNuevo.substr(0,3).toUpperCase();
-    data.equipos[idx]={...data.equipos[idx],nombre:nombreNuevo,div:val('ed-div'),ini};
+    const divNuevo=val('ed-div');
+    const ligaEl=document.getElementById('ed-eq-liga');
+    const liga=divNuevo==='extraliga'&&ligaEl?ligaEl.value.trim():'';
+    data.equipos[idx]={...data.equipos[idx],nombre:nombreNuevo,div:divNuevo,ini,liga};
     const e={...escudos};const escViejo=e[normalizar(nombreViejo)]||{};
     if(_editEscudoB64)escViejo.img=_editEscudoB64;
     escViejo.ini=ini;
@@ -9948,12 +10096,14 @@ function guardarEdicion(tipo,id){
     const idx=data.torneos.findIndex(p=>String(p.id)===sid);if(idx<0)return;
     const estado=val('ed-estado');
     const clubes=Array.from(document.querySelectorAll('.ed-to-club-chk:checked')).map(c=>c.value);
+    const disenoSel=document.querySelector('input[name="ed-diseno"]:checked');
     const nuevoLogo = window._edToLogo !== undefined ? window._edToLogo : (data.torneos[idx].logo||'');
     const nuevaCampeonFoto = estado==='finalizado' ? (window._edToCampeonFoto !== undefined ? window._edToCampeonFoto : (data.torneos[idx].campeonFoto||'')) : '';
     data.torneos[idx]={...data.torneos[idx],
       nombre:val('ed-nombre'),
       edicion:val('ed-edicion'),
       estado,
+      diseno:disenoSel?disenoSel.value:'banner',
       inicio:val('ed-inicio'),
       cierre:val('ed-cierre'),
       sede:val('ed-sede'),
@@ -10406,7 +10556,7 @@ function renderAdminListas(){
     const sid=String(e.id);
     return `<div class="admin-list-item">
       ${escPrev}
-      <span><b>${e.div==='primera'?'1ª':'2ª'}</b> | ${e.nombre} (${e.ini||'–'})</span>
+      <span><b>${e.div==='primera'?'1ª':e.div==='segunda'?'2ª':'Extra-liga'}</b> | ${e.nombre} (${e.ini||'–'})${e.div==='extraliga'&&e.liga?' · '+e.liga:''}</span>
       <div style="display:flex;gap:5px;flex-shrink:0">
         ${esc&&esc.img?`<button class="btn-danger" onclick="eliminarEscudo('${e.nombre.replace(/'/g,"\\'")}')">🗑 Escudo</button>`:''}
         <button class="btn-edit" onclick="abrirModalEdicion('equipos','${sid}')">✏ Editar</button>
@@ -10419,7 +10569,8 @@ function renderAdminListas(){
     const estadoTxt=t.estado==='activo'?'En curso':t.estado==='proximo'?'Próximo':'Finalizado';
     const logoImg=t.logo?`<img class="mini-logo-preview" src="${t.logo}"/>`:`<div class="mini-logo-preview" style="display:flex;align-items:center;justify-content:center;font-size:16px">🏆</div>`;
     const nClubes=(t.clubes||[]).length;
-    const detalles=[t.edicion,t.sede,nClubes?`${nClubes} clubes`:'',t.estado==='finalizado'&&t.campeon?`🏆 ${t.campeon}`:''].filter(Boolean).join(' · ');
+    const disenoTxt=t.diseno==='lateral'?'Diseño: lateral':'Diseño: banner';
+    const detalles=[t.edicion,t.sede,nClubes?`${nClubes} clubes`:'',t.estado==='finalizado'&&t.campeon?`🏆 ${t.campeon}`:'',disenoTxt].filter(Boolean).join(' · ');
     return `<div class="admin-list-item">
       ${logoImg}
       <span><b>${t.nombre}</b> – <em>${estadoTxt}</em>${detalles?'<br><span style="color:var(--gris);font-size:11px">'+detalles+'</span>':''}</span>
@@ -12404,7 +12555,6 @@ async function generarImagenTorneo(torneoId){
   const id   = getIdentidad();
   const liga = id.nombre||'DEPORTEMAS';
   const W    = CV_W;
-  const cuerpoH = s(240);
 
   const canvas = document.createElement('canvas');
   canvas.width=W; canvas.height=CV_H;
@@ -12413,58 +12563,165 @@ async function generarImagenTorneo(torneoId){
 
   ctx.fillStyle=C.NEG2; ctx.fillRect(0,0,W,CV_H);
 
-  const hHeader = s(64), hFooter = s(40);
-  const hContenido = hHeader + cuerpoH + hFooter;
-  const yOffset = Math.max(0, Math.floor((CV_H - hContenido) / 2));
+  // ── Header (siempre arriba, igual que el resto de las imágenes) ──
+  let y = await cvHeader(ctx,W,id,0);
 
-  let y=await cvHeader(ctx,W,id,yOffset);
+  const tieneFotoCampeon = t.estado==='finalizado' && !!t.campeon && !!t.campeonFoto;
+  const heroH = tieneFotoCampeon ? s(340) : s(280);
 
-  const grad=ctx.createLinearGradient(0,y,0,y+cuerpoH);
-  grad.addColorStop(0,C.NEG3); grad.addColorStop(1,C.NEG2);
-  ctx.fillStyle=grad; ctx.fillRect(0,y,W,cuerpoH);
+  const heroGrad=ctx.createLinearGradient(0,y,0,y+heroH);
+  heroGrad.addColorStop(0,C.NEG3); heroGrad.addColorStop(1,C.NEG2);
+  ctx.fillStyle=heroGrad; ctx.fillRect(0,y,W,heroH);
 
-  // Trofeo
-  ctx.font=`${s(88)}px sans-serif`;
-  ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText('🏆',W/2,y+s(76));
-  ctx.textBaseline='alphabetic';
+  if(tieneFotoCampeon){
+    // ── Foto grande del campeón ocupando todo el ancho ──
+    await new Promise(res=>{
+      const img=new Image();
+      img.onload=()=>{
+        const ratio=img.naturalWidth/img.naturalHeight;
+        let dw=W, dh=W/ratio;
+        if(dh<heroH){ dh=heroH; dw=heroH*ratio; }
+        const dx=(W-dw)/2, dy=y;
+        ctx.save(); ctx.beginPath(); ctx.rect(0,y,W,heroH); ctx.clip();
+        ctx.drawImage(img,dx,dy,dw,dh);
+        ctx.restore();
+        res();
+      };
+      img.onerror=()=>res();
+      img.src=t.campeonFoto;
+    });
+    const fade=ctx.createLinearGradient(0,y,0,y+heroH);
+    fade.addColorStop(0,'rgba(8,8,16,0.05)');
+    fade.addColorStop(0.55,'rgba(8,8,16,0.25)');
+    fade.addColorStop(1,'rgba(8,8,16,0.94)');
+    ctx.fillStyle=fade; ctx.fillRect(0,y,W,heroH);
 
-  // Nombre torneo — Bebas Neue
+    // Etiqueta "Campeón"
+    ctx.font=`700 ${s(14)}px "Rajdhani", Arial, sans-serif`;
+    const tagTxt='🏆 CAMPEÓN';
+    const tagW=ctx.measureText(tagTxt).width+s(26);
+    cvRoundRect(ctx,s(24),y+s(20),tagW,s(32),s(6));
+    ctx.fillStyle='rgba(201,162,39,0.92)'; ctx.fill();
+    ctx.fillStyle=C.NEG; ctx.textAlign='left'; ctx.textBaseline='middle';
+    ctx.fillText(tagTxt, s(24)+s(13), y+s(20)+s(16));
+    ctx.textBaseline='alphabetic';
+
+    // Nombre del campeón + escudo, apoyados abajo de la foto
+    const crestSize=s(64);
+    await cvDrawEscudo(ctx, t.campeon, W - s(24) - crestSize, y+heroH-s(24)-crestSize, crestSize);
+    ctx.fillStyle=C.BLANCO;
+    ctx.font=`${s(42)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+    cvFillTextTrunc(ctx, t.campeon.toUpperCase(), s(24), y+heroH-s(42), W - s(48) - crestSize);
+    ctx.fillStyle='rgba(255,255,255,0.62)';
+    ctx.font=`500 ${s(14)}px "DM Sans", Arial, sans-serif`;
+    cvFillTextTrunc(ctx, 'Campeón · '+t.nombre+(t.edicion?' · '+t.edicion:''), s(24), y+heroH-s(16), W - s(48) - crestSize);
+  } else if(t.logo){
+    // ── Logo del torneo, centrado ──
+    const logoSize=s(130);
+    await new Promise(res=>{
+      const img=new Image();
+      img.onload=()=>{
+        ctx.save(); ctx.beginPath();
+        ctx.arc(W/2, y+heroH/2, logoSize/2, 0, Math.PI*2); ctx.clip();
+        ctx.drawImage(img, W/2-logoSize/2, y+heroH/2-logoSize/2, logoSize, logoSize);
+        ctx.restore();
+        res();
+      };
+      img.onerror=()=>res();
+      img.src=t.logo;
+    });
+  } else {
+    ctx.font=`${s(90)}px sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('🏆',W/2,y+heroH/2);
+    ctx.textBaseline='alphabetic';
+  }
+  y += heroH;
+
+  // ── Nombre del torneo — Bebas Neue ──
   ctx.fillStyle=C.BLANCO;
-  ctx.font=`${s(36)}px "Bebas Neue", Arial, sans-serif`;
+  ctx.font=`${s(42)}px "Bebas Neue", Arial, sans-serif`;
   ctx.textAlign='center'; ctx.textBaseline='alphabetic';
-  cvFillTextTrunc(ctx,t.nombre.toUpperCase(),W/2,y+s(140),W-s(80));
+  y += s(58);
+  cvFillTextTrunc(ctx,t.nombre.toUpperCase(),W/2,y,W-s(80));
 
-  // Campeón (si finalizó) o Descripción — DM Sans
-  if(t.estado==='finalizado' && t.campeon){
+  if(t.edicion){
+    y += s(24);
+    ctx.fillStyle='rgba(201,162,39,0.75)';
+    ctx.font=`500 ${s(15)}px "DM Sans", Arial, sans-serif`;
+    cvFillTextTrunc(ctx, t.edicion, W/2, y, W-s(100));
+  }
+  if(!tieneFotoCampeon && t.estado==='finalizado' && t.campeon){
+    y += s(26);
     ctx.fillStyle=C.DORADO;
-    ctx.font=`700 ${s(16)}px "DM Sans", Arial, sans-serif`;
-    cvFillTextTrunc(ctx,'🏆 CAMPEÓN: '+t.campeon.toUpperCase(),W/2,y+s(166),W-s(120));
-  } else if(t.desc){
-    ctx.fillStyle='rgba(255,255,255,0.5)';
-    ctx.font=`400 ${s(16)}px "DM Sans", Arial, sans-serif`;
-    cvFillTextTrunc(ctx,t.desc,W/2,y+s(166),W-s(120));
+    ctx.font=`700 ${s(15)}px "DM Sans", Arial, sans-serif`;
+    cvFillTextTrunc(ctx,'🏆 CAMPEÓN: '+t.campeon.toUpperCase(),W/2,y,W-s(120));
   }
 
-  // Badge estado — Rajdhani
+  // ── Badge estado — Rajdhani ──
+  y += s(36);
   const estadoTxt=t.estado==='activo'?'EN CURSO':t.estado==='proximo'?'PRÓXIMO':'FINALIZADO';
-  const estadoCol=t.estado==='activo'?'rgba(26,107,47,0.6)':t.estado==='proximo'?'rgba(201,162,39,0.2)':'rgba(100,100,100,0.4)';
-  const estadoTxtCol=t.estado==='activo'?'#4caf74':t.estado==='proximo'?C.DORADO:C.GRIS;
+  const estadoCol=t.estado==='activo'?'rgba(26,107,47,0.6)':t.estado==='proximo'?'rgba(201,162,39,0.2)':'rgba(192,57,43,0.25)';
+  const estadoTxtCol=t.estado==='activo'?'#4caf74':t.estado==='proximo'?C.DORADO:'#e74c3c';
   ctx.font=`700 ${s(14)}px "Rajdhani", Arial, sans-serif`;
   const bW=ctx.measureText(estadoTxt).width+s(28);
-  cvRoundRect(ctx,W/2-bW/2,y+s(178),bW,s(28),s(6));
+  cvRoundRect(ctx,W/2-bW/2,y,bW,s(30),s(6));
   ctx.fillStyle=estadoCol; ctx.fill();
   ctx.fillStyle=estadoTxtCol; ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText(estadoTxt,W/2,y+s(192));
+  ctx.fillText(estadoTxt,W/2,y+s(15));
   ctx.textBaseline='alphabetic';
+  y += s(30);
 
-  // Fechas — DM Sans
+  // ── Fechas y sede — DM Sans ──
   if(t.inicio||t.cierre){
-    ctx.fillStyle='rgba(201,162,39,0.6)';
-    ctx.font=`500 ${s(14)}px "DM Sans", Arial, sans-serif`;
+    y += s(32);
+    ctx.fillStyle='rgba(201,162,39,0.65)';
+    ctx.font=`500 ${s(15)}px "DM Sans", Arial, sans-serif`;
     ctx.textAlign='center';
     const fechas=[(t.inicio?'Inicio: '+torneoFechaLegible(t.inicio):''),(t.cierre?'Cierre: '+torneoFechaLegible(t.cierre):'')].filter(Boolean).join('  ·  ');
-    ctx.fillText(fechas,W/2,y+s(222));
+    ctx.fillText(fechas,W/2,y);
+  }
+  if(t.sede){
+    y += s(26);
+    ctx.fillStyle='rgba(255,255,255,0.45)';
+    ctx.font=`400 ${s(14)}px "DM Sans", Arial, sans-serif`;
+    cvFillTextTrunc(ctx, '📍 '+t.sede, W/2, y, W-s(120));
+  }
+
+  // ── Clubes participantes — escudos ──
+  if(t.clubes && t.clubes.length){
+    y += s(50);
+    ctx.fillStyle='rgba(255,255,255,0.4)';
+    ctx.font=`700 ${s(13)}px "Rajdhani", Arial, sans-serif`;
+    ctx.textAlign='center';
+    ctx.fillText('CLUBES PARTICIPANTES',W/2,y);
+    y += s(34);
+    const maxMostrar=6;
+    const mostrar=t.clubes.slice(0,maxMostrar);
+    const extra=t.clubes.length-mostrar.length;
+    const crestSize=s(70);
+    const gap=s(26);
+    const totalItems=mostrar.length+(extra>0?1:0);
+    const totalW=totalItems*crestSize+(totalItems-1)*gap;
+    let cx=W/2-totalW/2;
+    for(const club of mostrar){
+      await cvDrawEscudo(ctx, club, cx, y, crestSize);
+      ctx.fillStyle='rgba(255,255,255,0.55)';
+      ctx.font=`500 ${s(11)}px "DM Sans", Arial, sans-serif`;
+      ctx.textAlign='center';
+      cvFillTextTrunc(ctx, club, cx+crestSize/2, y+crestSize+s(20), crestSize+s(34));
+      cx += crestSize+gap;
+    }
+    if(extra>0){
+      ctx.beginPath(); ctx.arc(cx+crestSize/2, y+crestSize/2, crestSize/2, 0, Math.PI*2);
+      ctx.fillStyle='rgba(201,162,39,0.15)'; ctx.fill();
+      ctx.fillStyle=C.DORADO;
+      ctx.font=`700 ${s(18)}px Arial`;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('+'+extra, cx+crestSize/2, y+crestSize/2);
+      ctx.textBaseline='alphabetic';
+    }
   }
 
   cvFooter(ctx,W,CV_H - s(40),liga);
