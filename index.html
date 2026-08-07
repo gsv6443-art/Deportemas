@@ -818,6 +818,17 @@ header::after{
 .banner-polideportivo:hover .bp-flecha{transform:translateX(3px);}
 .banner-polideportivo .bp-iconos{display:flex;align-items:center;gap:8px;padding-left:10px;margin-left:2px;border-left:1px solid var(--dorado-border);}
 .banner-polideportivo .bp-iconos svg{width:17px;height:17px;color:rgba(245,245,245,.6);}
+.banner-polideportivo--disabled{cursor:default;}
+.banner-polideportivo--disabled:hover{background:linear-gradient(90deg,var(--negro2) 0%,var(--negro3) 100%);}
+.banner-polideportivo--disabled .bp-texto{color:rgba(245,245,245,.55);}
+.banner-polideportivo--disabled .bp-texto b{color:rgba(245,245,245,.55);}
+.banner-polideportivo--disabled svg,.banner-polideportivo--disabled .bp-iconos svg{color:rgba(245,245,245,.3);}
+.bp-proximamente{
+  font-family:'Rajdhani',sans-serif;font-weight:700;font-size:10px;letter-spacing:1px;
+  text-transform:uppercase;color:var(--dorado-light);background:rgba(201,162,39,.12);
+  border:1px solid var(--dorado-border);border-radius:12px;padding:3px 10px;white-space:nowrap;
+  margin-left:4px;
+}
 @media(max-width:640px){
   .banner-polideportivo .bp-texto{font-size:12px;letter-spacing:.5px;}
   .banner-polideportivo svg{width:16px;height:16px;}
@@ -4409,8 +4420,8 @@ table.posiciones td:nth-child(8){
   </nav>
 </header>
 
-<!-- BANNER POLIDEPORTIVO -->
-<a href="polideportivo.html" class="banner-polideportivo" aria-label="Ir a Polideportivo">
+<!-- BANNER POLIDEPORTIVO (temporalmente deshabilitado — próximamente) -->
+<div class="banner-polideportivo banner-polideportivo--disabled" aria-label="Polideportivo, próximamente">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18M5.2 5.2c2.3 2.3 3.4 4.5 3.4 6.8s-1.1 4.5-3.4 6.8M18.8 5.2c-2.3 2.3-3.4 4.5-3.4 6.8s1.1 4.5 3.4 6.8"/></svg>
   <span class="bp-texto">Descubrí <b>Polideportivo</b></span>
   <span class="bp-iconos" aria-hidden="true">
@@ -4423,8 +4434,8 @@ table.posiciones td:nth-child(8){
     <!-- Tenis/Pádel -->
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9.5" cy="9.5" r="5.3"/><path d="M9.5 4.6v9.8M4.6 9.5h9.8" stroke-width="0.9" opacity="0.6"/><path d="M13.2 13.2 20.5 20.5"/><circle cx="18.3" cy="4.8" r="1.6" fill="currentColor" stroke="none"/></svg>
   </span>
-  <span class="bp-flecha">→</span>
-</a>
+  <span class="bp-proximamente">Próximamente</span>
+</div>
 
 <!-- BANNER PUBLICITARIO SUPERIOR -->
 
