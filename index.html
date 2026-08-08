@@ -10068,6 +10068,37 @@ function detectarEventoPartido(viejo, nuevo){
   return null;
 }
 
+// ============================================================
+// AUTO-DESCARGA DE IMAGEN PARA HISTORIAS (solo admin)
+// ============================================================
+// Cuando un partido pasa a "en juego", se carga un gol, termina el
+// primer tiempo, arranca el segundo o finaliza el partido, se genera
+// y descarga automáticamente (solo si hay un admin logueado) la
+// imagen de estado del partido para subir a las historias de Instagram.
+const EVENTOS_AUTO_DESCARGA = {
+  inicio:       'inicio',
+  gol:          'gol',
+  roja:         'expulsion',
+  entretiempo:  'entretiempo',
+  reanudacion:  'segundo-tiempo',
+  fin:          'final'
+};
+async function autoDescargarImagenEvento(pid, evento){
+  if(!evento || !EVENTOS_AUTO_DESCARGA[evento.tipo]) return;
+  if(!window._fbUser) return; // sólo se descarga automáticamente si hay un admin logueado
+  const p = data.partidos.find(x=>String(x.id)===String(pid));
+  if(!p) return;
+  try{
+    const canvas = await generarImagenHistoria(p, evento);
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = 'deportemas-' + EVENTOS_AUTO_DESCARGA[evento.tipo] + '-' + Date.now() + '.png';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  }catch(e){
+    console.error('Error generando imagen automática de historia', e);
+  }
+}
+
 function guardarEdicion(tipo,id){
   const sid=String(id);
   const val=id=>{const el=document.getElementById(id);return el?el.value:'';};
@@ -10214,6 +10245,7 @@ function guardarEdicion(tipo,id){
     const {pid, evento} = window._animPendiente;
     window._animPendiente = null;
     if(evento) dispararAnimacionMarcador(pid, evento.tipo, evento.equipo||'', evento.jugador||'', evento.min||'');
+    if(evento) autoDescargarImagenEvento(pid, evento);
   }
 }
 
@@ -11406,6 +11438,241 @@ async function generarImagenPartido(p){
   cvFooter(ctx, W, CV_H - s(40), liga);
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   return canvas;
+}
+
+// ============================================================
+// IMÁGENES PARA HISTORIAS DE INSTAGRAM — formato 1080×1920
+// ============================================================
+// Canvas más alto que el de "compartir resultado" (que sigue en
+// CV_H/1350 para no tocar esa función). Reutiliza C, s(), cvDrawEscudo,
+// cvRoundRect, cvFillTextTrunc, cvHeader y cvFooter.
+const CV_H_STORIA = 1920;
+
+function cvDivisorDorado(ctx, W, y){
+  const g = ctx.createLinearGradient(0, y, W, y);
+  g.addColorStop(0, 'transparent');
+  g.addColorStop(0.2, C.DORADO);
+  g.addColorStop(0.8, C.DORADO);
+  g.addColorStop(1, 'transparent');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, y, W, 2);
+}
+
+function cvBadgeEvento(ctx, W, texto, colorBg, colorTxt, y){
+  ctx.font = `700 ${s(18)}px "Rajdhani", Arial, sans-serif`;
+  const padX = s(28);
+  const bw = ctx.measureText(texto).width + padX*2;
+  const bh = s(40);
+  const bx = W/2 - bw/2;
+  cvRoundRect(ctx, bx, y, bw, bh, bh/2);
+  ctx.fillStyle = colorBg; ctx.fill();
+  ctx.fillStyle = colorTxt;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(texto, W/2, y + bh/2);
+  ctx.textBaseline = 'alphabetic';
+  return y + bh;
+}
+
+// Historia para eventos sin equipo protagonista: inicio, entretiempo,
+// inicio del segundo tiempo y final. Ambos escudos enfrentados con el
+// marcador/"VS" bien separado, y los nombres de equipo mucho más abajo
+// para que nada se superponga.
+async function generarImagenHistoriaNeutral(p, evento){
+  await document.fonts.ready;
+  const id   = getIdentidad();
+  const liga = id.nombre || 'DEPORTEMAS';
+  const W = CV_W, H = CV_H_STORIA, CX = W/2;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.textBaseline = 'alphabetic';
+
+  const bg = ctx.createLinearGradient(0,0,0,H);
+  bg.addColorStop(0, C.NEG3); bg.addColorStop(1, C.NEG);
+  ctx.fillStyle = bg; ctx.fillRect(0,0,W,H);
+
+  let y = await cvHeader(ctx, W, id, 0);
+
+  const CFG = {
+    inicio:      {label:'COMIENZA EL PARTIDO',    bg:'rgba(201,162,39,0.18)', tx:C.DORADO2},
+    entretiempo: {label:'FINALIZA EL 1ER TIEMPO', bg:'rgba(201,162,39,0.18)', tx:C.DORADO2},
+    reanudacion: {label:'COMIENZA EL 2DO TIEMPO', bg:'rgba(201,162,39,0.18)', tx:C.DORADO2},
+    fin:         {label:'FINAL DEL PARTIDO',      bg:'rgba(26,107,47,0.35)',  tx:'#4caf74'},
+  };
+  const cfg = CFG[evento.tipo] || CFG.inicio;
+  y += s(60);
+  y = cvBadgeEvento(ctx, W, cfg.label, cfg.bg, cfg.tx, y);
+
+  // Escudos grandes, con espacio garantizado para el marcador en el medio
+  const escR  = s(90);
+  const escCY = y + s(200);
+  const escLX = s(150), escRX = W - s(150);
+
+  await cvDrawEscudo(ctx, p.local, escLX-escR, escCY-escR, escR*2);
+  await cvDrawEscudo(ctx, p.visit, escRX-escR, escCY-escR, escR*2);
+
+  // Marcador en una placa de ancho fijo, centrada entre los escudos:
+  // así nunca puede invadirlos, sin importar cuántos dígitos tenga.
+  const marcTxt = evento.tipo==='inicio' ? 'VS' : (p.resultado || '0 - 0');
+  const mbW = s(190), mbH = s(78);
+  cvRoundRect(ctx, CX-mbW/2, escCY-mbH/2, mbW, mbH, s(14));
+  ctx.fillStyle = C.NEG3; ctx.fill();
+  ctx.strokeStyle = 'rgba(201,162,39,0.45)'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.font = `${s(46)}px "Bebas Neue", Arial, sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = C.DORADO;
+  cvFillTextTrunc(ctx, marcTxt, CX, escCY+2, mbW - s(24));
+  ctx.textBaseline = 'alphabetic';
+
+  // Nombres, con margen amplio debajo de los escudos (nunca tocan el marcador)
+  const nomY = escCY + escR + s(60);
+  ctx.font = `${s(30)}px "Bebas Neue", Arial, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.fillStyle = C.BLANCO;
+  cvFillTextTrunc(ctx, p.local.toUpperCase(), escLX, nomY, s(260));
+  cvFillTextTrunc(ctx, p.visit.toUpperCase(), escRX, nomY, s(260));
+
+  y = nomY + s(70);
+  cvDivisorDorado(ctx, W, y);
+  y += s(56);
+
+  const divLabel   = p.div==='primera' ? '1ª División' : '2ª División';
+  const tornLabel2 = p.torneo ? ' · '+torneoLabel(p.torneo) : '';
+  ctx.fillStyle = 'rgba(201,162,39,0.7)';
+  ctx.font = `700 ${s(16)}px "Rajdhani", Arial, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.fillText([(p.fecha||''),(p.dia||''), divLabel+tornLabel2].filter(Boolean).join('  ·  '), CX, y);
+  y += s(46);
+
+  if(p.arbitros && p.arbitros.length){
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.font = `400 ${s(17)}px "DM Sans", Arial, sans-serif`;
+    cvFillTextTrunc(ctx, 'Árbitro/s: ' + p.arbitros.map(a=>a.nombre||a).join(', '), CX, y, W - s(100));
+    y += s(46);
+  }
+
+  const goles = p.goles || [];
+  if(goles.length){
+    y += s(20);
+    cvDivisorDorado(ctx, W, y);
+    y += s(46);
+    ctx.fillStyle = 'rgba(201,162,39,0.6)';
+    ctx.font = `700 ${s(15)}px "Rajdhani", Arial, sans-serif`;
+    ctx.fillText('GOLES', CX, y);
+    y += s(40);
+    ctx.font = `500 ${s(19)}px "DM Sans", Arial, sans-serif`;
+    goles.slice(0,8).forEach(g=>{
+      const eqNom = g.equipo==='local' ? p.local : p.visit;
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      cvFillTextTrunc(ctx, `⚽ ${g.jugador}${g.min?` ${g.min}'`:''} — ${eqNom}`, CX, y, W - s(120));
+      y += s(40);
+    });
+  }
+
+  cvFooter(ctx, W, H - s(44), liga);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  return canvas;
+}
+
+// Historia para gol y expulsión: franja diagonal del color del equipo
+// protagonista arriba, y una fila muy separada abajo con ambos escudos
+// y el marcador, para que nunca se toquen entre sí.
+async function generarImagenHistoriaDestacado(p, evento){
+  await document.fonts.ready;
+  const id   = getIdentidad();
+  const liga = id.nombre || 'DEPORTEMAS';
+  const W = CV_W, H = CV_H_STORIA, CX = W/2;
+  const esGol      = evento.tipo === 'gol';
+  const equipoNom  = evento.equipo === 'local' ? p.local : p.visit;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.textBaseline = 'alphabetic';
+
+  ctx.fillStyle = C.NEG;
+  ctx.fillRect(0,0,W,H);
+
+  ctx.beginPath();
+  ctx.moveTo(0,0); ctx.lineTo(s(470),0); ctx.lineTo(s(250),H); ctx.lineTo(0,H);
+  ctx.closePath();
+  ctx.fillStyle = esGol ? 'rgba(201,162,39,0.16)' : 'rgba(192,57,43,0.22)';
+  ctx.fill();
+
+  const badgeTxt = (esGol ? 'GOL' : 'EXPULSIÓN') + (evento.min ? `  ·  ${evento.min}'` : '');
+  ctx.font = `700 ${s(17)}px "Rajdhani", Arial, sans-serif`;
+  const padX = s(24);
+  const bw = ctx.measureText(badgeTxt).width + padX*2;
+  const by = s(70);
+  cvRoundRect(ctx, s(50), by, bw, s(40), s(20));
+  ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fill();
+  ctx.fillStyle = esGol ? C.DORADO2 : '#ff8080';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText(badgeTxt, s(50)+padX, by + s(20));
+  ctx.textBaseline = 'alphabetic';
+
+  const escR  = s(115);
+  const escCX = s(290), escCY = s(430);
+  if(!esGol){
+    ctx.save();
+    ctx.translate(escCX, escCY - escR - s(90));
+    ctx.rotate(-6 * Math.PI/180);
+    cvRoundRect(ctx, -s(42), -s(58), s(84), s(116), s(8));
+    ctx.fillStyle = C.ROJO; ctx.fill();
+    ctx.restore();
+  }
+  await cvDrawEscudo(ctx, equipoNom, escCX-escR, escCY-escR, escR*2);
+
+  ctx.fillStyle = C.BLANCO;
+  ctx.font = `${s(54)}px "Bebas Neue", Arial, sans-serif`;
+  ctx.textAlign = 'left';
+  cvFillTextTrunc(ctx, (evento.jugador||'').toUpperCase(), s(90), escCY + escR + s(80), W - s(140));
+
+  ctx.fillStyle = 'rgba(245,245,245,0.6)';
+  ctx.font = `500 ${s(20)}px "DM Sans", Arial, sans-serif`;
+  cvFillTextTrunc(ctx, equipoNom.toUpperCase(), s(90), escCY + escR + s(116), W - s(140));
+
+  // Amplio margen antes de la fila inferior: nada se superpone
+  let y = escCY + escR + s(190);
+  cvDivisorDorado(ctx, W, y);
+  y += s(100);
+
+  const r2 = s(72);
+  const cyE = y + r2;
+  const eqLocalX = s(150), eqVisitX = W - s(150);
+
+  await cvDrawEscudo(ctx, p.local, eqLocalX-r2, cyE-r2, r2*2);
+  ctx.fillStyle = C.DORADO;
+  ctx.font = `700 ${s(16)}px "Rajdhani", Arial, sans-serif`;
+  ctx.textAlign = 'center';
+  cvFillTextTrunc(ctx, p.local.toUpperCase(), eqLocalX, cyE + r2 + s(34), s(190));
+
+  const bW = s(170), bH = s(72);
+  cvRoundRect(ctx, CX-bW/2, cyE-bH/2, bW, bH, s(14));
+  ctx.fillStyle = C.NEG3; ctx.fill();
+  ctx.strokeStyle = 'rgba(201,162,39,0.45)'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = C.DORADO2;
+  ctx.font = `700 ${s(34)}px "Bebas Neue", Arial, sans-serif`;
+  ctx.textBaseline = 'middle';
+  ctx.fillText(p.resultado || '0 - 0', CX, cyE+2);
+  ctx.textBaseline = 'alphabetic';
+
+  await cvDrawEscudo(ctx, p.visit, eqVisitX-r2, cyE-r2, r2*2);
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  ctx.font = `700 ${s(16)}px "Rajdhani", Arial, sans-serif`;
+  cvFillTextTrunc(ctx, p.visit.toUpperCase(), eqVisitX, cyE + r2 + s(34), s(190));
+
+  cvFooter(ctx, W, H - s(44), liga);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  return canvas;
+}
+
+async function generarImagenHistoria(p, evento){
+  if(evento.tipo === 'gol' || evento.tipo === 'roja'){
+    return await generarImagenHistoriaDestacado(p, evento);
+  }
+  return await generarImagenHistoriaNeutral(p, evento);
 }
 
 async function generarImagenPosiciones(){
