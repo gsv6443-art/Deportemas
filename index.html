@@ -515,8 +515,19 @@
   };
   // Envuelve una promesa de Firebase: cuando resuelve (o falla), suma un
   // paso al contador de progreso y refresca la barra/mensaje del splash.
-  function _trackCarga(promesa){
-    return promesa.finally(function(){
+  // Además le pone un límite de tiempo: si esa consulta puntual no responde
+  // en `msTimeout` (por ej. conexión restringida dentro de un navegador
+  // interno como el de la app de Google/Instagram/Facebook), se resuelve
+  // con null en vez de quedar colgada para siempre. Esto es clave porque
+  // todas las consultas van juntas en un Promise.all: si UNA sola queda
+  // colgada, ANTES bloqueaba a todas las demás (incluyendo radio y redes).
+  function _trackCarga(promesa, msTimeout){
+    const timeout = msTimeout || 7000;
+    const conLimite = Promise.race([
+      promesa,
+      new Promise(resolve => setTimeout(()=>resolve(null), timeout))
+    ]);
+    return conLimite.finally(function(){
       window._splashPasosHechos++;
       window._splashActualizarProgreso();
     });
@@ -628,6 +639,18 @@
     if(fbFichas)    { localStorage.setItem('lrr_fichas',    JSON.stringify(fbFichas)); }
     if(fbCronos)    { localStorage.setItem('lrr_cronos',    JSON.stringify(fbCronos)); }
     if(fbDM)        { localStorage.setItem('lrr_deportemas',JSON.stringify(fbDM)); if(typeof renderFooter==='function') renderFooter(); }
+    else {
+      // Esta consulta puntual (radio + redes sociales) no llegó a tiempo
+      // (timeout de _trackCarga). Reintentar en segundo plano, sin bloquear
+      // nada más, y redibujar el footer apenas llegue — sin importar que el
+      // splash ya se haya ocultado hace rato.
+      window._fb.get('deportemas').then(fbDMReintento => {
+        if(fbDMReintento){
+          localStorage.setItem('lrr_deportemas', JSON.stringify(fbDMReintento));
+          if(typeof renderFooter==='function') renderFooter();
+        }
+      });
+    }
 
     // ── Escudos: prioridad al formato nuevo, fallback al viejo, migrar si aplica ──
     if(fbEscudosNuevo && Object.keys(fbEscudosNuevo).length > 0){
@@ -2974,13 +2997,15 @@ table.posiciones td:nth-child(8){
 
 /* Modal instrucciones iOS */
 #pwa-ios-modal,
-#pwa-desktop-modal{
+#pwa-desktop-modal,
+#pwa-inapp-modal{
   display:none;position:fixed;inset:0;
   background:rgba(0,0,0,.85);z-index:9200;
   align-items:flex-end;justify-content:center;padding:0 0 env(safe-area-inset-bottom);
 }
 #pwa-ios-modal.open,
-#pwa-desktop-modal.open{display:flex;}
+#pwa-desktop-modal.open,
+#pwa-inapp-modal.open{display:flex;}
 .pwa-ios-box{
   background:var(--negro2);border:1px solid var(--dorado-border);
   border-radius:var(--r-lg) var(--r-lg) 0 0;
@@ -12101,17 +12126,24 @@ async function generarImagenNoticia(noticiaId){
   const liga = id.nombre||'DEPORTEMAS';
   const W    = CV_W;
 
-  // Canvas fijo 1080×1350
+  // Las Entrevistas se comparten en formato historia/reel (1080×1920);
+  // el resto de las noticias mantiene el formato feed (1080×1350).
+  const esEntrevista = n.cat === 'Entrevistas';
+  const H = esEntrevista ? 1920 : CV_H;
+
   const canvas = document.createElement('canvas');
-  canvas.width = W; canvas.height = CV_H;
+  canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
   ctx.textBaseline = 'alphabetic';
 
-  ctx.fillStyle = C.NEG2; ctx.fillRect(0,0,W,CV_H);
+  ctx.fillStyle = C.NEG2; ctx.fillRect(0,0,W,H);
   let y = await cvHeader(ctx, W, id, 0);
 
-  // Imagen de portada — ocupa todo el espacio sin distorsión (object-fit: cover)
-  const imgH = n.img ? s(480) : 0;
+  // Imagen de portada — ocupa todo el espacio sin distorsión (object-fit: cover).
+  // En formato historia (Entrevistas) mantiene la misma proporción de alto
+  // que en el feed, así la composición se ve igual de equilibrada, solo que
+  // con más superficie disponible.
+  const imgH = n.img ? Math.round(s(480) * (H / CV_H)) : 0;
   if(n.img){
     await new Promise(res=>{
       const img=new Image();
@@ -12157,7 +12189,7 @@ async function generarImagenNoticia(noticiaId){
   // Si el color es negro y hay imagen, añadir backing semitransparente blanco
   if(ct==='negro' && n.img){
     ctx.fillStyle='rgba(255,255,255,0.85)';
-    ctx.fillRect(0, y-s(10), W, CV_H - y + s(10));
+    ctx.fillRect(0, y-s(10), W, H - y + s(10));
   }
 
   // Badge categoría — Rajdhani (agrandado para que se lea bien)
@@ -12195,8 +12227,11 @@ async function generarImagenNoticia(noticiaId){
     ctx.font=`400 ${s(20)}px "DM Sans", Arial, sans-serif`;
     const LINE_H = s(28);
     // Espacio disponible real antes de la franja de meta + footer
-    const espacioDisponible = (CV_H - s(40)) - s(48) - y; // reserva meta + footer
-    const maxLineas = Math.max(1, Math.min(4, Math.floor(espacioDisponible / LINE_H)));
+    const espacioDisponible = (H - s(40)) - s(48) - y; // reserva meta + footer
+    // En formato historia (Entrevistas) hay más alto disponible: permitir
+    // que la bajada use más líneas en vez de dejar un hueco vacío.
+    const topeLineas = esEntrevista ? 7 : 4;
+    const maxLineas = Math.max(1, Math.min(topeLineas, Math.floor(espacioDisponible / LINE_H)));
     const bajadaWords=n.bajada.split(' ');
     const lineas=[]; let bl='';
     bajadaWords.forEach(w=>{
@@ -12224,7 +12259,7 @@ async function generarImagenNoticia(noticiaId){
   ctx.font=`500 ${s(15)}px "DM Sans", Arial, sans-serif`;
   ctx.fillText(`📅 ${n.fecha||''}  ·  ✍ ${n.autor||'Redacción'}`, s(40), y+s(18));
 
-  cvFooter(ctx,W,CV_H - s(40),liga);
+  cvFooter(ctx,W,H - s(40),liga);
   ctx.textAlign='left'; ctx.textBaseline='alphabetic';
   return canvas;
 }
@@ -13578,10 +13613,49 @@ renderFooter();
   </div>
 </div>
 
+<!-- Modal para navegadores internos (in-app): Google, Instagram, Facebook, etc.
+     iOS bloquea "Agregar a inicio" en estos navegadores; hay que abrir en Safari primero. -->
+<div id="pwa-inapp-modal">
+  <div class="pwa-ios-box">
+    <div class="pwa-ios-title">📲 Abrí este sitio en Safari</div>
+    <div class="pwa-ios-sub" id="pwa-inapp-sub">Estás viendo la página dentro de otra app</div>
+    <div class="pwa-ios-steps">
+      <div class="pwa-ios-step">
+        <div class="pwa-ios-step-num">1</div>
+        <div class="pwa-ios-step-text">
+          Tocá el botón <strong>⋯</strong> o <strong>compartir</strong> de esta app (arriba o abajo de la pantalla)
+        </div>
+      </div>
+      <div class="pwa-ios-step">
+        <div class="pwa-ios-step-num">2</div>
+        <div class="pwa-ios-step-text">Elegí <strong>"Abrir en Safari"</strong></div>
+      </div>
+      <div class="pwa-ios-step">
+        <div class="pwa-ios-step-num">3</div>
+        <div class="pwa-ios-step-text">Ya en Safari, tocá de nuevo <strong>"Instalar app"</strong> y seguí los pasos</div>
+      </div>
+    </div>
+    <button class="pwa-ios-close" onclick="document.getElementById('pwa-inapp-modal').classList.remove('open')">Entendido</button>
+  </div>
+</div>
+
 <script>
 // ═══════════════════════════════════════════════════════════════
 // PWA — Service Worker + Manifest + Install Banner
 // ═══════════════════════════════════════════════════════════════
+
+// ── Detección de navegadores internos (in-app browsers) ────────
+// iOS bloquea "Agregar a pantalla de inicio" para cualquier navegador
+// que no sea Safari real, incluidos los navegadores internos de estas apps.
+function _esNavegadorInApp(){
+  const ua = navigator.userAgent || '';
+  return /GSA\//.test(ua)                 // App de Google
+      || /FBAN|FBAV/.test(ua)             // Facebook / Messenger
+      || /Instagram/i.test(ua)            // Instagram
+      || /Twitter/i.test(ua)              // X / Twitter
+      || /Line\//.test(ua)                // LINE
+      || /wv\)/.test(ua) && /iPhone|iPad/.test(ua); // WebView genérico en iOS
+}
 
 // ── Manifest dinámico ─────────────────────────────────────────
 function _pwaBuildManifest(){
@@ -13671,6 +13745,15 @@ function cerrarPWABanner(){
 async function pwaInstalar(){
   const isIOS    = /iphone|ipad|ipod/i.test(navigator.userAgent);
   const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+  // Si estamos en un navegador interno (Google, Instagram, Facebook, etc.)
+  // dentro de iOS, mostrar directamente el aviso de "abrí en Safari" en vez
+  // de instrucciones que ahí no van a funcionar.
+  if(isIOS && _esNavegadorInApp()){
+    cerrarPWABanner();
+    document.getElementById('pwa-inapp-modal').classList.add('open');
+    return;
+  }
 
   if(_pwaPrompt){
     _pwaPrompt.prompt();
