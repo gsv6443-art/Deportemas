@@ -3461,6 +3461,7 @@ table.posiciones td:nth-child(8){
             <option value="barras">Ranking con barras comparativas</option>
           </select>
           <div id="g-estilo-msg" style="margin-top:6px;font-size:12px;display:none;font-family:'Rajdhani',sans-serif;letter-spacing:.5px;text-transform:uppercase;color:var(--dorado)">✓ Estilo guardado</div>
+          <div id="g-estilo-foto-info" style="margin-top:6px;font-size:11px;color:var(--gris)"></div>
         </div>
 
         <div class="form-row">
@@ -3488,7 +3489,7 @@ table.posiciones td:nth-child(8){
           <div class="form-group"><label>Equipo</label><input type="text" id="g-equipo" placeholder="Club"/></div>
         </div>
         <div class="form-group" style="max-width:120px"><label>Goles</label><input type="number" id="g-goles" min="0" value="0"/></div>
-        <div class="form-group"><label>Foto del jugador <span style="color:var(--gris);font-size:10px">(opcional — aparece de fondo en la tabla)</span></label>
+        <div class="form-group"><label>Foto del jugador <span id="g-foto-hint-add" style="color:var(--gris);font-size:10px"></span></label>
           <div class="upload-area">
             <input type="file" accept="image/*" id="g-foto-file" onchange="gPreviewFoto(this)"/>
             <span class="icon">📸</span><p>Hacé clic o arrastrá la foto</p>
@@ -4969,9 +4970,30 @@ function guardarEstiloGoleadores(){
   const id=getIdentidad();
   id.estiloGoleadores=document.getElementById('g-estilo-img').value;
   saveIdentidad(id);
+  actualizarInfoFotoEstilo();
+  renderAdminListas();
   const m=document.getElementById('g-estilo-msg');
   m.style.display='block';
   setTimeout(()=>m.style.display='none',2000);
+}
+// Nombre del estilo → hasta qué puesto de la tabla usa fotos de jugadores
+function estiloFotoTop(estilo){
+  return {hero:1,podio:3,tarjeta:10,grilla:0,barras:1}[estilo] ?? 1;
+}
+function estiloFotoHint(estilo){
+  const top=estiloFotoTop(estilo);
+  if(top===0) return 'este estilo no usa fotos de jugadores (usa escudos)';
+  if(top===1) return 'este estilo usa la foto solo del líder de goleadores';
+  return 'este estilo usa fotos hasta el puesto '+top+' de la tabla';
+}
+function actualizarInfoFotoEstilo(){
+  const sel=document.getElementById('g-estilo-img');
+  const estilo=sel?sel.value:(getIdentidad().estiloGoleadores||'hero');
+  const hint=estiloFotoHint(estilo);
+  const info=document.getElementById('g-estilo-foto-info');
+  if(info) info.textContent='ℹ '+hint.charAt(0).toUpperCase()+hint.slice(1)+'.';
+  const addHint=document.getElementById('g-foto-hint-add');
+  if(addHint) addHint.textContent='(opcional — '+hint+')';
 }
 function borrarLogo(){
   const id=getIdentidad();delete id.logo;saveIdentidad(id);_logoB64='';
@@ -9774,7 +9796,7 @@ function abrirModalEdicion(tipo,id,objOverride){
       <div class="form-row"><div class="form-group"><label>Jugador</label><input type="text" id="ed-nombre" value="${obj.nombre||''}"/></div>
         <div class="form-group"><label>Equipo</label><input type="text" id="ed-equipo" value="${obj.equipo||''}"/></div></div>
       <div class="form-group" style="max-width:120px"><label>Goles</label><input type="number" id="ed-goles" value="${obj.goles||0}" min="0"/></div>
-      <div class="form-group"><label>Foto del jugador <span style="color:var(--gris);font-size:10px">(fondo de la tabla)</span></label>
+      <div class="form-group"><label>Foto del jugador <span style="color:var(--gris);font-size:10px">(${estiloFotoHint(getIdentidad().estiloGoleadores||'hero')})</span></label>
         <div class="upload-area" style="padding:12px">
           <input type="file" accept="image/*" id="ed-g-foto-file" onchange="edGPreviewFoto(this)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%"/>
           <p style="pointer-events:none;font-size:11px">Hacé clic para cambiar la foto</p>
@@ -10697,11 +10719,31 @@ function renderAdminListas(){
     </div>`;
   }).join('')||'<p class="admin-empty">Sin posiciones cargadas</p>';
 
-  document.getElementById('lista-goleadores').innerHTML=data.goleadores.map(g=>`
-    <div class="admin-list-item">
+  const estiloListaGol = document.getElementById('g-estilo-img') ? document.getElementById('g-estilo-img').value : (getIdentidad().estiloGoleadores||'hero');
+  const topFotoGol = estiloFotoTop(estiloListaGol);
+  const rankMapGol = {};
+  const gruposGol = {};
+  data.goleadores.forEach(g=>{
+    const key = g.div+'|'+(g.div==='segunda'?(g.faseGol||g.torneo||'fase1'):(g.torneo||'apertura'));
+    (gruposGol[key]=gruposGol[key]||[]).push(g);
+  });
+  Object.values(gruposGol).forEach(arr=>{
+    arr.slice().sort((a,b)=>b.goles-a.goles).forEach((g,i)=>{ rankMapGol[g.id]=i+1; });
+  });
+  document.getElementById('lista-goleadores').innerHTML=data.goleadores.map(g=>{
+    const rank=rankMapGol[g.id]||999;
+    let fotoTag='';
+    if(topFotoGol>0 && rank<=topFotoGol){
+      fotoTag = g.foto
+        ? `<span style="background:rgba(201,162,39,.15);color:var(--dorado);border:1px solid rgba(201,162,39,.3);border-radius:6px;padding:2px 7px;font-size:10px;font-weight:700;letter-spacing:.3px;white-space:nowrap">📸 USA FOTO</span>`
+        : `<span style="background:rgba(224,84,84,.12);color:#e05454;border:1px solid rgba(224,84,84,.3);border-radius:6px;padding:2px 7px;font-size:10px;font-weight:700;letter-spacing:.3px;white-space:nowrap">⚠ SIN FOTO</span>`;
+    }
+    return `<div class="admin-list-item">
       <span><b>${torneoLabel(g.torneo||'apertura')}</b> | <b>${g.div==='primera'?'1ª':'2ª'}</b> | ${g.nombre} (${g.equipo}) – ${g.goles} goles</span>
+      ${fotoTag}
       ${btnAcciones('goleadores',g.id)}
-    </div>`).join('')||'<p class="admin-empty">Sin goleadores cargados</p>';
+    </div>`;
+  }).join('')||'<p class="admin-empty">Sin goleadores cargados</p>';
 
   document.getElementById('lista-equipos').innerHTML=data.equipos.map(e=>{
     const esc=escudos[normalizar(e.nombre)];
@@ -10806,6 +10848,7 @@ function openAdmin(){
   if(id.subtitulo)document.getElementById('id-subtitulo').value=id.subtitulo;
   if(id.logo){const p=document.getElementById('id-logo-preview');if(p){p.src=id.logo;}const w=document.getElementById('id-logo-wrap-prev');if(w)w.classList.add('visible');}
   const gEstilo=document.getElementById('g-estilo-img'); if(gEstilo) gEstilo.value=id.estiloGoleadores||'hero';
+  actualizarInfoFotoEstilo();
   asegurarIds(); // asignar IDs faltantes una sola vez al abrir
   renderAdminListas();
   document.getElementById('admin-overlay').classList.add('open');
