@@ -3450,6 +3450,19 @@ table.posiciones td:nth-child(8){
       <!-- GOLEADORES -->
       <div class="admin-section" id="admin-goleadores">
         <div class="admin-title">Goleadores</div>
+
+        <div class="form-group" style="margin-bottom:16px">
+          <label>Estilo de la imagen al compartir</label>
+          <select id="g-estilo-img" onchange="guardarEstiloGoleadores()">
+            <option value="hero">Foto de fondo + lista (clásico)</option>
+            <option value="podio">Podio (top 3 destacados)</option>
+            <option value="tarjeta">Tarjeta destacada + ranking con fotos</option>
+            <option value="grilla">Grilla de tarjetas</option>
+            <option value="barras">Ranking con barras comparativas</option>
+          </select>
+          <div id="g-estilo-msg" style="margin-top:6px;font-size:12px;display:none;font-family:'Rajdhani',sans-serif;letter-spacing:.5px;text-transform:uppercase;color:var(--dorado)">✓ Estilo guardado</div>
+        </div>
+
         <div class="form-row">
           <div class="form-group"><label>División</label>
             <select id="g-div" onchange="updateAdminGolDiv()">
@@ -4951,6 +4964,14 @@ function guardarIdentidad(){
   saveIdentidad(id);aplicarIdentidad();
   const m=document.getElementById('id-msg');m.textContent='✓ Cambios guardados';m.style.color='var(--dorado)';m.style.display='block';
   setTimeout(()=>m.style.display='none',2500);
+}
+function guardarEstiloGoleadores(){
+  const id=getIdentidad();
+  id.estiloGoleadores=document.getElementById('g-estilo-img').value;
+  saveIdentidad(id);
+  const m=document.getElementById('g-estilo-msg');
+  m.style.display='block';
+  setTimeout(()=>m.style.display='none',2000);
 }
 function borrarLogo(){
   const id=getIdentidad();delete id.logo;saveIdentidad(id);_logoB64='';
@@ -6993,7 +7014,7 @@ async function generarImagenPosicionesReserva(){
     if(eImg){
       ctx.save(); ctx.beginPath();
       ctx.arc(eX+eSize/2,eY+eSize/2,eSize/2,0,Math.PI*2); ctx.clip();
-      ctx.drawImage(eImg,eX,eY,eSize,eSize); ctx.restore();
+      cvDrawEscudoImg(ctx,eImg,eX,eY,eSize); ctx.restore();
     } else { cvEscudoFallback(ctx,p.equipo,eX,eY,eSize); }
 
     // Nombre — DM Sans
@@ -10784,6 +10805,7 @@ function openAdmin(){
   if(id.nombre)document.getElementById('id-nombre').value=id.nombre;
   if(id.subtitulo)document.getElementById('id-subtitulo').value=id.subtitulo;
   if(id.logo){const p=document.getElementById('id-logo-preview');if(p){p.src=id.logo;}const w=document.getElementById('id-logo-wrap-prev');if(w)w.classList.add('visible');}
+  const gEstilo=document.getElementById('g-estilo-img'); if(gEstilo) gEstilo.value=id.estiloGoleadores||'hero';
   asegurarIds(); // asignar IDs faltantes una sola vez al abrir
   renderAdminListas();
   document.getElementById('admin-overlay').classList.add('open');
@@ -11163,7 +11185,7 @@ function cvDrawLogo(ctx, logoSrc, x, y, size){
       ctx.beginPath();
       ctx.arc(x + size/2, y + size/2, size/2, 0, Math.PI*2);
       ctx.clip();
-      ctx.drawImage(img, x, y, size, size);
+      cvDrawEscudoImg(ctx, img, x, y, size);
       ctx.restore();
       resolve(true);
     };
@@ -11252,6 +11274,16 @@ function cvFillTextTrunc(ctx, text, x, y, maxW){
 }
 
 // Dibuja escudo en canvas con fallback a círculo con iniciales
+// Dibuja una imagen de escudo dentro de un cuadro size x size SIN deformarla:
+// escala manteniendo proporción original ("contain") y la centra en el cuadro.
+function cvDrawEscudoImg(ctx, img, x, y, size){
+  const iw = img.naturalWidth || img.width || 1;
+  const ih = img.naturalHeight || img.height || 1;
+  const scale = Math.min(size/iw, size/ih);
+  const dw = iw*scale, dh = ih*scale;
+  const dx = x + (size-dw)/2, dy = y + (size-dh)/2;
+  ctx.drawImage(img, dx, dy, dw, dh);
+}
 function cvDrawEscudo(ctx, nombre, x, y, size){
   return new Promise(resolve => {
     // escudos[key] puede ser { ini, img } o directamente un string base64
@@ -11264,7 +11296,7 @@ function cvDrawEscudo(ctx, nombre, x, y, size){
       ctx.beginPath();
       ctx.arc(x+size/2, y+size/2, size/2, 0, Math.PI*2);
       ctx.clip();
-      ctx.drawImage(img, x, y, size, size);
+      cvDrawEscudoImg(ctx, img, x, y, size);
       ctx.restore();
       resolve();
     };
@@ -11683,7 +11715,7 @@ async function generarImagenPosiciones(){
     if(eImg){
       ctx.save(); ctx.beginPath();
       ctx.arc(eX+eSize/2,eY+eSize/2,eSize/2,0,Math.PI*2); ctx.clip();
-      ctx.drawImage(eImg,eX,eY,eSize,eSize); ctx.restore();
+      cvDrawEscudoImg(ctx,eImg,eX,eY,eSize); ctx.restore();
     } else { cvEscudoFallback(ctx,p.equipo,eX,eY,eSize); }
 
     // Nombre — DM Sans
@@ -11806,6 +11838,19 @@ async function generarImagenGoleadores(){
   bgGrad.addColorStop(0,C.NEG3); bgGrad.addColorStop(1,C.NEG);
   ctx.fillStyle=bgGrad; ctx.fillRect(0,0,W,CV_H);
 
+  const estilo = id.estiloGoleadores || 'hero';
+  if(estilo==='podio')        await _dibujarGolPodio(ctx,gs,subtitulo,id,liga,W,CX);
+  else if(estilo==='tarjeta') await _dibujarGolTarjeta(ctx,gs,subtitulo,id,liga,W,CX);
+  else if(estilo==='grilla')  await _dibujarGolGrilla(ctx,gs,subtitulo,id,liga,W,CX);
+  else if(estilo==='barras')  await _dibujarGolBarras(ctx,gs,subtitulo,id,liga,W,CX);
+  else                        await _dibujarGolHero(ctx,gs,subtitulo,id,liga,W,CX);
+
+  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+  return canvas;
+}
+
+// ---- ESTILO "hero": foto de fondo del lider + lista compacta (estilo original) ----
+async function _dibujarGolHero(ctx,gs,subtitulo,id,liga,W,CX){
   // Foto de fondo del lider (mas visible sobre todo el canvas)
   if(gs[0]&&gs[0].foto){
     await new Promise(res=>{
@@ -11940,7 +11985,7 @@ async function generarImagenGoleadores(){
     if(eImg){
       ctx.save(); ctx.beginPath();
       ctx.arc(eX+eSize/2,eY+eSize/2,eSize/2,0,Math.PI*2); ctx.clip();
-      ctx.drawImage(eImg,eX,eY,eSize,eSize); ctx.restore();
+      cvDrawEscudoImg(ctx,eImg,eX,eY,eSize); ctx.restore();
     } else { cvEscudoFallback(ctx,g.equipo,eX,eY,eSize); }
 
     ctx.fillStyle=C.BLANCO;
@@ -11967,8 +12012,389 @@ async function generarImagenGoleadores(){
   });
 
   cvFooter(ctx,W,CV_H-s(40),liga);
-  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
-  return canvas;
+}
+
+// ---- Helpers compartidos por los nuevos estilos ----
+function cvLoadImg(src){
+  return new Promise(resolve=>{
+    if(!src){ resolve(null); return; }
+    const img=new Image();
+    img.onload=()=>resolve(img);
+    img.onerror=()=>resolve(null);
+    img.src=src;
+  });
+}
+function cvDrawFotoCover(ctx,img,x,y,size){
+  const iw=img.naturalWidth||img.width||1, ih=img.naturalHeight||img.height||1;
+  const scale=Math.max(size/iw,size/ih);
+  const dw=iw*scale, dh=ih*scale;
+  ctx.drawImage(img,x+(size-dw)/2,y+(size-dh)/2,dw,dh);
+}
+function cvDrawFotoCoverRect(ctx,img,x,y,w,h){
+  const iw=img.naturalWidth||img.width||1, ih=img.naturalHeight||img.height||1;
+  const scale=Math.max(w/iw,h/ih);
+  const dw=iw*scale, dh=ih*scale;
+  ctx.drawImage(img,x+(w-dw)/2,y+(h-dh)/2,dw,dh);
+}
+function cvIniciales(nombre){
+  return (nombre||'?').split(' ').filter(Boolean).slice(0,2).map(p=>p[0]).join('').toUpperCase()||'?';
+}
+async function cvAvatarCirculo(ctx,foto,nombre,x,y,size){
+  const img = foto ? await cvLoadImg(foto) : null;
+  ctx.save(); ctx.beginPath(); ctx.arc(x+size/2,y+size/2,size/2,0,Math.PI*2); ctx.clip();
+  if(img){
+    cvDrawFotoCover(ctx,img,x,y,size);
+  } else {
+    ctx.fillStyle=C.NEG4; ctx.fillRect(x,y,size,size);
+    ctx.fillStyle='rgba(201,162,39,0.6)';
+    ctx.font=`700 ${Math.round(size*0.34)}px "Rajdhani", Arial, sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(cvIniciales(nombre),x+size/2,y+size/2);
+    ctx.textBaseline='alphabetic';
+  }
+  ctx.restore();
+}
+
+// ---- ESTILO "podio": top 3 en podio + lista compacta del 4to en adelante ----
+async function _dibujarGolPodio(ctx,gs,subtitulo,id,liga,W,CX){
+  let y = await cvHeader(ctx,W,id,0);
+  y += s(28);
+
+  const top3=gs.slice(0,3);
+  const orden=top3.length===3?[1,0,2]:top3.map((_,i)=>i); // 2do-1ro-3ro
+  const cx3=[CX-s(190),CX,CX+s(190)];
+  const sizes=[s(76),s(104),s(76)];
+  const golesFs=[s(30),s(44),s(30)];
+
+  for(let slot=0;slot<orden.length;slot++){
+    const idx=orden[slot];
+    const g=top3[idx];
+    if(!g) continue;
+    const cx=cx3[slot], size=sizes[slot];
+    const esLider=idx===0;
+    const ay=y+(esLider?0:s(28));
+
+    if(esLider){
+      ctx.save();
+      ctx.beginPath(); ctx.arc(cx,ay+size/2,size/2+s(6),0,Math.PI*2);
+      ctx.strokeStyle=C.DORADO; ctx.lineWidth=s(3);
+      ctx.shadowColor='rgba(201,162,39,0.5)'; ctx.shadowBlur=s(16);
+      ctx.stroke(); ctx.shadowBlur=0;
+      ctx.restore();
+    }
+    await cvAvatarCirculo(ctx,g.foto,g.nombre,cx-size/2,ay,size);
+
+    ctx.textAlign='center';
+    ctx.fillStyle=C.BLANCO;
+    ctx.font=`${esLider?s(20):s(15)}px "Bebas Neue", Arial, sans-serif`;
+    cvFillTextTrunc(ctx,g.nombre.toUpperCase(),cx,ay+size+s(24),s(160));
+    ctx.fillStyle='rgba(255,255,255,0.45)';
+    ctx.font=`400 ${s(11)}px "DM Sans", Arial, sans-serif`;
+    cvFillTextTrunc(ctx,g.equipo,cx,ay+size+s(40),s(160));
+
+    ctx.fillStyle=esLider?C.DORADO:C.BLANCO;
+    ctx.font=`${golesFs[slot]}px "Bebas Neue", Arial, sans-serif`;
+    if(esLider){ ctx.shadowColor='rgba(201,162,39,0.4)'; ctx.shadowBlur=s(18); }
+    ctx.fillText(String(g.goles),cx,ay+size+(esLider?s(84):s(70)));
+    ctx.shadowBlur=0;
+
+    if(esLider){
+      const badgeTxt='LIDER DE GOLEADORES';
+      ctx.font=`700 ${s(12)}px "Rajdhani", Arial, sans-serif`;
+      const bW=ctx.measureText(badgeTxt).width+s(26);
+      const bY=ay+size+s(96);
+      cvRoundRect(ctx,cx-bW/2,bY,bW,s(26),s(13));
+      ctx.fillStyle='rgba(201,162,39,0.15)'; ctx.fill();
+      ctx.fillStyle=C.DORADO; ctx.textBaseline='middle';
+      ctx.fillText(badgeTxt,cx,bY+s(13));
+      ctx.textBaseline='alphabetic';
+    }
+  }
+
+  y+=s(230);
+  const dg=ctx.createLinearGradient(0,y,W,y);
+  dg.addColorStop(0,'transparent'); dg.addColorStop(0.2,C.DORADO);
+  dg.addColorStop(0.8,C.DORADO); dg.addColorStop(1,'transparent');
+  ctx.fillStyle=dg; ctx.fillRect(0,y,W,2); y+=s(2);
+
+  ctx.fillStyle='rgba(201,162,39,0.55)';
+  ctx.font=`700 ${s(13)}px "Rajdhani", Arial, sans-serif`;
+  ctx.textAlign='center';
+  ctx.fillText('GOLEADORES · '+subtitulo.toUpperCase(),CX,y+s(24));
+  y+=s(38);
+
+  const resto=gs.slice(3,10);
+  const restH=CV_H-s(40)-y;
+  const ROW_H=resto.length?Math.floor(restH/resto.length):restH;
+  for(let i=0;i<resto.length;i++){
+    const g=resto[i], fy=y+ROW_H/2;
+    ctx.fillStyle=i%2===0?'rgba(255,255,255,0.025)':'rgba(0,0,0,0.1)';
+    ctx.fillRect(0,y,W,ROW_H);
+
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle='rgba(255,255,255,0.4)';
+    ctx.font=`700 ${s(15)}px "Rajdhani", Arial, sans-serif`;
+    ctx.fillText(i+4,s(30),fy);
+
+    const eSize=s(32), eX=s(52), eY=y+(ROW_H-eSize)/2;
+    ctx.save(); ctx.beginPath(); ctx.arc(eX+eSize/2,eY+eSize/2,eSize/2,0,Math.PI*2); ctx.clip();
+    await cvDrawEscudo(ctx,g.equipo,eX,eY,eSize);
+    ctx.restore();
+
+    ctx.fillStyle=C.BLANCO; ctx.textAlign='left';
+    ctx.font=`600 ${s(18)}px "DM Sans", Arial, sans-serif`;
+    cvFillTextTrunc(ctx,g.nombre,s(96),fy-s(5),W-s(200));
+    ctx.fillStyle=C.GRIS;
+    ctx.font=`500 ${s(13)}px "DM Sans", Arial, sans-serif`;
+    cvFillTextTrunc(ctx,g.equipo,s(96),fy+s(13),W-s(200));
+
+    ctx.fillStyle=C.DORADO; ctx.textAlign='right';
+    ctx.font=`${s(32)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.fillText(g.goles,W-s(48),fy+s(4));
+    ctx.textBaseline='alphabetic';
+
+    ctx.fillStyle='rgba(255,255,255,0.04)';
+    ctx.fillRect(0,y+ROW_H-1,W,1);
+    y+=ROW_H;
+  }
+
+  cvFooter(ctx,W,CV_H-s(40),liga);
+}
+
+// ---- ESTILO "tarjeta": tarjeta destacada del lider + ranking con fotos ----
+async function _dibujarGolTarjeta(ctx,gs,subtitulo,id,liga,W,CX){
+  let y = await cvHeader(ctx,W,id,0);
+  y += s(16);
+
+  const g0=gs[0];
+  const cardH=s(300), cardX=s(32), cardY=y, cardW=W-s(64);
+  cvRoundRect(ctx,cardX,cardY,cardW,cardH,s(14));
+  ctx.save(); ctx.clip();
+  const img0 = g0.foto ? await cvLoadImg(g0.foto) : null;
+  if(img0){
+    cvDrawFotoCoverRect(ctx,img0,cardX,cardY,cardW,cardH);
+  } else {
+    const grad0=ctx.createLinearGradient(cardX,cardY,cardX+cardW,cardY+cardH);
+    grad0.addColorStop(0,C.NEG4); grad0.addColorStop(1,C.NEG3);
+    ctx.fillStyle=grad0; ctx.fillRect(cardX,cardY,cardW,cardH);
+  }
+  const gShade=ctx.createLinearGradient(cardX,cardY,cardX,cardY+cardH);
+  gShade.addColorStop(0,'rgba(0,0,0,0.15)'); gShade.addColorStop(0.6,'rgba(0,0,0,0.35)'); gShade.addColorStop(1,'rgba(0,0,0,0.88)');
+  ctx.fillStyle=gShade; ctx.fillRect(cardX,cardY,cardW,cardH);
+  ctx.restore();
+
+  const badgeTxt='LIDER DE GOLEADORES';
+  ctx.font=`700 ${s(12)}px "Rajdhani", Arial, sans-serif`;
+  const bW=ctx.measureText(badgeTxt).width+s(24);
+  cvRoundRect(ctx,cardX+s(14),cardY+s(14),bW,s(24),s(12));
+  ctx.fillStyle='rgba(201,162,39,0.92)'; ctx.fill();
+  ctx.fillStyle=C.NEG; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(badgeTxt,cardX+s(14)+bW/2,cardY+s(14)+s(12));
+  ctx.textBaseline='alphabetic';
+
+  const golR=s(42);
+  ctx.beginPath(); ctx.arc(cardX+cardW-s(14)-golR,cardY+s(14)+golR,golR,0,Math.PI*2);
+  ctx.fillStyle=C.DORADO; ctx.shadowColor='rgba(201,162,39,0.5)'; ctx.shadowBlur=s(14); ctx.fill(); ctx.shadowBlur=0;
+  ctx.fillStyle=C.NEG; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.font=`${s(30)}px "Bebas Neue", Arial, sans-serif`;
+  ctx.fillText(String(g0.goles),cardX+cardW-s(14)-golR,cardY+s(14)+golR-s(6));
+  ctx.font=`700 ${s(9)}px "Rajdhani", Arial, sans-serif`;
+  ctx.fillText('GOL'+(g0.goles!==1?'ES':''),cardX+cardW-s(14)-golR,cardY+s(14)+golR+s(12));
+  ctx.textBaseline='alphabetic';
+
+  ctx.textAlign='left';
+  ctx.fillStyle=C.BLANCO;
+  ctx.font=`${s(38)}px "Bebas Neue", Arial, sans-serif`;
+  cvFillTextTrunc(ctx,g0.nombre.toUpperCase(),cardX+s(18),cardY+cardH-s(46),cardW-s(36));
+  const eSize=s(22), eX=cardX+s(18), eY=cardY+cardH-s(34);
+  ctx.save(); ctx.beginPath(); ctx.arc(eX+eSize/2,eY+eSize/2,eSize/2,0,Math.PI*2); ctx.clip();
+  await cvDrawEscudo(ctx,g0.equipo,eX,eY,eSize);
+  ctx.restore();
+  ctx.fillStyle='rgba(255,255,255,0.6)';
+  ctx.font=`400 ${s(15)}px "DM Sans", Arial, sans-serif`;
+  cvFillTextTrunc(ctx,g0.equipo,eX+eSize+s(8),cardY+cardH-s(19),cardW-eSize-s(60));
+
+  y=cardY+cardH+s(18);
+  ctx.fillStyle='rgba(201,162,39,0.55)';
+  ctx.font=`700 ${s(13)}px "Rajdhani", Arial, sans-serif`;
+  ctx.textAlign='center';
+  ctx.fillText('GOLEADORES · '+subtitulo.toUpperCase(),CX,y+s(4));
+  y+=s(30);
+
+  const resto=gs.slice(1,10);
+  const restH=CV_H-s(40)-y;
+  const ROW_H=resto.length?Math.floor(restH/resto.length):restH;
+  for(let i=0;i<resto.length;i++){
+    const g=resto[i], fy=y+ROW_H/2;
+    ctx.fillStyle=i%2===0?'rgba(255,255,255,0.025)':'rgba(0,0,0,0.1)';
+    ctx.fillRect(0,y,W,ROW_H);
+
+    ctx.textAlign='left'; ctx.textBaseline='middle';
+    ctx.fillStyle='rgba(255,255,255,0.4)';
+    ctx.font=`700 ${s(13)}px "Rajdhani", Arial, sans-serif`;
+    ctx.fillText(i+2,s(24),fy);
+
+    const aSize=Math.round(ROW_H*0.62), aX=s(48), aY=fy-aSize/2;
+    await cvAvatarCirculo(ctx,g.foto,g.nombre,aX,aY,aSize);
+    const bSize=Math.round(aSize*0.5), bX=aX+aSize-bSize*0.6, bY=aY+aSize-bSize*0.6;
+    ctx.save(); ctx.beginPath(); ctx.arc(bX+bSize/2,bY+bSize/2,bSize/2+s(2),0,Math.PI*2); ctx.fillStyle=C.NEG3; ctx.fill(); ctx.restore();
+    ctx.save(); ctx.beginPath(); ctx.arc(bX+bSize/2,bY+bSize/2,bSize/2,0,Math.PI*2); ctx.clip();
+    await cvDrawEscudo(ctx,g.equipo,bX,bY,bSize);
+    ctx.restore();
+
+    ctx.fillStyle=C.BLANCO; ctx.textAlign='left';
+    ctx.font=`600 ${s(17)}px "DM Sans", Arial, sans-serif`;
+    cvFillTextTrunc(ctx,g.nombre,aX+aSize+s(14),fy-s(5),W-aX-aSize-s(130));
+    ctx.fillStyle=C.GRIS;
+    ctx.font=`500 ${s(12)}px "DM Sans", Arial, sans-serif`;
+    cvFillTextTrunc(ctx,g.equipo,aX+aSize+s(14),fy+s(12),W-aX-aSize-s(130));
+
+    ctx.fillStyle=C.BLANCO; ctx.textAlign='right';
+    ctx.font=`${s(28)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.fillText(g.goles,W-s(32),fy+s(3));
+    ctx.textBaseline='alphabetic';
+
+    ctx.fillStyle='rgba(255,255,255,0.04)';
+    ctx.fillRect(0,y+ROW_H-1,W,1);
+    y+=ROW_H;
+  }
+
+  cvFooter(ctx,W,CV_H-s(40),liga);
+}
+
+// ---- ESTILO "grilla": franja compacta del lider + grilla 2 columnas ----
+async function _dibujarGolGrilla(ctx,gs,subtitulo,id,liga,W,CX){
+  let y = await cvHeader(ctx,W,id,0);
+  y += s(16);
+
+  const g0=gs[0];
+  const stripX=s(32), stripW=W-s(64), stripH=s(70);
+  cvRoundRect(ctx,stripX,y,stripW,stripH,s(10));
+  ctx.fillStyle='rgba(201,162,39,0.08)'; ctx.fill();
+  ctx.fillStyle=C.DORADO; ctx.fillRect(stripX,y,s(4),stripH);
+
+  const aSize=s(48), aX=stripX+s(20), aY=y+(stripH-aSize)/2;
+  ctx.save(); ctx.beginPath(); ctx.arc(aX+aSize/2,aY+aSize/2,aSize/2+s(2),0,Math.PI*2); ctx.strokeStyle=C.DORADO; ctx.lineWidth=s(2); ctx.stroke(); ctx.restore();
+  ctx.save(); ctx.beginPath(); ctx.arc(aX+aSize/2,aY+aSize/2,aSize/2,0,Math.PI*2); ctx.clip();
+  await cvDrawEscudo(ctx,g0.equipo,aX,aY,aSize);
+  ctx.restore();
+
+  ctx.textAlign='left';
+  ctx.fillStyle=C.DORADO;
+  ctx.font=`700 ${s(11)}px "Rajdhani", Arial, sans-serif`;
+  ctx.fillText('LIDER DE GOLEADORES',aX+aSize+s(16),y+s(24));
+  ctx.fillStyle=C.BLANCO;
+  ctx.font=`${s(24)}px "Bebas Neue", Arial, sans-serif`;
+  cvFillTextTrunc(ctx,g0.nombre.toUpperCase(),aX+aSize+s(16),y+s(48),stripW-aSize-s(140));
+  ctx.fillStyle='rgba(255,255,255,0.45)';
+  ctx.font=`400 ${s(12)}px "DM Sans", Arial, sans-serif`;
+  cvFillTextTrunc(ctx,g0.equipo,aX+aSize+s(16),y+s(62),stripW-aSize-s(140));
+
+  ctx.fillStyle=C.DORADO; ctx.textAlign='right';
+  ctx.font=`${s(46)}px "Bebas Neue", Arial, sans-serif`;
+  ctx.fillText(String(g0.goles),stripX+stripW-s(18),y+stripH/2+s(16));
+
+  y+=stripH+s(20);
+  ctx.fillStyle='rgba(201,162,39,0.55)';
+  ctx.font=`700 ${s(13)}px "Rajdhani", Arial, sans-serif`;
+  ctx.textAlign='center';
+  ctx.fillText('GOLEADORES · '+subtitulo.toUpperCase(),CX,y+s(4));
+  y+=s(30);
+
+  const resto=gs.slice(1,13);
+  const cols=2, gap=s(14);
+  const cellW=(W-s(64)-gap)/cols;
+  const rows=Math.ceil(resto.length/cols);
+  const availH=CV_H-s(40)-y;
+  const cellH=rows?Math.min(Math.floor(availH/rows)-gap, s(150)):s(120);
+
+  for(let i=0;i<resto.length;i++){
+    const g=resto[i];
+    const col=i%cols, row=Math.floor(i/cols);
+    const cx0=s(32)+col*(cellW+gap), cy0=y+row*(cellH+gap);
+    cvRoundRect(ctx,cx0,cy0,cellW,cellH,s(10));
+    ctx.fillStyle='rgba(255,255,255,0.03)'; ctx.fill();
+
+    ctx.textAlign='left'; ctx.fillStyle='rgba(255,255,255,0.35)';
+    ctx.font=`700 ${s(11)}px "Rajdhani", Arial, sans-serif`;
+    ctx.fillText(i+2,cx0+s(10),cy0+s(18));
+
+    const eSize=Math.min(s(36),cellH*0.3), eX=cx0+cellW/2-eSize/2, eY=cy0+s(14);
+    ctx.save(); ctx.beginPath(); ctx.arc(eX+eSize/2,eY+eSize/2,eSize/2,0,Math.PI*2); ctx.clip();
+    await cvDrawEscudo(ctx,g.equipo,eX,eY,eSize);
+    ctx.restore();
+
+    ctx.textAlign='center';
+    ctx.fillStyle=C.BLANCO;
+    ctx.font=`600 ${s(13)}px "DM Sans", Arial, sans-serif`;
+    cvFillTextTrunc(ctx,g.nombre,cx0+cellW/2,eY+eSize+s(18),cellW-s(12));
+    ctx.fillStyle=C.GRIS;
+    ctx.font=`500 ${s(10)}px "DM Sans", Arial, sans-serif`;
+    cvFillTextTrunc(ctx,g.equipo,cx0+cellW/2,eY+eSize+s(31),cellW-s(12));
+
+    ctx.fillStyle=C.DORADO;
+    ctx.font=`${s(24)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.fillText(String(g.goles),cx0+cellW/2,cy0+cellH-s(12));
+  }
+
+  cvFooter(ctx,W,CV_H-s(40),liga);
+}
+
+// ---- ESTILO "barras": lider destacado + ranking en barras comparativas ----
+async function _dibujarGolBarras(ctx,gs,subtitulo,id,liga,W,CX){
+  let y = await cvHeader(ctx,W,id,0);
+  y += s(24);
+
+  const g0=gs[0];
+  const aSize=s(72);
+  await cvAvatarCirculo(ctx,g0.foto,g0.nombre,CX-aSize/2,y,aSize);
+  ctx.save(); ctx.beginPath(); ctx.arc(CX,y+aSize/2,aSize/2+s(3),0,Math.PI*2); ctx.strokeStyle=C.DORADO; ctx.lineWidth=s(3); ctx.stroke(); ctx.restore();
+
+  ctx.textAlign='center';
+  ctx.fillStyle=C.BLANCO;
+  ctx.font=`${s(30)}px "Bebas Neue", Arial, sans-serif`;
+  cvFillTextTrunc(ctx,g0.nombre.toUpperCase(),CX,y+aSize+s(30),W-s(100));
+  ctx.fillStyle='rgba(255,255,255,0.5)';
+  ctx.font=`400 ${s(13)}px "DM Sans", Arial, sans-serif`;
+  cvFillTextTrunc(ctx,`${g0.equipo} · Líder con ${g0.goles} gol${g0.goles!==1?'es':''}`,CX,y+aSize+s(48),W-s(100));
+
+  y+=aSize+s(64);
+  const dg=ctx.createLinearGradient(0,y,W,y);
+  dg.addColorStop(0,'transparent'); dg.addColorStop(0.2,C.DORADO);
+  dg.addColorStop(0.8,C.DORADO); dg.addColorStop(1,'transparent');
+  ctx.fillStyle=dg; ctx.fillRect(0,y,W,2); y+=s(2);
+
+  ctx.fillStyle='rgba(201,162,39,0.55)';
+  ctx.font=`700 ${s(13)}px "Rajdhani", Arial, sans-serif`;
+  ctx.fillText('GOLEADORES · '+subtitulo.toUpperCase(),CX,y+s(24));
+  y+=s(46);
+
+  const lista=gs.slice(0,10);
+  const maxGoles=lista[0].goles||1;
+  const rowH=s(56);
+  const barX=s(32), barW=W-s(64);
+
+  for(let i=0;i<lista.length;i++){
+    const g=lista[i];
+    ctx.textAlign='left'; ctx.fillStyle=C.BLANCO;
+    ctx.font=`500 ${s(15)}px "DM Sans", Arial, sans-serif`;
+    cvFillTextTrunc(ctx,`${i+1}   ${g.nombre}`,barX,y+s(16),barW-s(80));
+    ctx.textAlign='right';
+    ctx.fillStyle=i===0?C.DORADO:C.BLANCO;
+    ctx.font=`${s(20)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.fillText(String(g.goles),barX+barW,y+s(18));
+
+    const trackY=y+s(24), trackH=s(9);
+    cvRoundRect(ctx,barX,trackY,barW,trackH,s(4));
+    ctx.fillStyle='rgba(255,255,255,0.06)'; ctx.fill();
+    const pct=Math.max(g.goles/maxGoles,0.04);
+    cvRoundRect(ctx,barX,trackY,barW*pct,trackH,s(4));
+    ctx.fillStyle=i===0?C.DORADO:'rgba(255,255,255,0.35)'; ctx.fill();
+
+    y+=rowH;
+  }
+
+  cvFooter(ctx,W,CV_H-s(40),liga);
 }
 
 // Genera la(s) imagen(es) de "Próximos Partidos". Si hay más de 4 partidos,
@@ -12114,7 +12540,7 @@ async function _generarImagenProximosGrupo(ids){
     if(eImgL){
       ctx.save(); ctx.beginPath();
       ctx.arc(escLX+ECSIZE/2,escLY+ECSIZE/2,ECSIZE/2,0,Math.PI*2); ctx.clip();
-      ctx.drawImage(eImgL,escLX,escLY,ECSIZE,ECSIZE); ctx.restore();
+      cvDrawEscudoImg(ctx,eImgL,escLX,escLY,ECSIZE); ctx.restore();
     } else { cvEscudoFallback(ctx,p.local,escLX,escLY,ECSIZE); }
 
     // Nombre local
@@ -12139,7 +12565,7 @@ async function _generarImagenProximosGrupo(ids){
     if(eImgV){
       ctx.save(); ctx.beginPath();
       ctx.arc(escVX+ECSIZE/2,escVY+ECSIZE/2,ECSIZE/2,0,Math.PI*2); ctx.clip();
-      ctx.drawImage(eImgV,escVX,escVY,ECSIZE,ECSIZE); ctx.restore();
+      cvDrawEscudoImg(ctx,eImgV,escVX,escVY,ECSIZE); ctx.restore();
     } else { cvEscudoFallback(ctx,p.visit,escVX,escVY,ECSIZE); }
 
     // Nombre visitante
@@ -12438,7 +12864,7 @@ async function generarImagenTransferencia(tfId){
   if(escOrigImg){
     ctx.save();
     ctx.beginPath(); ctx.arc(oriX+ESC/2, oriY+ESC/2, ESC/2, 0, Math.PI*2); ctx.clip();
-    ctx.drawImage(escOrigImg, oriX, oriY, ESC, ESC);
+    cvDrawEscudoImg(ctx,escOrigImg, oriX, oriY, ESC);
     ctx.restore();
   } else {
     cvEscudoFallback(ctx, t.origen, oriX, oriY, ESC);
@@ -12463,7 +12889,7 @@ async function generarImagenTransferencia(tfId){
   if(escDestImg){
     ctx.save();
     ctx.beginPath(); ctx.arc(destX+ESC/2, destY+ESC/2, ESC/2, 0, Math.PI*2); ctx.clip();
-    ctx.drawImage(escDestImg, destX, destY, ESC, ESC);
+    cvDrawEscudoImg(ctx,escDestImg, destX, destY, ESC);
     ctx.restore();
   } else {
     cvEscudoFallback(ctx, t.destino, destX, destY, ESC);
@@ -12627,7 +13053,7 @@ async function generarImagenReserva(ids){
     if(eImgL){
       ctx.save(); ctx.beginPath();
       ctx.arc(COL_EC_L, ecTopY+ECSZ/2, ECSZ/2, 0, Math.PI*2); ctx.clip();
-      ctx.drawImage(eImgL, COL_EC_L-ECSZ/2, ecTopY, ECSZ, ECSZ); ctx.restore();
+      cvDrawEscudoImg(ctx,eImgL, COL_EC_L-ECSZ/2, ecTopY, ECSZ); ctx.restore();
     } else {
       cvEscudoFallback(ctx, p.local, COL_EC_L-ECSZ/2, ecTopY, ECSZ);
     }
@@ -12642,7 +13068,7 @@ async function generarImagenReserva(ids){
     if(eImgV){
       ctx.save(); ctx.beginPath();
       ctx.arc(COL_EC_R, ecTopY+ECSZ/2, ECSZ/2, 0, Math.PI*2); ctx.clip();
-      ctx.drawImage(eImgV, COL_EC_R-ECSZ/2, ecTopY, ECSZ, ECSZ); ctx.restore();
+      cvDrawEscudoImg(ctx,eImgV, COL_EC_R-ECSZ/2, ecTopY, ECSZ); ctx.restore();
     } else {
       cvEscudoFallback(ctx, p.visit, COL_EC_R-ECSZ/2, ecTopY, ECSZ);
     }
@@ -12972,7 +13398,7 @@ async function generarImagenPlayoff(torneo, esReserva){
       const escLY=y+(ROW-ECSIZE)/2;
       if(eImgL){
         ctx.save(); ctx.beginPath(); ctx.arc(escLX+ECSIZE/2,escLY+ECSIZE/2,ECSIZE/2,0,Math.PI*2); ctx.clip();
-        ctx.drawImage(eImgL,escLX,escLY,ECSIZE,ECSIZE); ctx.restore();
+        cvDrawEscudoImg(ctx,eImgL,escLX,escLY,ECSIZE); ctx.restore();
       } else if(c.local){ cvEscudoFallback(ctx,c.local,escLX,escLY,ECSIZE); }
       ctx.fillStyle=esGanL?C.DORADO:C.BLANCO;
       ctx.font=`${s(17)}px "Bebas Neue", Arial, sans-serif`;
@@ -12985,7 +13411,7 @@ async function generarImagenPlayoff(torneo, esReserva){
       const escVY=y+(ROW-ECSIZE)/2;
       if(eImgV){
         ctx.save(); ctx.beginPath(); ctx.arc(escVX+ECSIZE/2,escVY+ECSIZE/2,ECSIZE/2,0,Math.PI*2); ctx.clip();
-        ctx.drawImage(eImgV,escVX,escVY,ECSIZE,ECSIZE); ctx.restore();
+        cvDrawEscudoImg(ctx,eImgV,escVX,escVY,ECSIZE); ctx.restore();
       } else if(c.visit){ cvEscudoFallback(ctx,c.visit,escVX,escVY,ECSIZE); }
       ctx.fillStyle=esGanV?C.DORADO:C.BLANCO;
       ctx.font=`${s(17)}px "Bebas Neue", Arial, sans-serif`;
@@ -13169,7 +13595,7 @@ async function generarImagenEtapaPlayoff(torneo, esReserva, etapa){
     const eImg = escudoImgs[campeon];
     if(eImg){
       ctx.save(); ctx.beginPath(); ctx.arc(CX,cy+ECSZ/2,ECSZ/2,0,Math.PI*2); ctx.clip();
-      ctx.drawImage(eImg, CX-ECSZ/2, cy, ECSZ, ECSZ); ctx.restore();
+      cvDrawEscudoImg(ctx,eImg, CX-ECSZ/2, cy, ECSZ); ctx.restore();
       ctx.lineWidth=s(3); ctx.strokeStyle=C.DORADO;
       ctx.beginPath(); ctx.arc(CX,cy+ECSZ/2,ECSZ/2,0,Math.PI*2); ctx.stroke();
     } else {
@@ -13227,7 +13653,7 @@ async function generarImagenEtapaPlayoff(torneo, esReserva, etapa){
       const ex = s(96), ey = fy-ECSIZE/2;
       if(eImg){
         ctx.save(); ctx.beginPath(); ctx.arc(ex+ECSIZE/2,ey+ECSIZE/2,ECSIZE/2,0,Math.PI*2); ctx.clip();
-        ctx.drawImage(eImg, ex, ey, ECSIZE, ECSIZE); ctx.restore();
+        cvDrawEscudoImg(ctx,eImg, ex, ey, ECSIZE); ctx.restore();
       } else {
         cvEscudoFallback(ctx, nombre, ex, ey, ECSIZE);
       }
