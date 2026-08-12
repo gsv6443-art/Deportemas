@@ -171,9 +171,15 @@
     // ── ESCUDOS: cada uno en su propio documento para evitar el límite de 1MB ──
 
     // Guarda un escudo individual: /lrr/escudo_<nombreNorm>
+    // merge:true es clave acá: si en algún momento se guarda una versión
+    // incompleta (por ejemplo sin la imagen, porque se armó desde la copia
+    // liviana que se guarda en el celular), esto NO borra el campo "img"
+    // que ya estaba en el servidor — solo actualiza lo que de verdad vino
+    // en este guardado. Antes, un guardado parcial pisaba el documento
+    // entero y borraba la imagen para siempre.
     async setEscudo(nombreNorm, base64){
       try{
-        await setDoc(doc(db, COL, 'escudo_' + nombreNorm), { value: base64 });
+        await setDoc(doc(db, COL, 'escudo_' + nombreNorm), { value: base64 }, { merge: true });
       }catch(e){ console.error('FB setEscudo error', nombreNorm, e); }
     },
     // Borra un escudo individual
@@ -210,8 +216,11 @@
     },
 
     // ── NOTICIAS: cada noticia en su propio documento (/lrr/noticia_<id>) ──
+    // merge:true por el mismo motivo que en setEscudo: un guardado de edición
+    // (título, texto, etc.) que no incluya "img" no debe borrar la imagen
+    // que ya estaba guardada.
     async setNoticia(id, noticia){
-      try{ await setDoc(doc(db, COL, 'noticia_'+id), noticia); }
+      try{ await setDoc(doc(db, COL, 'noticia_'+id), noticia, { merge: true }); }
       catch(e){ console.error('FB setNoticia error', id, e); }
     },
     async delNoticia(id){
@@ -233,7 +242,7 @@
     // Guarda la foto de un goleador: /lrr/golfoto_<id>
     async setGolFoto(id, base64){
       try{
-        await setDoc(doc(db, COL, 'golfoto_' + id), { value: base64 });
+        await setDoc(doc(db, COL, 'golfoto_' + id), { value: base64 }, { merge: true });
       }catch(e){ console.error('FB setGolFoto error', id, e); }
     },
     // Borra la foto de un goleador
@@ -261,7 +270,7 @@
     // Guarda la foto de plantel de un club: /lrr/clubfoto_<key>
     async setClubFoto(key, base64){
       try{
-        await setDoc(doc(db, COL, 'clubfoto_' + key), { value: base64 });
+        await setDoc(doc(db, COL, 'clubfoto_' + key), { value: base64 }, { merge: true });
       }catch(e){ console.error('FB setClubFoto error', key, e); }
     },
     // Borra la foto de plantel de un club
@@ -289,7 +298,7 @@
     // Guarda el logo de un torneo: /lrr/torneologo_<id>
     async setTorneoLogo(id, base64){
       try{
-        await setDoc(doc(db, COL, 'torneologo_' + id), { value: base64 });
+        await setDoc(doc(db, COL, 'torneologo_' + id), { value: base64 }, { merge: true });
       }catch(e){ console.error('FB setTorneoLogo error', id, e); }
     },
     // Borra el logo de un torneo
@@ -317,7 +326,7 @@
     // Guarda la foto del campeón de un torneo: /lrr/torneofoto_<id>
     async setTorneoFoto(id, base64){
       try{
-        await setDoc(doc(db, COL, 'torneofoto_' + id), { value: base64 });
+        await setDoc(doc(db, COL, 'torneofoto_' + id), { value: base64 }, { merge: true });
       }catch(e){ console.error('FB setTorneoFoto error', id, e); }
     },
     // Borra la foto del campeón de un torneo
@@ -357,7 +366,7 @@
     //    (/lrr/<prefijo>_<id>) para evitar el límite de 1MB y permitir listas grandes.
     //    Usado por Amonestaciones, Expulsiones, Expedientes y Actas. ──
     async setItem(prefix, id, obj){
-      try{ await setDoc(doc(db, COL, prefix+'_'+id), obj); }
+      try{ await setDoc(doc(db, COL, prefix+'_'+id), obj, { merge: true }); }
       catch(e){ console.error('FB setItem error', prefix, id, e); }
     },
     async delItem(prefix, id){
@@ -533,11 +542,31 @@
     });
   }
 
+  // Reintenta en segundo plano una consulta que quedó en null por timeout,
+  // y aplica el resultado apenas llegue — sin bloquear nada ni depender del
+  // splash. Se usa como red de seguridad además del timeout más generoso
+  // que ya tienen las consultas pesadas (escudos, noticias, fotos).
+  function _reintentarCarga(fetchFn, aplicarFn){
+    fetchFn().then(res => { if(res) aplicarFn(res); }).catch(()=>{});
+  }
+
+  // Vuelve a pintar en pantalla lo ya cargado (usado tras un reintento).
+  function _repintarTodo(){
+    if(typeof renderFotosSidebar==='function') renderFotosSidebar();
+    if(typeof renderTodasLasPubs==='function') renderTodasLasPubs();
+    if(typeof actualizarNavLive==='function') actualizarNavLive();
+    if(typeof renderSection==='function') renderSection(currentSection);
+  }
+
   // ── Carga inicial de datos ───────────────────────────────────
   // Esperar a que el DOM esté listo; el script principal ya cargó data desde localStorage,
   // aquí lo sobreescribimos con los datos de Firestore.
   async function cargarDatosFirebase(){
     try {
+    // Escudos, noticias y fotos traen muchas imágenes en base64 juntas:
+    // son las consultas más pesadas, por eso les damos más margen (15s)
+    // que al resto (7s) antes de considerarlas "colgadas".
+    const TIMEOUT_PESADO = 15000;
     const [
       fbData, fbEscudosViejo, fbIdentidad, fbFotos,
       fbNoticiasViejo, fbPubs, fbFichas, fbCronos, fbDM,
@@ -547,28 +576,29 @@
       fbClubFotos, fbTorneoLogos, fbTorneoFotos
     ] = await Promise.all([
       _trackCarga(window._fb.get('data')),
-      _trackCarga(window._fb.get('escudos')),
+      _trackCarga(window._fb.get('escudos'), TIMEOUT_PESADO),
       _trackCarga(window._fb.get('identidad')),
-      _trackCarga(window._fb.get('fotos')),
-      _trackCarga(window._fb.get('noticias')),     // doc viejo (migración)
+      _trackCarga(window._fb.get('fotos'), TIMEOUT_PESADO),
+      _trackCarga(window._fb.get('noticias'), TIMEOUT_PESADO),     // doc viejo (migración)
       _trackCarga(window._fb.get('pubs')),
       _trackCarga(window._fb.get('fichas')),
       _trackCarga(window._fb.get('cronos')),
       _trackCarga(window._fb.get('deportemas')),
-      _trackCarga(window._fb.getAllEscudos()),
+      _trackCarga(window._fb.getAllEscudos(), TIMEOUT_PESADO),
       _trackCarga(window._fb.getAllItems('transferencia')),
       _trackCarga(window._fb.get('transferencias')), // doc viejo (migración)
-      _trackCarga(window._fb.getAllGolFotos()),
-      _trackCarga(window._fb.getAllNoticias()),    // docs individuales (nuevo)
+      _trackCarga(window._fb.getAllGolFotos(), TIMEOUT_PESADO),
+      _trackCarga(window._fb.getAllNoticias(), TIMEOUT_PESADO),    // docs individuales (nuevo)
       _trackCarga(window._fb.getAllItems('amonestacion')),
       _trackCarga(window._fb.getAllItems('expulsion')),
       _trackCarga(window._fb.getAllItems('expedientesan')),
       _trackCarga(window._fb.getAllItems('actasan')),
       _trackCarga(window._fb.getAllItems('sancionvigente')),
-      _trackCarga(window._fb.getAllClubFotos()),
-      _trackCarga(window._fb.getAllTorneoLogos()),
-      _trackCarga(window._fb.getAllTorneoFotos()),
+      _trackCarga(window._fb.getAllClubFotos(), TIMEOUT_PESADO),
+      _trackCarga(window._fb.getAllTorneoLogos(), TIMEOUT_PESADO),
+      _trackCarga(window._fb.getAllTorneoFotos(), TIMEOUT_PESADO),
     ]);
+
 
 
     // Cache en memoria de fotos de goleadores (id → base64), usado también por el listener en tiempo real
@@ -617,6 +647,17 @@
         fbNoticiasViejo.forEach(n=>{ if(n.id) window._fb.setNoticia(n.id, n); });
         console.log('Noticias migradas a documentos individuales:', fbNoticiasViejo.length);
       }
+    } else {
+      // Ninguna de las dos formas llegó a tiempo (timeout de _trackCarga,
+      // conexión lenta). Reintentar en segundo plano y redibujar apenas lleguen.
+      _reintentarCarga(() => window._fb.getAllNoticias(), fbNoticiasReintento => {
+        if(fbNoticiasReintento.length){
+          const idsServidor = new Set(fbNoticiasReintento.map(n=>n.id));
+          const pendientes = getNoticias().filter(n=>n._pendienteSync && !idsServidor.has(n.id));
+          saveNoticias([...pendientes, ...fbNoticiasReintento]);
+          if(currentSection==='noticias') renderNoticias();
+        }
+      });
     }
     // Reintentar en segundo plano las noticias que quedaron pendientes de la sesión anterior.
     if(noticiasLocalesPendientes.length && window._fb){
@@ -662,6 +703,16 @@
       escudos = fbEscudosViejo;
       _guardarEscudosLiviano(fbEscudosViejo);
       window._fb.migrarEscudos(fbEscudosViejo); // migración en background, no bloquea
+    } else {
+      // Ninguna de las dos formas llegó a tiempo. Reintentar en segundo
+      // plano y volver a pintar (posiciones, fichas, etc.) apenas lleguen.
+      _reintentarCarga(() => window._fb.getAllEscudos(), fbEscudosReintento => {
+        if(Object.keys(fbEscudosReintento).length > 0){
+          escudos = fbEscudosReintento;
+          _guardarEscudosLiviano(fbEscudosReintento);
+          _repintarTodo();
+        }
+      });
     }
 
     } catch(fbError) {
