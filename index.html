@@ -155,11 +155,13 @@
         return snap.exists() ? snap.data().value : null;
       }catch(e){ console.warn('FB get error', key, e); return null; }
     },
-    // Guarda un documento
+    // Guarda un documento. Devuelve true/false para que quien llama sepa
+    // si de verdad llegó al servidor (antes se tragaba el error en silencio).
     async set(key, value){
       try{
         await setDoc(doc(db, COL, key), { value });
-      }catch(e){ console.error('FB set error', key, e); }
+        return true;
+      }catch(e){ console.error('FB set error', key, e); return false; }
     },
     // Escucha cambios en tiempo real
     listen(key, cb){
@@ -3245,7 +3247,7 @@ table.posiciones td:nth-child(8){
 <!-- LOGIN -->
 <div id="login-overlay">
   <div class="login-box">
-    <div class="login-logo" id="login-logo-display">LRR</div>
+    <div class="login-logo" id="login-logo-display">DM</div>
     <h2>Panel de Admin</h2>
     <p>Ingresá con tu cuenta de administrador</p>
     <input type="email" id="login-email" placeholder="Correo electrónico" autocomplete="username"
@@ -4484,9 +4486,9 @@ table.posiciones td:nth-child(8){
 <header>
   <div class="logo-wrap">
     <img src="" alt="logo" id="logo-img-header"/>
-    <div class="logo-iniciales" id="logo-iniciales">LRR</div>
+    <div class="logo-iniciales" id="logo-iniciales">DM</div>
     <div class="logo-texto">
-      <h1 id="header-nombre">Liga Regional Riotercerense</h1>
+      <h1 id="header-nombre">DeporteMás</h1>
       <span id="header-subtitulo">Fútbol · Córdoba</span>
     </div>
   </div>
@@ -4866,7 +4868,12 @@ function saveEscudos(nuevoEscudos, nombreModificado){
   }
 }
 function getIdentidad(){try{return JSON.parse(localStorage.getItem(ID_KEY))||{};}catch(e){return {};}}
-function saveIdentidad(i){if(!setLSSafe(ID_KEY,JSON.stringify(i)))return;if(window._fb)window._fb.set('identidad',i);}
+async function saveIdentidad(i){
+  if(!setLSSafe(ID_KEY,JSON.stringify(i))) return {ok:false,motivo:'local'};
+  if(!window._fb) return {ok:false,motivo:'sin-conexion'};
+  const okServidor = await window._fb.set('identidad',i);
+  return {ok:okServidor, motivo:okServidor?null:'firestore'};
+}
 function getFotos(){try{return JSON.parse(localStorage.getItem(FOTOS_KEY))||[];}catch(e){return[];}}
 function saveFotos(f){if(!setLSSafe(FOTOS_KEY,JSON.stringify(f)))return;if(window._fb)window._fb.set('fotos',f);}
 
@@ -4957,24 +4964,37 @@ function previewLogo(input){
     const w=document.getElementById('id-logo-wrap-prev');if(w)w.classList.add('visible');
   });
 }
-function guardarIdentidad(){
+async function guardarIdentidad(){
   const id=getIdentidad();
   const n=document.getElementById('id-nombre').value.trim();
   const s=document.getElementById('id-subtitulo').value.trim();
   if(n)id.nombre=n;if(s)id.subtitulo=s;if(_logoB64)id.logo=_logoB64;
-  saveIdentidad(id);aplicarIdentidad();
-  const m=document.getElementById('id-msg');m.textContent='✓ Cambios guardados';m.style.color='var(--dorado)';m.style.display='block';
-  setTimeout(()=>m.style.display='none',2500);
+  const m=document.getElementById('id-msg');
+  m.textContent='Guardando...';m.style.color='var(--gris)';m.style.display='block';
+  const res=await saveIdentidad(id);
+  aplicarIdentidad();
+  if(res.ok){
+    m.textContent='✓ Cambios guardados y publicados';m.style.color='var(--dorado)';
+  } else if(res.motivo==='firestore'){
+    m.textContent='⚠ Se guardó en este dispositivo, pero falló al publicar en el servidor. Revisá tu conexión y probá de nuevo.';m.style.color='#e05454';
+  } else if(res.motivo==='sin-conexion'){
+    m.textContent='⚠ No se pudo conectar al servidor. Solo quedó guardado en este dispositivo.';m.style.color='#e05454';
+  } else {
+    m.textContent='⚠ No se pudo guardar. Probá de nuevo.';m.style.color='#e05454';
+  }
+  setTimeout(()=>m.style.display='none',res.ok?2500:6000);
 }
-function guardarEstiloGoleadores(){
+async function guardarEstiloGoleadores(){
   const id=getIdentidad();
   id.estiloGoleadores=document.getElementById('g-estilo-img').value;
-  saveIdentidad(id);
+  const m=document.getElementById('g-estilo-msg');
+  m.style.display='block';m.style.color='var(--gris)';m.textContent='Guardando...';
+  const res=await saveIdentidad(id);
   actualizarInfoFotoEstilo();
   renderAdminListas();
-  const m=document.getElementById('g-estilo-msg');
-  m.style.display='block';
-  setTimeout(()=>m.style.display='none',2000);
+  if(res.ok){ m.style.color='var(--dorado)'; m.textContent='✓ Estilo guardado y publicado'; }
+  else { m.style.color='#e05454'; m.textContent='⚠ No se pudo publicar en el servidor. Probá de nuevo.'; }
+  setTimeout(()=>m.style.display='none',res.ok?2000:6000);
 }
 // Nombre del estilo → hasta qué puesto de la tabla usa fotos de jugadores
 function estiloFotoTop(estilo){
@@ -4995,12 +5015,13 @@ function actualizarInfoFotoEstilo(){
   const addHint=document.getElementById('g-foto-hint-add');
   if(addHint) addHint.textContent='(opcional — '+hint+')';
 }
-function borrarLogo(){
-  const id=getIdentidad();delete id.logo;saveIdentidad(id);_logoB64='';
+async function borrarLogo(){
+  const id=getIdentidad();delete id.logo;_logoB64='';
+  await saveIdentidad(id);
   document.getElementById('logo-img-header').classList.remove('show');
   document.getElementById('logo-iniciales').classList.remove('hidden');
   document.getElementById('id-logo-preview').style.display='none';
-  document.getElementById('login-logo-display').textContent='LRR';
+  document.getElementById('login-logo-display').textContent='DM';
 }
 
 // ============================================================
