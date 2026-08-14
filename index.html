@@ -4869,7 +4869,9 @@ function saveEscudos(nuevoEscudos, nombreModificado){
 }
 function getIdentidad(){try{return JSON.parse(localStorage.getItem(ID_KEY))||{};}catch(e){return {};}}
 async function saveIdentidad(i){
-  if(!setLSSafe(ID_KEY,JSON.stringify(i))) return {ok:false,motivo:'local'};
+  // El caché local es solo una optimización — si está lleno, no debe
+  // impedir que el cambio se publique en el servidor (Firestore).
+  setLSSafe(ID_KEY,JSON.stringify(i));
   if(!window._fb) return {ok:false,motivo:'sin-conexion'};
   const okServidor = await window._fb.set('identidad',i);
   return {ok:okServidor, motivo:okServidor?null:'firestore'};
@@ -4971,7 +4973,7 @@ async function guardarIdentidad(){
   if(n)id.nombre=n;if(s)id.subtitulo=s;if(_logoB64)id.logo=_logoB64;
   const m=document.getElementById('id-msg');
   m.textContent='Guardando...';m.style.color='var(--gris)';m.style.display='block';
-  const res=await saveIdentidad(id);
+  const res=(await saveIdentidad(id))||{ok:false,motivo:'error'};
   aplicarIdentidad();
   if(res.ok){
     m.textContent='✓ Cambios guardados y publicados';m.style.color='var(--dorado)';
@@ -4989,7 +4991,7 @@ async function guardarEstiloGoleadores(){
   id.estiloGoleadores=document.getElementById('g-estilo-img').value;
   const m=document.getElementById('g-estilo-msg');
   m.style.display='block';m.style.color='var(--gris)';m.textContent='Guardando...';
-  const res=await saveIdentidad(id);
+  const res=(await saveIdentidad(id))||{ok:false,motivo:'error'};
   actualizarInfoFotoEstilo();
   renderAdminListas();
   if(res.ok){ m.style.color='var(--dorado)'; m.textContent='✓ Estilo guardado y publicado'; }
