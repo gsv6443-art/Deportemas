@@ -356,6 +356,20 @@ table.tabla-pos td.pts{font-family:'Bebas Neue',sans-serif;font-size:15px;color:
   z-index:1000;align-items:center;justify-content:center;padding:1rem;
 }
 .modal-overlay.open,.admin-overlay.open{display:flex;}
+
+/* ── Gate de acceso: oculta la app entera mientras no haya sesión admin ── */
+.gate-poli{
+  display:none;position:fixed;inset:0;z-index:900;
+  align-items:center;justify-content:center;padding:1.5rem;text-align:center;
+  background:radial-gradient(circle at 50% 30%,#232b30,#0b0e10 75%);
+}
+body.bloqueado-poli .gate-poli{display:flex;}
+body.bloqueado-poli > header,
+body.bloqueado-poli #landing,
+body.bloqueado-poli .vista-deporte{display:none!important;}
+.gate-poli-box{max-width:380px;}
+.gate-poli-box h2{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:1px;color:var(--plata,#c8d0d4);margin-bottom:12px;}
+.gate-poli-box p{font-family:'Rajdhani',sans-serif;font-size:15px;color:var(--gris);margin-bottom:20px;line-height:1.4;}
 .modal-box{background:var(--negro2);border:1px solid var(--negro4);border-radius:var(--r-lg);padding:24px;width:100%;max-width:340px;}
 .modal-box h3{font-family:'Bebas Neue',sans-serif;font-size:20px;margin-bottom:14px;letter-spacing:.5px;}
 .modal-error{color:#e0574a;font-size:12px;font-family:'Rajdhani',sans-serif;min-height:16px;margin-top:4px;}
@@ -400,7 +414,7 @@ table.tabla-pos td.pts{font-family:'Bebas Neue',sans-serif;font-size:15px;color:
 }
 </style>
 </head>
-<body class="tema-landing" id="body-poli">
+<body class="tema-landing bloqueado-poli" id="body-poli">
 
 <header>
   <div class="logo-wrap">
@@ -423,6 +437,15 @@ table.tabla-pos td.pts{font-family:'Bebas Neue',sans-serif;font-size:15px;color:
   </a>
   <a href="#" class="btn-volver" id="btn-admin-poli" onclick="abrirLoginPoli();return false" style="margin-left:8px">⚙ Admin</a>
 </header>
+
+<!-- GATE: bloquea todo el contenido hasta que haya sesión de administrador -->
+<div class="gate-poli" id="gate-poli">
+  <div class="gate-poli-box">
+    <h2>POLIDEPORTIVO</h2>
+    <p>Estamos terminando de cargar la información. Esta sección todavía no está disponible al público.</p>
+    <button class="btn-primario" onclick="abrirLoginPoli()">Ingresar como administrador</button>
+  </div>
+</div>
 
 <!-- MODAL LOGIN ADMIN -->
 <div class="modal-overlay" id="login-overlay">
@@ -2463,16 +2486,18 @@ async function renderAdminListas(){
 }
 
 
-// ── Estado de sesión: cambia el botón del header ────────────────
+// ── Estado de sesión: cambia el botón del header + gate de acceso ──────
 esperarFB().then(fb => {
   fb.onAuth(user => {
     const btn = document.getElementById('btn-admin-poli');
     if(user){
       btn.textContent = '⚙ Cerrar sesión';
       btn.onclick = (e)=>{ e.preventDefault(); fb.logout(); cerrarAdminPoli(); };
+      document.getElementById('body-poli').classList.remove('bloqueado-poli');
     } else {
       btn.textContent = '⚙ Admin';
       btn.onclick = (e)=>{ e.preventDefault(); abrirLoginPoli(); };
+      document.getElementById('body-poli').classList.add('bloqueado-poli');
     }
   });
 });
