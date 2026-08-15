@@ -1147,6 +1147,43 @@ const ICON_ANIM = {
   basquet: 'animRebote', voley: 'animRemate', handball: 'animLanzamiento',
   hockey: 'animGolpe', tenis: 'animPique', padel: 'animSwing'
 };
+// ── Hash routing: #deporte o #deporte-seccion (ej. #basquet-posiciones) ──
+const DEPORTES_VALIDOS_POLI = ['basquet','voley','handball','hockey','tenis','padel'];
+const TABS_VALIDAS_POLI = ['fixture','posiciones','anotadores','sanciones','torneos','noticias'];
+
+function _actualizarHashPoli(dep, tab){
+  try{
+    const h = '#' + dep + (tab && tab !== 'fixture' ? '-' + tab : '');
+    if(location.hash !== h) history.pushState({dep,tab}, '', h);
+  }catch(e){}
+}
+
+function _deporteYTabDesdeHash(){
+  const h = (location.hash || '').replace('#','');
+  if(!h) return null;
+  const idx = h.indexOf('-');
+  const dep = idx === -1 ? h : h.slice(0, idx);
+  const tab = idx === -1 ? 'fixture' : h.slice(idx+1);
+  if(!DEPORTES_VALIDOS_POLI.includes(dep)) return null;
+  return { dep, tab: TABS_VALIDAS_POLI.includes(tab) ? tab : 'fixture' };
+}
+
+// Activa una pestaña (Fixture/Posiciones/etc.) de un deporte — usada tanto por
+// los clicks en el tabs-row como por la navegación vía hash (#dep-tab).
+function activarTabPoli(dep, tab, actualizarHash){
+  const tabsRow = document.getElementById(seccionesTabsId(dep));
+  if(!tabsRow) return;
+  const btn = tabsRow.querySelector('.tab-btn[data-tab="' + tab + '"]');
+  if(!btn) return;
+  tabsRow.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('#vista-' + dep + ' .tab-panel').forEach(p=>{
+    p.style.display = (p.dataset.panel === tab) ? 'block' : 'none';
+  });
+  cerrarSecciones(dep);
+  if(actualizarHash !== false) _actualizarHashPoli(dep, tab);
+}
+
 function animarEntradaDeporte(ev, deporte){
   const card = ev.currentTarget;
   const icono = card.querySelector('img, svg');
@@ -1162,11 +1199,12 @@ function animarEntradaDeporte(ev, deporte){
   }, icono ? 500 : 0);
 }
 
-function mostrarDeporte(deporte){
+function mostrarDeporte(deporte, _fromHash){
   document.getElementById('landing').style.display = 'none';
   document.getElementById('vista-' + deporte).classList.add('visible');
   document.getElementById('body-poli').classList.remove('tema-landing');
   document.getElementById('body-poli').classList.add(temaPorDeporte[deporte]);
+  if(!_fromHash) _actualizarHashPoli(deporte, 'fixture');
   if(deporte === 'basquet'){
     cargarFixture(categoriaActual);
     cargarPosiciones(categoriaActual);
@@ -1210,13 +1248,16 @@ function mostrarDeporte(deporte){
     cargarNoticiasPadel();
   }
 }
-function volverLanding(){
+function volverLanding(_fromHash){
   document.querySelectorAll('.vista-deporte.visible').forEach(v=>v.classList.remove('visible'));
   document.getElementById('landing').style.display = 'block';
   Object.values(temaPorDeporte).forEach(t=>document.getElementById('body-poli').classList.remove(t));
   document.getElementById('body-poli').classList.add('tema-landing');
   document.querySelectorAll('.tabs-row').forEach(t=>t.classList.remove('open'));
   document.querySelectorAll('.hamburger-secciones').forEach(b=>b.classList.remove('open'));
+  if(!_fromHash){
+    try{ if(location.hash) history.pushState(null, '', location.pathname + location.search); }catch(e){}
+  }
 }
 document.getElementById('categorias-row').addEventListener('click', e=>{
   if(!e.target.classList.contains('cat-btn')) return;
@@ -1230,13 +1271,7 @@ document.getElementById('categorias-row').addEventListener('click', e=>{
 });
 document.getElementById('tabs-row').addEventListener('click', e=>{
   if(!e.target.classList.contains('tab-btn')) return;
-  document.querySelectorAll('#tabs-row .tab-btn').forEach(b=>b.classList.remove('active'));
-  e.target.classList.add('active');
-  const tab = e.target.dataset.tab;
-  document.querySelectorAll('#vista-basquet .tab-panel').forEach(p=>{
-    p.style.display = (p.dataset.panel === tab) ? 'block' : 'none';
-  });
-  cerrarSecciones('basquet');
+  activarTabPoli('basquet', e.target.dataset.tab);
 });
 
 // ── VÓLEY: género / categoría / tabs ────────────────────────────
@@ -1262,13 +1297,7 @@ document.getElementById('categorias-row-voley').addEventListener('click', e=>{
 });
 document.getElementById('tabs-row-voley').addEventListener('click', e=>{
   if(!e.target.classList.contains('tab-btn')) return;
-  document.querySelectorAll('#tabs-row-voley .tab-btn').forEach(b=>b.classList.remove('active'));
-  e.target.classList.add('active');
-  const tab = e.target.dataset.tab;
-  document.querySelectorAll('#vista-voley .tab-panel').forEach(p=>{
-    p.style.display = (p.dataset.panel === tab) ? 'block' : 'none';
-  });
-  cerrarSecciones('voley');
+  activarTabPoli('voley', e.target.dataset.tab);
 });
 
 // ── HANDBALL: género / tabs (única categoría: Primera) ──────────
@@ -1284,13 +1313,7 @@ document.getElementById('generos-row-handball').addEventListener('click', e=>{
 });
 document.getElementById('tabs-row-handball').addEventListener('click', e=>{
   if(!e.target.classList.contains('tab-btn')) return;
-  document.querySelectorAll('#tabs-row-handball .tab-btn').forEach(b=>b.classList.remove('active'));
-  e.target.classList.add('active');
-  const tab = e.target.dataset.tab;
-  document.querySelectorAll('#vista-handball .tab-panel').forEach(p=>{
-    p.style.display = (p.dataset.panel === tab) ? 'block' : 'none';
-  });
-  cerrarSecciones('handball');
+  activarTabPoli('handball', e.target.dataset.tab);
 });
 
 // ── HOCKEY: género (recalcula categorías) / categoría / tabs ────
@@ -1311,13 +1334,7 @@ document.getElementById('categorias-row-hockey').addEventListener('click', e=>{
 });
 document.getElementById('tabs-row-hockey').addEventListener('click', e=>{
   if(!e.target.classList.contains('tab-btn')) return;
-  document.querySelectorAll('#tabs-row-hockey .tab-btn').forEach(b=>b.classList.remove('active'));
-  e.target.classList.add('active');
-  const tab = e.target.dataset.tab;
-  document.querySelectorAll('#vista-hockey .tab-panel').forEach(p=>{
-    p.style.display = (p.dataset.panel === tab) ? 'block' : 'none';
-  });
-  cerrarSecciones('hockey');
+  activarTabPoli('hockey', e.target.dataset.tab);
 });
 
 // ── TENIS: género / certamen / categoría / tabs ─────────────────
@@ -1345,13 +1362,7 @@ document.getElementById('categorias-row-tenis').addEventListener('click', e=>{
 });
 document.getElementById('tabs-row-tenis').addEventListener('click', e=>{
   if(!e.target.classList.contains('tab-btn')) return;
-  document.querySelectorAll('#tabs-row-tenis .tab-btn').forEach(b=>b.classList.remove('active'));
-  e.target.classList.add('active');
-  const tab = e.target.dataset.tab;
-  document.querySelectorAll('#vista-tenis .tab-panel').forEach(p=>{
-    p.style.display = (p.dataset.panel === tab) ? 'block' : 'none';
-  });
-  cerrarSecciones('tenis');
+  activarTabPoli('tenis', e.target.dataset.tab);
 });
 
 // ── PÁDEL: género / certamen / categoría / tabs ──────────────────
@@ -1379,13 +1390,7 @@ document.getElementById('categorias-row-padel').addEventListener('click', e=>{
 });
 document.getElementById('tabs-row-padel').addEventListener('click', e=>{
   if(!e.target.classList.contains('tab-btn')) return;
-  document.querySelectorAll('#tabs-row-padel .tab-btn').forEach(b=>b.classList.remove('active'));
-  e.target.classList.add('active');
-  const tab = e.target.dataset.tab;
-  document.querySelectorAll('#vista-padel .tab-panel').forEach(p=>{
-    p.style.display = (p.dataset.panel === tab) ? 'block' : 'none';
-  });
-  cerrarSecciones('padel');
+  activarTabPoli('padel', e.target.dataset.tab);
 });
 
 // ── FIXTURE (público) ──────────────────────────────────────────
@@ -2471,6 +2476,26 @@ esperarFB().then(fb => {
     }
   });
 });
+
+// ── Hash routing: abrir deporte/pestaña según #dep o #dep-tab ───────────
+(function(){
+  document.addEventListener('DOMContentLoaded', ()=>{
+    const parsed = _deporteYTabDesdeHash();
+    if(parsed){
+      mostrarDeporte(parsed.dep, true);
+      if(parsed.tab !== 'fixture') activarTabPoli(parsed.dep, parsed.tab, false);
+    }
+  });
+  window.addEventListener('popstate', ()=>{
+    const parsed = _deporteYTabDesdeHash();
+    if(parsed){
+      mostrarDeporte(parsed.dep, true);
+      activarTabPoli(parsed.dep, parsed.tab, false);
+    } else {
+      volverLanding(true);
+    }
+  });
+})();
 </script>
 
 </body>
