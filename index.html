@@ -5029,12 +5029,20 @@ async function borrarLogo(){
 // ============================================================
 // NAVEGACIÓN
 // ============================================================
-function showSection(sec){
+const SECCIONES_VALIDAS = ['fixture','posiciones','resultados','goleadores','equipos','torneos','noticias','sanciones'];
+
+function showSection(sec, _fromHash){
   if(sec === currentSection) return;
 
   const saliente = document.getElementById('section-' + currentSection);
   const entrante = document.getElementById('section-' + sec);
   if(!entrante) return;
+
+  // Reflejar la sección en la URL (#seccion) sin disparar 'hashchange' — pushState no lo dispara.
+  // Si venimos de un cambio de hash externo (atrás/adelante del navegador), no volvemos a empujar.
+  if(!_fromHash && SECCIONES_VALIDAS.includes(sec)){
+    try{ history.pushState({sec}, '', '#' + sec); }catch(e){}
+  }
 
   // Actualizar estado y nav de inmediato — header nav + bottom nav
   currentSection = sec;
@@ -14962,6 +14970,26 @@ document.addEventListener('DOMContentLoaded', ()=>{
   const modoEl = document.getElementById('adv-modo');
   if(modoEl) modoEl.addEventListener('change', advToggleSeccion);
 });
+
+// ── Hash routing: abrir sección según #fixture, #posiciones, etc. ──────────
+(function(){
+  function seccionDesdeHash(){
+    const h = (location.hash || '').replace('#','');
+    return SECCIONES_VALIDAS.includes(h) ? h : null;
+  }
+  // Al cargar: si la URL trae un hash de sección válido, abrirla directamente.
+  document.addEventListener('DOMContentLoaded', ()=>{
+    const inicial = seccionDesdeHash();
+    if(inicial && inicial !== currentSection){
+      showSection(inicial, true);
+    }
+  });
+  // Atrás/adelante del navegador: sincronizar la vista con el hash actual.
+  window.addEventListener('popstate', ()=>{
+    const sec = seccionDesdeHash() || 'fixture';
+    if(sec !== currentSection) showSection(sec, true);
+  });
+})();
 
 function advPreviewImg(input){
   const file = input.files[0];
