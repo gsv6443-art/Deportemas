@@ -524,7 +524,8 @@ body.bloqueado-poli .vista-deporte{display:none!important;}
           <button type="button" class="btn-quitar-img" onclick="quitarEscudoPoli()">✕ Quitar</button>
         </div>
       </div>
-      <button class="btn-primario" style="margin-top:8px" onclick="agregarEquipoPoli()">+ Agregar equipo</button>
+      <button class="btn-primario" style="margin-top:8px" id="aeq-btn-guardar" onclick="agregarEquipoPoli()">+ Agregar equipo</button>
+      <button class="btn-primario" style="margin-top:8px;display:none;background:#555" id="aeq-btn-cancelar" onclick="cancelarEdicionEquipoPoli()">Cancelar edición</button>
       <div class="admin-lista" id="admin-lista-equipos"></div>
     </div>
 
@@ -2404,6 +2405,8 @@ function cerrarAdminPoli(){
 document.getElementById('admin-categoria').addEventListener('change', renderAdminListas);
 
 let _escudoB64Poli = '';
+let _escudoPreviewPromisePoli = null; // referencia a la compresión en curso, para poder esperarla
+let _equipoEditandoKey = null; // si no es null, "Agregar equipo" pasa a editar este equipo en vez de crear uno nuevo
 
 // Comprime una imagen a base64 (mismo criterio que Fútbol: máx 300px, calidad .85)
 function comprimirABase64Poli(file, maxW=300, q=0.85){
@@ -2427,28 +2430,76 @@ function comprimirABase64Poli(file, maxW=300, q=0.85){
 function previewEscudoPoli(input){
   const file = input.files[0];
   if(!file) return;
-  comprimirABase64Poli(file).then(dataUrl=>{
+  const btn = document.getElementById('aeq-btn-guardar');
+  const textoPrevio = btn ? btn.textContent : '';
+  if(btn){ btn.disabled = true; btn.textContent = 'Procesando imagen...'; }
+  _escudoPreviewPromisePoli = comprimirABase64Poli(file).then(dataUrl=>{
     _escudoB64Poli = dataUrl;
     document.getElementById('aeq-escudo-preview').src = dataUrl;
     document.getElementById('aeq-escudo-wrap').classList.add('visible');
+    return dataUrl;
+  }).catch(e=>{
+    console.error('Error al procesar escudo', e);
+    alert('No se pudo procesar la imagen del escudo. Probá con otra foto.');
+    _escudoB64Poli = '';
+    return null;
+  }).finally(()=>{
+    _escudoPreviewPromisePoli = null;
+    if(btn){ btn.disabled = false; btn.textContent = textoPrevio; }
   });
 }
 function quitarEscudoPoli(){
   _escudoB64Poli = '';
+  _escudoPreviewPromisePoli = null;
   document.getElementById('aeq-escudo-file').value = '';
   document.getElementById('aeq-escudo-preview').src = '';
   document.getElementById('aeq-escudo-wrap').classList.remove('visible');
+}
+async function editarEquipoPoli(key){
+  const fb = await esperarFB();
+  const eq = await fb.get(key);
+  if(!eq){ alert('No se pudo cargar el equipo'); return; }
+  _equipoEditandoKey = key;
+  document.getElementById('aeq-nombre').value = eq.nombre || '';
+  _escudoB64Poli = eq.escudo || '';
+  if(eq.escudo){
+    document.getElementById('aeq-escudo-preview').src = eq.escudo;
+    document.getElementById('aeq-escudo-wrap').classList.add('visible');
+  } else {
+    document.getElementById('aeq-escudo-preview').src = '';
+    document.getElementById('aeq-escudo-wrap').classList.remove('visible');
+  }
+  document.getElementById('aeq-btn-guardar').textContent = 'Guardar cambios';
+  document.getElementById('aeq-btn-cancelar').style.display = '';
+  document.getElementById('aeq-nombre').scrollIntoView({behavior:'smooth', block:'center'});
+}
+function cancelarEdicionEquipoPoli(){
+  _equipoEditandoKey = null;
+  document.getElementById('aeq-nombre').value = '';
+  quitarEscudoPoli();
+  document.getElementById('aeq-btn-guardar').textContent = '+ Agregar equipo';
+  document.getElementById('aeq-btn-cancelar').style.display = 'none';
 }
 async function agregarEquipoPoli(){
   const dep = prefijoAdmin();
   const nombre = document.getElementById('aeq-nombre').value.trim();
   if(!nombre){ alert('Completá el nombre del equipo'); return; }
-  const id = Date.now();
+  // Si todavía se está comprimiendo el escudo (usuario tocó el botón muy rápido), esperamos a que termine
+  if(_escudoPreviewPromisePoli){ await _escudoPreviewPromisePoli; }
   const fb = await esperarFB();
-  await fb.set(dep + '_equipo_' + id, { nombre, escudo: _escudoB64Poli || null });
+  const key = _equipoEditandoKey || (dep + '_equipo_' + Date.now());
+  const ok = await fb.set(key, { nombre, escudo: _escudoB64Poli || null });
+  if(!ok){
+    alert('No se pudo guardar el equipo. Revisá tu conexión e intentá de nuevo.');
+    return;
+  }
+  _equipoEditandoKey = null;
   document.getElementById('aeq-nombre').value = '';
+  document.getElementById('aeq-btn-guardar').textContent = '+ Agregar equipo';
+  document.getElementById('aeq-btn-cancelar').style.display = 'none';
   quitarEscudoPoli();
   renderAdminListas();
+  refrescarPublico(dep);
 }
 
 async function agregarPartidoPoli(){
@@ -2585,7 +2636,7 @@ async function renderAdminListas(){
   listaEq.innerHTML = keysEq.length ? keysEq.map(k => {
     const eq = equipos[k];
     const escudoImg = eq.escudo ? `<img src="${eq.escudo}" alt="" style="width:20px;height:20px;object-fit:contain;border-radius:3px;vertical-align:middle;margin-right:6px">` : '';
-    return `<div class="admin-lista-row"><span>${escudoImg}${escapeHtml(eq.nombre)}</span><button onclick="borrarItemPoli('${k}','${dep}','equipo')">Borrar</button></div>`;
+    return `<div class="admin-lista-row"><span>${escudoImg}${escapeHtml(eq.nombre)}</span><span><button onclick="editarEquipoPoli('${k}')" style="margin-right:6px">Editar</button><button onclick="borrarItemPoli('${k}','${dep}','equipo')">Borrar</button></span></div>`;
   }).join('') : '<div class="placeholder">Sin equipos cargados</div>';
   document.getElementById('datalist-equipos-poli').innerHTML =
     Object.values(equipos).map(eq => `<option value="${escapeHtml(eq.nombre)}">`).join('');
