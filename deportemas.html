@@ -3284,6 +3284,7 @@ table.posiciones td:nth-child(8){
       <button class="admin-tab" onclick="switchAdminTab('config',this)">Config</button>
       <button class="admin-tab" onclick="switchAdminTab('estadisticas',this)">📊 Estadisticas</button>
       <button class="admin-tab" onclick="switchAdminTab('sanciones',this)">🟥 Sanciones</button>
+      <button class="admin-tab" onclick="switchAdminTab('alineaciones',this)">🧩 Alineaciones</button>
       <button class="admin-tab" onclick="switchAdminTab('notificaciones',this)">🔔 Notificaciones</button>
     </div>
     <div class="admin-body">
@@ -4448,6 +4449,65 @@ table.posiciones td:nth-child(8){
         </div>
       </div>
 
+      <div class="admin-section" id="admin-alineaciones">
+        <div class="admin-title">🧩 Alineaciones</div>
+        <p style="font-size:11px;color:var(--gris);margin-bottom:14px;font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px">Cargá el once titular, el DT y los 7 suplentes para generar una imagen para compartir.</p>
+
+        <datalist id="alin-partidos-datalist"></datalist>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-group">
+            <label>Equipo</label>
+            <input type="text" id="alin-equipo" list="alin-partidos-datalist" placeholder="Nombre del equipo"/>
+          </div>
+          <div class="form-group">
+            <label>Rival (opcional)</label>
+            <input type="text" id="alin-rival" placeholder="Nombre del rival"/>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-group">
+            <label>Fecha (opcional)</label>
+            <input type="text" id="alin-fecha" placeholder="Ej: Fecha 12 — 24/08"/>
+          </div>
+          <div class="form-group">
+            <label>Formación</label>
+            <select id="alin-formacion" onchange="alinRenderSlots()">
+              <option value="4-4-2">4-4-2</option>
+              <option value="4-3-3" selected>4-3-3</option>
+              <option value="3-5-2">3-5-2</option>
+              <option value="4-2-3-1">4-2-3-1</option>
+              <option value="5-3-2">5-3-2</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Director Técnico</label>
+          <input type="text" id="alin-dt" placeholder="Nombre del DT"/>
+        </div>
+
+        <p style="font-size:11px;color:var(--dorado);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 6px">Titulares (11)</p>
+        <div id="alin-titulares-container"></div>
+
+        <p style="font-size:11px;color:var(--dorado);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 6px">Suplentes (7)</p>
+        <div id="alin-suplentes-container">
+          <div style="display:grid;grid-template-columns:52px 1fr;gap:8px;margin-bottom:6px"><input type="text" inputmode="numeric" maxlength="2" placeholder="N°" class="alin-sup-num" style="text-align:center"><input type="text" placeholder="Nombre del jugador" class="alin-sup-nom"></div>
+          <div style="display:grid;grid-template-columns:52px 1fr;gap:8px;margin-bottom:6px"><input type="text" inputmode="numeric" maxlength="2" placeholder="N°" class="alin-sup-num" style="text-align:center"><input type="text" placeholder="Nombre del jugador" class="alin-sup-nom"></div>
+          <div style="display:grid;grid-template-columns:52px 1fr;gap:8px;margin-bottom:6px"><input type="text" inputmode="numeric" maxlength="2" placeholder="N°" class="alin-sup-num" style="text-align:center"><input type="text" placeholder="Nombre del jugador" class="alin-sup-nom"></div>
+          <div style="display:grid;grid-template-columns:52px 1fr;gap:8px;margin-bottom:6px"><input type="text" inputmode="numeric" maxlength="2" placeholder="N°" class="alin-sup-num" style="text-align:center"><input type="text" placeholder="Nombre del jugador" class="alin-sup-nom"></div>
+          <div style="display:grid;grid-template-columns:52px 1fr;gap:8px;margin-bottom:6px"><input type="text" inputmode="numeric" maxlength="2" placeholder="N°" class="alin-sup-num" style="text-align:center"><input type="text" placeholder="Nombre del jugador" class="alin-sup-nom"></div>
+          <div style="display:grid;grid-template-columns:52px 1fr;gap:8px;margin-bottom:6px"><input type="text" inputmode="numeric" maxlength="2" placeholder="N°" class="alin-sup-num" style="text-align:center"><input type="text" placeholder="Nombre del jugador" class="alin-sup-nom"></div>
+          <div style="display:grid;grid-template-columns:52px 1fr;gap:8px;margin-bottom:6px"><input type="text" inputmode="numeric" maxlength="2" placeholder="N°" class="alin-sup-num" style="text-align:center"><input type="text" placeholder="Nombre del jugador" class="alin-sup-nom"></div>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:14px">
+          <button class="btn-primary" id="alin-guardar-btn" onclick="guardarAlineacion()">Guardar alineación</button>
+          <button class="btn-edit" onclick="alinLimpiarForm()">Limpiar</button>
+        </div>
+
+        <div class="admin-list" id="alin-lista"></div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -4512,8 +4572,8 @@ table.posiciones td:nth-child(8){
   </nav>
 </header>
 
-<!-- BANNER POLIDEPORTIVO -->
-<a href="polideportivo.html" class="banner-polideportivo" aria-label="Descubrí Polideportivo">
+<!-- BANNER POLIDEPORTIVO (temporalmente deshabilitado — próximamente) -->
+<div class="banner-polideportivo banner-polideportivo--disabled" aria-label="Polideportivo, próximamente">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18M5.2 5.2c2.3 2.3 3.4 4.5 3.4 6.8s-1.1 4.5-3.4 6.8M18.8 5.2c-2.3 2.3-3.4 4.5-3.4 6.8s1.1 4.5 3.4 6.8"/></svg>
   <span class="bp-texto">Descubrí <b>Polideportivo</b></span>
   <span class="bp-iconos" aria-hidden="true">
@@ -4526,8 +4586,8 @@ table.posiciones td:nth-child(8){
     <!-- Tenis/Pádel -->
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9.5" cy="9.5" r="5.3"/><path d="M9.5 4.6v9.8M4.6 9.5h9.8" stroke-width="0.9" opacity="0.6"/><path d="M13.2 13.2 20.5 20.5"/><circle cx="18.3" cy="4.8" r="1.6" fill="currentColor" stroke="none"/></svg>
   </span>
-  <span class="bp-flecha">→</span>
-</a>
+  <span class="bp-proximamente">Próximamente</span>
+</div>
 
 <!-- BANNER PUBLICITARIO SUPERIOR -->
 
@@ -4804,7 +4864,7 @@ function setLSSafe(key, value){
   }
 }
 
-function getData(){try{const d=JSON.parse(localStorage.getItem(DATA_KEY))||defData();if(!d.playoff)d.playoff=[];return d;}catch(e){return defData();}}
+function getData(){try{const d=JSON.parse(localStorage.getItem(DATA_KEY))||defData();if(!d.playoff)d.playoff=[];if(!d.alineaciones)d.alineaciones=[];return d;}catch(e){return defData();}}
 // Construye una copia de "d" sin las fotos de goleadores:
 // van en documentos individuales para no superar el límite de 1MB de Firestore.
 function dataParaFirestore(d){
@@ -4879,7 +4939,7 @@ async function saveIdentidad(i){
 function getFotos(){try{return JSON.parse(localStorage.getItem(FOTOS_KEY))||[];}catch(e){return[];}}
 function saveFotos(f){if(!setLSSafe(FOTOS_KEY,JSON.stringify(f)))return;if(window._fb)window._fb.set('fotos',f);}
 
-function defData(){return{partidos:[],posiciones:[],goleadores:[],equipos:[],torneos:[],playoff:[]};};
+function defData(){return{partidos:[],posiciones:[],goleadores:[],equipos:[],torneos:[],playoff:[],alineaciones:[]};};
 
 let data=getData();
 let escudos=getEscudos();
@@ -5029,20 +5089,12 @@ async function borrarLogo(){
 // ============================================================
 // NAVEGACIÓN
 // ============================================================
-const SECCIONES_VALIDAS = ['fixture','posiciones','resultados','goleadores','equipos','torneos','noticias','sanciones'];
-
-function showSection(sec, _fromHash){
+function showSection(sec){
   if(sec === currentSection) return;
 
   const saliente = document.getElementById('section-' + currentSection);
   const entrante = document.getElementById('section-' + sec);
   if(!entrante) return;
-
-  // Reflejar la sección en la URL (#seccion) sin disparar 'hashchange' — pushState no lo dispara.
-  // Si venimos de un cambio de hash externo (atrás/adelante del navegador), no volvemos a empujar.
-  if(!_fromHash && SECCIONES_VALIDAS.includes(sec)){
-    try{ history.pushState({sec}, '', '#' + sec); }catch(e){}
-  }
 
   // Actualizar estado y nav de inmediato — header nav + bottom nav
   currentSection = sec;
@@ -10900,7 +10952,8 @@ function switchAdminTab(tab,el){
   if(tab==='estadisticas'){ renderEstadisticas(); }
   if(tab==='sanciones'){ poblarSelectClubSancion('am'); renderAdminListaAmonestaciones(); recalcularSancionesVigentes(); }
   if(tab==='torneos'){ renderTorneoClubesChecklist(); toActualizarVisEstado(); }
-  if(tab==='notificaciones'){ actualizarContadorSubs(); }}
+  if(tab==='notificaciones'){ actualizarContadorSubs(); }
+  if(tab==='alineaciones'){ poblarSelectPartidoAlineacion(); renderAdminListaAlineaciones(); alinRenderSlots(); }}
 function cambiarPassword(){
   // La contraseña se gestiona desde Firebase Console → Authentication
   const msg=document.getElementById('conf-msg');
@@ -13931,6 +13984,282 @@ actualizarNavLive();
 renderSection('fixture');
 // Publicidad: diferida para garantizar que el JS esté cargado
 setTimeout(function(){ if(typeof renderTodasLasPubs==='function') renderTodasLasPubs(); }, 0);
+
+// ============================================================
+// ALINEACIONES — carga de once titular + suplentes y generación
+// de imagen para compartir
+// ============================================================
+const FORMACIONES = {
+  '4-4-2':  {lineas:[1,4,4,2],   labels:['Arquero','Defensores','Mediocampistas','Delanteros']},
+  '4-3-3':  {lineas:[1,4,3,3],   labels:['Arquero','Defensores','Mediocampistas','Delanteros']},
+  '3-5-2':  {lineas:[1,3,5,2],   labels:['Arquero','Defensores','Mediocampistas','Delanteros']},
+  '4-2-3-1':{lineas:[1,4,2,3,1], labels:['Arquero','Defensores','Volantes de contención','Volantes ofensivos','Delantero']},
+  '5-3-2':  {lineas:[1,5,3,2],   labels:['Arquero','Defensores','Mediocampistas','Delanteros']},
+};
+let _alinEditId = null; // id de la alineación en edición (null = nueva)
+
+function poblarSelectPartidoAlineacion(){
+  const dl = document.getElementById('alin-partidos-datalist');
+  if(!dl || !data.partidos) return;
+  const partidos = [...data.partidos].sort((a,b)=>String(b.fecha||'').localeCompare(String(a.fecha||'')));
+  dl.innerHTML = partidos.map(p=>`<option value="${(p.local||'')} vs ${(p.visitante||'')} — ${(p.fecha||'')}">`).join('');
+}
+
+// Construye los inputs de titulares según la formación elegida.
+// Si se pasan datosExistentes (array de {numero,nombre}) los precarga;
+// si no, intenta preservar lo que ya estaba tipeado en el formulario.
+function alinRenderSlots(datosExistentes){
+  const sel = document.getElementById('alin-formacion');
+  const form = FORMACIONES[sel.value] || FORMACIONES['4-3-3'];
+  const cont = document.getElementById('alin-titulares-container');
+  if(!cont) return;
+  const previos = datosExistentes || alinLeerTitularesActuales();
+  let idx = 0;
+  let html = '';
+  form.lineas.forEach((cant,li)=>{
+    html += `<p style="font-size:11px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px;margin:8px 0 6px">${form.labels[li]||''}</p>`;
+    for(let i=0;i<cant;i++){
+      const prev = previos[idx] || {numero:'',nombre:''};
+      html += `<div style="display:grid;grid-template-columns:52px 1fr;gap:8px;margin-bottom:6px">
+        <input type="text" inputmode="numeric" maxlength="2" placeholder="N°" value="${prev.numero||''}" class="alin-tit-num" style="text-align:center">
+        <input type="text" placeholder="Nombre del jugador" value="${prev.nombre||''}" class="alin-tit-nom">
+      </div>`;
+      idx++;
+    }
+  });
+  cont.innerHTML = html;
+}
+
+function alinLeerTitularesActuales(){
+  const nums = [...document.querySelectorAll('#alin-titulares-container .alin-tit-num')].map(e=>e.value);
+  const noms = [...document.querySelectorAll('#alin-titulares-container .alin-tit-nom')].map(e=>e.value);
+  return nums.map((n,i)=>({numero:n,nombre:noms[i]||''}));
+}
+
+function alinLimpiarForm(){
+  _alinEditId = null;
+  document.getElementById('alin-equipo').value='';
+  document.getElementById('alin-rival').value='';
+  document.getElementById('alin-fecha').value='';
+  document.getElementById('alin-dt').value='';
+  document.getElementById('alin-formacion').value='4-3-3';
+  alinRenderSlots([]);
+  document.querySelectorAll('#alin-suplentes-container .alin-sup-num').forEach(e=>e.value='');
+  document.querySelectorAll('#alin-suplentes-container .alin-sup-nom').forEach(e=>e.value='');
+  const btn = document.getElementById('alin-guardar-btn');
+  if(btn) btn.textContent='Guardar alineación';
+}
+
+function guardarAlineacion(){
+  const equipo = document.getElementById('alin-equipo').value.trim();
+  if(!equipo){ alert('Ingresá el nombre del equipo.'); return; }
+  const formacion = document.getElementById('alin-formacion').value;
+  const dt = document.getElementById('alin-dt').value.trim();
+  const titulares = alinLeerTitularesActuales().filter(t=>t.nombre.trim());
+  const supNums = [...document.querySelectorAll('#alin-suplentes-container .alin-sup-num')].map(e=>e.value);
+  const supNoms = [...document.querySelectorAll('#alin-suplentes-container .alin-sup-nom')].map(e=>e.value);
+  const suplentes = supNums.map((n,i)=>({numero:n,nombre:supNoms[i]})).filter(sp=>sp.nombre && sp.nombre.trim());
+
+  const obj = {
+    id: _alinEditId || ('alin_'+Date.now()),
+    equipo, rival: document.getElementById('alin-rival').value.trim(),
+    fecha: document.getElementById('alin-fecha').value.trim(),
+    formacion, dt, titulares, suplentes
+  };
+  if(!data.alineaciones) data.alineaciones = [];
+  if(_alinEditId){
+    const i = data.alineaciones.findIndex(a=>a.id===_alinEditId);
+    if(i>-1) data.alineaciones[i]=obj; else data.alineaciones.push(obj);
+  } else {
+    data.alineaciones.push(obj);
+  }
+  saveData(data);
+  alinLimpiarForm();
+  renderAdminListaAlineaciones();
+}
+
+function editarAlineacion(id){
+  const a = (data.alineaciones||[]).find(x=>x.id===id);
+  if(!a) return;
+  _alinEditId = id;
+  document.getElementById('alin-equipo').value = a.equipo||'';
+  document.getElementById('alin-rival').value = a.rival||'';
+  document.getElementById('alin-fecha').value = a.fecha||'';
+  document.getElementById('alin-dt').value = a.dt||'';
+  document.getElementById('alin-formacion').value = a.formacion||'4-3-3';
+  alinRenderSlots(a.titulares||[]);
+  const supNumInputs = document.querySelectorAll('#alin-suplentes-container .alin-sup-num');
+  const supNomInputs = document.querySelectorAll('#alin-suplentes-container .alin-sup-nom');
+  supNumInputs.forEach(e=>e.value='');
+  supNomInputs.forEach(e=>e.value='');
+  (a.suplentes||[]).forEach((sp,i)=>{
+    if(supNumInputs[i]) supNumInputs[i].value = sp.numero||'';
+    if(supNomInputs[i]) supNomInputs[i].value = sp.nombre||'';
+  });
+  const btn = document.getElementById('alin-guardar-btn');
+  if(btn) btn.textContent='Guardar cambios';
+}
+
+function eliminarAlineacion(id){
+  pedirConfirmacion('¿Eliminar esta alineación?', function(){
+    data.alineaciones = (data.alineaciones||[]).filter(a=>a.id!==id);
+    saveData(data);
+    renderAdminListaAlineaciones();
+  });
+}
+
+function renderAdminListaAlineaciones(){
+  const cont = document.getElementById('alin-lista');
+  if(!cont) return;
+  const items = [...(data.alineaciones||[])].sort((a,b)=>String(b.fecha||'').localeCompare(String(a.fecha||'')));
+  if(!items.length){ cont.innerHTML = '<p class="admin-empty">Todavía no cargaste ninguna alineación.</p>'; return; }
+  cont.innerHTML = items.map(a=>`
+    <div class="admin-list-item">
+      <span>${a.equipo}${a.rival?' vs '+a.rival:''}${a.fecha?' · '+a.fecha:''}${a.formacion?' · '+a.formacion:''}</span>
+      <button class="btn-edit" onclick="abrirShare(()=>generarImagenAlineacionDesde('${a.id}'))">🖼️ Imagen</button>
+      <button class="btn-edit" onclick="editarAlineacion('${a.id}')">✏ Editar</button>
+      <button class="btn-danger" onclick="eliminarAlineacion('${a.id}')">✕ Eliminar</button>
+    </div>
+  `).join('');
+}
+
+// ── Imagen para compartir ────────────────────────────────────
+
+async function generarImagenAlineacionDesde(id){
+  const a = (data.alineaciones||[]).find(x=>x.id===id);
+  if(!a) return null;
+  await document.fonts.ready;
+  const identidad = getIdentidad();
+  const W = CV_W;
+  const form = FORMACIONES[a.formacion] || FORMACIONES['4-3-3'];
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = CV_H;
+  const ctx = canvas.getContext('2d');
+  ctx.textBaseline = 'alphabetic';
+
+  const bgGrad = ctx.createLinearGradient(0,0,0,CV_H);
+  bgGrad.addColorStop(0, C.NEG3); bgGrad.addColorStop(1, C.NEG);
+  ctx.fillStyle = bgGrad; ctx.fillRect(0,0,W,CV_H);
+
+  let y = await cvHeader(ctx, W, identidad, 0);
+
+  ctx.fillStyle = C.DORADO;
+  ctx.font = `${s(26)}px "Bebas Neue", Arial, sans-serif`;
+  ctx.textAlign='center';
+  const titulo = a.rival ? `${a.equipo} vs ${a.rival}` : a.equipo;
+  cvFillTextTrunc(ctx, titulo.toUpperCase(), W/2, y+s(32), W-s(60));
+  ctx.fillStyle='rgba(201,162,39,0.6)';
+  ctx.font=`600 ${s(13)}px "DM Sans", Arial, sans-serif`;
+  const sub = [a.formacion, a.fecha].filter(Boolean).join(' · ');
+  if(sub) ctx.fillText(sub, W/2, y+s(50));
+  y += s(64);
+
+  // Cancha
+  const footerH = s(40);
+  const dtBoxH = s(120);
+  const pitchTop = y + s(10);
+  const pitchBottom = CV_H - footerH - dtBoxH - s(10);
+  const pitchH = pitchBottom - pitchTop;
+  const margin = s(60);
+
+  const pitchGrad = ctx.createLinearGradient(0,pitchTop,0,pitchBottom);
+  pitchGrad.addColorStop(0,'#0f6e56'); pitchGrad.addColorStop(1,'#085041');
+  ctx.fillStyle = pitchGrad;
+  cvRoundRect(ctx, margin*0.3, pitchTop, W-margin*0.6, pitchH, s(12));
+  ctx.fill();
+
+  ctx.strokeStyle = 'rgba(255,255,255,.35)';
+  ctx.lineWidth = 2;
+  cvRoundRect(ctx, margin*0.3+s(10), pitchTop+s(10), W-margin*0.6-s(20), pitchH-s(20), s(6));
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(margin*0.3+s(10), pitchTop+pitchH/2);
+  ctx.lineTo(W-margin*0.3-s(10), pitchTop+pitchH/2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(W/2, pitchTop+pitchH/2, s(48), 0, Math.PI*2);
+  ctx.stroke();
+
+  // Jugadores por línea
+  const lineas = form.lineas;
+  const nLineas = lineas.length;
+  const yStep = pitchH/(nLineas+1);
+  let jIdx = 0;
+  const R = s(30);
+  lineas.forEach((cant,li)=>{
+    const yPos = pitchTop + yStep*(li+1);
+    const xStep = (W-margin*2)/(cant+1);
+    for(let i=0;i<cant;i++){
+      const t = a.titulares[jIdx] || {};
+      const xPos = margin + xStep*(i+1);
+      ctx.beginPath();
+      ctx.arc(xPos, yPos, R, 0, Math.PI*2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+      ctx.fillStyle = C.NEG2;
+      ctx.font = `700 ${s(18)}px "Rajdhani", Arial, sans-serif`;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(t.numero||'', xPos, yPos+s(1));
+      ctx.textBaseline='alphabetic';
+      if(t.nombre){
+        ctx.font = `600 ${s(13)}px "DM Sans", Arial, sans-serif`;
+        const nameW = Math.min(ctx.measureText(t.nombre).width+s(10), xStep+s(16));
+        ctx.fillStyle='rgba(0,0,0,.55)';
+        cvRoundRect(ctx, xPos-nameW/2, yPos+R+s(4), nameW, s(20), s(4));
+        ctx.fill();
+        ctx.fillStyle='#ffffff';
+        ctx.textAlign='center';
+        cvFillTextTrunc(ctx, t.nombre, xPos, yPos+R+s(18), xStep+s(10));
+      }
+      jIdx++;
+    }
+  });
+
+  // DT + Suplentes
+  let yb = pitchBottom + s(16);
+  ctx.textAlign='left';
+  ctx.fillStyle='rgba(201,162,39,0.65)';
+  ctx.font=`600 ${s(12)}px "DM Sans", Arial, sans-serif`;
+  ctx.fillText('DIRECTOR TÉCNICO', margin*0.3, yb);
+  ctx.fillStyle=C.BLANCO;
+  ctx.font=`600 ${s(17)}px "Rajdhani", Arial, sans-serif`;
+  cvFillTextTrunc(ctx, a.dt||'—', margin*0.3, yb+s(22), W-margin*0.6);
+
+  yb += s(40);
+  ctx.fillStyle='rgba(201,162,39,0.65)';
+  ctx.font=`600 ${s(12)}px "DM Sans", Arial, sans-serif`;
+  ctx.fillText('SUPLENTES', margin*0.3, yb);
+  ctx.fillStyle='rgba(255,255,255,.85)';
+  ctx.font=`500 ${s(14)}px "DM Sans", Arial, sans-serif`;
+  const supTxt = (a.suplentes||[]).map(sp=>`${sp.numero?sp.numero+' ':''}${sp.nombre}`).join('  ·  ');
+  cvWrapTexto(ctx, supTxt, margin*0.3, yb+s(20), W-margin*0.6, s(18), 2);
+
+  cvFooter(ctx, W, CV_H-footerH, identidad.nombre);
+
+  ctx.textAlign='left';
+  return canvas;
+}
+
+// Envuelve texto en hasta maxLineas renglones (con "…" al final si no entra todo)
+function cvWrapTexto(ctx, text, x, y, maxW, lineH, maxLineas){
+  const palabras = (text||'').split(/\s+/).filter(Boolean);
+  let linea = '', lineas = [];
+  palabras.forEach(p=>{
+    const test = linea ? linea+' '+p : p;
+    if(ctx.measureText(test).width > maxW && linea){
+      lineas.push(linea); linea = p;
+    } else linea = test;
+  });
+  if(linea) lineas.push(linea);
+  if(lineas.length > maxLineas){
+    lineas = lineas.slice(0, maxLineas);
+    let last = lineas[maxLineas-1];
+    while(ctx.measureText(last+'…').width > maxW && last.length>1) last = last.slice(0,-1);
+    lineas[maxLineas-1] = last + '…';
+  }
+  lineas.forEach((l,i)=> ctx.fillText(l, x, y + i*lineH));
+}
 </script>
 
 <!-- ============================================================
@@ -14970,26 +15299,6 @@ document.addEventListener('DOMContentLoaded', ()=>{
   const modoEl = document.getElementById('adv-modo');
   if(modoEl) modoEl.addEventListener('change', advToggleSeccion);
 });
-
-// ── Hash routing: abrir sección según #fixture, #posiciones, etc. ──────────
-(function(){
-  function seccionDesdeHash(){
-    const h = (location.hash || '').replace('#','');
-    return SECCIONES_VALIDAS.includes(h) ? h : null;
-  }
-  // Al cargar: si la URL trae un hash de sección válido, abrirla directamente.
-  document.addEventListener('DOMContentLoaded', ()=>{
-    const inicial = seccionDesdeHash();
-    if(inicial && inicial !== currentSection){
-      showSection(inicial, true);
-    }
-  });
-  // Atrás/adelante del navegador: sincronizar la vista con el hash actual.
-  window.addEventListener('popstate', ()=>{
-    const sec = seccionDesdeHash() || 'fixture';
-    if(sec !== currentSection) showSection(sec, true);
-  });
-})();
 
 function advPreviewImg(input){
   const file = input.files[0];
