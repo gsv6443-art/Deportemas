@@ -14299,11 +14299,20 @@ async function generarImagenAlineacionDesde(id){
   // Fecha, arriba a la izquierda sobre la foto: texto simple + línea dorada fina debajo
   if(a.fecha){
     ctx.save();
+    const scrimGrad = ctx.createRadialGradient(0,0,0,0,0,s(230));
+    scrimGrad.addColorStop(0, 'rgba(0,0,0,.6)');
+    scrimGrad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = scrimGrad;
+    ctx.fillRect(0, 0, s(230), s(110));
+
     ctx.textAlign='left';
+    ctx.shadowColor = 'rgba(0,0,0,.85)';
+    ctx.shadowBlur = s(6);
     ctx.fillStyle = C.BLANCO;
     ctx.font = `800 ${s(19)}px "Rajdhani", Arial, sans-serif`;
     ctx.fillText(a.fecha.toUpperCase(), s(20), s(38));
     const anchoTexto = ctx.measureText(a.fecha.toUpperCase()).width;
+    ctx.shadowColor = 'transparent';
     ctx.strokeStyle = C.DORADO;
     ctx.lineWidth = s(2);
     ctx.beginPath();
@@ -14338,6 +14347,7 @@ async function generarImagenAlineacionDesde(id){
   const capRight = escX_der + escSize + escPad;
   const capTop = escY - escPad;
   const capH = escSize + escPad*2;
+  const capBottom = capTop + capH;
 
   ctx.fillStyle = 'rgba(10,10,10,.45)';
   cvRoundRect(ctx, capLeft, capTop, capRight-capLeft, capH, capH/2);
@@ -14366,7 +14376,7 @@ async function generarImagenAlineacionDesde(id){
   const numColW = s(50);
   const nameColRight = listX + listW - numColW - s(14);
   const numColRight = listX + listW;
-  let ly = escY + escSize + s(30);
+  let ly = capBottom + s(45);
   const rowH = s(46);
 
   (a.titulares||[]).slice(0,11).forEach(t=>{
