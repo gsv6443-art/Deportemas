@@ -14216,7 +14216,6 @@ async function generarImagenAlineacionDesde(id){
   await document.fonts.ready;
   const identidad = getIdentidad();
   const W = CV_W;
-  const form = FORMACIONES[a.formacion] || FORMACIONES['4-3-3'];
 
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = CV_H;
@@ -14227,31 +14226,70 @@ async function generarImagenAlineacionDesde(id){
   bgGrad.addColorStop(0, C.NEG3); bgGrad.addColorStop(1, C.NEG);
   ctx.fillStyle = bgGrad; ctx.fillRect(0,0,W,CV_H);
 
-  let y = await cvHeader(ctx, W, identidad, 0);
+  // ── Barra dorada superior: liga + fecha ──
+  const goldBarH = s(28);
+  ctx.fillStyle = C.DORADO;
+  ctx.fillRect(0, 0, W, goldBarH);
+  ctx.fillStyle = C.NEG;
+  ctx.font = `700 ${s(12)}px "DM Sans", Arial, sans-serif`;
+  ctx.textAlign='left';
+  ctx.fillText((identidad.nombre||'LIGA REGIONAL').toUpperCase(), s(24), goldBarH/2+s(4));
+  if(a.fecha){
+    ctx.textAlign='right';
+    ctx.fillText(a.fecha.toUpperCase(), W-s(24), goldBarH/2+s(4));
+  }
 
-  const tituloH = s(90);
+  // ── Nombre del equipo, rival y formación ──
+  const headerH = s(84);
+  ctx.textAlign='left';
+  ctx.fillStyle = C.BLANCO;
+  ctx.font = `700 ${s(27)}px "Rajdhani", Arial, sans-serif`;
+  cvFillTextTrunc(ctx, (a.equipo||'').toUpperCase(), s(24), goldBarH+s(38), W-s(48));
+  ctx.font = `500 ${s(15)}px "DM Sans", Arial, sans-serif`;
+  if(a.rival){
+    ctx.fillStyle = 'rgba(255,255,255,.45)';
+    ctx.fillText('vs', s(24), goldBarH+s(64));
+    const vsW = ctx.measureText('vs ').width;
+    ctx.fillStyle = 'rgba(255,255,255,.75)';
+    ctx.font = `600 ${s(16)}px "DM Sans", Arial, sans-serif`;
+    ctx.fillText(a.rival, s(24)+vsW, goldBarH+s(64));
+  }
+  if(a.formacion){
+    ctx.textAlign='right';
+    ctx.fillStyle = C.DORADO;
+    ctx.font = `600 ${s(15)}px "DM Sans", Arial, sans-serif`;
+    ctx.fillText(a.formacion, W-s(24), goldBarH+s(64));
+  }
+
+  const contentTop = goldBarH + headerH;
+  const footerH = s(58);
+  const contentH = CV_H - contentTop - footerH;
+
+  // ── Foto a la izquierda (propia de la alineación o, si no hay, la de la ficha del club) ──
+  const colW = s(280);
   const fotoSrc = (window._alinFotosCache && window._alinFotosCache[a.id])
     || (window._clubFotosCache && window._clubFotosCache[normalizar(a.equipo)])
     || '';
+  ctx.fillStyle = '#232228';
+  ctx.fillRect(0, contentTop, colW, contentH);
   if(fotoSrc){
     await new Promise(res=>{
       const img = new Image();
       img.onload = ()=>{
         ctx.save();
         ctx.beginPath();
-        ctx.rect(0, y, W, tituloH);
+        ctx.rect(0, contentTop, colW, contentH);
         ctx.clip();
         const iw = img.naturalWidth, ih = img.naturalHeight;
-        const scale = Math.max(W/iw, tituloH/ih);
+        const scale = Math.max(colW/iw, contentH/ih);
         const dw = iw*scale, dh = ih*scale;
-        const dx = (W-dw)/2, dy = y+(tituloH-dh)/2;
+        const dx = (colW-dw)/2, dy = contentTop+(contentH-dh)/2;
         ctx.drawImage(img, dx, dy, dw, dh);
-        const g = ctx.createLinearGradient(0, y, 0, y+tituloH);
-        g.addColorStop(0, 'rgba(8,8,8,.25)');
-        g.addColorStop(0.6, 'rgba(8,8,8,.55)');
-        g.addColorStop(1, 'rgba(8,8,8,.9)');
+        const g = ctx.createLinearGradient(0, contentTop, 0, contentTop+contentH);
+        g.addColorStop(0.55, 'rgba(0,0,0,0)');
+        g.addColorStop(1, 'rgba(0,0,0,.65)');
         ctx.fillStyle = g;
-        ctx.fillRect(0, y, W, tituloH);
+        ctx.fillRect(0, contentTop, colW, contentH);
         ctx.restore();
         res();
       };
@@ -14259,99 +14297,103 @@ async function generarImagenAlineacionDesde(id){
       img.src = fotoSrc;
     });
   }
+  const edgeGrad = ctx.createLinearGradient(0, contentTop, 0, contentTop+contentH);
+  edgeGrad.addColorStop(0, C.DORADO);
+  edgeGrad.addColorStop(1, 'rgba(201,162,39,.2)');
+  ctx.fillStyle = edgeGrad;
+  ctx.fillRect(colW-s(3), contentTop, s(3), contentH);
 
+  // ── Columna derecha: titulares numerados + suplentes ──
+  const rx = colW + s(20);
+  const rw = W - colW - s(44);
+  let ry = contentTop + s(20);
+
+  ctx.textAlign='left';
   ctx.fillStyle = C.DORADO;
-  ctx.font = `${s(26)}px "Bebas Neue", Arial, sans-serif`;
-  ctx.textAlign='center';
-  const titulo = a.rival ? `${a.equipo} vs ${a.rival}` : a.equipo;
-  cvFillTextTrunc(ctx, titulo.toUpperCase(), W/2, y+s(38), W-s(60));
-  ctx.fillStyle='rgba(240,192,64,0.9)';
-  ctx.font=`600 ${s(13)}px "DM Sans", Arial, sans-serif`;
-  const sub = [a.formacion, a.fecha].filter(Boolean).join(' · ');
-  if(sub) ctx.fillText(sub, W/2, y+s(58));
-  y += tituloH;
-
-  // Cancha
-  const footerH = s(40);
-  const dtBoxH = s(120);
-  const pitchTop = y + s(10);
-  const pitchBottom = CV_H - footerH - dtBoxH - s(10);
-  const pitchH = pitchBottom - pitchTop;
-  const margin = s(60);
-
-  const pitchGrad = ctx.createLinearGradient(0,pitchTop,0,pitchBottom);
-  pitchGrad.addColorStop(0,'#0f6e56'); pitchGrad.addColorStop(1,'#085041');
-  ctx.fillStyle = pitchGrad;
-  cvRoundRect(ctx, margin*0.3, pitchTop, W-margin*0.6, pitchH, s(12));
-  ctx.fill();
-
-  ctx.strokeStyle = 'rgba(255,255,255,.35)';
-  ctx.lineWidth = 2;
-  cvRoundRect(ctx, margin*0.3+s(10), pitchTop+s(10), W-margin*0.6-s(20), pitchH-s(20), s(6));
-  ctx.stroke();
+  ctx.font = `600 ${s(13)}px "DM Sans", Arial, sans-serif`;
+  ctx.fillText('TITULARES', rx, ry);
+  ctx.strokeStyle = 'rgba(201,162,39,.3)';
+  ctx.lineWidth = 1;
+  const labelW = ctx.measureText('TITULARES').width;
   ctx.beginPath();
-  ctx.moveTo(margin*0.3+s(10), pitchTop+pitchH/2);
-  ctx.lineTo(W-margin*0.3-s(10), pitchTop+pitchH/2);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.arc(W/2, pitchTop+pitchH/2, s(48), 0, Math.PI*2);
+  ctx.moveTo(rx+labelW+s(10), ry-s(4));
+  ctx.lineTo(rx+rw, ry-s(4));
   ctx.stroke();
 
-  // Jugadores por línea
-  const lineas = form.lineas;
-  const nLineas = lineas.length;
-  const yStep = pitchH/(nLineas+1);
-  let jIdx = 0;
-  const R = s(30);
-  lineas.forEach((cant,li)=>{
-    const yPos = pitchTop + yStep*(li+1);
-    const xStep = (W-margin*2)/(cant+1);
-    for(let i=0;i<cant;i++){
-      const t = a.titulares[jIdx] || {};
-      const xPos = margin + xStep*(i+1);
-      ctx.beginPath();
-      ctx.arc(xPos, yPos, R, 0, Math.PI*2);
-      ctx.fillStyle = '#ffffff';
-      ctx.fill();
-      ctx.fillStyle = C.NEG2;
-      ctx.font = `700 ${s(18)}px "Rajdhani", Arial, sans-serif`;
-      ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText(t.numero||'', xPos, yPos+s(1));
-      ctx.textBaseline='alphabetic';
-      if(t.nombre){
-        ctx.font = `600 ${s(13)}px "DM Sans", Arial, sans-serif`;
-        const nameW = Math.min(ctx.measureText(t.nombre).width+s(10), xStep+s(16));
-        ctx.fillStyle='rgba(0,0,0,.55)';
-        cvRoundRect(ctx, xPos-nameW/2, yPos+R+s(4), nameW, s(20), s(4));
-        ctx.fill();
-        ctx.fillStyle='#ffffff';
-        ctx.textAlign='center';
-        cvFillTextTrunc(ctx, t.nombre, xPos, yPos+R+s(18), xStep+s(10));
-      }
-      jIdx++;
-    }
+  ry += s(14);
+  const R = s(17);
+  const rowH = s(44);
+  (a.titulares||[]).slice(0,11).forEach(t=>{
+    ry += rowH/2;
+    ctx.beginPath();
+    ctx.arc(rx+R, ry, R, 0, Math.PI*2);
+    ctx.fillStyle = C.DORADO;
+    ctx.fill();
+    ctx.fillStyle = C.NEG;
+    ctx.font = `700 ${s(14)}px "Rajdhani", Arial, sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(t.numero||'', rx+R, ry+s(1));
+    ctx.textBaseline='alphabetic'; ctx.textAlign='left';
+    ctx.fillStyle = C.BLANCO;
+    ctx.font = `600 ${s(16)}px "DM Sans", Arial, sans-serif`;
+    cvFillTextTrunc(ctx, t.nombre||'', rx+R*2+s(12), ry+s(6), rw-R*2-s(12));
+    ry += rowH/2;
   });
 
-  // DT + Suplentes
-  let yb = pitchBottom + s(16);
+  // ── Suplentes en chips ──
+  ry += s(14);
+  ctx.fillStyle = 'rgba(255,255,255,.5)';
+  ctx.font = `600 ${s(12)}px "DM Sans", Arial, sans-serif`;
+  ctx.fillText('SUPLENTES', rx, ry);
+  const labelW2 = ctx.measureText('SUPLENTES').width;
+  ctx.strokeStyle = 'rgba(255,255,255,.12)';
+  ctx.beginPath();
+  ctx.moveTo(rx+labelW2+s(10), ry-s(4));
+  ctx.lineTo(rx+rw, ry-s(4));
+  ctx.stroke();
+  ry += s(18);
+
+  const chipH = s(28);
+  const chipGap = s(8);
+  let cx = rx, cy = ry;
+  ctx.font = `500 ${s(13)}px "DM Sans", Arial, sans-serif`;
+  (a.suplentes||[]).forEach(sp=>{
+    const txt = `${sp.numero?sp.numero+' ':''}${sp.nombre}`;
+    const tw = ctx.measureText(txt).width;
+    const chipW = tw + s(20);
+    if(cx+chipW > rx+rw){ cx = rx; cy += chipH+chipGap; }
+    ctx.fillStyle = 'rgba(255,255,255,.07)';
+    cvRoundRect(ctx, cx, cy, chipW, chipH, chipH/2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.75)';
+    ctx.textAlign='left';
+    ctx.fillText(txt, cx+s(10), cy+chipH/2+s(5));
+    cx += chipW + chipGap;
+  });
+
+  // ── Pie: DT + sitio ──
+  const footerY = CV_H - footerH;
+  ctx.strokeStyle = 'rgba(201,162,39,.25)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, footerY);
+  ctx.lineTo(W, footerY);
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(35,34,40,1)';
+  ctx.fillRect(0, footerY+1, W, footerH-1);
+
   ctx.textAlign='left';
-  ctx.fillStyle='rgba(201,162,39,0.65)';
-  ctx.font=`600 ${s(12)}px "DM Sans", Arial, sans-serif`;
-  ctx.fillText('DIRECTOR TÉCNICO', margin*0.3, yb);
-  ctx.fillStyle=C.BLANCO;
-  ctx.font=`600 ${s(17)}px "Rajdhani", Arial, sans-serif`;
-  cvFillTextTrunc(ctx, a.dt||'—', margin*0.3, yb+s(22), W-margin*0.6);
-
-  yb += s(40);
-  ctx.fillStyle='rgba(201,162,39,0.65)';
-  ctx.font=`600 ${s(12)}px "DM Sans", Arial, sans-serif`;
-  ctx.fillText('SUPLENTES', margin*0.3, yb);
-  ctx.fillStyle='rgba(255,255,255,.85)';
-  ctx.font=`500 ${s(14)}px "DM Sans", Arial, sans-serif`;
-  const supTxt = (a.suplentes||[]).map(sp=>`${sp.numero?sp.numero+' ':''}${sp.nombre}`).join('  ·  ');
-  cvWrapTexto(ctx, supTxt, margin*0.3, yb+s(20), W-margin*0.6, s(18), 2);
-
-  cvFooter(ctx, W, CV_H-footerH, identidad.nombre);
+  ctx.fillStyle = C.DORADO;
+  ctx.font = `600 ${s(12)}px "DM Sans", Arial, sans-serif`;
+  ctx.fillText('DIRECTOR TÉCNICO', s(24), footerY+footerH/2+s(5));
+  const dtLabelW = ctx.measureText('DIRECTOR TÉCNICO').width;
+  ctx.fillStyle = C.BLANCO;
+  ctx.font = `600 ${s(15)}px "DM Sans", Arial, sans-serif`;
+  cvFillTextTrunc(ctx, a.dt||'—', s(24)+dtLabelW+s(8), footerY+footerH/2+s(5), W-s(48)-dtLabelW-s(8)-s(150));
+  ctx.textAlign='right';
+  ctx.fillStyle = 'rgba(255,255,255,.3)';
+  ctx.font = `500 ${s(12)}px "DM Sans", Arial, sans-serif`;
+  ctx.fillText((identidad.nombre||'DEPORTEMAS').toUpperCase()+' · deportemas.pages.dev', W-s(24), footerY+footerH/2+s(5));
 
   ctx.textAlign='left';
   return canvas;
