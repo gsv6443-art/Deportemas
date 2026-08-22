@@ -511,9 +511,6 @@ body.bloqueado-poli .vista-deporte{display:none!important;}
       <option value="provincial">Camp. Provincial Juvenil</option>
     </select>
 
-    <label class="admin-label" id="admin-torneo-basquet-label" style="display:none">Torneo (Básquetbol)</label>
-    <select id="admin-torneo-basquet" class="admin-input" style="display:none" onchange="torneoAdminBasquetCambio()"></select>
-
     <label class="admin-label" id="admin-categoria-label">Categoría</label>
     <select id="admin-categoria" class="admin-input" onchange="renderAdminListas()"></select>
 
@@ -525,14 +522,6 @@ body.bloqueado-poli .vista-deporte{display:none!important;}
       <div id="aeq-basquet-extra" class="admin-grid" style="display:none;margin-top:8px">
         <input type="text" id="aeq-localidad" class="admin-input" placeholder="Localidad">
         <input type="text" id="aeq-liga" class="admin-input" placeholder="Liga">
-        <label class="admin-label" style="grid-column:1/-1;margin-top:0">Torneo que disputa</label>
-        <select id="aeq-torneo" class="admin-input" style="grid-column:1/-1" onchange="aeqTorneoCambio()">
-          <option value="">Sin torneo asignado</option>
-        </select>
-        <label class="admin-label" style="grid-column:1/-1;margin-top:0">División</label>
-        <select id="aeq-division" class="admin-input" style="grid-column:1/-1">
-          <option value="">Sin división asignada</option>
-        </select>
       </div>
       <div style="margin-top:8px">
         <div class="upload-area">
@@ -552,6 +541,18 @@ body.bloqueado-poli .vista-deporte{display:none!important;}
 
     <div class="admin-seccion">
       <h4>Agregar partido</h4>
+      <div id="ap-basquet-niveles" style="display:none;margin-bottom:8px">
+        <select id="ap-b-nivel2" class="admin-input" style="margin-bottom:6px" onchange="nivelesBasquetNivel2Cambio('ap-b')"></select>
+        <select id="ap-b-nivel3" class="admin-input" style="margin-bottom:6px;display:none" onchange="renderAdminListas()"></select>
+        <div id="ap-b-nuevo-grupo" style="display:none;gap:6px;margin-bottom:6px">
+          <select id="ap-b-grupo-tipo" class="admin-input" style="display:none;max-width:170px">
+            <option value="tira">Tira</option>
+            <option value="cuadrangular">Cuadrangular/Triangular</option>
+          </select>
+          <input type="text" id="ap-b-grupo-nombre" class="admin-input" placeholder="Nombre de la nueva tira/grupo" style="flex:1">
+          <button type="button" class="btn-primario" style="background:#555" onclick="agregarGrupoBasquet('ap-b')">+ Crear</button>
+        </div>
+      </div>
       <div class="admin-grid">
         <input type="text" id="ap-local" class="admin-input" placeholder="Equipo local" list="datalist-equipos-poli">
         <input type="text" id="ap-visitante" class="admin-input" placeholder="Equipo visitante" list="datalist-equipos-poli">
@@ -563,7 +564,7 @@ body.bloqueado-poli .vista-deporte{display:none!important;}
       <div class="admin-lista" id="admin-lista-fixture"></div>
     </div>
 
-    <div class="admin-seccion">
+    <div class="admin-seccion" id="admin-seccion-posiciones-manual">
       <h4>Agregar fila de posiciones</h4>
       <div class="admin-grid">
         <input type="text" id="apos-equipo" class="admin-input" placeholder="Equipo" style="grid-column:1/-1" list="datalist-equipos-poli">
@@ -576,8 +577,26 @@ body.bloqueado-poli .vista-deporte{display:none!important;}
       <div class="admin-lista" id="admin-lista-posiciones"></div>
     </div>
 
+    <div class="admin-seccion" id="admin-seccion-posiciones-auto" style="display:none">
+      <h4>Posiciones (calculadas automáticamente)</h4>
+      <p style="font-size:13px;color:var(--gris-claro);margin:0 0 8px">Se arman solas a partir de los resultados cargados en "Agregar partido". Elegí el Torneo y la Zona/Categoría/Tira arriba en esa sección para ver la tabla correspondiente acá abajo.</p>
+      <div class="admin-lista" id="admin-lista-posiciones-auto"></div>
+    </div>
+
     <div class="admin-seccion">
       <h4>Agregar anotador</h4>
+      <div id="aan-basquet-niveles" style="display:none;margin-bottom:8px">
+        <select id="aan-b-nivel2" class="admin-input" style="margin-bottom:6px" onchange="nivelesBasquetNivel2Cambio('aan-b')"></select>
+        <select id="aan-b-nivel3" class="admin-input" style="margin-bottom:6px;display:none" onchange="renderAdminListas()"></select>
+        <div id="aan-b-nuevo-grupo" style="display:none;gap:6px;margin-bottom:6px">
+          <select id="aan-b-grupo-tipo" class="admin-input" style="display:none;max-width:170px">
+            <option value="tira">Tira</option>
+            <option value="cuadrangular">Cuadrangular/Triangular</option>
+          </select>
+          <input type="text" id="aan-b-grupo-nombre" class="admin-input" placeholder="Nombre de la nueva tira/grupo" style="flex:1">
+          <button type="button" class="btn-primario" style="background:#555" onclick="agregarGrupoBasquet('aan-b')">+ Crear</button>
+        </div>
+      </div>
       <div class="admin-grid">
         <input type="text" id="aan-nombre" class="admin-input" placeholder="Nombre del jugador" style="grid-column:1/-1">
         <input type="text" id="aan-equipo" class="admin-input" placeholder="Equipo" list="datalist-equipos-poli">
@@ -599,7 +618,7 @@ body.bloqueado-poli .vista-deporte{display:none!important;}
       <div class="admin-lista" id="admin-lista-sanciones"></div>
     </div>
 
-    <div class="admin-seccion">
+    <div class="admin-seccion" id="admin-seccion-torneos">
       <h4>Agregar / editar torneo</h4>
       <div class="admin-grid">
         <input type="text" id="ato-nombre" class="admin-input" placeholder="Nombre del torneo" style="grid-column:1/-1">
@@ -612,60 +631,8 @@ body.bloqueado-poli .vista-deporte{display:none!important;}
         <input type="text" id="ato-inicio" class="admin-input" placeholder="Fecha inicio">
         <input type="text" id="ato-fin" class="admin-input" placeholder="Fecha fin">
         <input type="text" id="ato-sede" class="admin-input" placeholder="Sede" style="grid-column:1/-1">
-        <div id="ato-categorias-generico-wrap" style="grid-column:1/-1">
+        <div style="grid-column:1/-1">
           <input type="text" id="ato-categorias" class="admin-input" placeholder="Categorías que compiten (ej: Primera, Sub21)" style="width:100%">
-        </div>
-        <div id="ato-categorias-basquet-wrap" style="display:none;grid-column:1/-1;border:1px solid var(--accent-border);border-radius:var(--r-md);padding:10px;margin-bottom:4px">
-          <label class="admin-label" style="margin-top:0">Divisiones que compiten en este torneo</label>
-          <div class="admin-grid">
-            <input type="text" id="atc-nombre" class="admin-input" placeholder="Nombre de la división (ej: Liga A, Liga B)" style="grid-column:1/-1">
-            <select id="atc-tipo" class="admin-input" style="grid-column:1/-1" onchange="cambiarTipoFormaDisputa()">
-              <option value="todos-contra-todos">Todos contra todos</option>
-              <option value="grupos-playoffs">Fase de grupos + Playoffs</option>
-              <option value="eliminacion-directa">Eliminación directa (cuadro)</option>
-            </select>
-
-            <div id="atc-campos-todos" class="admin-grid" style="grid-column:1/-1">
-              <select id="atc-vuelta" class="admin-input" style="grid-column:1/-1">
-                <option value="una">Una vuelta</option>
-                <option value="ida-vuelta">Ida y vuelta</option>
-              </select>
-            </div>
-
-            <div id="atc-campos-grupos" class="admin-grid" style="grid-column:1/-1;display:none">
-              <input type="number" id="atc-zonas" class="admin-input" placeholder="Cantidad de zonas" min="1">
-              <input type="text" id="atc-equipos-zona" class="admin-input" placeholder="Equipos por zona (ej: 6,6,7)">
-              <input type="number" id="atc-clasif-directos" class="admin-input" placeholder="Clasificados directos por zona" min="1" style="grid-column:1/-1">
-              <label style="grid-column:1/-1;display:flex;align-items:center;gap:6px;font-size:13px;color:var(--gris-claro)">
-                <input type="checkbox" id="atc-repechaje" onchange="toggleRepechajeBasquet()"> Hay repechaje entre otras posiciones
-              </label>
-              <div id="atc-campos-repechaje" class="admin-grid" style="grid-column:1/-1;display:none">
-                <input type="text" id="atc-repechaje-rango" class="admin-input" placeholder="Rango de posiciones (ej: 5° a 12°)">
-                <input type="number" id="atc-repechaje-avanzan" class="admin-input" placeholder="Cuántos avanzan del repechaje" min="1">
-              </div>
-              <select id="atc-formato-cruces" class="admin-input" style="grid-column:1/-1">
-                <option value="unico">Playoffs a partido único</option>
-                <option value="ida-vuelta">Playoffs ida y vuelta</option>
-                <option value="ida-vuelta-desempate">Ida y vuelta, con posible partido de desempate</option>
-              </select>
-            </div>
-
-            <div id="atc-campos-eliminacion" class="admin-grid" style="grid-column:1/-1;display:none">
-              <input type="number" id="atc-cant-equipos-cuadro" class="admin-input" placeholder="Cantidad de equipos en el cuadro" min="2">
-              <select id="atc-formato-cruces-elim" class="admin-input">
-                <option value="unico">Partido único</option>
-                <option value="ida-vuelta">Ida y vuelta</option>
-                <option value="ida-vuelta-desempate">Ida y vuelta, con posible partido de desempate</option>
-              </select>
-            </div>
-
-            <label class="admin-label" style="grid-column:1/-1">Equipos que compiten en esta división</label>
-            <div id="atc-equipos-checklist" style="grid-column:1/-1;max-height:160px;overflow-y:auto;border:1px solid var(--accent-border);border-radius:var(--r-sm);padding:6px;font-family:'Rajdhani',sans-serif;font-size:14px">
-              <div class="placeholder">Cargando equipos...</div>
-            </div>
-          </div>
-          <button type="button" class="btn-primario" style="margin-top:8px;background:#555" onclick="agregarCategoriaTorneoBasquet()">+ Agregar división al torneo</button>
-          <div id="atc-lista-categorias" style="margin-top:10px"></div>
         </div>
         <input type="text" id="ato-clubes" class="admin-input" placeholder="Clubes participantes (separados por coma)" style="grid-column:1/-1">
         <input type="text" id="ato-campeon" class="admin-input" placeholder="Campeón (si ya finalizó)">
@@ -743,20 +710,23 @@ body.bloqueado-poli .vista-deporte{display:none!important;}
     <span></span><span></span><span></span>
   </button>
   <div class="tabs-row" id="tabs-row">
-    <button class="tab-btn active" data-tab="fixture">Fixture</button>
+    <button class="tab-btn active" data-tab="fixture">Partidos</button>
     <button class="tab-btn" data-tab="posiciones">Posiciones</button>
     <button class="tab-btn" data-tab="anotadores">Máx. anotadores</button>
     <button class="tab-btn" data-tab="sanciones">Sanciones</button>
     <button class="tab-btn" data-tab="equipos">Equipos</button>
-    <button class="tab-btn" data-tab="torneos">Torneos</button>
     <button class="tab-btn" data-tab="noticias">Noticias</button>
   </div>
 
-  <div class="categorias-row" id="torneos-row-basquet"></div>
-  <div class="categorias-row" id="categorias-row"></div>
+  <div class="categorias-row" id="categorias-row">
+    <button class="cat-btn active" data-cat="liga-cordobesa">Liga Cordobesa</button>
+    <button class="cat-btn" data-cat="interasociativo">Torneo Interasociativo</button>
+    <button class="cat-btn" data-cat="asociativo">Torneo Asociativo</button>
+    <button class="cat-btn" data-cat="formativas">Ligas Formativas</button>
+    <button class="cat-btn" data-cat="amistosos">Amistosos</button>
+  </div>
 
-
-  <!-- Tab: Fixture -->
+  <!-- Tab: Partidos -->
   <div class="tab-panel" data-panel="fixture">
     <div class="card">
       <div class="card-titulo">Partidos</div>
@@ -766,8 +736,17 @@ body.bloqueado-poli .vista-deporte{display:none!important;}
 
   <!-- Tab: Posiciones -->
   <div class="tab-panel" data-panel="posiciones" style="display:none">
+    <div class="categorias-row" id="pos-torneo-row">
+      <button class="cat-btn active" data-pt="liga-cordobesa">Liga Cordobesa</button>
+      <button class="cat-btn" data-pt="interasociativo">Torneo Interasociativo</button>
+      <button class="cat-btn" data-pt="asociativo">Torneo Asociativo</button>
+      <button class="cat-btn" data-pt="formativas">Ligas Formativas</button>
+    </div>
+    <div class="categorias-row" id="pos-nivel2-row"></div>
+    <div class="categorias-row" id="pos-nivel3-row"></div>
+    <div class="categorias-row" id="pos-nivel4-row"></div>
     <div class="card">
-      <div class="card-titulo">Tabla General</div>
+      <div class="card-titulo" id="pos-titulo">Tabla de posiciones</div>
       <table class="tabla-pos">
         <tr><th>#</th><th>Equipo</th><th>PJ</th><th>G</th><th>P</th><th>Pts</th></tr>
         <tbody id="posiciones-tbody"><tr><td colspan="6" class="placeholder">Cargando...</td></tr></tbody>
@@ -777,6 +756,15 @@ body.bloqueado-poli .vista-deporte{display:none!important;}
 
   <!-- Tab: Anotadores -->
   <div class="tab-panel" data-panel="anotadores" style="display:none">
+    <div class="categorias-row" id="anot-torneo-row">
+      <button class="cat-btn active" data-at="liga-cordobesa">Liga Cordobesa</button>
+      <button class="cat-btn" data-at="interasociativo">Torneo Interasociativo</button>
+      <button class="cat-btn" data-at="asociativo">Torneo Asociativo</button>
+      <button class="cat-btn" data-at="formativas">Ligas Formativas</button>
+    </div>
+    <div class="categorias-row" id="anot-nivel2-row"></div>
+    <div class="categorias-row" id="anot-nivel3-row"></div>
+    <div class="categorias-row" id="anot-nivel4-row"></div>
     <div class="card">
       <div class="card-titulo">Máximos anotadores</div>
       <div id="anotadores-lista"><div class="placeholder">Cargando...</div></div>
@@ -797,11 +785,6 @@ body.bloqueado-poli .vista-deporte{display:none!important;}
       <div class="card-titulo">Equipos</div>
       <div id="equipos-lista-basquet"><div class="placeholder">Cargando...</div></div>
     </div>
-  </div>
-
-  <!-- Tab: Torneos -->
-  <div class="tab-panel" data-panel="torneos" style="display:none">
-    <div id="torneos-lista"><div class="placeholder">Cargando...</div></div>
   </div>
 
   <!-- Tab: Noticias -->
@@ -1210,9 +1193,9 @@ function esperarFB(){
   });
 }
 
-let categoriaActual = '';
-let torneoBasquetActual = '';       // key completa, ej: "basquet_torneo_1723999999"
-let _torneosBasquetPublicoCache = {}; // { key: torneoObj }
+let categoriaActual = 'liga-cordobesa';
+let posTorneo = 'liga-cordobesa', posNivel2 = '', posNivel3 = '', posNivel4 = '';
+let anotTorneo = 'liga-cordobesa', anotNivel2 = '', anotNivel3 = '', anotNivel4 = '';
 let generoActual = 'masculino';
 let categoriaVoleyActual = 'primera';
 let generoHandballActual = 'masculino';
@@ -1355,10 +1338,8 @@ function mostrarDeporte(deporte, _fromHash){
   document.getElementById('body-poli').classList.add(temaPorDeporte[deporte]);
   if(!_fromHash) _actualizarHashPoli(deporte, 'fixture');
   if(deporte === 'basquet'){
-    poblarTorneosBasquetPublico();
-    cargarTorneos();
+    cargarTodoBasquet();
     cargarNoticias();
-    cargarEquiposBasquet();
   }
   if(deporte === 'voley'){
     cargarFixtureVoley(generoActual, categoriaVoleyActual);
@@ -1406,13 +1387,6 @@ function volverLanding(_fromHash){
     try{ if(location.hash) history.pushState(null, '', location.pathname + location.search); }catch(e){}
   }
 }
-document.getElementById('torneos-row-basquet').addEventListener('click', e=>{
-  if(!e.target.classList.contains('cat-btn')) return;
-  document.querySelectorAll('#torneos-row-basquet .cat-btn').forEach(b=>b.classList.remove('active'));
-  e.target.classList.add('active');
-  torneoBasquetActual = e.target.dataset.torneo;
-  poblarCategoriasBasquetPublico();
-});
 document.getElementById('categorias-row').addEventListener('click', e=>{
   if(!e.target.classList.contains('cat-btn')) return;
   document.querySelectorAll('#categorias-row .cat-btn').forEach(b=>b.classList.remove('active'));
@@ -1586,7 +1560,155 @@ async function cargarFixture(categoria){
     (filas[0]?.fecha ? `<div style="text-align:center;margin-top:8px"><span class="placeholder" style="padding:0">${escapeHtml(filas[filas.length-1].fecha||'')}</span></div>` : '');
 }
 
-// ── POSICIONES (público) ────────────────────────────────────────
+// ── POSICIONES (público) — navegación anidada específica de Básquet ──
+const POS_BASQUET = {
+  'liga-cordobesa': {
+    nivel2: [['a','A'],['b','B']],
+    nivel3: {
+      a: [['zona-1','Zona 1'],['zona-2','Zona 2'],['zona-3','Zona 3'],['general','Tabla General']],
+      b: [['zona-1','Zona 1'],['zona-2','Zona 2'],['general','Tabla General']]
+    }
+  },
+  'interasociativo': {
+    nivel2: [['zona-1','Zona 1'],['zona-2','Zona 2']]
+  },
+  'asociativo': {
+    nivel2: [['apertura','Apertura'],['clausura','Clausura']],
+    nivel3: {
+      apertura: [['infantiles','Infantiles'],['cadetes','Cadetes'],['juveniles','Juveniles'],['liga-proximo','Liga Próximo']],
+      clausura: [['infantiles','Infantiles'],['cadetes','Cadetes'],['juveniles','Juveniles'],['liga-proximo','Liga Próximo'],['mini','Mini']]
+    }
+  },
+  'formativas': {
+    nivel2: [['liga-formativa','Liga Formativa'],['liga-desarrollo','Liga de Desarrollo']]
+    // nivel3 (tiras/grupos) es dinámico, se carga desde Firestore — ver poblarGruposFormativasPublico()
+  }
+};
+
+async function renderPosNav(){
+  const cfg = POS_BASQUET[posTorneo];
+  const filaN2 = document.getElementById('pos-nivel2-row');
+  const filaN3 = document.getElementById('pos-nivel3-row');
+  const filaN4 = document.getElementById('pos-nivel4-row');
+  filaN4.innerHTML = ''; filaN4.style.display = 'none';
+
+  if(!cfg || !cfg.nivel2){ filaN2.innerHTML = ''; filaN2.style.display = 'none'; filaN3.innerHTML = ''; filaN3.style.display = 'none'; cargarPosicionesBasquetPublico(); return; }
+
+  filaN2.style.display = 'flex';
+  if(!cfg.nivel2.some(([v])=>v===posNivel2)) posNivel2 = cfg.nivel2[0][0];
+  filaN2.innerHTML = cfg.nivel2.map(([v,l])=>`<button class="cat-btn${v===posNivel2?' active':''}" data-p2="${v}">${l}</button>`).join('');
+
+  if(posTorneo === 'interasociativo'){
+    filaN3.innerHTML = ''; filaN3.style.display = 'none';
+    cargarPosicionesBasquetPublico();
+    return;
+  }
+
+  if(posTorneo === 'formativas'){
+    filaN3.style.display = 'flex';
+    await poblarGruposFormativasPublico();
+    return;
+  }
+
+  // liga-cordobesa / asociativo: nivel3 estático según nivel2
+  const opciones3 = cfg.nivel3[posNivel2] || [];
+  filaN3.style.display = 'flex';
+  if(!opciones3.some(([v])=>v===posNivel3)) posNivel3 = opciones3[0] ? opciones3[0][0] : '';
+  filaN3.innerHTML = opciones3.map(([v,l])=>`<button class="cat-btn${v===posNivel3?' active':''}" data-p3="${v}">${l}</button>`).join('');
+  cargarPosicionesBasquetPublico();
+}
+
+async function poblarGruposFormativasPublico(){
+  const filaN3 = document.getElementById('pos-nivel3-row');
+  const filaN4 = document.getElementById('pos-nivel4-row');
+  const fb = await esperarFB();
+  const grupos = await fb.getAllByPrefix('basquet_grupo_' + posNivel2 + '_');
+  const tiras = Object.entries(grupos).filter(([,g])=>g.tipo!=='cuadrangular').sort((a,b)=>(a[1].orden||0)-(b[1].orden||0));
+  const cuad = posNivel2 === 'liga-desarrollo' ? Object.entries(grupos).filter(([,g])=>g.tipo==='cuadrangular').sort((a,b)=>(a[1].orden||0)-(b[1].orden||0)) : [];
+
+  let botones = tiras.map(([k,g])=>`<button class="cat-btn" data-p3="${k.replace('basquet_grupo_'+posNivel2+'_','')}">${escapeHtml(g.nombre)}</button>`).join('');
+  if(posNivel2 === 'liga-desarrollo') botones += `<button class="cat-btn" data-p3="__cuad__">Cuadrangulares/Triangulares</button>`;
+
+  if(!botones){
+    filaN3.innerHTML = '<div class="placeholder">Todavía no hay tiras cargadas para esta liga</div>';
+    filaN4.innerHTML = ''; filaN4.style.display = 'none';
+    cargarPosicionesBasquetPublico();
+    return;
+  }
+  const idsValidos = tiras.map(([k])=>k.replace('basquet_grupo_'+posNivel2+'_','')).concat(posNivel2==='liga-desarrollo' ? ['__cuad__'] : []);
+  if(!idsValidos.includes(posNivel3)) posNivel3 = idsValidos[0];
+  const botonesArr = tiras.map(([k,g]) => {
+    const id = k.replace('basquet_grupo_'+posNivel2+'_','');
+    return `<button class="cat-btn${id===posNivel3?' active':''}" data-p3="${id}">${escapeHtml(g.nombre)}</button>`;
+  });
+  if(posNivel2 === 'liga-desarrollo') botonesArr.push(`<button class="cat-btn${posNivel3==='__cuad__'?' active':''}" data-p3="__cuad__">Cuadrangulares/Triangulares</button>`);
+  filaN3.innerHTML = botonesArr.join('');
+
+  if(posNivel3 === '__cuad__'){
+    filaN4.style.display = 'flex';
+    if(!cuad.length){
+      filaN4.innerHTML = '<div class="placeholder">Todavía no hay cuadrangulares/triangulares cargados</div>';
+      cargarPosicionesBasquetPublico();
+      return;
+    }
+    const idsCuad = cuad.map(([k])=>k.replace('basquet_grupo_'+posNivel2+'_',''));
+    if(!idsCuad.includes(posNivel4)) posNivel4 = idsCuad[0];
+    filaN4.innerHTML = cuad.map(([k,g]) => {
+      const id = k.replace('basquet_grupo_'+posNivel2+'_','');
+      return `<button class="cat-btn${id===posNivel4?' active':''}" data-p4="${id}">${escapeHtml(g.nombre)}</button>`;
+    }).join('');
+  } else {
+    filaN4.innerHTML = ''; filaN4.style.display = 'none';
+  }
+  cargarPosicionesBasquetPublico();
+}
+
+function segmentoPosicionesBasquetPublico(){
+  if(posTorneo === 'liga-cordobesa') return `liga-cordobesa_${posNivel2}_${posNivel3}`;
+  if(posTorneo === 'interasociativo') return `interasociativo_${posNivel2}`;
+  if(posTorneo === 'asociativo') return `asociativo_${posNivel2}_${posNivel3}`;
+  if(posTorneo === 'formativas'){
+    if(!posNivel3) return `formativas_${posNivel2}_sin-grupos`;
+    if(posNivel3 === '__cuad__') return `formativas_${posNivel2}_grupo-${posNivel4}`;
+    return `formativas_${posNivel2}_grupo-${posNivel3}`;
+  }
+  return posTorneo;
+}
+function cargarPosicionesBasquetPublico(){
+  cargarPosiciones(segmentoPosicionesBasquetPublico());
+}
+
+document.getElementById('pos-torneo-row').addEventListener('click', e=>{
+  if(!e.target.classList.contains('cat-btn')) return;
+  document.querySelectorAll('#pos-torneo-row .cat-btn').forEach(b=>b.classList.remove('active'));
+  e.target.classList.add('active');
+  posTorneo = e.target.dataset.pt;
+  posNivel2 = ''; posNivel3 = ''; posNivel4 = '';
+  renderPosNav();
+});
+document.getElementById('pos-nivel2-row').addEventListener('click', e=>{
+  if(!e.target.classList.contains('cat-btn')) return;
+  posNivel2 = e.target.dataset.p2;
+  posNivel3 = ''; posNivel4 = '';
+  renderPosNav();
+});
+document.getElementById('pos-nivel3-row').addEventListener('click', e=>{
+  if(!e.target.classList.contains('cat-btn')) return;
+  posNivel3 = e.target.dataset.p3;
+  posNivel4 = '';
+  if(posTorneo === 'formativas'){ poblarGruposFormativasPublico(); return; }
+  document.querySelectorAll('#pos-nivel3-row .cat-btn').forEach(b=>b.classList.remove('active'));
+  e.target.classList.add('active');
+  cargarPosicionesBasquetPublico();
+});
+document.getElementById('pos-nivel4-row').addEventListener('click', e=>{
+  if(!e.target.classList.contains('cat-btn')) return;
+  document.querySelectorAll('#pos-nivel4-row .cat-btn').forEach(b=>b.classList.remove('active'));
+  e.target.classList.add('active');
+  posNivel4 = e.target.dataset.p4;
+  cargarPosicionesBasquetPublico();
+});
+
 async function cargarPosiciones(categoria){
   const tbody = document.getElementById('posiciones-tbody');
   tbody.innerHTML = '<tr><td colspan="6" class="placeholder">Cargando...</td></tr>';
@@ -1605,6 +1727,127 @@ async function cargarPosiciones(categoria){
       <td class="pts">${f.pts ?? 0}</td>
     </tr>`).join('');
 }
+
+// ── ANOTADORES (público) — navegación anidada igual que Posiciones ──
+async function renderAnotNav(){
+  const cfg = POS_BASQUET[anotTorneo];
+  const filaN2 = document.getElementById('anot-nivel2-row');
+  const filaN3 = document.getElementById('anot-nivel3-row');
+  const filaN4 = document.getElementById('anot-nivel4-row');
+  filaN4.innerHTML = ''; filaN4.style.display = 'none';
+
+  if(!cfg || !cfg.nivel2){ filaN2.innerHTML = ''; filaN2.style.display = 'none'; filaN3.innerHTML = ''; filaN3.style.display = 'none'; cargarAnotadoresBasquetPublico(); return; }
+
+  filaN2.style.display = 'flex';
+  if(!cfg.nivel2.some(([v])=>v===anotNivel2)) anotNivel2 = cfg.nivel2[0][0];
+  filaN2.innerHTML = cfg.nivel2.map(([v,l])=>`<button class="cat-btn${v===anotNivel2?' active':''}" data-p2="${v}">${l}</button>`).join('');
+
+  if(anotTorneo === 'interasociativo'){
+    filaN3.innerHTML = ''; filaN3.style.display = 'none';
+    cargarAnotadoresBasquetPublico();
+    return;
+  }
+
+  if(anotTorneo === 'formativas'){
+    filaN3.style.display = 'flex';
+    await poblarGruposFormativasAnotPublico();
+    return;
+  }
+
+  const opciones3 = cfg.nivel3[anotNivel2] || [];
+  filaN3.style.display = 'flex';
+  if(!opciones3.some(([v])=>v===anotNivel3)) anotNivel3 = opciones3[0] ? opciones3[0][0] : '';
+  filaN3.innerHTML = opciones3.map(([v,l])=>`<button class="cat-btn${v===anotNivel3?' active':''}" data-p3="${v}">${l}</button>`).join('');
+  cargarAnotadoresBasquetPublico();
+}
+
+async function poblarGruposFormativasAnotPublico(){
+  const filaN3 = document.getElementById('anot-nivel3-row');
+  const filaN4 = document.getElementById('anot-nivel4-row');
+  const fb = await esperarFB();
+  const grupos = await fb.getAllByPrefix('basquet_grupo_' + anotNivel2 + '_');
+  const tiras = Object.entries(grupos).filter(([,g])=>g.tipo!=='cuadrangular').sort((a,b)=>(a[1].orden||0)-(b[1].orden||0));
+  const cuad = anotNivel2 === 'liga-desarrollo' ? Object.entries(grupos).filter(([,g])=>g.tipo==='cuadrangular').sort((a,b)=>(a[1].orden||0)-(b[1].orden||0)) : [];
+
+  const idsValidos = tiras.map(([k])=>k.replace('basquet_grupo_'+anotNivel2+'_','')).concat(anotNivel2==='liga-desarrollo' ? ['__cuad__'] : []);
+  if(!idsValidos.length){
+    filaN3.innerHTML = '<div class="placeholder">Todavía no hay tiras cargadas para esta liga</div>';
+    filaN4.innerHTML = ''; filaN4.style.display = 'none';
+    cargarAnotadoresBasquetPublico();
+    return;
+  }
+  if(!idsValidos.includes(anotNivel3)) anotNivel3 = idsValidos[0];
+  const botonesArr = tiras.map(([k,g]) => {
+    const id = k.replace('basquet_grupo_'+anotNivel2+'_','');
+    return `<button class="cat-btn${id===anotNivel3?' active':''}" data-p3="${id}">${escapeHtml(g.nombre)}</button>`;
+  });
+  if(anotNivel2 === 'liga-desarrollo') botonesArr.push(`<button class="cat-btn${anotNivel3==='__cuad__'?' active':''}" data-p3="__cuad__">Cuadrangulares/Triangulares</button>`);
+  filaN3.innerHTML = botonesArr.join('');
+
+  if(anotNivel3 === '__cuad__'){
+    filaN4.style.display = 'flex';
+    if(!cuad.length){
+      filaN4.innerHTML = '<div class="placeholder">Todavía no hay cuadrangulares/triangulares cargados</div>';
+      cargarAnotadoresBasquetPublico();
+      return;
+    }
+    const idsCuad = cuad.map(([k])=>k.replace('basquet_grupo_'+anotNivel2+'_',''));
+    if(!idsCuad.includes(anotNivel4)) anotNivel4 = idsCuad[0];
+    filaN4.innerHTML = cuad.map(([k,g]) => {
+      const id = k.replace('basquet_grupo_'+anotNivel2+'_','');
+      return `<button class="cat-btn${id===anotNivel4?' active':''}" data-p4="${id}">${escapeHtml(g.nombre)}</button>`;
+    }).join('');
+  } else {
+    filaN4.innerHTML = ''; filaN4.style.display = 'none';
+  }
+  cargarAnotadoresBasquetPublico();
+}
+
+function segmentoAnotadoresBasquetPublico(){
+  if(anotTorneo === 'liga-cordobesa') return `liga-cordobesa_${anotNivel2}_${anotNivel3}`;
+  if(anotTorneo === 'interasociativo') return `interasociativo_${anotNivel2}`;
+  if(anotTorneo === 'asociativo') return `asociativo_${anotNivel2}_${anotNivel3}`;
+  if(anotTorneo === 'formativas'){
+    if(!anotNivel3) return `formativas_${anotNivel2}_sin-grupos`;
+    if(anotNivel3 === '__cuad__') return `formativas_${anotNivel2}_grupo-${anotNivel4}`;
+    return `formativas_${anotNivel2}_grupo-${anotNivel3}`;
+  }
+  return anotTorneo;
+}
+function cargarAnotadoresBasquetPublico(){
+  cargarAnotadores(segmentoAnotadoresBasquetPublico());
+}
+
+document.getElementById('anot-torneo-row').addEventListener('click', e=>{
+  if(!e.target.classList.contains('cat-btn')) return;
+  document.querySelectorAll('#anot-torneo-row .cat-btn').forEach(b=>b.classList.remove('active'));
+  e.target.classList.add('active');
+  anotTorneo = e.target.dataset.at;
+  anotNivel2 = ''; anotNivel3 = ''; anotNivel4 = '';
+  renderAnotNav();
+});
+document.getElementById('anot-nivel2-row').addEventListener('click', e=>{
+  if(!e.target.classList.contains('cat-btn')) return;
+  anotNivel2 = e.target.dataset.p2;
+  anotNivel3 = ''; anotNivel4 = '';
+  renderAnotNav();
+});
+document.getElementById('anot-nivel3-row').addEventListener('click', e=>{
+  if(!e.target.classList.contains('cat-btn')) return;
+  anotNivel3 = e.target.dataset.p3;
+  anotNivel4 = '';
+  if(anotTorneo === 'formativas'){ poblarGruposFormativasAnotPublico(); return; }
+  document.querySelectorAll('#anot-nivel3-row .cat-btn').forEach(b=>b.classList.remove('active'));
+  e.target.classList.add('active');
+  cargarAnotadoresBasquetPublico();
+});
+document.getElementById('anot-nivel4-row').addEventListener('click', e=>{
+  if(!e.target.classList.contains('cat-btn')) return;
+  document.querySelectorAll('#anot-nivel4-row .cat-btn').forEach(b=>b.classList.remove('active'));
+  e.target.classList.add('active');
+  anotNivel4 = e.target.dataset.p4;
+  cargarAnotadoresBasquetPublico();
+});
 
 // ── ANOTADORES (público) ────────────────────────────────────────
 async function cargarAnotadores(categoria){
@@ -1646,70 +1889,62 @@ async function cargarSanciones(categoria){
     </div>`).join('');
 }
 
-// ── TORNEOS / CATEGORÍAS dinámicas de Básquetbol (público) ──────
-async function poblarTorneosBasquetPublico(){
-  const cont = document.getElementById('torneos-row-basquet');
-  cont.innerHTML = '<div class="placeholder">Cargando...</div>';
+// ── Cálculo automático de posiciones a partir de los resultados de Partidos (sistema de puntos 2-1) ──
+function slugEquipoBasquet(nombre){
+  return (nombre||'').toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'') || 'equipo';
+}
+async function recalcularPosicionesBasquet(torneo, subSeg){
+  if(!subSeg) return;
   const fb = await esperarFB();
-  const torneos = await fb.getAllByPrefix('basquet_torneo_');
-  _torneosBasquetPublicoCache = torneos;
-  const filas = Object.entries(torneos).sort((a,b)=>(b[1].orden||0)-(a[1].orden||0));
-  if(!filas.length){
-    cont.innerHTML = '<div class="placeholder">Todavía no hay torneos cargados</div>';
-    document.getElementById('categorias-row').innerHTML = '';
-    torneoBasquetActual = ''; categoriaActual = '';
-    cargarFixture(''); cargarPosiciones(''); cargarAnotadores(''); cargarSanciones('');
-    cargarEquiposBasquet();
-    return;
+  // "Tabla General" de Liga Cordobesa: combina los resultados de TODAS las zonas de esa división (a/b), no es un subSeg con partidos propios
+  const esGeneralCordobesa = torneo === 'liga-cordobesa' && /_general$/.test(subSeg);
+  const division = esGeneralCordobesa ? subSeg.replace('_general','') : null;
+
+  const partidos = await fb.getAllByPrefix('basquet_partido_' + torneo + '_');
+  const stats = {};
+  Object.values(partidos).forEach(p=>{
+    if(!p.jugado || p.ptsLocal == null || p.ptsVisitante == null) return;
+    const coincide = esGeneralCordobesa ? (p.subSeg || '').startsWith(division + '_zona-') : (p.subSeg === subSeg);
+    if(!coincide) return;
+    [[p.local, p.ptsLocal, p.ptsVisitante],[p.visitante, p.ptsVisitante, p.ptsLocal]].forEach(([nombre, favor, contra])=>{
+      if(!nombre) return;
+      const slug = slugEquipoBasquet(nombre);
+      if(!stats[slug]) stats[slug] = { equipo: nombre, pj:0, g:0, p:0, pts:0 };
+      stats[slug].pj++;
+      if(favor > contra){ stats[slug].g++; stats[slug].pts += 2; }
+      else { stats[slug].p++; stats[slug].pts += 1; }
+    });
+  });
+
+  const segmento = torneo + '_' + subSeg;
+  const viejas = await fb.getAllByPrefix('basquet_posicion_' + segmento + '_');
+  for(const key of Object.keys(viejas)) await fb.del(key);
+  for(const slug in stats) await fb.set('basquet_posicion_' + segmento + '_' + slug, stats[slug]);
+
+  // Si se tocó una zona de Liga Cordobesa, la Tabla General de esa misma división también depende de este resultado
+  if(torneo === 'liga-cordobesa' && !esGeneralCordobesa && /_zona-/.test(subSeg)){
+    const div = subSeg.split('_zona-')[0];
+    await recalcularPosicionesBasquet(torneo, div + '_general');
   }
-  const preferido = filas.find(([,t])=>t.estado==='en-curso') || filas[0];
-  // Si el torneo actualmente elegido ya no existe (se borró), volvemos al preferido
-  const actual = filas.find(([k])=>k===torneoBasquetActual) ? torneoBasquetActual : preferido[0];
-  cont.innerHTML = filas.map(([k,t])=>`<button class="cat-btn${k===actual?' active':''}" data-torneo="${k}">${escapeHtml(t.nombre||'')}</button>`).join('');
-  torneoBasquetActual = actual;
-  poblarCategoriasBasquetPublico();
 }
 
-function poblarCategoriasBasquetPublico(){
-  const torneo = _torneosBasquetPublicoCache[torneoBasquetActual];
-  const cont = document.getElementById('categorias-row');
-  const cats = (torneo && Array.isArray(torneo.categorias)) ? torneo.categorias : [];
-  if(!cats.length){
-    cont.innerHTML = '<div class="placeholder">Este torneo no tiene divisiones cargadas</div>';
-    categoriaActual = '';
-  } else {
-    const sigueExistiendo = cats.some(c=>c.id===categoriaActual);
-    if(!sigueExistiendo) categoriaActual = cats[0].id;
-    cont.innerHTML = cats.map(c=>`<button class="cat-btn${c.id===categoriaActual?' active':''}" data-cat="${c.id}">${escapeHtml(c.nombre)}</button>`).join('');
-  }
-  cargarTodoBasquet();
-}
-
-function segmentoPublicoBasquet(){
-  const torneoId = (torneoBasquetActual||'').replace('basquet_torneo_','');
-  return torneoId + '_' + categoriaActual;
-}
 function cargarTodoBasquet(){
-  const seg = segmentoPublicoBasquet();
-  cargarFixture(seg);
-  cargarPosiciones(seg);
-  cargarAnotadores(seg);
-  cargarSanciones(seg);
+  cargarFixture(categoriaActual);
+  cargarSanciones(categoriaActual);
   cargarEquiposBasquet();
+  renderPosNav();
+  renderAnotNav();
 }
 
-// ── EQUIPOS (público) — tarjetas con Localidad/Liga, filtradas por Torneo/División ──
+// ── EQUIPOS (público) — tarjetas con Localidad/Liga ──────────────
 async function cargarEquiposBasquet(){
   const cont = document.getElementById('equipos-lista-basquet');
   cont.innerHTML = '<div class="placeholder">Cargando...</div>';
   const fb = await esperarFB();
   const datos = await fb.getAllByPrefix('basquet_equipo_');
   let filas = Object.values(datos);
-  if(torneoBasquetActual){
-    filas = filas.filter(eq => eq.torneo === torneoBasquetActual && (!categoriaActual || eq.division === categoriaActual));
-  }
   filas.sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||'', 'es'));
-  if(!filas.length){ cont.innerHTML = '<div class="placeholder">No hay equipos cargados para esta división</div>'; return; }
+  if(!filas.length){ cont.innerHTML = '<div class="placeholder">No hay equipos cargados</div>'; return; }
   cont.innerHTML = filas.map(eq => `
     <div class="equipo-card-basquet">
       ${eq.escudo ? `<img src="${eq.escudo}" alt="" class="equipo-card-escudo">` : '<div class="equipo-card-escudo equipo-card-escudo-vacio">🏀</div>'}
@@ -1717,65 +1952,6 @@ async function cargarEquiposBasquet(){
         <div class="equipo-card-nombre">${escapeHtml(eq.nombre||'')}</div>
         ${(eq.localidad || eq.liga) ? `<div class="equipo-card-meta">${[eq.localidad, eq.liga].filter(Boolean).map(escapeHtml).join(' · ')}</div>` : ''}
       </div>
-    </div>`).join('');
-}
-
-// ── Forma de disputa: texto descriptivo para mostrar al público ─
-function describirFormaDisputa(fd){
-  if(!fd || !fd.tipo) return '';
-  const fmtCruces = { unico:'partido único', 'ida-vuelta':'ida y vuelta', 'ida-vuelta-desempate':'ida y vuelta, con posible partido de desempate' };
-  if(fd.tipo === 'todos-contra-todos'){
-    return 'Todos contra todos' + (fd.vuelta === 'ida-vuelta' ? ' (ida y vuelta)' : ' (una vuelta)');
-  }
-  if(fd.tipo === 'grupos-playoffs'){
-    let t = `Fase de grupos (${fd.zonas || '-'} zonas${fd.equiposPorZona ? ', ' + escapeHtml(fd.equiposPorZona) + ' equipos' : ''}) + Playoffs`;
-    t += ` — clasifican ${fd.clasificadosDirectos || '-'} directos por zona`;
-    if(fd.repechaje){ t += `, más ${fd.repechajeAvanzan || '-'} de repechaje entre los puestos ${escapeHtml(fd.repechajeRango||'-')}`; }
-    t += `. Cruces a ${fmtCruces[fd.formatoCruces] || fd.formatoCruces}`;
-    return t;
-  }
-  if(fd.tipo === 'eliminacion-directa'){
-    return `Eliminación directa (${fd.cantEquipos || '-'} equipos) — ${fmtCruces[fd.formatoCruces] || fd.formatoCruces}`;
-  }
-  return '';
-}
-
-// ── TORNEOS (público) ───────────────────────────────────────────
-async function cargarTorneos(){
-  const cont = document.getElementById('torneos-lista');
-  cont.innerHTML = '<div class="placeholder">Cargando...</div>';
-  const fb = await esperarFB();
-  const datos = await fb.getAllByPrefix('basquet_torneo_');
-  const filas = Object.values(datos).sort((a,b)=>(b.orden||0)-(a.orden||0));
-  if(!filas.length){ cont.innerHTML = '<div class="placeholder">Todavía no hay torneos cargados</div>'; return; }
-  const etiquetaEstado = { 'en-curso':'En curso', 'proximo':'Próximo', 'finalizado':'Finalizado' };
-  cont.innerHTML = filas.map(t => `
-    <div class="card torneo-card">
-      <div class="torneo-top">
-        <div>
-          <div class="torneo-nombre">${escapeHtml(t.nombre||'')}</div>
-          ${t.edicion ? `<div class="torneo-edicion">Edición ${escapeHtml(t.edicion)}</div>` : ''}
-        </div>
-        <span class="torneo-estado ${t.estado||'proximo'}">${etiquetaEstado[t.estado] || 'Próximo'}</span>
-      </div>
-      <div class="torneo-meta">
-        ${t.inicio || t.fin ? `<b>Fechas:</b> ${escapeHtml(t.inicio||'-')} al ${escapeHtml(t.fin||'-')}<br>` : ''}
-        ${t.sede ? `<b>Sede:</b> ${escapeHtml(t.sede)}<br>` : ''}
-        ${t.clubes ? `<b>Clubes:</b> ${escapeHtml(t.clubes)}` : ''}
-      </div>
-      ${Array.isArray(t.categorias) && t.categorias.length ? `
-      <div class="torneo-meta" style="margin-top:8px">
-        <b>Divisiones:</b>
-        ${t.categorias.map(c => `<div style="margin-top:4px">• <b>${escapeHtml(c.nombre)}</b> — ${describirFormaDisputa(c.formaDisputa)}</div>`).join('')}
-      </div>` : ''}
-      ${t.campeon ? `
-        <div class="torneo-campeon">
-          ${t.campeonFoto ? `<img src="${escapeHtml(t.campeonFoto)}" alt="Campeón">` : ''}
-          <div class="torneo-campeon-txt">
-            <div class="label">Campeón</div>
-            <div class="nombre">${escapeHtml(t.campeon)}</div>
-          </div>
-        </div>` : ''}
     </div>`).join('');
 }
 
@@ -2451,7 +2627,7 @@ async function loginPoli(){
 
 // ── ADMIN: panel ─────────────────────────────────────────────
 const CATEGORIAS_ADMIN = {
-  basquet: null, // Básquetbol: las categorías salen del torneo elegido (ver poblarCategoriasAdminBasquet)
+  basquet: [['liga-cordobesa','Liga Cordobesa'],['interasociativo','Torneo Interasociativo'],['asociativo','Torneo Asociativo'],['formativas','Ligas Formativas'],['amistosos','Amistosos']],
   voley: [['primera','Primera'],['sub21','Sub 21'],['sub18','Sub 18'],['sub16','Sub 16'],['sub14','Sub 14']],
   handball: null, // única categoría (Primera) — no necesita selector
   // Hockey: las categorías dependen del certamen (torneos distintos)
@@ -2481,6 +2657,7 @@ const GENERO_OPCIONES_ADMIN = {
   padel: [['masculino','Masculino'],['femenino','Femenino']]
 };
 const GENERO_LABEL_ADMIN = { voley: 'Género', handball: 'Género', hockey: 'Certamen', tenis: 'Género', padel: 'Género' };
+const CATEGORIA_LABEL_ADMIN = { basquet: 'Torneo' }; // etiqueta del selector de categoría — Básquet lo usa para elegir a qué torneo pertenece
 
 function poblarCategoriasAdmin(){
   const dep = document.getElementById('admin-deporte').value;
@@ -2496,7 +2673,7 @@ function poblarCategoriasAdmin(){
   } else {
     opciones = config[document.getElementById('admin-genero').value]; // Hockey: depende del género/certamen
   }
-  catLabel.textContent = 'Categoría';
+  catLabel.textContent = CATEGORIA_LABEL_ADMIN[dep] || 'Categoría';
   catLabel.style.display = 'block';
   catSelect.style.display = 'block';
   catSelect.innerHTML = opciones.map(([v,l]) => `<option value="${v}">${l}</option>`).join('');
@@ -2520,20 +2697,15 @@ function cambiarDeporteAdmin(){
   if(mostrarCertamen) document.getElementById('admin-certamen').value = 'liga';
 
   const esBasquet = dep === 'basquet';
-  document.getElementById('admin-torneo-basquet-label').style.display = esBasquet ? 'block' : 'none';
-  document.getElementById('admin-torneo-basquet').style.display = esBasquet ? 'block' : 'none';
-  document.getElementById('ato-categorias-generico-wrap').style.display = esBasquet ? 'none' : 'block';
-  document.getElementById('ato-categorias-basquet-wrap').style.display = esBasquet ? 'block' : 'none';
   document.getElementById('aeq-basquet-extra').style.display = esBasquet ? 'grid' : 'none';
-  if(esBasquet){
-    _categoriasTorneoBasquet = [];
-    renderCategoriasTorneoBasquet();
-    poblarTorneosAdminBasquet(); // popula torneo, división, checklist de equipos y el selector de "Torneo que disputa" del equipo; llama a renderAdminListas()
-    poblarChecklistEquiposBasquet();
-  } else {
-    poblarCategoriasAdmin();
-    renderAdminListas();
-  }
+  document.getElementById('admin-seccion-torneos').style.display = esBasquet ? 'none' : 'block';
+  document.getElementById('admin-seccion-posiciones-manual').style.display = esBasquet ? 'none' : 'block';
+  document.getElementById('admin-seccion-posiciones-auto').style.display = esBasquet ? 'block' : 'none';
+
+  poblarCategoriasAdmin();
+  poblarNivelesBasquetForm('ap-b');
+  poblarNivelesBasquetForm('aan-b');
+  renderAdminListas();
 }
 function generoAdminCambio(){
   poblarCategoriasAdmin(); // Hockey: cambia también las categorías disponibles
@@ -2544,79 +2716,97 @@ function certamenAdminCambio(){
   renderAdminListas();
 }
 
-// ── Básquetbol admin: selector de Torneo → División (en vez de lista fija) ──
-let _torneosBasquetAdminCache = {};
-async function poblarTorneosAdminBasquet(){
-  const sel = document.getElementById('admin-torneo-basquet');
-  const selEq = document.getElementById('aeq-torneo');
-  const fb = await esperarFB();
-  const torneos = await fb.getAllByPrefix('basquet_torneo_');
-  _torneosBasquetAdminCache = torneos;
-  const filas = Object.entries(torneos).sort((a,b)=>(b[1].orden||0)-(a[1].orden||0));
-  const opciones = filas.map(([k,t]) => `<option value="${k}">${escapeHtml(t.nombre||'(sin nombre)')}</option>`).join('');
-  sel.innerHTML = filas.length ? opciones : '<option value="">Sin torneos cargados</option>';
-  const torneoEqPrevio = selEq.value;
-  selEq.innerHTML = '<option value="">Sin torneo asignado</option>' + opciones;
-  selEq.value = torneoEqPrevio; // conserva selección si seguía existiendo
-  poblarCategoriasAdminBasquet();
-  poblarDivisionesEquipoBasquet();
+// ── Básquet admin: niveles extra de los formularios "Agregar partido" y "Agregar anotador" ──
+// (Sanciones/Equipos siguen usando solo admin-categoria, plano; Partidos y Anotadores necesitan más
+//  profundidad — Partidos para que las Posiciones se calculen solas, Anotadores porque se pidió la misma navegación)
+// "prefix" es 'ap-b' (Partido) o 'aan-b' (Anotador) — ambos formularios comparten exactamente la misma lógica.
+async function poblarNivelesBasquetForm(prefix){
+  const wrap = document.getElementById(prefix === 'ap-b' ? 'ap-basquet-niveles' : 'aan-basquet-niveles');
+  if(prefijoAdmin() !== 'basquet'){ wrap.style.display = 'none'; return; }
+  const torneo = document.getElementById('admin-categoria').value;
+  const cfg = POS_BASQUET[torneo];
+  const selN2 = document.getElementById(prefix + '-nivel2');
+  const nuevoGrupoWrap = document.getElementById(prefix + '-nuevo-grupo');
+  if(!cfg || !cfg.nivel2){
+    wrap.style.display = 'none';
+    return;
+  }
+  wrap.style.display = 'block';
+  selN2.style.display = 'block';
+  selN2.innerHTML = cfg.nivel2.map(([v,l]) => `<option value="${v}">${l}</option>`).join('');
+  nuevoGrupoWrap.style.display = 'none';
+  await nivelesBasquetNivel2Cambio(prefix);
+}
+async function nivelesBasquetNivel2Cambio(prefix){
+  const torneo = document.getElementById('admin-categoria').value;
+  const cfg = POS_BASQUET[torneo];
+  const n2 = document.getElementById(prefix + '-nivel2').value;
+  const selN3 = document.getElementById(prefix + '-nivel3');
+  const nuevoGrupoWrap = document.getElementById(prefix + '-nuevo-grupo');
+  const tipoGrupoSel = document.getElementById(prefix + '-grupo-tipo');
+  if(torneo === 'liga-cordobesa' || torneo === 'asociativo'){
+    const opciones = (cfg.nivel3 && cfg.nivel3[n2]) || [];
+    selN3.style.display = 'block';
+    selN3.innerHTML = opciones.map(([v,l]) => `<option value="${v}">${l}</option>`).join('');
+    nuevoGrupoWrap.style.display = 'none';
+  } else if(torneo === 'interasociativo'){
+    selN3.style.display = 'none'; selN3.innerHTML = '';
+    nuevoGrupoWrap.style.display = 'none';
+  } else if(torneo === 'formativas'){
+    selN3.style.display = 'block';
+    tipoGrupoSel.style.display = (n2 === 'liga-desarrollo') ? 'block' : 'none';
+    nuevoGrupoWrap.style.display = 'flex';
+    await poblarGruposFormativasAdmin(n2, selN3);
+  }
   renderAdminListas();
 }
-function poblarCategoriasAdminBasquet(){
-  const torneoKey = document.getElementById('admin-torneo-basquet').value;
-  const torneo = _torneosBasquetAdminCache[torneoKey];
-  const catLabel = document.getElementById('admin-categoria-label');
-  const catSelect = document.getElementById('admin-categoria');
-  const cats = (torneo && Array.isArray(torneo.categorias)) ? torneo.categorias : [];
-  catLabel.textContent = 'División';
-  catLabel.style.display = 'block';
-  catSelect.style.display = 'block';
-  catSelect.innerHTML = cats.length
-    ? cats.map(c => `<option value="${c.id}">${escapeHtml(c.nombre)}</option>`).join('')
-    : '<option value="">Este torneo no tiene divisiones</option>';
+async function poblarGruposFormativasAdmin(liga, selN3){
+  const fb = await esperarFB();
+  const grupos = await fb.getAllByPrefix('basquet_grupo_' + liga + '_');
+  const filas = Object.entries(grupos).sort((a,b)=>(a[1].orden||0)-(b[1].orden||0));
+  selN3.innerHTML = filas.length
+    ? filas.map(([k,g]) => `<option value="${k.replace('basquet_grupo_'+liga+'_','')}">${escapeHtml(g.nombre)}${g.tipo==='cuadrangular'?' (Cuadrangular/Triangular)':''}</option>`).join('')
+    : '<option value="">Todavía no hay tiras/grupos creados</option>';
 }
-function torneoAdminBasquetCambio(){
-  poblarCategoriasAdminBasquet();
+async function agregarGrupoBasquet(prefix){
+  const torneo = document.getElementById('admin-categoria').value;
+  if(torneo !== 'formativas') return;
+  const liga = document.getElementById(prefix + '-nivel2').value;
+  const nombre = document.getElementById(prefix + '-grupo-nombre').value.trim();
+  if(!nombre){ alert('Escribí un nombre para la tira/grupo'); return; }
+  const tipo = (liga === 'liga-desarrollo') ? document.getElementById(prefix + '-grupo-tipo').value : 'tira';
+  const id = Date.now();
+  const fb = await esperarFB();
+  await fb.set('basquet_grupo_' + liga + '_' + id, { nombre, tipo, orden: id });
+  document.getElementById(prefix + '-grupo-nombre').value = '';
+  // las tiras/grupos son compartidos entre Partido y Anotador — refrescamos ambos formularios si están mostrando esa misma liga
+  for(const p of ['ap-b','aan-b']){
+    const selN2 = document.getElementById(p + '-nivel2');
+    if(selN2 && selN2.value === liga) await poblarGruposFormativasAdmin(liga, document.getElementById(p + '-nivel3'));
+  }
   renderAdminListas();
 }
-
-// ── Básquetbol: "Torneo que disputa" / "División" del formulario de Equipo ──
-function poblarDivisionesEquipoBasquet(){
-  const torneoKey = document.getElementById('aeq-torneo').value;
-  const torneo = _torneosBasquetAdminCache[torneoKey];
-  const selDiv = document.getElementById('aeq-division');
-  const cats = (torneo && Array.isArray(torneo.categorias)) ? torneo.categorias : [];
-  const divPrevia = selDiv.value;
-  selDiv.innerHTML = '<option value="">Sin división asignada</option>' + cats.map(c=>`<option value="${c.id}">${escapeHtml(c.nombre)}</option>`).join('');
-  selDiv.value = divPrevia;
-}
-function aeqTorneoCambio(){
-  poblarDivisionesEquipoBasquet();
-}
-
-// ── Básquetbol: checklist de equipos para asignar a una división del torneo ──
-let _equiposBasquetAdminCache = {};
-async function poblarChecklistEquiposBasquet(){
-  const fb = await esperarFB();
-  const equipos = await fb.getAllByPrefix('basquet_equipo_');
-  _equiposBasquetAdminCache = equipos;
-  const cont = document.getElementById('atc-equipos-checklist');
-  const filas = Object.entries(equipos).sort((a,b)=>(a[1].nombre||'').localeCompare(b[1].nombre||'','es'));
-  cont.innerHTML = filas.length
-    ? filas.map(([k,eq]) => `<label style="display:flex;align-items:center;gap:6px;padding:2px 0"><input type="checkbox" value="${k}" class="atc-equipo-chk"> ${escapeHtml(eq.nombre)}</label>`).join('')
-    : '<div class="placeholder">No hay equipos cargados todavía. Cargalos primero en la sección Equipos.</div>';
+// Sufijo de segmento (todo lo que va después de "<torneo>_") a partir de los selectores del formulario indicado
+// ('ap-b' = Agregar partido, 'aan-b' = Agregar anotador). Se usa para armar basquet_partido_.../subSeg
+// y la clave de basquet_posicion_<torneo>_<subSeg>_<equipo> / basquet_anotador_<torneo>_<subSeg>_<id>.
+function subSegmentoBasquetAdmin(prefix){
+  const torneo = document.getElementById('admin-categoria').value;
+  const cfg = POS_BASQUET[torneo];
+  if(!cfg || !cfg.nivel2) return '';
+  const n2 = document.getElementById(prefix + '-nivel2').value;
+  if(torneo === 'interasociativo') return n2;
+  if(torneo === 'formativas'){
+    const grupoId = document.getElementById(prefix + '-nivel3').value;
+    return grupoId ? (n2 + '_grupo-' + grupoId) : '';
+  }
+  const n3 = document.getElementById(prefix + '-nivel3').value;
+  return n3 ? (n2 + '_' + n3) : '';
 }
 
 // Prefijo Firestore ("basquet"/"voley"/"handball"/"hockey"/"tenis"/"padel") y segmento (categoría, género_categoría, género_certamen_categoría, o solo género)
 function prefijoAdmin(){ return document.getElementById('admin-deporte').value; }
 function segmentoAdmin(){
   const dep = prefijoAdmin();
-  if(dep === 'basquet'){
-    const torneoKey = document.getElementById('admin-torneo-basquet').value || '';
-    const torneoId = torneoKey.replace('basquet_torneo_','');
-    const cat = document.getElementById('admin-categoria').value || '';
-    return torneoId + '_' + cat;
-  }
   const tieneGenero = CON_GENERO[dep];
   const tieneCertamen = !!CON_CERTAMEN[dep];
   const tieneCategoria = !!CATEGORIAS_ADMIN[dep];
@@ -2648,7 +2838,7 @@ function refrescarPublico(dep){
   }
 }
 function refrescarPublicoTorneosNoticias(dep){
-  if(dep === 'basquet'){ cargarTorneos(); cargarNoticias(); poblarTorneosBasquetPublico(); }
+  if(dep === 'basquet'){ cargarNoticias(); }
   else if(dep === 'voley'){ cargarTorneosVoley(); cargarNoticiasVoley(); }
   else if(dep === 'handball'){ cargarTorneosHandball(); cargarNoticiasHandball(); }
   else if(dep === 'hockey'){ cargarTorneosHockey(); cargarNoticiasHockey(); }
@@ -2667,7 +2857,7 @@ function abrirAdminParaDeporte(dep){
 function cerrarAdminPoli(){
   document.getElementById('admin-overlay').classList.remove('open');
 }
-document.getElementById('admin-categoria').addEventListener('change', renderAdminListas);
+document.getElementById('admin-categoria').addEventListener('change', ()=>{ poblarNivelesBasquetForm('ap-b'); poblarNivelesBasquetForm('aan-b'); renderAdminListas(); });
 
 let _escudoB64Poli = '';
 let _escudoPreviewPromisePoli = null; // referencia a la compresión en curso, para poder esperarla
@@ -2729,9 +2919,6 @@ async function editarEquipoPoli(key){
   if(prefijoAdmin() === 'basquet'){
     document.getElementById('aeq-localidad').value = eq.localidad || '';
     document.getElementById('aeq-liga').value = eq.liga || '';
-    document.getElementById('aeq-torneo').value = eq.torneo || '';
-    poblarDivisionesEquipoBasquet();
-    document.getElementById('aeq-division').value = eq.division || '';
   }
   _escudoB64Poli = eq.escudo || '';
   if(eq.escudo){
@@ -2751,8 +2938,6 @@ function cancelarEdicionEquipoPoli(){
   if(prefijoAdmin() === 'basquet'){
     document.getElementById('aeq-localidad').value = '';
     document.getElementById('aeq-liga').value = '';
-    document.getElementById('aeq-torneo').value = '';
-    poblarDivisionesEquipoBasquet();
   }
   quitarEscudoPoli();
   document.getElementById('aeq-btn-guardar').textContent = '+ Agregar equipo';
@@ -2770,8 +2955,6 @@ async function agregarEquipoPoli(){
   if(dep === 'basquet'){
     datos.localidad = document.getElementById('aeq-localidad').value.trim();
     datos.liga = document.getElementById('aeq-liga').value.trim();
-    datos.torneo = document.getElementById('aeq-torneo').value || '';
-    datos.division = document.getElementById('aeq-division').value || '';
   }
   const ok = await fb.set(key, datos);
   if(!ok){
@@ -2783,8 +2966,6 @@ async function agregarEquipoPoli(){
   if(dep === 'basquet'){
     document.getElementById('aeq-localidad').value = '';
     document.getElementById('aeq-liga').value = '';
-    document.getElementById('aeq-torneo').value = '';
-    poblarDivisionesEquipoBasquet();
   }
   document.getElementById('aeq-btn-guardar').textContent = '+ Agregar equipo';
   document.getElementById('aeq-btn-cancelar').style.display = 'none';
@@ -2805,17 +2986,21 @@ async function agregarPartidoPoli(){
   const jugado = ptsLocalRaw !== '' && ptsVisitanteRaw !== '';
   const id = Date.now();
   const fb = await esperarFB();
-  await fb.set(dep + '_partido_' + seg + '_' + id, {
+  const datos = {
     local, visitante,
     ptsLocal: jugado ? Number(ptsLocalRaw) : null,
     ptsVisitante: jugado ? Number(ptsVisitanteRaw) : null,
     jugado, fecha, orden: id
-  });
+  };
+  let subSeg = '';
+  if(dep === 'basquet'){ subSeg = subSegmentoBasquetAdmin('ap-b'); datos.subSeg = subSeg; }
+  await fb.set(dep + '_partido_' + seg + '_' + id, datos);
   document.getElementById('ap-local').value = '';
   document.getElementById('ap-visitante').value = '';
   document.getElementById('ap-pts-local').value = '';
   document.getElementById('ap-pts-visitante').value = '';
   document.getElementById('ap-fecha').value = '';
+  if(dep === 'basquet' && jugado && subSeg) await recalcularPosicionesBasquet(seg, subSeg);
   renderAdminListas();
   refrescarPublico(dep);
 }
@@ -2841,7 +3026,14 @@ async function agregarPosicionPoli(){
 }
 
 async function agregarAnotadorPoli(){
-  const dep = prefijoAdmin(), seg = segmentoAdmin();
+  const dep = prefijoAdmin();
+  let seg = segmentoAdmin();
+  if(dep === 'basquet'){
+    const torneo = document.getElementById('admin-categoria').value;
+    const subSeg = subSegmentoBasquetAdmin('aan-b');
+    if(!subSeg){ alert('Elegí la Zona/Categoría/Tira arriba antes de agregar el anotador'); return; }
+    seg = torneo + '_' + subSeg;
+  }
   const nombre = document.getElementById('aan-nombre').value.trim();
   const equipo = document.getElementById('aan-equipo').value.trim();
   const pts = Number(document.getElementById('aan-pts').value || 0);
@@ -2874,74 +3066,6 @@ async function agregarSancionPoli(){
   refrescarPublico(dep);
 }
 
-// ── Básquetbol: constructor de categorías + forma de disputa dentro del torneo ──
-let _categoriasTorneoBasquet = [];
-
-function cambiarTipoFormaDisputa(){
-  const tipo = document.getElementById('atc-tipo').value;
-  document.getElementById('atc-campos-todos').style.display = tipo === 'todos-contra-todos' ? 'grid' : 'none';
-  document.getElementById('atc-campos-grupos').style.display = tipo === 'grupos-playoffs' ? 'grid' : 'none';
-  document.getElementById('atc-campos-eliminacion').style.display = tipo === 'eliminacion-directa' ? 'grid' : 'none';
-}
-function toggleRepechajeBasquet(){
-  document.getElementById('atc-campos-repechaje').style.display = document.getElementById('atc-repechaje').checked ? 'grid' : 'none';
-}
-function _slugCategoriaBasquet(nombre){
-  return (nombre||'').toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'') || ('cat-' + Date.now());
-}
-function agregarCategoriaTorneoBasquet(){
-  const nombre = document.getElementById('atc-nombre').value.trim();
-  if(!nombre){ alert('Completá el nombre de la división'); return; }
-  const tipo = document.getElementById('atc-tipo').value;
-  let formaDisputa = { tipo };
-  if(tipo === 'todos-contra-todos'){
-    formaDisputa.vuelta = document.getElementById('atc-vuelta').value;
-  } else if(tipo === 'grupos-playoffs'){
-    formaDisputa.zonas = document.getElementById('atc-zonas').value.trim();
-    formaDisputa.equiposPorZona = document.getElementById('atc-equipos-zona').value.trim();
-    formaDisputa.clasificadosDirectos = document.getElementById('atc-clasif-directos').value.trim();
-    formaDisputa.repechaje = document.getElementById('atc-repechaje').checked;
-    if(formaDisputa.repechaje){
-      formaDisputa.repechajeRango = document.getElementById('atc-repechaje-rango').value.trim();
-      formaDisputa.repechajeAvanzan = document.getElementById('atc-repechaje-avanzan').value.trim();
-    }
-    formaDisputa.formatoCruces = document.getElementById('atc-formato-cruces').value;
-  } else if(tipo === 'eliminacion-directa'){
-    formaDisputa.cantEquipos = document.getElementById('atc-cant-equipos-cuadro').value.trim();
-    formaDisputa.formatoCruces = document.getElementById('atc-formato-cruces-elim').value;
-  }
-  let id = _slugCategoriaBasquet(nombre);
-  // evitar ids duplicados dentro del mismo torneo
-  if(_categoriasTorneoBasquet.some(c=>c.id===id)) id = id + '-' + Date.now();
-  const equipoIds = Array.from(document.querySelectorAll('.atc-equipo-chk:checked')).map(chk=>chk.value);
-  _categoriasTorneoBasquet.push({ id, nombre, formaDisputa, equipoIds });
-  renderCategoriasTorneoBasquet();
-  // limpiar el sub-formulario para la próxima categoría
-  document.getElementById('atc-nombre').value = '';
-  document.getElementById('atc-zonas').value = '';
-  document.getElementById('atc-equipos-zona').value = '';
-  document.getElementById('atc-clasif-directos').value = '';
-  document.getElementById('atc-repechaje').checked = false;
-  document.getElementById('atc-repechaje-rango').value = '';
-  document.getElementById('atc-repechaje-avanzan').value = '';
-  document.getElementById('atc-cant-equipos-cuadro').value = '';
-  document.querySelectorAll('.atc-equipo-chk').forEach(chk=>chk.checked=false);
-  toggleRepechajeBasquet();
-}
-function quitarCategoriaTorneoBasquet(idx){
-  _categoriasTorneoBasquet.splice(idx,1);
-  renderCategoriasTorneoBasquet();
-}
-function renderCategoriasTorneoBasquet(){
-  const cont = document.getElementById('atc-lista-categorias');
-  if(!_categoriasTorneoBasquet.length){
-    cont.innerHTML = '<div class="placeholder">Todavía no agregaste categorías a este torneo</div>';
-    return;
-  }
-  cont.innerHTML = _categoriasTorneoBasquet.map((c,i) => `
-    <div class="admin-lista-row"><span><b>${escapeHtml(c.nombre)}</b> — ${describirFormaDisputa(c.formaDisputa)}<br><small style="color:var(--gris-claro)">${(c.equipoIds||[]).length} equipo${(c.equipoIds||[]).length===1?'':'s'} seleccionado${(c.equipoIds||[]).length===1?'':'s'}</small></span><button onclick="quitarCategoriaTorneoBasquet(${i})">Quitar</button></div>`).join('');
-}
-
 async function agregarTorneoPoli(){
   const dep = prefijoAdmin();
   const nombre = document.getElementById('ato-nombre').value.trim();
@@ -2950,13 +3074,7 @@ async function agregarTorneoPoli(){
   const inicio = document.getElementById('ato-inicio').value.trim();
   const fin = document.getElementById('ato-fin').value.trim();
   const sede = document.getElementById('ato-sede').value.trim();
-  let categorias;
-  if(dep === 'basquet'){
-    if(!_categoriasTorneoBasquet.length){ alert('Agregá al menos una división al torneo'); return; }
-    categorias = _categoriasTorneoBasquet;
-  } else {
-    categorias = document.getElementById('ato-categorias').value.trim();
-  }
+  const categorias = document.getElementById('ato-categorias').value.trim();
   const clubes = document.getElementById('ato-clubes').value.trim();
   const campeon = document.getElementById('ato-campeon').value.trim();
   const campeonFoto = document.getElementById('ato-campeon-foto').value.trim();
@@ -2965,23 +3083,7 @@ async function agregarTorneoPoli(){
   const fb = await esperarFB();
   const torneoKey = dep + '_torneo_' + id;
   await fb.set(torneoKey, { nombre, edicion, estado, inicio, fin, sede, categorias, clubes, campeon, campeonFoto, orden: id });
-  if(dep === 'basquet'){
-    // Asigna Torneo + División a cada equipo seleccionado en cada división
-    for(const cat of categorias){
-      for(const eqKey of (cat.equipoIds||[])){
-        const eqActual = _equiposBasquetAdminCache[eqKey];
-        if(!eqActual) continue;
-        await fb.set(eqKey, Object.assign({}, eqActual, { torneo: torneoKey, division: cat.id }));
-      }
-    }
-  }
   ['ato-nombre','ato-edicion','ato-inicio','ato-fin','ato-sede','ato-categorias','ato-clubes','ato-campeon','ato-campeon-foto'].forEach(id=>document.getElementById(id).value='');
-  if(dep === 'basquet'){
-    _categoriasTorneoBasquet = [];
-    renderCategoriasTorneoBasquet();
-    poblarTorneosAdminBasquet();
-    poblarChecklistEquiposBasquet();
-  }
   renderAdminListas();
   refrescarPublicoTorneosNoticias(dep);
 }
@@ -3003,7 +3105,15 @@ async function agregarNoticiaPoli(){
 
 async function borrarItemPoli(key, dep, tipo){
   const fb = await esperarFB();
+  let partidoBorrado = null;
+  if(dep === 'basquet' && tipo === 'partido'){
+    partidoBorrado = await fb.get(key);
+  }
   await fb.del(key);
+  if(partidoBorrado && partidoBorrado.subSeg){
+    const torneo = key.split('_partido_')[1].split('_')[0];
+    await recalcularPosicionesBasquet(torneo, partidoBorrado.subSeg);
+  }
   renderAdminListas();
   if(tipo === 'torneo' || tipo === 'noticia'){ refrescarPublicoTorneosNoticias(dep); }
   else { refrescarPublico(dep); }
@@ -3020,26 +3130,23 @@ async function renderAdminListas(){
     const eq = equipos[k];
     const escudoImg = eq.escudo ? `<img src="${eq.escudo}" alt="" style="width:20px;height:20px;object-fit:contain;border-radius:3px;vertical-align:middle;margin-right:6px">` : '';
     let extra = '';
-    if(dep === 'basquet' && (eq.torneo || eq.division || eq.localidad || eq.liga)){
-      const t = _torneosBasquetAdminCache[eq.torneo];
-      const cat = t && Array.isArray(t.categorias) ? t.categorias.find(c=>c.id===eq.division) : null;
-      const partes = [eq.localidad, eq.liga, t ? t.nombre : null, cat ? cat.nombre : null].filter(Boolean);
+    if(dep === 'basquet' && (eq.localidad || eq.liga)){
+      const partes = [eq.localidad, eq.liga].filter(Boolean);
       if(partes.length) extra = `<br><small style="color:var(--gris-claro)">${escapeHtml(partes.join(' · '))}</small>`;
     }
     return `<div class="admin-lista-row"><span>${escudoImg}${escapeHtml(eq.nombre)}${extra}</span><span><button onclick="editarEquipoPoli('${k}')" style="margin-right:6px">Editar</button><button onclick="borrarItemPoli('${k}','${dep}','equipo')">Borrar</button></span></div>`;
   }).join('') : '<div class="placeholder">Sin equipos cargados</div>';
   document.getElementById('datalist-equipos-poli').innerHTML =
     Object.values(equipos).map(eq => `<option value="${escapeHtml(eq.nombre)}">`).join('') ;
-  if(dep === 'basquet'){
-    // En Básquetbol el datalist se limita a los equipos del Torneo/División elegidos arriba
-    const torneoKey = document.getElementById('admin-torneo-basquet').value || '';
-    const catId = document.getElementById('admin-categoria').value || '';
-    const filtrados = Object.values(equipos).filter(eq => eq.torneo === torneoKey && (!catId || eq.division === catId));
-    document.getElementById('datalist-equipos-poli').innerHTML =
-      filtrados.map(eq => `<option value="${escapeHtml(eq.nombre)}">`).join('');
-  }
 
-  const partidos = await fb.getAllByPrefix(dep + '_partido_' + seg + '_');
+  let partidos;
+  if(dep === 'basquet'){
+    const todosPartidos = await fb.getAllByPrefix(dep + '_partido_' + seg + '_');
+    const subSegActual = subSegmentoBasquetAdmin('ap-b');
+    partidos = subSegActual ? Object.fromEntries(Object.entries(todosPartidos).filter(([,p])=>p.subSeg===subSegActual)) : todosPartidos;
+  } else {
+    partidos = await fb.getAllByPrefix(dep + '_partido_' + seg + '_');
+  }
   const listaFixture = document.getElementById('admin-lista-fixture');
   const keysP = Object.keys(partidos);
   listaFixture.innerHTML = keysP.length ? keysP.map(k => {
@@ -3048,21 +3155,40 @@ async function renderAdminListas(){
     return `<div class="admin-lista-row"><span>${escapeHtml(p.local)} vs ${escapeHtml(p.visitante)} (${marcador})</span><button onclick="borrarItemPoli('${k}','${dep}','partido')">Borrar</button></div>`;
   }).join('') : '<div class="placeholder">Sin partidos en esta categoría</div>';
 
-  const posiciones = await fb.getAllByPrefix(dep + '_posicion_' + seg + '_');
-  const listaPos = document.getElementById('admin-lista-posiciones');
-  const keysPos = Object.keys(posiciones);
-  listaPos.innerHTML = keysPos.length ? keysPos.map(k => {
-    const f = posiciones[k];
-    return `<div class="admin-lista-row"><span>${escapeHtml(f.equipo)} — PJ ${f.pj} · Pts ${f.pts}</span><button onclick="borrarItemPoli('${k}','${dep}','posicion')">Borrar</button></div>`;
-  }).join('') : '<div class="placeholder">Sin equipos cargados en esta categoría</div>';
+  if(dep === 'basquet'){
+    const subSegActual = subSegmentoBasquetAdmin('ap-b');
+    const listaAuto = document.getElementById('admin-lista-posiciones-auto');
+    if(!subSegActual){
+      listaAuto.innerHTML = '<div class="placeholder">Elegí Zona/Categoría/Tira arriba en "Agregar partido" para ver la tabla</div>';
+    } else {
+      const posBasquet = await fb.getAllByPrefix('basquet_posicion_' + seg + '_' + subSegActual + '_');
+      const filasPos = Object.values(posBasquet).sort((a,b)=>(b.pts||0)-(a.pts||0));
+      listaAuto.innerHTML = filasPos.length
+        ? filasPos.map(f => `<div class="admin-lista-row"><span>${escapeHtml(f.equipo)} — PJ ${f.pj} · G ${f.g} · P ${f.p} · Pts ${f.pts}</span></div>`).join('')
+        : '<div class="placeholder">Todavía no hay partidos jugados en esta selección</div>';
+    }
+  } else {
+    const posiciones = await fb.getAllByPrefix(dep + '_posicion_' + seg + '_');
+    const listaPos = document.getElementById('admin-lista-posiciones');
+    const keysPos = Object.keys(posiciones);
+    listaPos.innerHTML = keysPos.length ? keysPos.map(k => {
+      const f = posiciones[k];
+      return `<div class="admin-lista-row"><span>${escapeHtml(f.equipo)} — PJ ${f.pj} · Pts ${f.pts}</span><button onclick="borrarItemPoli('${k}','${dep}','posicion')">Borrar</button></div>`;
+    }).join('') : '<div class="placeholder">Sin equipos cargados en esta categoría</div>';
+  }
 
-  const anotadores = await fb.getAllByPrefix(dep + '_anotador_' + seg + '_');
+  let segAnot = seg;
+  if(dep === 'basquet'){
+    const subSegAnot = subSegmentoBasquetAdmin('aan-b');
+    segAnot = subSegAnot ? (seg + '_' + subSegAnot) : null;
+  }
+  const anotadores = segAnot ? await fb.getAllByPrefix(dep + '_anotador_' + segAnot + '_') : {};
   const listaAnot = document.getElementById('admin-lista-anotadores');
   const keysAnot = Object.keys(anotadores);
   listaAnot.innerHTML = keysAnot.length ? keysAnot.map(k => {
     const a = anotadores[k];
     return `<div class="admin-lista-row"><span>${escapeHtml(a.nombre)} (${escapeHtml(a.equipo||'-')}) — ${a.pts} pts</span><button onclick="borrarItemPoli('${k}','${dep}','anotador')">Borrar</button></div>`;
-  }).join('') : '<div class="placeholder">Sin anotadores cargados en esta categoría</div>';
+  }).join('') : `<div class="placeholder">${dep === 'basquet' && !segAnot ? 'Elegí Zona/Categoría/Tira arriba para ver los anotadores' : 'Sin anotadores cargados en esta categoría'}</div>`;
 
   const sanciones = await fb.getAllByPrefix(dep + '_sancion_' + seg + '_');
   const listaSanc = document.getElementById('admin-lista-sanciones');
