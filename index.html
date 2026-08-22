@@ -295,6 +295,34 @@
       }catch(e){ console.warn('FB getAllClubFotos error', e); return {}; }
     },
 
+    // ── FOTO DE FONDO DE ALINEACIÓN: un documento individual por alineación para evitar el límite de 1MB ──
+
+    // Guarda la foto de fondo de una alineación: /lrr/alinfoto_<id>
+    async setAlinFoto(id, base64){
+      try{
+        await setDoc(doc(db, COL, 'alinfoto_' + id), { value: base64 }, { merge: true });
+      }catch(e){ console.error('FB setAlinFoto error', id, e); }
+    },
+    // Borra la foto de fondo de una alineación
+    async delAlinFoto(id){
+      try{
+        await deleteDoc(doc(db, COL, 'alinfoto_' + id));
+      }catch(e){ console.warn('FB delAlinFoto error', id, e); }
+    },
+    // Lee todos los documentos alinfoto_* y reconstruye el mapa {id: base64}
+    async getAllAlinFotos(){
+      try{
+        const snap = await getDocs(collection(db, COL));
+        const result = {};
+        snap.forEach(d => {
+          if(d.id.startsWith('alinfoto_')){
+            result[d.id.slice(9)] = d.data().value;
+          }
+        });
+        return result;
+      }catch(e){ console.warn('FB getAllAlinFotos error', e); return {}; }
+    },
+
     // ── LOGO DE TORNEO: un documento individual por torneo para evitar el límite de 1MB ──
 
     // Guarda el logo de un torneo: /lrr/torneologo_<id>
@@ -575,7 +603,7 @@
       fbEscudosNuevo, fbTransferenciasNuevo, fbTransferenciasViejo, fbGolFotos,
       fbNoticiasNuevo, fbAmonestaciones, fbExpulsiones,
       fbExpedientesSan, fbActasSan, fbSancionesVigentes,
-      fbClubFotos, fbTorneoLogos, fbTorneoFotos
+      fbClubFotos, fbTorneoLogos, fbTorneoFotos, fbAlinFotos
     ] = await Promise.all([
       _trackCarga(window._fb.get('data')),
       _trackCarga(window._fb.get('escudos'), TIMEOUT_PESADO),
@@ -599,6 +627,7 @@
       _trackCarga(window._fb.getAllClubFotos(), TIMEOUT_PESADO),
       _trackCarga(window._fb.getAllTorneoLogos(), TIMEOUT_PESADO),
       _trackCarga(window._fb.getAllTorneoFotos(), TIMEOUT_PESADO),
+      _trackCarga(window._fb.getAllAlinFotos(), TIMEOUT_PESADO),
     ]);
 
 
@@ -610,6 +639,8 @@
     // Cache en memoria de logos y fotos de campeón de torneos (id → base64)
     window._torneoLogosCache = fbTorneoLogos || {};
     window._torneoFotosCache = fbTorneoFotos || {};
+    // Cache en memoria de fotos de fondo de alineaciones (id de alineación → base64)
+    window._alinFotosCache = fbAlinFotos || {};
 
     if(fbData)      { data = fbData; if(!data.playoff) data.playoff=[];
                       // Reincorporar fotos de goleadores (guardadas en docs individuales aparte)
@@ -4484,6 +4515,18 @@ table.posiciones td:nth-child(8){
         <div class="form-group">
           <label>Director Técnico</label>
           <input type="text" id="alin-dt" placeholder="Nombre del DT"/>
+        </div>
+
+        <div class="form-group">
+          <label>Foto de fondo (opcional) <span style="color:var(--gris);font-size:10px">— si no cargás una, se usa la foto de la ficha del club</span></label>
+          <div class="upload-area">
+            <input type="file" accept="image/*" id="alin-foto-file" onchange="alinPreviewFoto(this)"/>
+            <span class="icon">📸</span><p>Hacé clic o arrastrá la foto</p>
+          </div>
+          <div class="preview-wrap" id="alin-foto-wrap">
+            <img id="alin-foto-preview" src="" alt="" style="max-height:120px;object-fit:cover;object-position:top"/>
+            <button type="button" class="btn-quitar-img" onclick="quitarFotoAlineacion()">✕ Quitar</button>
+          </div>
         </div>
 
         <p style="font-size:11px;color:var(--dorado);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 6px">Titulares (11)</p>
@@ -13997,6 +14040,24 @@ const FORMACIONES = {
   '5-3-2':  {lineas:[1,5,3,2],   labels:['Arquero','Defensores','Mediocampistas','Delanteros']},
 };
 let _alinEditId = null; // id de la alineación en edición (null = nueva)
+let _alinFoto = '';         // base64 de la foto de fondo recién subida (pendiente de guardar)
+let _alinFotoEliminada = false;
+
+function alinPreviewFoto(input){
+  const file = input.files[0]; if(!file) return;
+  comprimirABase64(file, 900, 0.8).then(dataUrl=>{
+    _alinFoto = dataUrl;
+    _alinFotoEliminada = false;
+    const p=document.getElementById('alin-foto-preview'); if(p) p.src=_alinFoto;
+    const w=document.getElementById('alin-foto-wrap'); if(w) w.classList.add('visible');
+  });
+}
+function quitarFotoAlineacion(){
+  _alinFoto=''; _alinFotoEliminada=true;
+  const p=document.getElementById('alin-foto-preview'); if(p) p.src='';
+  const w=document.getElementById('alin-foto-wrap'); if(w) w.classList.remove('visible');
+  const f=document.getElementById('alin-foto-file'); if(f) f.value='';
+}
 
 function poblarSelectPartidoAlineacion(){
   const dl = document.getElementById('alin-partidos-datalist');
@@ -14046,6 +14107,9 @@ function alinLimpiarForm(){
   alinRenderSlots([]);
   document.querySelectorAll('#alin-suplentes-container .alin-sup-num').forEach(e=>e.value='');
   document.querySelectorAll('#alin-suplentes-container .alin-sup-nom').forEach(e=>e.value='');
+  _alinFoto=''; _alinFotoEliminada=false;
+  const fp=document.getElementById('alin-foto-preview'), fw=document.getElementById('alin-foto-wrap'), ff=document.getElementById('alin-foto-file');
+  if(fp) fp.src=''; if(fw) fw.classList.remove('visible'); if(ff) ff.value='';
   const btn = document.getElementById('alin-guardar-btn');
   if(btn) btn.textContent='Guardar alineación';
 }
@@ -14074,6 +14138,18 @@ function guardarAlineacion(){
     data.alineaciones.push(obj);
   }
   saveData(data);
+
+  // La foto de fondo se guarda aparte (documento individual), igual que las
+  // fotos de plantel de club, para no inflar el documento principal "data".
+  if(_alinFoto){
+    if(window._fb) window._fb.setAlinFoto(obj.id, _alinFoto);
+    if(!window._alinFotosCache) window._alinFotosCache={};
+    window._alinFotosCache[obj.id]=_alinFoto;
+  } else if(_alinFotoEliminada){
+    if(window._fb) window._fb.delAlinFoto(obj.id);
+    if(window._alinFotosCache) delete window._alinFotosCache[obj.id];
+  }
+
   alinLimpiarForm();
   renderAdminListaAlineaciones();
 }
@@ -14098,12 +14174,21 @@ function editarAlineacion(id){
   });
   const btn = document.getElementById('alin-guardar-btn');
   if(btn) btn.textContent='Guardar cambios';
+
+  _alinFoto=''; _alinFotoEliminada=false;
+  const fotoExistente = window._alinFotosCache ? window._alinFotosCache[id] : '';
+  const fp=document.getElementById('alin-foto-preview'), fw=document.getElementById('alin-foto-wrap'), ff=document.getElementById('alin-foto-file');
+  if(ff) ff.value='';
+  if(fotoExistente){ if(fp) fp.src=fotoExistente; if(fw) fw.classList.add('visible'); }
+  else { if(fp) fp.src=''; if(fw) fw.classList.remove('visible'); }
 }
 
 function eliminarAlineacion(id){
   pedirConfirmacion('¿Eliminar esta alineación?', function(){
     data.alineaciones = (data.alineaciones||[]).filter(a=>a.id!==id);
     saveData(data);
+    if(window._fb) window._fb.delAlinFoto(id);
+    if(window._alinFotosCache) delete window._alinFotosCache[id];
     renderAdminListaAlineaciones();
   });
 }
@@ -14144,16 +14229,47 @@ async function generarImagenAlineacionDesde(id){
 
   let y = await cvHeader(ctx, W, identidad, 0);
 
+  const tituloH = s(90);
+  const fotoSrc = (window._alinFotosCache && window._alinFotosCache[a.id])
+    || (window._clubFotosCache && window._clubFotosCache[normalizar(a.equipo)])
+    || '';
+  if(fotoSrc){
+    await new Promise(res=>{
+      const img = new Image();
+      img.onload = ()=>{
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, y, W, tituloH);
+        ctx.clip();
+        const iw = img.naturalWidth, ih = img.naturalHeight;
+        const scale = Math.max(W/iw, tituloH/ih);
+        const dw = iw*scale, dh = ih*scale;
+        const dx = (W-dw)/2, dy = y+(tituloH-dh)/2;
+        ctx.drawImage(img, dx, dy, dw, dh);
+        const g = ctx.createLinearGradient(0, y, 0, y+tituloH);
+        g.addColorStop(0, 'rgba(8,8,8,.25)');
+        g.addColorStop(0.6, 'rgba(8,8,8,.55)');
+        g.addColorStop(1, 'rgba(8,8,8,.9)');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, y, W, tituloH);
+        ctx.restore();
+        res();
+      };
+      img.onerror = ()=>res();
+      img.src = fotoSrc;
+    });
+  }
+
   ctx.fillStyle = C.DORADO;
   ctx.font = `${s(26)}px "Bebas Neue", Arial, sans-serif`;
   ctx.textAlign='center';
   const titulo = a.rival ? `${a.equipo} vs ${a.rival}` : a.equipo;
-  cvFillTextTrunc(ctx, titulo.toUpperCase(), W/2, y+s(32), W-s(60));
-  ctx.fillStyle='rgba(201,162,39,0.6)';
+  cvFillTextTrunc(ctx, titulo.toUpperCase(), W/2, y+s(38), W-s(60));
+  ctx.fillStyle='rgba(240,192,64,0.9)';
   ctx.font=`600 ${s(13)}px "DM Sans", Arial, sans-serif`;
   const sub = [a.formacion, a.fecha].filter(Boolean).join(' · ');
-  if(sub) ctx.fillText(sub, W/2, y+s(50));
-  y += s(64);
+  if(sub) ctx.fillText(sub, W/2, y+s(58));
+  y += tituloH;
 
   // Cancha
   const footerH = s(40);
