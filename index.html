@@ -14296,22 +14296,22 @@ async function generarImagenAlineacionDesde(id){
   }
   ctx.restore();
 
-  // Óvalo con la fecha, arriba a la izquierda sobre la foto
-  const ovalCx = s(58), ovalCy = s(46), ovalW = s(86), ovalH = s(52);
-  ctx.save();
-  ctx.translate(ovalCx, ovalCy);
-  ctx.rotate(-6*Math.PI/180);
-  ctx.beginPath();
-  ctx.ellipse(0, 0, ovalW/2, ovalH/2, 0, 0, Math.PI*2);
-  ctx.lineWidth = s(3);
-  ctx.strokeStyle = C.DORADO;
-  ctx.stroke();
-  ctx.fillStyle = C.DORADO;
-  ctx.font = `800 ${s(21)}px "Rajdhani", Arial, sans-serif`;
-  ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText(a.fecha ? a.fecha.replace(/^Fecha\s*/i,'F.') : '', 0, s(1));
-  ctx.textBaseline='alphabetic';
-  ctx.restore();
+  // Fecha, arriba a la izquierda sobre la foto: texto simple + línea dorada fina debajo
+  if(a.fecha){
+    ctx.save();
+    ctx.textAlign='left';
+    ctx.fillStyle = C.BLANCO;
+    ctx.font = `800 ${s(19)}px "Rajdhani", Arial, sans-serif`;
+    ctx.fillText(a.fecha.toUpperCase(), s(20), s(38));
+    const anchoTexto = ctx.measureText(a.fecha.toUpperCase()).width;
+    ctx.strokeStyle = C.DORADO;
+    ctx.lineWidth = s(2);
+    ctx.beginPath();
+    ctx.moveTo(s(20), s(46));
+    ctx.lineTo(s(20)+Math.min(anchoTexto, s(64)), s(46));
+    ctx.stroke();
+    ctx.restore();
+  }
 
   // ── Haz de luz diagonal muy sutil, detrás de todo el panel derecho ──
   ctx.save();
@@ -14327,14 +14327,37 @@ async function generarImagenAlineacionDesde(id){
   ctx.fillRect(-s(45), -CV_H*0.3, s(90), CV_H*1.3);
   ctx.restore();
 
-  // ── Escudos: propio y rival, arriba a la derecha ──
+  // ── Escudos: propio y rival, en cápsula de "vidrio esmerilado" arriba a la derecha ──
   const escSize = s(46);
   const escY = s(26);
+  const escPad = s(9);
+  const escX_der = W-s(24)-escSize;                    // rival (o el propio, si no hay rival)
+  const escX_izq = W-s(24)-escSize*2-s(10);             // propio, cuando hay rival
+
+  const capLeft = (a.rival ? escX_izq : escX_der) - escPad;
+  const capRight = escX_der + escSize + escPad;
+  const capTop = escY - escPad;
+  const capH = escSize + escPad*2;
+
+  ctx.fillStyle = 'rgba(10,10,10,.45)';
+  cvRoundRect(ctx, capLeft, capTop, capRight-capLeft, capH, capH/2);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(201,162,39,.4)';
+  ctx.lineWidth = 1;
+  cvRoundRect(ctx, capLeft, capTop, capRight-capLeft, capH, capH/2);
+  ctx.stroke();
+
   if(a.rival){
-    await cvDrawEscudo(ctx, a.rival, W-s(24)-escSize, escY, escSize);
-    await cvDrawEscudo(ctx, a.equipo, W-s(24)-escSize*2-s(10), escY, escSize);
+    const dividerX = escX_izq + escSize + s(5);
+    ctx.strokeStyle = 'rgba(201,162,39,.4)';
+    ctx.beginPath();
+    ctx.moveTo(dividerX, capTop+s(8));
+    ctx.lineTo(dividerX, capTop+capH-s(8));
+    ctx.stroke();
+    await cvDrawEscudo(ctx, a.rival, escX_der, escY, escSize);
+    await cvDrawEscudo(ctx, a.equipo, escX_izq, escY, escSize);
   } else {
-    await cvDrawEscudo(ctx, a.equipo, W-s(24)-escSize, escY, escSize);
+    await cvDrawEscudo(ctx, a.equipo, escX_der, escY, escSize);
   }
 
   // ── Lista de titulares: nombre y número alineados en columnas, estilo grilla ──
