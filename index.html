@@ -14323,49 +14323,52 @@ async function generarImagenAlineacionDesde(id){
     await cvDrawEscudo(ctx, a.equipo, W-s(24)-escSize, escY, escSize);
   }
 
-  // ── Lista de titulares: nombre grande + número, con línea divisoria ──
+  // ── Lista de titulares: nombre y número alineados en columnas, estilo grilla ──
   const listX = colW + s(18);
   const listW = W - listX - s(24);
-  let ly = escY + escSize + s(28);
-  const rowH = s(43);
+  const numColW = s(46);
+  const nameColRight = listX + listW - numColW - s(14);
+  const numColRight = listX + listW;
+  let ly = escY + escSize + s(24);
+  const rowH = s(36);
 
-  ctx.textAlign='left';
   (a.titulares||[]).slice(0,11).forEach(t=>{
-    ctx.font = `800 ${s(25)}px "Rajdhani", Arial, sans-serif`;
-    let nombreX = listX;
-    if(t.capitan){
-      ctx.fillStyle = C.DORADO;
-      ctx.fillText('© ', nombreX, ly);
-      nombreX += ctx.measureText('© ').width;
-    }
-    ctx.fillStyle = C.BLANCO;
-    cvFillTextTrunc(ctx, (t.nombre||'').toUpperCase(), nombreX, ly, listX+listW-nombreX-s(36));
     ctx.textAlign='right';
+    ctx.font = `800 ${s(23)}px "Rajdhani", Arial, sans-serif`;
+    ctx.fillStyle = C.BLANCO;
+    const nombre = (t.nombre||'').toUpperCase();
+    cvFillTextTrunc(ctx, nombre, nameColRight, ly, nameColRight-listX-(t.capitan?s(30):0));
+    if(t.capitan){
+      const nombreW = Math.min(ctx.measureText(nombre).width, nameColRight-listX-s(30));
+      ctx.fillStyle = C.DORADO;
+      ctx.fillText('©', nameColRight-nombreW-s(10), ly);
+    }
+
     ctx.fillStyle = C.DORADO;
-    ctx.font = `700 ${s(20)}px "Rajdhani", Arial, sans-serif`;
-    ctx.fillText(t.numero||'', listX+listW, ly);
-    ctx.textAlign='left';
+    ctx.font = `700 ${s(19)}px "Rajdhani", Arial, sans-serif`;
+    ctx.fillText(t.numero||'', numColRight, ly);
 
     ctx.strokeStyle = 'rgba(255,255,255,.08)';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(listX, ly+s(10));
-    ctx.lineTo(listX+listW, ly+s(10));
+    ctx.moveTo(listX, ly+s(9));
+    ctx.lineTo(listX+listW, ly+s(9));
     ctx.stroke();
 
     ly += rowH;
   });
 
   // ── Suplentes ──
-  ly += s(12);
+  ctx.textAlign='left';
+  ly += s(16);
   ctx.fillStyle = 'rgba(255,255,255,.4)';
-  ctx.font = `italic ${s(15)}px "DM Sans", Arial, sans-serif`;
+  ctx.font = `italic ${s(16)}px "DM Sans", Arial, sans-serif`;
   ctx.fillText('Suplentes', listX, ly);
-  ly += s(20);
-  ctx.fillStyle = 'rgba(255,255,255,.72)';
-  ctx.font = `600 ${s(14)}px "DM Sans", Arial, sans-serif`;
+  ly += s(24);
+  ctx.fillStyle = 'rgba(255,255,255,.8)';
+  ctx.font = `700 ${s(17)}px "DM Sans", Arial, sans-serif`;
   const supTxt = (a.suplentes||[]).map(sp=>(sp.nombre||'').toUpperCase()).join(', ');
-  cvWrapTexto(ctx, supTxt, listX, ly, listW, s(21), 3);
+  cvWrapTexto(ctx, supTxt, listX, ly, listW, s(25), 3);
 
   // DT, discreto al pie de la columna derecha
   ctx.fillStyle = 'rgba(255,255,255,.35)';
