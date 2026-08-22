@@ -536,6 +536,7 @@
       const adminOverlay = document.getElementById('admin-overlay');
       if(adminOverlay && adminOverlay.classList.contains('open')) closeAdmin();
     }
+    if(typeof window.actualizarBannerPolideportivo === 'function') window.actualizarBannerPolideportivo();
   });
 
   // ── Progreso real del splash ──────────────────────────────────
@@ -4615,8 +4616,8 @@ table.posiciones td:nth-child(8){
   </nav>
 </header>
 
-<!-- BANNER POLIDEPORTIVO (temporalmente deshabilitado — próximamente) -->
-<div class="banner-polideportivo banner-polideportivo--disabled" aria-label="Polideportivo, próximamente">
+<!-- BANNER POLIDEPORTIVO (deshabilitado para el público — próximamente; habilitado automáticamente para el admin logueado) -->
+<div id="banner-polideportivo" class="banner-polideportivo banner-polideportivo--disabled" aria-label="Polideportivo, próximamente">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18M5.2 5.2c2.3 2.3 3.4 4.5 3.4 6.8s-1.1 4.5-3.4 6.8M18.8 5.2c-2.3 2.3-3.4 4.5-3.4 6.8s1.1 4.5 3.4 6.8"/></svg>
   <span class="bp-texto">Descubrí <b>Polideportivo</b></span>
   <span class="bp-iconos" aria-hidden="true">
@@ -10909,6 +10910,27 @@ function abrirLogin(){
   document.getElementById('login-overlay').classList.add('open');
   setTimeout(()=>document.getElementById('login-email').focus(),100);
 }
+
+// Habilita el acceso al Polideportivo solo mientras haya una sesión de admin
+// activa (Firebase Auth). Para el público general sigue mostrando el badge
+// "Próximamente" y no hace nada al hacer clic.
+window.actualizarBannerPolideportivo = function(){
+  const el = document.getElementById('banner-polideportivo');
+  if(!el) return;
+  const esAdmin = !!window._fbUser;
+  const badge = el.querySelector('.bp-proximamente');
+  if(esAdmin){
+    el.classList.remove('banner-polideportivo--disabled');
+    el.style.cursor = 'pointer';
+    el.onclick = ()=>{ window.location.href = 'polideportivo.html'; };
+    if(badge) badge.textContent = 'Vista previa (admin)';
+  } else {
+    el.classList.add('banner-polideportivo--disabled');
+    el.style.cursor = 'default';
+    el.onclick = null;
+    if(badge) badge.textContent = 'Próximamente';
+  }
+};
 function closeLogin(){
   document.getElementById('login-overlay').classList.remove('open');
   document.getElementById('login-pass').value='';
@@ -14080,10 +14102,12 @@ function alinRenderSlots(datosExistentes){
   form.lineas.forEach((cant,li)=>{
     html += `<p style="font-size:11px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px;margin:8px 0 6px">${form.labels[li]||''}</p>`;
     for(let i=0;i<cant;i++){
-      const prev = previos[idx] || {numero:'',nombre:''};
-      html += `<div style="display:grid;grid-template-columns:52px 1fr;gap:8px;margin-bottom:6px">
+      const prev = previos[idx] || {numero:'',nombre:'',capitan:false};
+      const myIdx = idx;
+      html += `<div style="display:grid;grid-template-columns:52px 1fr 30px;gap:8px;margin-bottom:6px;align-items:center">
         <input type="text" inputmode="numeric" maxlength="2" placeholder="N°" value="${prev.numero||''}" class="alin-tit-num" style="text-align:center">
         <input type="text" placeholder="Nombre del jugador" value="${prev.nombre||''}" class="alin-tit-nom">
+        <label style="display:flex;flex-direction:column;align-items:center;font-size:9px;color:var(--dorado)"><input type="radio" name="alin-capitan" class="alin-tit-cap" value="${myIdx}" ${prev.capitan?'checked':''} style="margin:0 0 2px">C</label>
       </div>`;
       idx++;
     }
@@ -14094,7 +14118,9 @@ function alinRenderSlots(datosExistentes){
 function alinLeerTitularesActuales(){
   const nums = [...document.querySelectorAll('#alin-titulares-container .alin-tit-num')].map(e=>e.value);
   const noms = [...document.querySelectorAll('#alin-titulares-container .alin-tit-nom')].map(e=>e.value);
-  return nums.map((n,i)=>({numero:n,nombre:noms[i]||''}));
+  const capRadio = document.querySelector('#alin-titulares-container .alin-tit-cap:checked');
+  const capIdx = capRadio ? Number(capRadio.value) : -1;
+  return nums.map((n,i)=>({numero:n,nombre:noms[i]||'',capitan:i===capIdx}));
 }
 
 function alinLimpiarForm(){
@@ -14222,182 +14248,134 @@ async function generarImagenAlineacionDesde(id){
   const ctx = canvas.getContext('2d');
   ctx.textBaseline = 'alphabetic';
 
-  const bgGrad = ctx.createLinearGradient(0,0,0,CV_H);
-  bgGrad.addColorStop(0, C.NEG3); bgGrad.addColorStop(1, C.NEG);
-  ctx.fillStyle = bgGrad; ctx.fillRect(0,0,W,CV_H);
+  ctx.fillStyle = '#141414';
+  ctx.fillRect(0,0,W,CV_H);
 
-  // ── Barra dorada superior: liga + fecha ──
-  const goldBarH = s(28);
-  ctx.fillStyle = C.DORADO;
-  ctx.fillRect(0, 0, W, goldBarH);
-  ctx.fillStyle = C.NEG;
-  ctx.font = `700 ${s(12)}px "DM Sans", Arial, sans-serif`;
-  ctx.textAlign='left';
-  ctx.fillText((identidad.nombre||'LIGA REGIONAL').toUpperCase(), s(24), goldBarH/2+s(4));
-  if(a.fecha){
-    ctx.textAlign='right';
-    ctx.fillText(a.fecha.toUpperCase(), W-s(24), goldBarH/2+s(4));
-  }
-
-  // ── Nombre del equipo, rival y formación ──
-  const headerH = s(84);
-  ctx.textAlign='left';
-  ctx.fillStyle = C.BLANCO;
-  ctx.font = `700 ${s(27)}px "Rajdhani", Arial, sans-serif`;
-  cvFillTextTrunc(ctx, (a.equipo||'').toUpperCase(), s(24), goldBarH+s(38), W-s(48));
-  ctx.font = `500 ${s(15)}px "DM Sans", Arial, sans-serif`;
-  if(a.rival){
-    ctx.fillStyle = 'rgba(255,255,255,.45)';
-    ctx.fillText('vs', s(24), goldBarH+s(64));
-    const vsW = ctx.measureText('vs ').width;
-    ctx.fillStyle = 'rgba(255,255,255,.75)';
-    ctx.font = `600 ${s(16)}px "DM Sans", Arial, sans-serif`;
-    ctx.fillText(a.rival, s(24)+vsW, goldBarH+s(64));
-  }
-  if(a.formacion){
-    ctx.textAlign='right';
-    ctx.fillStyle = C.DORADO;
-    ctx.font = `600 ${s(15)}px "DM Sans", Arial, sans-serif`;
-    ctx.fillText(a.formacion, W-s(24), goldBarH+s(64));
-  }
-
-  const contentTop = goldBarH + headerH;
-  const footerH = s(58);
-  const contentH = CV_H - contentTop - footerH;
-
-  // ── Foto a la izquierda (propia de la alineación o, si no hay, la de la ficha del club) ──
   const colW = s(280);
+  const contentTop = 0;
+  const contentH = CV_H;
+  const cutInset = s(50); // cuánto se cierra el corte diagonal hacia la izquierda en la base
+
+  // ── Panel de foto con corte diagonal a la izquierda ──
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(0, contentTop);
+  ctx.lineTo(colW, contentTop);
+  ctx.lineTo(colW-cutInset, contentTop+contentH);
+  ctx.lineTo(0, contentTop+contentH);
+  ctx.closePath();
+  ctx.clip();
+
+  const fotoGrad = ctx.createLinearGradient(0,0,0,CV_H);
+  fotoGrad.addColorStop(0,'#3a3a40'); fotoGrad.addColorStop(1,'#151518');
+  ctx.fillStyle = fotoGrad;
+  ctx.fillRect(0,0,colW,CV_H);
+
   const fotoSrc = (window._alinFotosCache && window._alinFotosCache[a.id])
     || (window._clubFotosCache && window._clubFotosCache[normalizar(a.equipo)])
     || '';
-  ctx.fillStyle = '#232228';
-  ctx.fillRect(0, contentTop, colW, contentH);
   if(fotoSrc){
     await new Promise(res=>{
       const img = new Image();
       img.onload = ()=>{
-        ctx.save();
-        ctx.beginPath();
-        ctx.rect(0, contentTop, colW, contentH);
-        ctx.clip();
         const iw = img.naturalWidth, ih = img.naturalHeight;
-        const scale = Math.max(colW/iw, contentH/ih);
+        const scale = Math.max(colW/iw, CV_H/ih);
         const dw = iw*scale, dh = ih*scale;
-        const dx = (colW-dw)/2, dy = contentTop+(contentH-dh)/2;
+        const dx = (colW-dw)/2, dy = (CV_H-dh)/2;
         ctx.drawImage(img, dx, dy, dw, dh);
-        const g = ctx.createLinearGradient(0, contentTop, 0, contentTop+contentH);
-        g.addColorStop(0.55, 'rgba(0,0,0,0)');
-        g.addColorStop(1, 'rgba(0,0,0,.65)');
-        ctx.fillStyle = g;
-        ctx.fillRect(0, contentTop, colW, contentH);
-        ctx.restore();
         res();
       };
       img.onerror = ()=>res();
       img.src = fotoSrc;
     });
+  } else {
+    ctx.fillStyle = 'rgba(255,255,255,.13)';
+    ctx.font = `${s(120)}px "Rajdhani", Arial, sans-serif`;
+    ctx.textAlign='center';
+    ctx.fillText('⚽', colW*0.4, CV_H*0.7);
   }
-  const edgeGrad = ctx.createLinearGradient(0, contentTop, 0, contentTop+contentH);
-  edgeGrad.addColorStop(0, C.DORADO);
-  edgeGrad.addColorStop(1, 'rgba(201,162,39,.2)');
-  ctx.fillStyle = edgeGrad;
-  ctx.fillRect(colW-s(3), contentTop, s(3), contentH);
+  ctx.restore();
 
-  // ── Columna derecha: titulares numerados + suplentes ──
-  const rx = colW + s(20);
-  const rw = W - colW - s(44);
-  let ry = contentTop + s(20);
+  // Óvalo con la fecha, arriba a la izquierda sobre la foto
+  const ovalCx = s(58), ovalCy = s(46), ovalW = s(86), ovalH = s(52);
+  ctx.save();
+  ctx.translate(ovalCx, ovalCy);
+  ctx.rotate(-6*Math.PI/180);
+  ctx.beginPath();
+  ctx.ellipse(0, 0, ovalW/2, ovalH/2, 0, 0, Math.PI*2);
+  ctx.lineWidth = s(3);
+  ctx.strokeStyle = C.DORADO;
+  ctx.stroke();
+  ctx.fillStyle = C.DORADO;
+  ctx.font = `800 ${s(21)}px "Rajdhani", Arial, sans-serif`;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(a.fecha ? a.fecha.replace(/^Fecha\s*/i,'F.') : '', 0, s(1));
+  ctx.textBaseline='alphabetic';
+  ctx.restore();
+
+  // ── Escudos: propio y rival, arriba a la derecha ──
+  const escSize = s(46);
+  const escY = s(26);
+  if(a.rival){
+    await cvDrawEscudo(ctx, a.rival, W-s(24)-escSize, escY, escSize);
+    await cvDrawEscudo(ctx, a.equipo, W-s(24)-escSize*2-s(10), escY, escSize);
+  } else {
+    await cvDrawEscudo(ctx, a.equipo, W-s(24)-escSize, escY, escSize);
+  }
+
+  // ── Lista de titulares: nombre grande + número, con línea divisoria ──
+  const listX = colW + s(18);
+  const listW = W - listX - s(24);
+  let ly = escY + escSize + s(28);
+  const rowH = s(43);
 
   ctx.textAlign='left';
-  ctx.fillStyle = C.DORADO;
-  ctx.font = `600 ${s(13)}px "DM Sans", Arial, sans-serif`;
-  ctx.fillText('TITULARES', rx, ry);
-  ctx.strokeStyle = 'rgba(201,162,39,.3)';
-  ctx.lineWidth = 1;
-  const labelW = ctx.measureText('TITULARES').width;
-  ctx.beginPath();
-  ctx.moveTo(rx+labelW+s(10), ry-s(4));
-  ctx.lineTo(rx+rw, ry-s(4));
-  ctx.stroke();
-
-  ry += s(14);
-  const R = s(17);
-  const rowH = s(44);
   (a.titulares||[]).slice(0,11).forEach(t=>{
-    ry += rowH/2;
-    ctx.beginPath();
-    ctx.arc(rx+R, ry, R, 0, Math.PI*2);
-    ctx.fillStyle = C.DORADO;
-    ctx.fill();
-    ctx.fillStyle = C.NEG;
-    ctx.font = `700 ${s(14)}px "Rajdhani", Arial, sans-serif`;
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(t.numero||'', rx+R, ry+s(1));
-    ctx.textBaseline='alphabetic'; ctx.textAlign='left';
+    ctx.font = `800 ${s(25)}px "Rajdhani", Arial, sans-serif`;
+    let nombreX = listX;
+    if(t.capitan){
+      ctx.fillStyle = C.DORADO;
+      ctx.fillText('© ', nombreX, ly);
+      nombreX += ctx.measureText('© ').width;
+    }
     ctx.fillStyle = C.BLANCO;
-    ctx.font = `600 ${s(16)}px "DM Sans", Arial, sans-serif`;
-    cvFillTextTrunc(ctx, t.nombre||'', rx+R*2+s(12), ry+s(6), rw-R*2-s(12));
-    ry += rowH/2;
-  });
-
-  // ── Suplentes en chips ──
-  ry += s(14);
-  ctx.fillStyle = 'rgba(255,255,255,.5)';
-  ctx.font = `600 ${s(12)}px "DM Sans", Arial, sans-serif`;
-  ctx.fillText('SUPLENTES', rx, ry);
-  const labelW2 = ctx.measureText('SUPLENTES').width;
-  ctx.strokeStyle = 'rgba(255,255,255,.12)';
-  ctx.beginPath();
-  ctx.moveTo(rx+labelW2+s(10), ry-s(4));
-  ctx.lineTo(rx+rw, ry-s(4));
-  ctx.stroke();
-  ry += s(18);
-
-  const chipH = s(28);
-  const chipGap = s(8);
-  let cx = rx, cy = ry;
-  ctx.font = `500 ${s(13)}px "DM Sans", Arial, sans-serif`;
-  (a.suplentes||[]).forEach(sp=>{
-    const txt = `${sp.numero?sp.numero+' ':''}${sp.nombre}`;
-    const tw = ctx.measureText(txt).width;
-    const chipW = tw + s(20);
-    if(cx+chipW > rx+rw){ cx = rx; cy += chipH+chipGap; }
-    ctx.fillStyle = 'rgba(255,255,255,.07)';
-    cvRoundRect(ctx, cx, cy, chipW, chipH, chipH/2);
-    ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,.75)';
+    cvFillTextTrunc(ctx, (t.nombre||'').toUpperCase(), nombreX, ly, listX+listW-nombreX-s(36));
+    ctx.textAlign='right';
+    ctx.fillStyle = C.DORADO;
+    ctx.font = `700 ${s(20)}px "Rajdhani", Arial, sans-serif`;
+    ctx.fillText(t.numero||'', listX+listW, ly);
     ctx.textAlign='left';
-    ctx.fillText(txt, cx+s(10), cy+chipH/2+s(5));
-    cx += chipW + chipGap;
+
+    ctx.strokeStyle = 'rgba(255,255,255,.08)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(listX, ly+s(10));
+    ctx.lineTo(listX+listW, ly+s(10));
+    ctx.stroke();
+
+    ly += rowH;
   });
 
-  // ── Pie: DT + sitio ──
-  const footerY = CV_H - footerH;
-  ctx.strokeStyle = 'rgba(201,162,39,.25)';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(0, footerY);
-  ctx.lineTo(W, footerY);
-  ctx.stroke();
-  ctx.fillStyle = 'rgba(35,34,40,1)';
-  ctx.fillRect(0, footerY+1, W, footerH-1);
+  // ── Suplentes ──
+  ly += s(12);
+  ctx.fillStyle = 'rgba(255,255,255,.4)';
+  ctx.font = `italic ${s(15)}px "DM Sans", Arial, sans-serif`;
+  ctx.fillText('Suplentes', listX, ly);
+  ly += s(20);
+  ctx.fillStyle = 'rgba(255,255,255,.72)';
+  ctx.font = `600 ${s(14)}px "DM Sans", Arial, sans-serif`;
+  const supTxt = (a.suplentes||[]).map(sp=>(sp.nombre||'').toUpperCase()).join(', ');
+  cvWrapTexto(ctx, supTxt, listX, ly, listW, s(21), 3);
 
-  ctx.textAlign='left';
-  ctx.fillStyle = C.DORADO;
-  ctx.font = `600 ${s(12)}px "DM Sans", Arial, sans-serif`;
-  ctx.fillText('DIRECTOR TÉCNICO', s(24), footerY+footerH/2+s(5));
-  const dtLabelW = ctx.measureText('DIRECTOR TÉCNICO').width;
-  ctx.fillStyle = C.BLANCO;
-  ctx.font = `600 ${s(15)}px "DM Sans", Arial, sans-serif`;
-  cvFillTextTrunc(ctx, a.dt||'—', s(24)+dtLabelW+s(8), footerY+footerH/2+s(5), W-s(48)-dtLabelW-s(8)-s(150));
-  ctx.textAlign='right';
-  ctx.fillStyle = 'rgba(255,255,255,.3)';
+  // DT, discreto al pie de la columna derecha
+  ctx.fillStyle = 'rgba(255,255,255,.35)';
   ctx.font = `500 ${s(12)}px "DM Sans", Arial, sans-serif`;
-  ctx.fillText((identidad.nombre||'DEPORTEMAS').toUpperCase()+' · deportemas.pages.dev', W-s(24), footerY+footerH/2+s(5));
+  ctx.fillText(`DT ${a.dt||'—'}  ·  ${(identidad.nombre||'DEPORTEMAS').toUpperCase()}`, listX, CV_H-s(20));
 
   ctx.textAlign='left';
   return canvas;
 }
+
 
 // Envuelve texto en hasta maxLineas renglones (con "…" al final si no entra todo)
 function cvWrapTexto(ctx, text, x, y, maxW, lineH, maxLineas){
