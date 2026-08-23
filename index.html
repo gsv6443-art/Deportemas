@@ -14432,16 +14432,16 @@ async function generarImagenAlineacionDesde(id){
   // DT, más visible al pie de la columna derecha
   ctx.textAlign='left';
   ctx.fillStyle = C.DORADO;
-  ctx.font = `700 ${s(13)}px "DM Sans", Arial, sans-serif`;
+  ctx.font = `700 ${s(15)}px "DM Sans", Arial, sans-serif`;
   ctx.fillText('DT', listX, CV_H-s(20));
   const dtLabelW = ctx.measureText('DT').width;
   ctx.fillStyle = C.BLANCO;
-  ctx.font = `700 ${s(17)}px "Rajdhani", Arial, sans-serif`;
-  cvFillTextTrunc(ctx, a.dt||'—', listX+dtLabelW+s(8), CV_H-s(19), listW-dtLabelW-s(8)-s(140));
+  ctx.font = `700 ${s(24)}px "Rajdhani", Arial, sans-serif`;
+  cvFillTextTrunc(ctx, a.dt||'—', listX+dtLabelW+s(10), CV_H-s(18), listW-dtLabelW-s(10)-s(95));
 
   ctx.textAlign='right';
   ctx.fillStyle = 'rgba(255,255,255,.3)';
-  ctx.font = `500 ${s(11)}px "DM Sans", Arial, sans-serif`;
+  ctx.font = `500 ${s(10)}px "DM Sans", Arial, sans-serif`;
   ctx.fillText((identidad.nombre||'DEPORTEMAS').toUpperCase(), listX+listW, CV_H-s(20));
 
   ctx.textAlign='left';
