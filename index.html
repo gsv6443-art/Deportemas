@@ -14296,6 +14296,18 @@ async function generarImagenAlineacionDesde(id){
   }
   ctx.restore();
 
+  // Costura dorada con resplandor sobre el borde diagonal
+  ctx.save();
+  ctx.shadowColor = 'rgba(233,201,106,.85)';
+  ctx.shadowBlur = s(9);
+  ctx.strokeStyle = 'rgba(233,201,106,.75)';
+  ctx.lineWidth = s(1.5);
+  ctx.beginPath();
+  ctx.moveTo(colW, contentTop);
+  ctx.lineTo(colW-cutInset, contentTop+contentH);
+  ctx.stroke();
+  ctx.restore();
+
   // Fecha, arriba a la izquierda sobre la foto: texto simple + línea dorada fina debajo
   if(a.fecha){
     ctx.save();
@@ -14417,10 +14429,20 @@ async function generarImagenAlineacionDesde(id){
   const supTxt = (a.suplentes||[]).map(sp=>(sp.nombre||'').toUpperCase()).join(', ');
   cvWrapTexto(ctx, supTxt, listX, ly, listW, s(29), 3);
 
-  // DT, discreto al pie de la columna derecha
-  ctx.fillStyle = 'rgba(255,255,255,.35)';
-  ctx.font = `500 ${s(12)}px "DM Sans", Arial, sans-serif`;
-  ctx.fillText(`DT ${a.dt||'—'}  ·  ${(identidad.nombre||'DEPORTEMAS').toUpperCase()}`, listX, CV_H-s(20));
+  // DT, más visible al pie de la columna derecha
+  ctx.textAlign='left';
+  ctx.fillStyle = C.DORADO;
+  ctx.font = `700 ${s(13)}px "DM Sans", Arial, sans-serif`;
+  ctx.fillText('DT', listX, CV_H-s(20));
+  const dtLabelW = ctx.measureText('DT').width;
+  ctx.fillStyle = C.BLANCO;
+  ctx.font = `700 ${s(17)}px "Rajdhani", Arial, sans-serif`;
+  cvFillTextTrunc(ctx, a.dt||'—', listX+dtLabelW+s(8), CV_H-s(19), listW-dtLabelW-s(8)-s(140));
+
+  ctx.textAlign='right';
+  ctx.fillStyle = 'rgba(255,255,255,.3)';
+  ctx.font = `500 ${s(11)}px "DM Sans", Arial, sans-serif`;
+  ctx.fillText((identidad.nombre||'DEPORTEMAS').toUpperCase(), listX+listW, CV_H-s(20));
 
   ctx.textAlign='left';
   return canvas;
