@@ -291,6 +291,8 @@ header{
   padding:16px 18px;margin-bottom:12px;
 }
 .card-titulo{font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--accent);letter-spacing:.5px;margin-bottom:10px;}
+.fecha-sub-titulo{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gris);opacity:.75;margin:14px 0 4px;}
+.fecha-sub-titulo:first-of-type{margin-top:0;}
 
 /* Fixture */
 .partido-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--negro4);font-family:'Rajdhani',sans-serif;}
@@ -1303,6 +1305,13 @@ function activarTabPoli(dep, tab, actualizarHash){
   document.querySelectorAll('#vista-' + dep + ' .tab-panel').forEach(p=>{
     p.style.display = (p.dataset.panel === tab) ? 'block' : 'none';
   });
+  // La fila de torneos de "Partidos" en Básquetbol (#categorias-row) no está
+  // dentro de un .tab-panel, así que hay que ocultarla/mostrarla a mano
+  // para que no quede duplicada encima de Posiciones/Anotadores/etc.
+  if(dep === 'basquet'){
+    const catRow = document.getElementById('categorias-row');
+    if(catRow) catRow.style.display = (tab === 'fixture') ? 'flex' : 'none';
+  }
   cerrarSecciones(dep);
   if(actualizarHash !== false) _actualizarHashPoli(dep, tab);
 }
@@ -1534,21 +1543,136 @@ function escudoTagPoli(mapa, nombre){
   return esc ? `<img src="${esc}" alt="" class="escudo-mini-poli">` : '';
 }
 
+// Nombres reales de las tiras/grupos de Ligas Formativas (Firestore basquet_grupo_<liga>_<id>),
+// para mostrar un label legible en vez del id en el agrupador de Partidos
+async function nombresGruposFormativasBasquet(){
+  const fb = await esperarFB();
+  const mapa = {};
+  for(const liga of ['liga-formativa','liga-desarrollo']){
+    const grupos = await fb.getAllByPrefix('basquet_grupo_' + liga + '_');
+    Object.entries(grupos).forEach(([k,g])=>{
+      const id = k.replace('basquet_grupo_' + liga + '_', '');
+      mapa[liga + '_grupo-' + id] = g && g.nombre;
+    });
+  }
+  return mapa;
+}
+
+// Convierte el subSeg guardado (ej: "a_zona-1", "apertura_infantiles") en un
+// título legible para agrupar Partidos, usando la misma config que Posiciones
+function etiquetaSubSegBasquet(torneo, subSeg, nombresGrupos){
+  if(!subSeg) return '';
+  const cfg = POS_BASQUET[torneo];
+  const humanizar = s => s.replace(/[-_]/g,' ').replace(/\b\w/g, c=>c.toUpperCase());
+  if(!cfg) return humanizar(subSeg);
+  if(torneo === 'interasociativo'){
+    const item = (cfg.nivel2||[]).find(([v])=>v===subSeg);
+    return item ? item[1] : humanizar(subSeg);
+  }
+  if(torneo === 'liga-cordobesa'){
+    const m = subSeg.match(/^([ab])_(.+)$/);
+    if(!m) return humanizar(subSeg);
+    const [,div,resto] = m;
+    const n3 = (cfg.nivel3 && cfg.nivel3[div]) || [];
+    const restoItem = n3.find(([v])=>v===resto);
+    return 'Liga ' + div.toUpperCase() + ' · ' + (restoItem ? restoItem[1] : humanizar(resto));
+  }
+  if(torneo === 'asociativo'){
+    const partes = subSeg.split('_');
+    const fase = partes[0], cat = partes.slice(1).join('_');
+    const n2Item = (cfg.nivel2||[]).find(([v])=>v===fase);
+    const n3Item = ((cfg.nivel3 && cfg.nivel3[fase]) || []).find(([v])=>v===cat);
+    return (n2Item ? n2Item[1] : humanizar(fase)) + ' · ' + (n3Item ? n3Item[1] : humanizar(cat));
+  }
+  if(torneo === 'formativas'){
+    const m = subSeg.match(/^(liga-formativa|liga-desarrollo)_grupo-/);
+    const n2Item = m && (cfg.nivel2||[]).find(([v])=>v===m[1]);
+    const nombreTira = nombresGrupos && nombresGrupos[subSeg];
+    return (n2Item ? n2Item[1] : humanizar(subSeg)) + (nombreTira ? ' · ' + nombreTira : '');
+  }
+  return humanizar(subSeg);
+}
+
+// Orden natural de zonas/subSeg dentro de un torneo (en vez de alfabético,
+// que dejaría mal ubicada "Tabla General" o mezclaría A/B con Apertura/Clausura)
+function ordenSubSegBasquet(torneo, subSeg){
+  const cfg = POS_BASQUET[torneo];
+  if(!cfg) return 0;
+  if(torneo === 'interasociativo'){
+    const i = (cfg.nivel2||[]).findIndex(([v])=>v===subSeg);
+    return i<0 ? 999 : i;
+  }
+  if(torneo === 'liga-cordobesa'){
+    const m = subSeg.match(/^([ab])_(.+)$/);
+    if(!m) return 999;
+    const [,div,resto] = m;
+    const n3 = (cfg.nivel3 && cfg.nivel3[div]) || [];
+    const restoIdx = n3.findIndex(([v])=>v===resto);
+    return (div==='a'?0:100) + (restoIdx<0?99:restoIdx);
+  }
+  if(torneo === 'asociativo'){
+    const partes = subSeg.split('_');
+    const fase = partes[0], cat = partes.slice(1).join('_');
+    const faseIdx = (cfg.nivel2||[]).findIndex(([v])=>v===fase);
+    const catIdx = ((cfg.nivel3 && cfg.nivel3[fase]) || []).findIndex(([v])=>v===cat);
+    return (faseIdx<0?99:faseIdx)*100 + (catIdx<0?99:catIdx);
+  }
+  if(torneo === 'formativas'){
+    const m = subSeg.match(/^(liga-formativa|liga-desarrollo)_grupo-/);
+    const ligaIdx = m && (cfg.nivel2||[]).findIndex(([v])=>v===m[1]);
+    return (ligaIdx===null || ligaIdx<0) ? 999 : ligaIdx;
+  }
+  return 0;
+}
+
 async function cargarFixture(categoria){
   const cont = document.getElementById('fixture-lista');
   cont.innerHTML = '<div class="placeholder">Cargando...</div>';
   const fb = await esperarFB();
   const escudos = await mapaEscudosPoli('basquet');
   const datos = await fb.getAllByPrefix('basquet_partido_' + categoria + '_');
-  const filas = Object.values(datos).sort((a,b)=>(a.orden||0)-(b.orden||0));
+  const filas = Object.values(datos);
   if(!filas.length){ cont.innerHTML = '<div class="placeholder">Todavía no hay partidos cargados</div>'; return; }
-  cont.innerHTML = filas.map(p => `
+
+  const nombresGrupos = (categoria === 'formativas') ? await nombresGruposFormativasBasquet() : null;
+
+  // 1) Agrupar por Zona/subSeg
+  const porZona = {};
+  const ordenZonas = [];
+  filas.forEach(p=>{
+    const key = p.subSeg || '';
+    if(!porZona[key]){ porZona[key] = []; ordenZonas.push(key); }
+    porZona[key].push(p);
+  });
+  ordenZonas.sort((a,b)=> ordenSubSegBasquet(categoria,a) - ordenSubSegBasquet(categoria,b));
+
+  const partidoRowHTML = p => `
     <div class="partido-row">
       <div class="partido-equipo">${escudoTagPoli(escudos, p.local)}${escapeHtml(p.local||'')}</div>
       <div class="partido-resultado">${p.jugado ? (p.ptsLocal ?? '-') + ' - ' + (p.ptsVisitante ?? '-') : '—'}</div>
       <div class="partido-equipo" style="text-align:right">${escudoTagPoli(escudos, p.visitante)}${escapeHtml(p.visitante||'')}</div>
-    </div>`).join('') +
-    (filas[0]?.fecha ? `<div style="text-align:center;margin-top:8px"><span class="placeholder" style="padding:0">${escapeHtml(filas[filas.length-1].fecha||'')}</span></div>` : '');
+    </div>`;
+
+  cont.innerHTML = ordenZonas.map(zonaKey=>{
+    const partidosZona = porZona[zonaKey].slice().sort((a,b)=>(a.orden||0)-(b.orden||0));
+    const zonaLabel = etiquetaSubSegBasquet(categoria, zonaKey, nombresGrupos);
+
+    // 2) Dentro de la zona, agrupar por Fecha
+    const porFecha = {};
+    const ordenFechas = [];
+    partidosZona.forEach(p=>{
+      const f = p.fecha || 'Sin fecha';
+      if(!porFecha[f]){ porFecha[f] = []; ordenFechas.push(f); }
+      porFecha[f].push(p);
+    });
+
+    const cuerpo = ordenFechas.map(fecha=>
+      `<div class="fecha-sub-titulo">${escapeHtml(fecha)}</div>` +
+      porFecha[fecha].map(partidoRowHTML).join('')
+    ).join('');
+
+    return `<div class="card">${zonaLabel ? `<div class="card-titulo">${escapeHtml(zonaLabel)}</div>` : ''}${cuerpo}</div>`;
+  }).join('');
 }
 
 // ── POSICIONES (público) — navegación anidada específica de Básquet ──
