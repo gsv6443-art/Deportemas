@@ -41,6 +41,15 @@
         return snap.exists() ? snap.data().value : null;
       }catch(e){ console.warn('FBPoli get error', key, e); return null; }
     },
+    // Escucha cambios en tiempo real de un documento puntual. Devuelve la función
+    // para cancelar la suscripción (llamarla al dejar de necesitarla).
+    listen(key, callback){
+      try{
+        return onSnapshot(doc(db, COL, key), snap => {
+          callback(snap.exists() ? snap.data().value : null);
+        }, e => console.warn('FBPoli listen error', key, e));
+      }catch(e){ console.warn('FBPoli listen error', key, e); return ()=>{}; }
+    },
     async set(key, value){
       try{ await setDoc(doc(db, COL, key), { value }); return true; }
       catch(e){ console.error('FBPoli set error', key, e); return false; }
@@ -306,6 +315,20 @@ header{
 .equipo-card-meta{font-size:13px;color:var(--gris-claro);margin-top:2px;}
 .partido-resultado{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--accent-light);padding:0 14px;white-space:nowrap;}
 .partido-meta{font-size:11px;color:var(--gris);text-align:right;min-width:80px;}
+.partido-row.en-juego{background:rgba(255,60,60,.06);border-radius:8px;padding-left:8px;padding-right:8px;margin:2px 0;}
+.badge-en-vivo{display:inline-flex;align-items:center;gap:5px;background:#c0392b;color:#fff;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:11px;letter-spacing:.5px;text-transform:uppercase;padding:3px 8px;border-radius:20px;}
+.badge-en-vivo::before{content:'';width:6px;height:6px;border-radius:50%;background:#fff;animation:pulsoEnVivo 1.2s infinite;}
+@keyframes pulsoEnVivo{0%,100%{opacity:1}50%{opacity:.25}}
+.partido-en-juego-meta{display:flex;align-items:center;gap:8px;justify-content:flex-end;font-family:'Rajdhani',sans-serif;font-size:12px;color:var(--gris-claro);margin-top:2px;}
+.partido-cuarto{font-weight:700;color:var(--accent-light);}
+.partido-crono{font-variant-numeric:tabular-nums;}
+.estado-badge{display:inline-block;font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;padding:2px 7px;border-radius:5px;margin-left:6px}
+.estado-badge.pendiente{background:var(--negro4);color:var(--gris-claro)}
+.estado-badge.en-juego{background:#c0392b;color:#fff}
+.estado-badge.jugado{background:var(--accent);color:#111}
+.admin-crono-controles{display:flex;align-items:center;gap:6px;margin-top:6px;font-family:'Rajdhani',sans-serif;font-size:13px}
+.admin-crono-controles select{padding:2px 4px}
+.admin-crono-controles button{padding:3px 8px;font-size:12px}
 
 /* Posiciones */
 table.tabla-pos{width:100%;border-collapse:collapse;font-family:'Rajdhani',sans-serif;font-size:13px;}
@@ -555,6 +578,21 @@ body.bloqueado-poli .vista-deporte{display:none!important;}
           <button type="button" class="btn-primario" style="background:#555" onclick="agregarGrupoBasquet('ap-b')">+ Crear</button>
         </div>
       </div>
+      <div id="ap-basquet-estado" style="display:none;margin-bottom:8px">
+        <select id="ap-estado" class="admin-input" style="margin-bottom:6px" onchange="cambiarEstadoPartidoAdmin()">
+          <option value="pendiente">Pendiente</option>
+          <option value="en-juego">En juego</option>
+          <option value="jugado">Jugado</option>
+        </select>
+        <select id="ap-cuarto" class="admin-input" style="display:none">
+          <option value="1">1er cuarto</option>
+          <option value="2">2do cuarto</option>
+          <option value="3">3er cuarto</option>
+          <option value="4">4to cuarto</option>
+          <option value="entretiempo">Entretiempo</option>
+          <option value="prorroga">Prórroga</option>
+        </select>
+      </div>
       <div class="admin-grid">
         <input type="text" id="ap-local" class="admin-input" placeholder="Equipo local" list="datalist-equipos-poli">
         <input type="text" id="ap-visitante" class="admin-input" placeholder="Equipo visitante" list="datalist-equipos-poli">
@@ -562,7 +600,8 @@ body.bloqueado-poli .vista-deporte{display:none!important;}
         <input type="number" id="ap-pts-visitante" class="admin-input" placeholder="Pts. visitante">
         <input type="text" id="ap-fecha" class="admin-input" placeholder="Fecha (ej: Fecha 6, 10/08)" style="grid-column:1/-1">
       </div>
-      <button class="btn-primario" style="margin-top:8px" onclick="agregarPartidoPoli()">+ Agregar partido</button>
+      <button class="btn-primario" style="margin-top:8px" id="ap-btn-guardar" onclick="agregarPartidoPoli()">+ Agregar partido</button>
+      <button class="btn-primario" style="margin-top:8px;display:none;background:#555" id="ap-btn-cancelar" onclick="cancelarEdicionPartidoPoli()">Cancelar edición</button>
       <div class="admin-lista" id="admin-lista-fixture"></div>
     </div>
 
@@ -712,7 +751,8 @@ body.bloqueado-poli .vista-deporte{display:none!important;}
     <span></span><span></span><span></span>
   </button>
   <div class="tabs-row" id="tabs-row">
-    <button class="tab-btn active" data-tab="fixture">Partidos</button>
+    <button class="tab-btn active" data-tab="fixture">Fixture</button>
+    <button class="tab-btn" data-tab="resultados">Resultados</button>
     <button class="tab-btn" data-tab="posiciones">Posiciones</button>
     <button class="tab-btn" data-tab="anotadores">Máx. anotadores</button>
     <button class="tab-btn" data-tab="equipos">Equipos</button>
@@ -727,12 +767,14 @@ body.bloqueado-poli .vista-deporte{display:none!important;}
     <button class="cat-btn" data-cat="amistosos">Amistosos</button>
   </div>
 
-  <!-- Tab: Partidos -->
+  <!-- Tab: Fixture (partidos pendientes y en juego) -->
   <div class="tab-panel" data-panel="fixture">
-    <div class="card">
-      <div class="card-titulo">Partidos</div>
-      <div id="fixture-lista"><div class="placeholder">Cargando...</div></div>
-    </div>
+    <div id="fixture-lista"><div class="placeholder">Cargando...</div></div>
+  </div>
+
+  <!-- Tab: Resultados (partidos ya jugados) -->
+  <div class="tab-panel" data-panel="resultados" style="display:none">
+    <div id="resultados-lista"><div class="placeholder">Cargando...</div></div>
   </div>
 
   <!-- Tab: Posiciones -->
@@ -1310,7 +1352,7 @@ function activarTabPoli(dep, tab, actualizarHash){
   // para que no quede duplicada encima de Posiciones/Anotadores/etc.
   if(dep === 'basquet'){
     const catRow = document.getElementById('categorias-row');
-    if(catRow) catRow.style.display = (tab === 'fixture') ? 'flex' : 'none';
+    if(catRow) catRow.style.display = (tab === 'fixture' || tab === 'resultados') ? 'flex' : 'none';
   }
   cerrarSecciones(dep);
   if(actualizarHash !== false) _actualizarHashPoli(dep, tab);
@@ -1383,6 +1425,9 @@ function volverLanding(_fromHash){
   document.getElementById('body-poli').classList.add('tema-landing');
   document.querySelectorAll('.tabs-row').forEach(t=>t.classList.remove('open'));
   document.querySelectorAll('.hamburger-secciones').forEach(b=>b.classList.remove('open'));
+  // Cortar las suscripciones en vivo de Básquet al salir, para no dejarlas corriendo de fondo
+  _unsubsBasquetFixture.forEach(unsub=>unsub());
+  _unsubsBasquetFixture = [];
   if(!_fromHash){
     try{ if(location.hash) history.pushState(null, '', location.pathname + location.search); }catch(e){}
   }
@@ -1625,16 +1670,29 @@ function ordenSubSegBasquet(torneo, subSeg){
   return 0;
 }
 
-async function cargarFixture(categoria){
-  const cont = document.getElementById('fixture-lista');
+const CUARTO_LABELS_BASQUET = {'1':'1er cuarto','2':'2do cuarto','3':'3er cuarto','4':'4to cuarto','entretiempo':'Entretiempo','prorroga':'Prórroga'};
+function estadoPartidoBasquet(p){ return p.estado || (p.jugado ? 'jugado' : 'pendiente'); }
+
+async function cargarFixture(categoria, modo){
+  modo = modo || 'fixture'; // 'fixture' = pendientes + en juego · 'resultados' = jugados
+  const cont = document.getElementById(modo === 'resultados' ? 'resultados-lista' : 'fixture-lista');
   cont.innerHTML = '<div class="placeholder">Cargando...</div>';
   const fb = await esperarFB();
   const escudos = await mapaEscudosPoli('basquet');
   const datos = await fb.getAllByPrefix('basquet_partido_' + categoria + '_');
-  const filas = Object.values(datos);
-  if(!filas.length){ cont.innerHTML = '<div class="placeholder">Todavía no hay partidos cargados</div>'; return; }
+  const filas = Object.entries(datos)
+    .map(([k,p]) => Object.assign({_key:k}, p))
+    .filter(p => modo === 'resultados' ? estadoPartidoBasquet(p) === 'jugado' : estadoPartidoBasquet(p) !== 'jugado');
+  if(!filas.length){
+    cont.innerHTML = `<div class="placeholder">${modo === 'resultados' ? 'Todavía no hay resultados cargados' : 'No hay partidos pendientes en esta categoría'}</div>`;
+    return;
+  }
 
   const nombresGrupos = (categoria === 'formativas') ? await nombresGruposFormativasBasquet() : null;
+
+  // Cronómetros de los partidos en juego, para mostrarlos ya arrancados
+  const keysEnJuego = filas.filter(p=>estadoPartidoBasquet(p)==='en-juego').map(p=>p._key);
+  if(keysEnJuego.length) await precargarCronosBasquet(keysEnJuego);
 
   // 1) Agrupar por Zona/subSeg
   const porZona = {};
@@ -1646,12 +1704,30 @@ async function cargarFixture(categoria){
   });
   ordenZonas.sort((a,b)=> ordenSubSegBasquet(categoria,a) - ordenSubSegBasquet(categoria,b));
 
-  const partidoRowHTML = p => `
+  const partidoRowHTML = p => {
+    const estado = estadoPartidoBasquet(p);
+    if(estado === 'en-juego'){
+      return `
+      <div class="partido-row en-juego">
+        <div class="partido-equipo">${escudoTagPoli(escudos, p.local)}${escapeHtml(p.local||'')}</div>
+        <div>
+          <div class="partido-resultado" id="marcador-pub-basquet-${p._key}">${p.ptsLocal ?? 0} - ${p.ptsVisitante ?? 0}</div>
+          <div class="partido-en-juego-meta">
+            <span class="badge-en-vivo">En vivo</span>
+            <span class="partido-cuarto" id="cuarto-pub-basquet-${p._key}">${CUARTO_LABELS_BASQUET[p.cuarto] || ''}</span>
+            <span class="partido-crono" id="crono-pub-basquet-${p._key}">${formatCronoBasquet(cronoBasquetSegundosSync(p._key))}</span>
+          </div>
+        </div>
+        <div class="partido-equipo" style="text-align:right">${escudoTagPoli(escudos, p.visitante)}${escapeHtml(p.visitante||'')}</div>
+      </div>`;
+    }
+    return `
     <div class="partido-row">
       <div class="partido-equipo">${escudoTagPoli(escudos, p.local)}${escapeHtml(p.local||'')}</div>
-      <div class="partido-resultado">${p.jugado ? (p.ptsLocal ?? '-') + ' - ' + (p.ptsVisitante ?? '-') : '—'}</div>
+      <div class="partido-resultado">${estado === 'jugado' ? (p.ptsLocal ?? '-') + ' - ' + (p.ptsVisitante ?? '-') : 'VS'}</div>
       <div class="partido-equipo" style="text-align:right">${escudoTagPoli(escudos, p.visitante)}${escapeHtml(p.visitante||'')}</div>
     </div>`;
+  };
 
   cont.innerHTML = ordenZonas.map(zonaKey=>{
     const partidosZona = porZona[zonaKey].slice().sort((a,b)=>(a.orden||0)-(b.orden||0));
@@ -1673,6 +1749,38 @@ async function cargarFixture(categoria){
 
     return `<div class="card">${zonaLabel ? `<div class="card-titulo">${escapeHtml(zonaLabel)}</div>` : ''}${cuerpo}</div>`;
   }).join('');
+  if(keysEnJuego.length) arrancarTickBasquet();
+
+  // Suscripción en tiempo real: mientras esta pestaña esté mostrando el Fixture,
+  // los partidos "En juego" actualizan marcador/cuarto solos, sin recargar la página
+  if(modo === 'fixture'){
+    _unsubsBasquetFixture.forEach(unsub=>unsub());
+    _unsubsBasquetFixture = [];
+    keysEnJuego.forEach(key=>{
+      _unsubsBasquetFixture.push(fb.listen(key, nuevoVal => actualizarPartidoEnVivoPublico(key, nuevoVal)));
+      _unsubsBasquetFixture.push(fb.listen('crono_' + key, cronoVal => {
+        if(cronoVal) _cronosBasquetCache[key] = cronoVal; else delete _cronosBasquetCache[key];
+        if(cronoVal && cronoVal.corriendo) arrancarTickBasquet();
+        const elCrono = document.getElementById('crono-pub-basquet-' + key);
+        if(elCrono) elCrono.textContent = formatCronoBasquet(cronoBasquetSegundosSync(key));
+      }));
+    });
+  }
+}
+let _unsubsBasquetFixture = [];
+// Se dispara cuando cambia en Firestore un partido que estaba en vivo en pantalla
+function actualizarPartidoEnVivoPublico(key, p){
+  if(!p) return; // el partido fue borrado
+  if(estadoPartidoBasquet(p) !== 'en-juego'){
+    // pasó a Jugado o volvió a Pendiente: cambia de sección, así que recargamos ambas listas
+    cargarFixture(categoriaActual, 'fixture');
+    cargarFixture(categoriaActual, 'resultados');
+    return;
+  }
+  const elMarcador = document.getElementById('marcador-pub-basquet-' + key);
+  if(elMarcador) elMarcador.textContent = (p.ptsLocal ?? 0) + ' - ' + (p.ptsVisitante ?? 0);
+  const elCuarto = document.getElementById('cuarto-pub-basquet-' + key);
+  if(elCuarto) elCuarto.textContent = CUARTO_LABELS_BASQUET[p.cuarto] || '';
 }
 
 // ── POSICIONES (público) — navegación anidada específica de Básquet ──
@@ -1988,6 +2096,80 @@ async function cargarAnotadores(categoria){
 function slugEquipoBasquet(nombre){
   return (nombre||'').toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'') || 'equipo';
 }
+// ============================================================
+// CRONÓMETRO EN VIVO (Básquet) — un registro por partido, guardado
+// en Firestore bajo la clave "crono_<clave del partido>"
+// ============================================================
+let _cronosBasquetCache = {}; // clave del partido -> {corriendo, inicio, base}
+
+async function precargarCronosBasquet(keys){
+  const fb = await esperarFB();
+  for(const k of keys){
+    const c = await fb.get('crono_' + k);
+    if(c) _cronosBasquetCache[k] = c;
+  }
+}
+function cronoBasquetSegundosSync(pid){
+  const c = _cronosBasquetCache[pid];
+  if(!c) return 0;
+  if(c.corriendo) return (c.base||0) + Math.floor((Date.now() - c.inicio) / 1000);
+  return c.base || 0;
+}
+function formatCronoBasquet(seg){
+  const m = Math.floor(seg/60), s = seg%60;
+  return String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+}
+async function cronoBasquetIniciar(pid){
+  const fb = await esperarFB();
+  const base = cronoBasquetSegundosSync(pid);
+  const c = { corriendo: true, inicio: Date.now(), base };
+  _cronosBasquetCache[pid] = c;
+  await fb.set('crono_' + pid, c);
+  arrancarTickBasquet();
+  renderAdminListas();
+}
+async function cronoBasquetPausar(pid){
+  const fb = await esperarFB();
+  const c = { corriendo: false, inicio: Date.now(), base: cronoBasquetSegundosSync(pid) };
+  _cronosBasquetCache[pid] = c;
+  await fb.set('crono_' + pid, c);
+  renderAdminListas();
+}
+async function cronoBasquetReset(pid){
+  const fb = await esperarFB();
+  delete _cronosBasquetCache[pid];
+  await fb.del('crono_' + pid);
+  renderAdminListas();
+}
+let _tickBasquet = null;
+function arrancarTickBasquet(){
+  if(_tickBasquet) return;
+  _tickBasquet = setInterval(()=>{
+    let activos = false;
+    Object.keys(_cronosBasquetCache).forEach(pid=>{
+      const c = _cronosBasquetCache[pid];
+      if(!c || !c.corriendo) return;
+      activos = true;
+      const seg = cronoBasquetSegundosSync(pid);
+      const elAdm = document.getElementById('crono-adm-basquet-' + pid);
+      if(elAdm) elAdm.textContent = formatCronoBasquet(seg);
+      const elPub = document.getElementById('crono-pub-basquet-' + pid);
+      if(elPub) elPub.textContent = formatCronoBasquet(seg);
+    });
+    if(!activos){ clearInterval(_tickBasquet); _tickBasquet = null; }
+  }, 1000);
+}
+// Cambiar el cuarto de un partido en juego sin pasar por el formulario completo de edición
+async function cambiarCuartoPartidoLive(pid, cuarto){
+  const fb = await esperarFB();
+  const p = await fb.get(pid);
+  if(!p) return;
+  p.cuarto = cuarto;
+  const ok = await fb.set(pid, p);
+  if(!ok){ alert('⚠ No se pudo guardar el cambio de cuarto. Revisá tu conexión e intentá de nuevo.'); return; }
+  refrescarPublico('basquet');
+}
+
 async function recalcularPosicionesBasquet(torneo, subSeg){
   if(!subSeg) return;
   const fb = await esperarFB();
@@ -2024,7 +2206,8 @@ async function recalcularPosicionesBasquet(torneo, subSeg){
 }
 
 function cargarTodoBasquet(){
-  cargarFixture(categoriaActual);
+  cargarFixture(categoriaActual, 'fixture');
+  cargarFixture(categoriaActual, 'resultados');
   cargarEquiposBasquet();
   renderPosNav();
   renderAnotNav();
@@ -2796,6 +2979,8 @@ function cambiarDeporteAdmin(){
   document.getElementById('admin-seccion-posiciones-manual').style.display = esBasquet ? 'none' : 'block';
   document.getElementById('admin-seccion-posiciones-auto').style.display = esBasquet ? 'block' : 'none';
   document.getElementById('admin-seccion-sanciones').style.display = esBasquet ? 'none' : 'block';
+  document.getElementById('ap-basquet-estado').style.display = esBasquet ? 'block' : 'none';
+  cancelarEdicionPartidoPoli();
 
   poblarCategoriasAdmin();
   poblarNivelesBasquetForm('ap-b');
@@ -2901,6 +3086,32 @@ function subSegmentoBasquetAdmin(prefix){
   const n3 = document.getElementById(prefix + '-nivel3').value;
   return n3 ? (n2 + '_' + n3) : '';
 }
+// Inversa de subSegmentoBasquetAdmin: al editar un partido, deja los selectores
+// de Zona/Categoría/Tira apuntando al subSeg que ya tenía guardado.
+async function precargarNivelesBasquetDesdeSubSeg(prefix, subSeg){
+  const torneo = document.getElementById('admin-categoria').value;
+  const cfg = POS_BASQUET[torneo];
+  if(!cfg || !cfg.nivel2 || !subSeg) return;
+  if(torneo === 'interasociativo'){
+    document.getElementById(prefix + '-nivel2').value = subSeg;
+    await nivelesBasquetNivel2Cambio(prefix);
+    return;
+  }
+  if(torneo === 'formativas'){
+    const m = subSeg.match(/^(liga-formativa|liga-desarrollo)_grupo-(.+)$/);
+    if(!m) return;
+    document.getElementById(prefix + '-nivel2').value = m[1];
+    await nivelesBasquetNivel2Cambio(prefix);
+    document.getElementById(prefix + '-nivel3').value = m[2];
+    return;
+  }
+  // liga-cordobesa / asociativo: subSeg = "<nivel2>_<nivel3>"
+  const idx = subSeg.indexOf('_');
+  if(idx < 0) return;
+  document.getElementById(prefix + '-nivel2').value = subSeg.slice(0, idx);
+  await nivelesBasquetNivel2Cambio(prefix);
+  document.getElementById(prefix + '-nivel3').value = subSeg.slice(idx + 1);
+}
 
 // Prefijo Firestore ("basquet"/"voley"/"handball"/"hockey"/"tenis"/"padel") y segmento (categoría, género_categoría, género_certamen_categoría, o solo género)
 function prefijoAdmin(){ return document.getElementById('admin-deporte').value; }
@@ -2961,6 +3172,13 @@ document.getElementById('admin-categoria').addEventListener('change', ()=>{ pobl
 let _escudoB64Poli = '';
 let _escudoPreviewPromisePoli = null; // referencia a la compresión en curso, para poder esperarla
 let _equipoEditandoKey = null; // si no es null, "Agregar equipo" pasa a editar este equipo en vez de crear uno nuevo
+let _partidoEditandoKey = null; // ídem, para "Agregar partido" (Básquet)
+
+// Muestra/oculta el selector de cuarto según el estado elegido en el form de partido
+function cambiarEstadoPartidoAdmin(){
+  const estado = document.getElementById('ap-estado').value;
+  document.getElementById('ap-cuarto').style.display = (estado === 'en-juego') ? 'block' : 'none';
+}
 
 // Comprime una imagen a base64 (mismo criterio que Fútbol: máx 300px, calidad .85)
 function comprimirABase64Poli(file, maxW=300, q=0.85){
@@ -3074,6 +3292,41 @@ async function agregarEquipoPoli(){
   if(dep === 'basquet') refrescarPublicoTorneosNoticias(dep);
 }
 
+async function editarPartidoPoli(key){
+  const fb = await esperarFB();
+  const p = await fb.get(key);
+  if(!p){ alert('No se pudo cargar el partido'); return; }
+  _partidoEditandoKey = key;
+  document.getElementById('ap-local').value = p.local || '';
+  document.getElementById('ap-visitante').value = p.visitante || '';
+  document.getElementById('ap-pts-local').value = (p.ptsLocal ?? '') === null ? '' : (p.ptsLocal ?? '');
+  document.getElementById('ap-pts-visitante').value = (p.ptsVisitante ?? '') === null ? '' : (p.ptsVisitante ?? '');
+  document.getElementById('ap-fecha').value = p.fecha || '';
+  if(prefijoAdmin() === 'basquet'){
+    const estado = p.estado || (p.jugado ? 'jugado' : 'pendiente');
+    document.getElementById('ap-estado').value = estado;
+    cambiarEstadoPartidoAdmin();
+    if(estado === 'en-juego') document.getElementById('ap-cuarto').value = p.cuarto || '1';
+    if(p.subSeg) await precargarNivelesBasquetDesdeSubSeg('ap-b', p.subSeg);
+  }
+  document.getElementById('ap-btn-guardar').textContent = 'Guardar cambios';
+  document.getElementById('ap-btn-cancelar').style.display = '';
+  document.getElementById('ap-local').scrollIntoView({behavior:'smooth', block:'center'});
+}
+function cancelarEdicionPartidoPoli(){
+  _partidoEditandoKey = null;
+  const local = document.getElementById('ap-local'), visitante = document.getElementById('ap-visitante');
+  if(local) local.value = '';
+  if(visitante) visitante.value = '';
+  const pl = document.getElementById('ap-pts-local'), pv = document.getElementById('ap-pts-visitante'), f = document.getElementById('ap-fecha');
+  if(pl) pl.value = ''; if(pv) pv.value = ''; if(f) f.value = '';
+  const estadoSel = document.getElementById('ap-estado');
+  if(estadoSel){ estadoSel.value = 'pendiente'; cambiarEstadoPartidoAdmin(); }
+  const btnG = document.getElementById('ap-btn-guardar'), btnC = document.getElementById('ap-btn-cancelar');
+  if(btnG) btnG.textContent = '+ Agregar partido';
+  if(btnC) btnC.style.display = 'none';
+}
+
 async function agregarPartidoPoli(){
   const dep = prefijoAdmin(), seg = segmentoAdmin();
   const local = document.getElementById('ap-local').value.trim();
@@ -3082,28 +3335,43 @@ async function agregarPartidoPoli(){
   const ptsVisitanteRaw = document.getElementById('ap-pts-visitante').value;
   const fecha = document.getElementById('ap-fecha').value.trim();
   if(!local || !visitante){ alert('Completá ambos equipos'); return; }
-  const jugado = ptsLocalRaw !== '' && ptsVisitanteRaw !== '';
-  const id = Date.now();
+  const hayPts = ptsLocalRaw !== '' && ptsVisitanteRaw !== '';
+
+  const esBasquet = dep === 'basquet';
+  const estado = esBasquet ? document.getElementById('ap-estado').value : (hayPts ? 'jugado' : 'pendiente');
+  const jugado = estado === 'jugado';
+
+  const key = _partidoEditandoKey || (dep + '_partido_' + seg + '_' + Date.now());
   const fb = await esperarFB();
+  const existente = _partidoEditandoKey ? await fb.get(key) : null;
   const datos = {
     local, visitante,
-    ptsLocal: jugado ? Number(ptsLocalRaw) : null,
-    ptsVisitante: jugado ? Number(ptsVisitanteRaw) : null,
-    jugado, fecha, orden: id
+    ptsLocal: hayPts ? Number(ptsLocalRaw) : null,
+    ptsVisitante: hayPts ? Number(ptsVisitanteRaw) : null,
+    jugado, fecha,
+    orden: existente ? (existente.orden || Date.now()) : Number(key.split('_').pop())
   };
+  if(esBasquet){
+    datos.estado = estado;
+    datos.cuarto = estado === 'en-juego' ? document.getElementById('ap-cuarto').value : null;
+  }
   let subSeg = '';
-  if(dep === 'basquet'){ subSeg = subSegmentoBasquetAdmin('ap-b'); datos.subSeg = subSeg; }
-  const ok = await fb.set(dep + '_partido_' + seg + '_' + id, datos);
+  if(esBasquet){ subSeg = subSegmentoBasquetAdmin('ap-b'); datos.subSeg = subSeg; }
+  const ok = await fb.set(key, datos);
   if(!ok){
     alert('⚠ No se pudo guardar el partido. Revisá tu conexión y que tu sesión de administrador siga activa, y volvé a intentar.');
     return;
   }
-  document.getElementById('ap-local').value = '';
-  document.getElementById('ap-visitante').value = '';
-  document.getElementById('ap-pts-local').value = '';
-  document.getElementById('ap-pts-visitante').value = '';
-  document.getElementById('ap-fecha').value = '';
-  if(dep === 'basquet' && jugado && subSeg) await recalcularPosicionesBasquet(seg, subSeg);
+  const eraEdicion = !!_partidoEditandoKey;
+  const subSegAnterior = existente ? existente.subSeg : null;
+  cancelarEdicionPartidoPoli();
+  // Se recalcula siempre que el partido tenga zona/tira asignada: tanto al agregar
+  // un resultado nuevo como al editar uno (por ejemplo, si pasa de Jugado a Pendiente
+  // hay que sacarlo de la tabla, no solo sumarlo cuando se carga por primera vez)
+  if(esBasquet && subSeg && (jugado || eraEdicion)) await recalcularPosicionesBasquet(seg, subSeg);
+  // Si al editar se cambió de Zona/Categoría/Tira, la tabla de la zona vieja
+  // también quedó con datos de este partido que ya no le corresponden
+  if(esBasquet && subSegAnterior && subSegAnterior !== subSeg) await recalcularPosicionesBasquet(seg, subSegAnterior);
   renderAdminListas();
   refrescarPublico(dep);
 }
@@ -3272,11 +3540,29 @@ async function renderAdminListas(){
   }
   const listaFixture = document.getElementById('admin-lista-fixture');
   const keysP = Object.keys(partidos);
+  if(dep === 'basquet'){
+    const keysEnJuego = keysP.filter(k => (partidos[k].estado || (partidos[k].jugado?'jugado':'pendiente')) === 'en-juego');
+    if(keysEnJuego.length) await precargarCronosBasquet(keysEnJuego);
+  }
   listaFixture.innerHTML = keysP.length ? keysP.map(k => {
     const p = partidos[k];
+    const estado = (dep === 'basquet') ? (p.estado || (p.jugado ? 'jugado' : 'pendiente')) : null;
     const marcador = p.jugado ? `${p.ptsLocal} - ${p.ptsVisitante}` : 'sin jugar';
-    return `<div class="admin-lista-row"><span>${escapeHtml(p.local)} vs ${escapeHtml(p.visitante)} (${marcador})</span><button onclick="borrarItemPoli('${k}','${dep}','partido')">Borrar</button></div>`;
+    const estadoLabel = estado === 'en-juego' ? 'En juego' : estado === 'jugado' ? 'Jugado' : 'Pendiente';
+    const badge = estado ? `<span class="estado-badge ${estado}">${estadoLabel}</span>` : '';
+    const cronoHtml = (estado === 'en-juego') ? `
+      <div class="admin-crono-controles">
+        <span class="partido-crono" id="crono-adm-basquet-${k}">${formatCronoBasquet(cronoBasquetSegundosSync(k))}</span>
+        <select onchange="cambiarCuartoPartidoLive('${k}', this.value)">
+          ${['1','2','3','4','entretiempo','prorroga'].map(v=>`<option value="${v}"${p.cuarto===v?' selected':''}>${{'1':'1er cuarto','2':'2do cuarto','3':'3er cuarto','4':'4to cuarto','entretiempo':'Entretiempo','prorroga':'Prórroga'}[v]}</option>`).join('')}
+        </select>
+        <button type="button" onclick="cronoBasquetIniciar('${k}')">▶</button>
+        <button type="button" onclick="cronoBasquetPausar('${k}')">⏸</button>
+        <button type="button" onclick="cronoBasquetReset('${k}')">⟲</button>
+      </div>` : '';
+    return `<div class="admin-lista-row"><span>${escapeHtml(p.local)} vs ${escapeHtml(p.visitante)} (${marcador})${badge}${cronoHtml}</span><span><button onclick="editarPartidoPoli('${k}')" style="margin-right:6px">Editar</button><button onclick="borrarItemPoli('${k}','${dep}','partido')">Borrar</button></span></div>`;
   }).join('') : '<div class="placeholder">Sin partidos en esta categoría</div>';
+  if(dep === 'basquet') arrancarTickBasquet();
 
   if(dep === 'basquet'){
     const subSegActual = subSegmentoBasquetAdmin('ap-b');
