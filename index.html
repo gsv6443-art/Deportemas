@@ -4932,10 +4932,18 @@ function saveData(d){
   if(window._fb){
     // Activar flag para que el listener ignore el echo de esta escritura
     window._fbEscribiendoData = true;
-    window._fb.set('data', dataParaFirestore(d)).then(()=>{
+    window._fb.set('data', dataParaFirestore(d)).then(ok=>{
       // Dar tiempo a que Firestore envíe el snapshot de vuelta y lo ignoremos
       setTimeout(()=>{ window._fbEscribiendoData = false; }, 3000);
-    }).catch(()=>{ window._fbEscribiendoData = false; });
+      if(ok===false){
+        alert('⚠ No se pudo guardar en el servidor. Lo que acabás de cargar puede perderse si cerrás o recargás la página.\n\nRevisá tu conexión a internet y que tu sesión de administrador siga activa (probá recargar y volver a iniciar sesión), y volvé a guardar.');
+      }
+    }).catch(()=>{
+      window._fbEscribiendoData = false;
+      alert('⚠ No se pudo guardar en el servidor. Lo que acabás de cargar puede perderse si cerrás o recargás la página.\n\nRevisá tu conexión a internet y que tu sesión de administrador siga activa (probá recargar y volver a iniciar sesión), y volvé a guardar.');
+    });
+  } else {
+    alert('⚠ No hay conexión con el servidor en este momento. Lo que acabás de cargar solo quedó guardado en este navegador y puede perderse. Revisá tu conexión e intentá de nuevo.');
   }
 }
 function getEscudos(){try{return JSON.parse(localStorage.getItem(ESCUDOS_KEY))||{};}catch(e){return {};}}
