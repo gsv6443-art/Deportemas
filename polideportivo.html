@@ -606,7 +606,7 @@ body.bloqueado-poli .vista-deporte{display:none!important;}
       <div class="admin-lista" id="admin-lista-anotadores"></div>
     </div>
 
-    <div class="admin-seccion">
+    <div class="admin-seccion" id="admin-seccion-sanciones">
       <h4>Agregar sanción</h4>
       <div class="admin-grid">
         <input type="text" id="asa-nombre" class="admin-input" placeholder="Nombre del jugador" style="grid-column:1/-1">
@@ -713,7 +713,6 @@ body.bloqueado-poli .vista-deporte{display:none!important;}
     <button class="tab-btn active" data-tab="fixture">Partidos</button>
     <button class="tab-btn" data-tab="posiciones">Posiciones</button>
     <button class="tab-btn" data-tab="anotadores">Máx. anotadores</button>
-    <button class="tab-btn" data-tab="sanciones">Sanciones</button>
     <button class="tab-btn" data-tab="equipos">Equipos</button>
     <button class="tab-btn" data-tab="noticias">Noticias</button>
   </div>
@@ -768,14 +767,6 @@ body.bloqueado-poli .vista-deporte{display:none!important;}
     <div class="card">
       <div class="card-titulo">Máximos anotadores</div>
       <div id="anotadores-lista"><div class="placeholder">Cargando...</div></div>
-    </div>
-  </div>
-
-  <!-- Tab: Sanciones -->
-  <div class="tab-panel" data-panel="sanciones" style="display:none">
-    <div class="card">
-      <div class="card-titulo">Jugadores sancionados</div>
-      <div id="sanciones-lista"><div class="placeholder">Cargando...</div></div>
     </div>
   </div>
 
@@ -1869,26 +1860,6 @@ async function cargarAnotadores(categoria){
     </div>`).join('');
 }
 
-// ── SANCIONES (público) ─────────────────────────────────────────
-async function cargarSanciones(categoria){
-  const cont = document.getElementById('sanciones-lista');
-  cont.innerHTML = '<div class="placeholder">Cargando...</div>';
-  const fb = await esperarFB();
-  const escudos = await mapaEscudosPoli('basquet');
-  const datos = await fb.getAllByPrefix('basquet_sancion_' + categoria + '_');
-  const filas = Object.values(datos);
-  if(!filas.length){ cont.innerHTML = '<div class="placeholder">Sin jugadores sancionados en esta categoría</div>'; return; }
-  cont.innerHTML = filas.map(s => `
-    <div class="sancion-row">
-      <div style="flex:1">
-        <div class="sancion-nombre">${escapeHtml(s.nombre||'')}</div>
-        <div class="sancion-equipo">${escudoTagPoli(escudos, s.equipo)}${escapeHtml(s.equipo||'')}</div>
-        ${s.motivo ? `<div class="sancion-motivo">${escapeHtml(s.motivo)}</div>` : ''}
-      </div>
-      <div class="sancion-fechas">${s.fechas ?? 0} fecha${(s.fechas==1)?'':'s'}</div>
-    </div>`).join('');
-}
-
 // ── Cálculo automático de posiciones a partir de los resultados de Partidos (sistema de puntos 2-1) ──
 function slugEquipoBasquet(nombre){
   return (nombre||'').toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'') || 'equipo';
@@ -1930,7 +1901,6 @@ async function recalcularPosicionesBasquet(torneo, subSeg){
 
 function cargarTodoBasquet(){
   cargarFixture(categoriaActual);
-  cargarSanciones(categoriaActual);
   cargarEquiposBasquet();
   renderPosNav();
   renderAnotNav();
@@ -2701,6 +2671,7 @@ function cambiarDeporteAdmin(){
   document.getElementById('admin-seccion-torneos').style.display = esBasquet ? 'none' : 'block';
   document.getElementById('admin-seccion-posiciones-manual').style.display = esBasquet ? 'none' : 'block';
   document.getElementById('admin-seccion-posiciones-auto').style.display = esBasquet ? 'block' : 'none';
+  document.getElementById('admin-seccion-sanciones').style.display = esBasquet ? 'none' : 'block';
 
   poblarCategoriasAdmin();
   poblarNivelesBasquetForm('ap-b');
@@ -2777,7 +2748,11 @@ async function agregarGrupoBasquet(prefix){
   const tipo = (liga === 'liga-desarrollo') ? document.getElementById(prefix + '-grupo-tipo').value : 'tira';
   const id = Date.now();
   const fb = await esperarFB();
-  await fb.set('basquet_grupo_' + liga + '_' + id, { nombre, tipo, orden: id });
+  const ok = await fb.set('basquet_grupo_' + liga + '_' + id, { nombre, tipo, orden: id });
+  if(!ok){
+    alert('⚠ No se pudo guardar la tira/grupo. Revisá tu conexión y que tu sesión de administrador siga activa, y volvé a intentar.');
+    return;
+  }
   document.getElementById(prefix + '-grupo-nombre').value = '';
   // las tiras/grupos son compartidos entre Partido y Anotador — refrescamos ambos formularios si están mostrando esa misma liga
   for(const p of ['ap-b','aan-b']){
@@ -2994,7 +2969,11 @@ async function agregarPartidoPoli(){
   };
   let subSeg = '';
   if(dep === 'basquet'){ subSeg = subSegmentoBasquetAdmin('ap-b'); datos.subSeg = subSeg; }
-  await fb.set(dep + '_partido_' + seg + '_' + id, datos);
+  const ok = await fb.set(dep + '_partido_' + seg + '_' + id, datos);
+  if(!ok){
+    alert('⚠ No se pudo guardar el partido. Revisá tu conexión y que tu sesión de administrador siga activa, y volvé a intentar.');
+    return;
+  }
   document.getElementById('ap-local').value = '';
   document.getElementById('ap-visitante').value = '';
   document.getElementById('ap-pts-local').value = '';
@@ -3015,7 +2994,11 @@ async function agregarPosicionPoli(){
   if(!equipo){ alert('Completá el nombre del equipo'); return; }
   const id = Date.now();
   const fb = await esperarFB();
-  await fb.set(dep + '_posicion_' + seg + '_' + id, { equipo, pj, g, p, pts });
+  const ok = await fb.set(dep + '_posicion_' + seg + '_' + id, { equipo, pj, g, p, pts });
+  if(!ok){
+    alert('⚠ No se pudo guardar la posición. Revisá tu conexión y que tu sesión de administrador siga activa, y volvé a intentar.');
+    return;
+  }
   document.getElementById('apos-equipo').value = '';
   document.getElementById('apos-pj').value = '';
   document.getElementById('apos-g').value = '';
@@ -3040,7 +3023,11 @@ async function agregarAnotadorPoli(){
   if(!nombre){ alert('Completá el nombre del jugador'); return; }
   const id = Date.now();
   const fb = await esperarFB();
-  await fb.set(dep + '_anotador_' + seg + '_' + id, { nombre, equipo, pts });
+  const ok = await fb.set(dep + '_anotador_' + seg + '_' + id, { nombre, equipo, pts });
+  if(!ok){
+    alert('⚠ No se pudo guardar el anotador. Revisá tu conexión y que tu sesión de administrador siga activa, y volvé a intentar.');
+    return;
+  }
   document.getElementById('aan-nombre').value = '';
   document.getElementById('aan-equipo').value = '';
   document.getElementById('aan-pts').value = '';
@@ -3057,7 +3044,11 @@ async function agregarSancionPoli(){
   if(!nombre){ alert('Completá el nombre del jugador'); return; }
   const id = Date.now();
   const fb = await esperarFB();
-  await fb.set(dep + '_sancion_' + seg + '_' + id, { nombre, equipo, fechas, motivo });
+  const ok = await fb.set(dep + '_sancion_' + seg + '_' + id, { nombre, equipo, fechas, motivo });
+  if(!ok){
+    alert('⚠ No se pudo guardar la sanción. Revisá tu conexión y que tu sesión de administrador siga activa, y volvé a intentar.');
+    return;
+  }
   document.getElementById('asa-nombre').value = '';
   document.getElementById('asa-equipo').value = '';
   document.getElementById('asa-fechas').value = '';
@@ -3082,7 +3073,11 @@ async function agregarTorneoPoli(){
   const id = Date.now();
   const fb = await esperarFB();
   const torneoKey = dep + '_torneo_' + id;
-  await fb.set(torneoKey, { nombre, edicion, estado, inicio, fin, sede, categorias, clubes, campeon, campeonFoto, orden: id });
+  const ok = await fb.set(torneoKey, { nombre, edicion, estado, inicio, fin, sede, categorias, clubes, campeon, campeonFoto, orden: id });
+  if(!ok){
+    alert('⚠ No se pudo guardar el torneo. Revisá tu conexión y que tu sesión de administrador siga activa, y volvé a intentar.');
+    return;
+  }
   ['ato-nombre','ato-edicion','ato-inicio','ato-fin','ato-sede','ato-categorias','ato-clubes','ato-campeon','ato-campeon-foto'].forEach(id=>document.getElementById(id).value='');
   renderAdminListas();
   refrescarPublicoTorneosNoticias(dep);
@@ -3097,7 +3092,11 @@ async function agregarNoticiaPoli(){
   if(!titulo){ alert('Completá el título de la noticia'); return; }
   const id = Date.now();
   const fb = await esperarFB();
-  await fb.set(dep + '_noticia_' + id, { titulo, fecha, imagen, cuerpo, orden: id });
+  const ok = await fb.set(dep + '_noticia_' + id, { titulo, fecha, imagen, cuerpo, orden: id });
+  if(!ok){
+    alert('⚠ No se pudo guardar la noticia. Revisá tu conexión y que tu sesión de administrador siga activa, y volvé a intentar.');
+    return;
+  }
   ['ano-titulo','ano-fecha','ano-imagen','ano-cuerpo'].forEach(id=>document.getElementById(id).value='');
   renderAdminListas();
   refrescarPublicoTorneosNoticias(dep);
