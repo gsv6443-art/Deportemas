@@ -4935,14 +4935,19 @@ function saveData(d){
     window._fb.set('data', dataParaFirestore(d)).then(ok=>{
       // Dar tiempo a que Firestore envíe el snapshot de vuelta y lo ignoremos
       setTimeout(()=>{ window._fbEscribiendoData = false; }, 3000);
-      if(ok===false){
+      // Solo avisar si hay una sesión de admin activa: para un visitante
+      // anónimo este guardado (recálculo automático al abrir la página)
+      // falla siempre por permisos, y eso es esperado, no un error real.
+      if(ok===false && window._fbUser){
         alert('⚠ No se pudo guardar en el servidor. Lo que acabás de cargar puede perderse si cerrás o recargás la página.\n\nRevisá tu conexión a internet y que tu sesión de administrador siga activa (probá recargar y volver a iniciar sesión), y volvé a guardar.');
       }
     }).catch(()=>{
       window._fbEscribiendoData = false;
-      alert('⚠ No se pudo guardar en el servidor. Lo que acabás de cargar puede perderse si cerrás o recargás la página.\n\nRevisá tu conexión a internet y que tu sesión de administrador siga activa (probá recargar y volver a iniciar sesión), y volvé a guardar.');
+      if(window._fbUser){
+        alert('⚠ No se pudo guardar en el servidor. Lo que acabás de cargar puede perderse si cerrás o recargás la página.\n\nRevisá tu conexión a internet y que tu sesión de administrador siga activa (probá recargar y volver a iniciar sesión), y volvé a guardar.');
+      }
     });
-  } else {
+  } else if(window._fbUser){
     alert('⚠ No hay conexión con el servidor en este momento. Lo que acabás de cargar solo quedó guardado en este navegador y puede perderse. Revisá tu conexión e intentá de nuevo.');
   }
 }
