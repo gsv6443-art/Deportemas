@@ -307,6 +307,23 @@ header{
 .partido-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--negro4);font-family:'Rajdhani',sans-serif;}
 .partido-row:last-child{border-bottom:none;}
 .partido-equipo{font-size:15px;font-weight:600;flex:1;}
+
+/* Fixture: partido pendiente con día/hora — franja lateral tipo "ticket" */
+.fx-pendiente{display:flex;align-items:stretch;border:1px solid var(--negro4);border-radius:10px;overflow:hidden;margin:10px 0;background:var(--negro3);}
+.fx-pendiente:first-child{margin-top:0;}
+.fx-dia-stripe{background:linear-gradient(180deg,var(--accent-bg),transparent);border-right:2px solid var(--accent);padding:10px 14px;display:flex;flex-direction:column;justify-content:center;align-items:center;min-width:76px;flex-shrink:0;font-family:'Rajdhani',sans-serif;}
+.fx-dia-dow{font-size:10px;font-weight:700;letter-spacing:1px;color:var(--accent-light);text-transform:uppercase;}
+.fx-dia-fecha{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--blanco);line-height:1;margin:1px 0;}
+.fx-dia-hora{font-size:12px;color:var(--gris-claro);font-weight:600;}
+.fx-cuerpo{flex:1;padding:10px 16px;display:flex;flex-direction:column;justify-content:center;gap:6px;min-width:0;}
+.fx-equipos{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.fx-equipo{display:flex;align-items:center;gap:9px;flex:1;min-width:0;font-weight:700;font-size:14px;color:var(--blanco);}
+.fx-equipo span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.fx-equipo.der{justify-content:flex-end;text-align:right;flex-direction:row-reverse;}
+.fx-crest{width:26px;height:26px;border-radius:6px;object-fit:contain;flex-shrink:0;}
+.fx-crest-ini{background:var(--negro4);display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:11px;color:var(--gris);}
+.fx-vs{font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--accent-light);padding:0 8px;flex-shrink:0;}
+.fx-lugar{font-size:12px;color:var(--gris);padding-left:2px;}
 .equipo-card-basquet{display:flex;align-items:center;gap:12px;padding:12px;border-bottom:1px solid var(--negro4);font-family:'Rajdhani',sans-serif;}
 .equipo-card-basquet:last-child{border-bottom:none;}
 .equipo-card-escudo{width:42px;height:42px;object-fit:contain;border-radius:8px;flex-shrink:0;}
@@ -1685,6 +1702,30 @@ function formatDiaHoraPartido(iso){
   const hora = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
   return `${dias[d.getDay()]} ${fecha} · ${hora}hs`;
 }
+// Versión en partes separadas (día de semana / fecha / hora), para la franja tipo "ticket" del Fixture
+function partesDiaHoraPartido(iso){
+  if(!iso) return null;
+  const d = new Date(iso);
+  if(isNaN(d)) return null;
+  const dias = ['DOM','LUN','MAR','MIÉ','JUE','VIE','SÁB'];
+  return {
+    dow: dias[d.getDay()],
+    fecha: String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0'),
+    hora: String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0') + 'hs'
+  };
+}
+function inicialesEquipoBasquet(nombre){
+  if(!nombre) return '';
+  const palabras = nombre.trim().split(/\s+/).filter(Boolean);
+  if(palabras.length === 1) return palabras[0].slice(0,2).toUpperCase();
+  return (palabras[0][0] + palabras[1][0]).toUpperCase();
+}
+// Escudo real si existe en el mapa de equipos, o un círculo con las iniciales si no
+function crestOEscudoHTML(mapa, nombre){
+  const esc = mapa && mapa[normalizarPoli(nombre)];
+  if(esc) return `<img src="${esc}" alt="" class="fx-crest">`;
+  return `<div class="fx-crest fx-crest-ini">${escapeHtml(inicialesEquipoBasquet(nombre))}</div>`;
+}
 
 async function cargarFixture(categoria, modo){
   modo = modo || 'fixture'; // 'fixture' = pendientes + en juego · 'resultados' = jugados
@@ -1735,13 +1776,41 @@ async function cargarFixture(categoria, modo){
         <div class="partido-equipo" style="text-align:right">${escudoTagPoli(escudos, p.visitante)}${escapeHtml(p.visitante||'')}</div>
       </div>`;
     }
-    const infoExtra = [formatDiaHoraPartido(p.diaHora), p.lugar ? escapeHtml(p.lugar) : ''].filter(Boolean).join(' · ');
+    if(estado === 'jugado'){
+      return `
+      <div class="partido-row">
+        <div class="partido-equipo">${escudoTagPoli(escudos, p.local)}${escapeHtml(p.local||'')}</div>
+        <div class="partido-resultado">${(p.ptsLocal ?? '-') + ' - ' + (p.ptsVisitante ?? '-')}</div>
+        <div class="partido-equipo" style="text-align:right">${escudoTagPoli(escudos, p.visitante)}${escapeHtml(p.visitante||'')}</div>
+      </div>`;
+    }
+    // Pendiente con día/hora cargados: franja tipo "ticket"
+    const partes = partesDiaHoraPartido(p.diaHora);
+    if(partes){
+      return `
+      <div class="fx-pendiente">
+        <div class="fx-dia-stripe">
+          <span class="fx-dia-dow">${partes.dow}</span>
+          <span class="fx-dia-fecha">${partes.fecha}</span>
+          <span class="fx-dia-hora">${partes.hora}</span>
+        </div>
+        <div class="fx-cuerpo">
+          <div class="fx-equipos">
+            <div class="fx-equipo">${crestOEscudoHTML(escudos, p.local)}<span>${escapeHtml(p.local||'')}</span></div>
+            <div class="fx-vs">VS</div>
+            <div class="fx-equipo der"><span>${escapeHtml(p.visitante||'')}</span>${crestOEscudoHTML(escudos, p.visitante)}</div>
+          </div>
+          ${p.lugar ? `<div class="fx-lugar">📍 ${escapeHtml(p.lugar)}</div>` : ''}
+        </div>
+      </div>`;
+    }
+    // Pendiente sin día/hora cargados: fila simple, como antes
     return `
     <div class="partido-row">
       <div class="partido-equipo">${escudoTagPoli(escudos, p.local)}${escapeHtml(p.local||'')}</div>
       <div>
-        <div class="partido-resultado">${estado === 'jugado' ? (p.ptsLocal ?? '-') + ' - ' + (p.ptsVisitante ?? '-') : 'VS'}</div>
-        ${(estado === 'pendiente' && infoExtra) ? `<div class="partido-info-extra">${infoExtra}</div>` : ''}
+        <div class="partido-resultado">VS</div>
+        ${p.lugar ? `<div class="partido-info-extra">${escapeHtml(p.lugar)}</div>` : ''}
       </div>
       <div class="partido-equipo" style="text-align:right">${escudoTagPoli(escudos, p.visitante)}${escapeHtml(p.visitante||'')}</div>
     </div>`;
