@@ -322,6 +322,7 @@ header{
 .partido-en-juego-meta{display:flex;align-items:center;gap:8px;justify-content:flex-end;font-family:'Rajdhani',sans-serif;font-size:12px;color:var(--gris-claro);margin-top:2px;}
 .partido-cuarto{font-weight:700;color:var(--accent-light);}
 .partido-crono{font-variant-numeric:tabular-nums;}
+.partido-info-extra{font-family:'Rajdhani',sans-serif;font-size:11px;color:var(--gris);text-align:center;margin-top:2px;}
 .estado-badge{display:inline-block;font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;padding:2px 7px;border-radius:5px;margin-left:6px}
 .estado-badge.pendiente{background:var(--negro4);color:var(--gris-claro)}
 .estado-badge.en-juego{background:#c0392b;color:#fff}
@@ -599,6 +600,9 @@ body.bloqueado-poli .vista-deporte{display:none!important;}
         <input type="number" id="ap-pts-local" class="admin-input" placeholder="Pts. local">
         <input type="number" id="ap-pts-visitante" class="admin-input" placeholder="Pts. visitante">
         <input type="text" id="ap-fecha" class="admin-input" placeholder="Fecha (ej: Fecha 6, 10/08)" style="grid-column:1/-1">
+        <label class="admin-label" style="grid-column:1/-1;margin-bottom:-4px">Día y hora del partido</label>
+        <input type="datetime-local" id="ap-dia-hora" class="admin-input">
+        <input type="text" id="ap-lugar" class="admin-input" placeholder="Lugar (cancha, sede)">
       </div>
       <button class="btn-primario" style="margin-top:8px" id="ap-btn-guardar" onclick="agregarPartidoPoli()">+ Agregar partido</button>
       <button class="btn-primario" style="margin-top:8px;display:none;background:#555" id="ap-btn-cancelar" onclick="cancelarEdicionPartidoPoli()">Cancelar edición</button>
@@ -1672,6 +1676,15 @@ function ordenSubSegBasquet(torneo, subSeg){
 
 const CUARTO_LABELS_BASQUET = {'1':'1er cuarto','2':'2do cuarto','3':'3er cuarto','4':'4to cuarto','entretiempo':'Entretiempo','prorroga':'Prórroga'};
 function estadoPartidoBasquet(p){ return p.estado || (p.jugado ? 'jugado' : 'pendiente'); }
+function formatDiaHoraPartido(iso){
+  if(!iso) return '';
+  const d = new Date(iso);
+  if(isNaN(d)) return '';
+  const dias = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  const fecha = String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0');
+  const hora = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  return `${dias[d.getDay()]} ${fecha} · ${hora}hs`;
+}
 
 async function cargarFixture(categoria, modo){
   modo = modo || 'fixture'; // 'fixture' = pendientes + en juego · 'resultados' = jugados
@@ -1717,14 +1730,19 @@ async function cargarFixture(categoria, modo){
             <span class="partido-cuarto" id="cuarto-pub-basquet-${p._key}">${CUARTO_LABELS_BASQUET[p.cuarto] || ''}</span>
             <span class="partido-crono" id="crono-pub-basquet-${p._key}">${formatCronoBasquet(cronoBasquetSegundosSync(p._key))}</span>
           </div>
+          ${p.lugar ? `<div class="partido-info-extra">${escapeHtml(p.lugar)}</div>` : ''}
         </div>
         <div class="partido-equipo" style="text-align:right">${escudoTagPoli(escudos, p.visitante)}${escapeHtml(p.visitante||'')}</div>
       </div>`;
     }
+    const infoExtra = [formatDiaHoraPartido(p.diaHora), p.lugar ? escapeHtml(p.lugar) : ''].filter(Boolean).join(' · ');
     return `
     <div class="partido-row">
       <div class="partido-equipo">${escudoTagPoli(escudos, p.local)}${escapeHtml(p.local||'')}</div>
-      <div class="partido-resultado">${estado === 'jugado' ? (p.ptsLocal ?? '-') + ' - ' + (p.ptsVisitante ?? '-') : 'VS'}</div>
+      <div>
+        <div class="partido-resultado">${estado === 'jugado' ? (p.ptsLocal ?? '-') + ' - ' + (p.ptsVisitante ?? '-') : 'VS'}</div>
+        ${(estado === 'pendiente' && infoExtra) ? `<div class="partido-info-extra">${infoExtra}</div>` : ''}
+      </div>
       <div class="partido-equipo" style="text-align:right">${escudoTagPoli(escudos, p.visitante)}${escapeHtml(p.visitante||'')}</div>
     </div>`;
   };
@@ -3191,7 +3209,12 @@ function comprimirABase64Poli(file, maxW=300, q=0.85){
       const h = Math.round(img.naturalHeight*scale);
       const c = document.createElement('canvas');
       c.width = w; c.height = h;
-      c.getContext('2d').drawImage(img,0,0,w,h);
+      const ctx = c.getContext('2d');
+      // JPEG no soporta transparencia: sin este relleno, las zonas
+      // transparentes del logo (ej. un PNG) quedan negras al exportar
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0,0,w,h);
+      ctx.drawImage(img,0,0,w,h);
       URL.revokeObjectURL(objUrl);
       resolve(c.toDataURL('image/jpeg', q));
     };
@@ -3302,6 +3325,8 @@ async function editarPartidoPoli(key){
   document.getElementById('ap-pts-local').value = (p.ptsLocal ?? '') === null ? '' : (p.ptsLocal ?? '');
   document.getElementById('ap-pts-visitante').value = (p.ptsVisitante ?? '') === null ? '' : (p.ptsVisitante ?? '');
   document.getElementById('ap-fecha').value = p.fecha || '';
+  document.getElementById('ap-dia-hora').value = p.diaHora || '';
+  document.getElementById('ap-lugar').value = p.lugar || '';
   if(prefijoAdmin() === 'basquet'){
     const estado = p.estado || (p.jugado ? 'jugado' : 'pendiente');
     document.getElementById('ap-estado').value = estado;
@@ -3320,6 +3345,8 @@ function cancelarEdicionPartidoPoli(){
   if(visitante) visitante.value = '';
   const pl = document.getElementById('ap-pts-local'), pv = document.getElementById('ap-pts-visitante'), f = document.getElementById('ap-fecha');
   if(pl) pl.value = ''; if(pv) pv.value = ''; if(f) f.value = '';
+  const dh = document.getElementById('ap-dia-hora'), lg = document.getElementById('ap-lugar');
+  if(dh) dh.value = ''; if(lg) lg.value = '';
   const estadoSel = document.getElementById('ap-estado');
   if(estadoSel){ estadoSel.value = 'pendiente'; cambiarEstadoPartidoAdmin(); }
   const btnG = document.getElementById('ap-btn-guardar'), btnC = document.getElementById('ap-btn-cancelar');
@@ -3334,6 +3361,8 @@ async function agregarPartidoPoli(){
   const ptsLocalRaw = document.getElementById('ap-pts-local').value;
   const ptsVisitanteRaw = document.getElementById('ap-pts-visitante').value;
   const fecha = document.getElementById('ap-fecha').value.trim();
+  const diaHora = document.getElementById('ap-dia-hora').value || null;
+  const lugar = document.getElementById('ap-lugar').value.trim() || null;
   if(!local || !visitante){ alert('Completá ambos equipos'); return; }
   const hayPts = ptsLocalRaw !== '' && ptsVisitanteRaw !== '';
 
@@ -3348,7 +3377,7 @@ async function agregarPartidoPoli(){
     local, visitante,
     ptsLocal: hayPts ? Number(ptsLocalRaw) : null,
     ptsVisitante: hayPts ? Number(ptsVisitanteRaw) : null,
-    jugado, fecha,
+    jugado, fecha, diaHora, lugar,
     orden: existente ? (existente.orden || Date.now()) : Number(key.split('_').pop())
   };
   if(esBasquet){
