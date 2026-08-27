@@ -9887,6 +9887,15 @@ function abrirModalEdicion(tipo,id,objOverride){
             <option value="ST" ${obj.periodo==='ST'?'selected':''}>ST – Segundo Tiempo</option>
           </select>
         </div></div>
+      <div class="seccion-label">🧑‍⚖️ Árbitros</div>
+      <div class="form-row">
+        <div class="form-group"><label>Árbitro principal</label><input type="text" id="ed-arb1" placeholder="Nombre y apellido" value="${(obj.arbitros&&obj.arbitros[0])||''}"/></div>
+        <div class="form-group"><label>Árbitro asistente 1</label><input type="text" id="ed-arb2" placeholder="Nombre y apellido" value="${(obj.arbitros&&obj.arbitros[1])||''}"/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Árbitro asistente 2</label><input type="text" id="ed-arb3" placeholder="Nombre y apellido" value="${(obj.arbitros&&obj.arbitros[2])||''}"/></div>
+        <div class="form-group"><label>Cuarto árbitro</label><input type="text" id="ed-arb4" placeholder="Nombre y apellido (opcional)" value="${(obj.arbitros&&obj.arbitros[3])||''}"/></div>
+      </div>
       <div class="seccion-label">⚽ Goles</div>
       <div class="evento-list" id="ed-goles-list">${buildEventoRowsHTML(obj.goles||[],'gol','ed-goles-list')}</div>
       <button class="btn-add-evento" onclick="addEventoRow('ed-goles-list','gol')">+ Agregar gol</button>
