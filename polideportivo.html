@@ -326,6 +326,8 @@ header{
 .fx-lugar{font-size:12px;color:var(--gris);padding-left:2px;}
 .btn-compartir-fx{background:none;border:none;color:var(--gris);font-size:15px;cursor:pointer;padding:6px 8px;opacity:.7;flex-shrink:0;align-self:center;}
 .btn-compartir-fx:hover{opacity:1;color:var(--accent-light);}
+.card-header-fx{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.card-header-fx .card-titulo{margin-bottom:0;}
 .equipo-card-basquet{display:flex;align-items:center;gap:12px;padding:12px;border-bottom:1px solid var(--negro4);font-family:'Rajdhani',sans-serif;}
 .equipo-card-basquet:last-child{border-bottom:none;}
 .equipo-card-escudo{width:42px;height:42px;object-fit:contain;border-radius:8px;flex-shrink:0;}
@@ -534,7 +536,12 @@ body.bloqueado-poli .vista-deporte{display:none!important;}
   <div class="modal-box" style="max-width:360px;text-align:center">
     <h3>Compartir</h3>
     <div id="share-loading" class="placeholder" style="padding:40px 0">Generando imagen...</div>
-    <img id="share-preview" style="display:none;width:100%;border-radius:10px;margin-bottom:14px" alt="">
+    <img id="share-preview" style="display:none;width:100%;border-radius:10px;margin-bottom:10px" alt="">
+    <div id="share-nav" style="display:none;align-items:center;justify-content:center;gap:14px;margin-bottom:10px">
+      <button class="btn-secundario" onclick="shareCambiarImagenPoli(-1)">◀</button>
+      <span id="share-contador" style="font-size:12px;color:var(--gris)"></span>
+      <button class="btn-secundario" onclick="shareCambiarImagenPoli(1)">▶</button>
+    </div>
     <div class="modal-btns" style="flex-wrap:wrap">
       <button class="btn-secundario" onclick="cerrarSharePoli()">Cerrar</button>
       <button class="btn-primario" onclick="descargarImagenPoli()">⬇ Descargar</button>
@@ -1922,20 +1929,141 @@ async function generarImagenPartidoBasquet(p, torneoLabel){
   return canvas;
 }
 
+// Imagen con TODOS los partidos de una zona (Fixture). Si son muchos, se
+// reparten en varias imágenes de a 5 partidos (igual que "próximos" en fútbol).
+async function generarImagenZonaBasquet(partidos, zonaLabel){
+  const ps = partidos.slice().sort((a,b)=>(a.orden||0)-(b.orden||0));
+  if(!ps.length) return [];
+  if(ps.length > 5){
+    const grupos = [];
+    for(let i=0;i<ps.length;i+=5) grupos.push(ps.slice(i,i+5));
+    const canvases = [];
+    for(const g of grupos) canvases.push(await _generarImagenZonaBasquetGrupo(g, zonaLabel));
+    return canvases;
+  }
+  return [await _generarImagenZonaBasquetGrupo(ps, zonaLabel)];
+}
+
+async function _generarImagenZonaBasquetGrupo(ps, zonaLabel){
+  await document.fonts.ready;
+  const escudos = await mapaEscudosPoli('basquet');
+  const W = CVP_W, CX = W/2;
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = CVP_H;
+  const ctx = canvas.getContext('2d');
+  ctx.textBaseline = 'alphabetic';
+
+  const bgGrad = ctx.createLinearGradient(0,0,0,CVP_H);
+  bgGrad.addColorStop(0, CVP_C.NEG3); bgGrad.addColorStop(1, CVP_C.NEG);
+  ctx.fillStyle = bgGrad; ctx.fillRect(0,0,W,CVP_H);
+
+  let y = cvpHeader(ctx, W, 0);
+
+  ctx.fillStyle = CVP_C.NARANJA_L;
+  ctx.font = `${cvp(26)}px "Bebas Neue", Arial, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.fillText('PRÓXIMOS PARTIDOS', CX, y+cvp(34));
+  ctx.fillStyle = 'rgba(232,114,12,0.6)';
+  ctx.font = `600 ${cvp(14)}px "DM Sans", Arial, sans-serif`;
+  cvpFillTextTrunc(ctx, zonaLabel || 'Básquetbol', CX, y+cvp(52), W-cvp(80));
+
+  const dg = ctx.createLinearGradient(0,0,W,0);
+  dg.addColorStop(0,'transparent'); dg.addColorStop(0.2,CVP_C.NARANJA);
+  dg.addColorStop(0.8,CVP_C.NARANJA); dg.addColorStop(1,'transparent');
+  ctx.fillStyle = dg; ctx.fillRect(0,y+cvp(60),W,1);
+  y += cvp(62);
+
+  const disponible = CVP_H - y - cvp(40);
+  const ROW_H = Math.floor(disponible / ps.length);
+  const ECSIZE = Math.max(cvp(44), Math.min(cvp(70), ROW_H - cvp(74)));
+
+  for(let i=0;i<ps.length;i++){
+    const p = ps[i];
+    const estado = estadoPartidoBasquet(p);
+
+    ctx.fillStyle = i%2===0 ? 'rgba(232,114,12,0.03)' : 'transparent';
+    ctx.fillRect(0,y,W,ROW_H);
+    if(i>0){
+      const sepGrad = ctx.createLinearGradient(0,y,W,y);
+      sepGrad.addColorStop(0,'transparent'); sepGrad.addColorStop(0.15,'rgba(232,114,12,0.2)');
+      sepGrad.addColorStop(0.85,'rgba(232,114,12,0.2)'); sepGrad.addColorStop(1,'transparent');
+      ctx.fillStyle = sepGrad; ctx.fillRect(0,y,W,1);
+    }
+
+    let cy = y + cvp(12);
+    if(estado === 'en-juego'){
+      ctx.fillStyle = '#ff6b6b';
+      ctx.font = `700 ${cvp(15)}px "Rajdhani", Arial, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText('● EN VIVO' + (p.cuarto ? '  ·  ' + (CUARTO_LABELS_BASQUET[p.cuarto]||'').toUpperCase() : ''), CX, cy+cvp(14));
+      cy += cvp(24);
+    } else {
+      const partes = partesDiaHoraPartido(p.diaHora);
+      if(partes){
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.font = `600 ${cvp(14)}px "DM Sans", Arial, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.fillText(`${partes.dow} ${partes.fecha} · ${partes.hora}`, CX, cy+cvp(14));
+        cy += cvp(22);
+      }
+    }
+
+    const escLX = cvp(70), escVX = W-cvp(70)-ECSIZE;
+    await cvpDrawEscudo(ctx, escudos[normalizarPoli(p.local)], p.local, escLX, cy, ECSIZE);
+    await cvpDrawEscudo(ctx, escudos[normalizarPoli(p.visitante)], p.visitante, escVX, cy, ECSIZE);
+
+    ctx.fillStyle = CVP_C.BLANCO;
+    ctx.font = `${cvp(17)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    cvpFillTextTrunc(ctx, (p.local||'').toUpperCase(), escLX+ECSIZE/2, cy+ECSIZE+cvp(6), cvp(220));
+    cvpFillTextTrunc(ctx, (p.visitante||'').toUpperCase(), escVX+ECSIZE/2, cy+ECSIZE+cvp(6), cvp(220));
+    ctx.textBaseline = 'alphabetic';
+
+    const marcTxt = estado === 'en-juego' ? `${p.ptsLocal ?? 0}-${p.ptsVisitante ?? 0}` : 'VS';
+    const vsW = cvp(64), vsH = cvp(30);
+    cvpRoundRect(ctx, CX-vsW/2, cy+ECSIZE/2-vsH/2, vsW, vsH, cvp(7));
+    ctx.fillStyle = CVP_C.NEG4; ctx.fill();
+    ctx.fillStyle = CVP_C.NARANJA_L;
+    ctx.font = `${cvp(19)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(marcTxt, CX, cy+ECSIZE/2);
+    ctx.textBaseline = 'alphabetic';
+
+    if(p.lugar){
+      ctx.fillStyle = 'rgba(255,255,255,0.4)';
+      ctx.font = `500 ${cvp(12)}px "DM Sans", Arial, sans-serif`;
+      ctx.textAlign = 'center';
+      cvpFillTextTrunc(ctx, '📍 ' + p.lugar, CX, cy+ECSIZE+cvp(28), W-cvp(100));
+    }
+
+    y += ROW_H;
+  }
+
+  cvpFooter(ctx, W, CVP_H - cvp(40));
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  return canvas;
+}
+
 // ── Modal Compartir (Polideportivo) ────────────────────────────
-let _sharePoliCanvas = null;
+let _sharePoliCanvases = [];
+let _sharePoliIdx = 0;
 function abrirSharePoli(generadorFn){
   const loadEl = document.getElementById('share-loading');
   const imgEl  = document.getElementById('share-preview');
-  _sharePoliCanvas = null;
+  const navEl  = document.getElementById('share-nav');
+  _sharePoliCanvases = [];
+  _sharePoliIdx = 0;
   imgEl.style.display = 'none';
   loadEl.style.display = 'block';
+  loadEl.textContent = 'Generando imagen...';
+  if(navEl) navEl.style.display = 'none';
   document.getElementById('share-overlay').classList.add('open');
   requestAnimationFrame(async ()=>{
     try{
-      const canvas = await generadorFn();
-      _sharePoliCanvas = canvas;
-      imgEl.src = canvas.toDataURL('image/png');
+      const resultado = await generadorFn();
+      _sharePoliCanvases = Array.isArray(resultado) ? resultado : [resultado];
+      if(!_sharePoliCanvases.length){ cerrarSharePoli(); return; }
+      _shareMostrarImagenPoli();
       imgEl.style.display = 'block';
       loadEl.style.display = 'none';
     }catch(e){
@@ -1944,20 +2072,39 @@ function abrirSharePoli(generadorFn){
     }
   });
 }
+function _shareMostrarImagenPoli(){
+  if(!_sharePoliCanvases.length) return;
+  const imgEl = document.getElementById('share-preview');
+  const navEl = document.getElementById('share-nav');
+  const cntEl = document.getElementById('share-contador');
+  imgEl.src = _sharePoliCanvases[_sharePoliIdx].toDataURL('image/png');
+  if(_sharePoliCanvases.length > 1 && navEl){
+    navEl.style.display = 'flex';
+    if(cntEl) cntEl.textContent = (_sharePoliIdx+1) + ' / ' + _sharePoliCanvases.length;
+  } else if(navEl){
+    navEl.style.display = 'none';
+  }
+}
+function shareCambiarImagenPoli(delta){
+  if(!_sharePoliCanvases.length) return;
+  _sharePoliIdx = (_sharePoliIdx + delta + _sharePoliCanvases.length) % _sharePoliCanvases.length;
+  _shareMostrarImagenPoli();
+}
 function cerrarSharePoli(){
   document.getElementById('share-overlay').classList.remove('open');
 }
 function descargarImagenPoli(){
-  if(!_sharePoliCanvas) return;
+  if(!_sharePoliCanvases.length) return;
   const a = document.createElement('a');
   a.download = 'polideportivo-basquet.png';
-  a.href = _sharePoliCanvas.toDataURL('image/png');
+  a.href = _sharePoliCanvases[_sharePoliIdx].toDataURL('image/png');
   a.click();
 }
 async function compartirImgPoli(){
-  if(!_sharePoliCanvas) return;
+  if(!_sharePoliCanvases.length) return;
+  const canvas = _sharePoliCanvases[_sharePoliIdx];
   try{
-    const blob = await new Promise(res=>_sharePoliCanvas.toBlob(res,'image/png'));
+    const blob = await new Promise(res=>canvas.toBlob(res,'image/png'));
     const file = new File([blob],'polideportivo-basquet.png',{type:'image/png'});
     if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
       await navigator.share({ files:[file], title:'Polideportivo', text:'Polideportivo · Básquetbol – ¡Mirá el partido! 🏀' });
@@ -2003,7 +2150,6 @@ async function cargarFixture(categoria, modo){
 
   const partidoRowHTML = p => {
     const estado = estadoPartidoBasquet(p);
-    const btnCompartir = `<button type="button" class="btn-compartir-fx" onclick="compartirPartidoBasquet('${p._key}')" title="Compartir">📤</button>`;
     if(estado === 'en-juego'){
       return `
       <div class="partido-row en-juego">
@@ -2018,7 +2164,6 @@ async function cargarFixture(categoria, modo){
           ${p.lugar ? `<div class="partido-info-extra">${escapeHtml(p.lugar)}</div>` : ''}
         </div>
         <div class="partido-equipo" style="text-align:right">${escudoTagPoli(escudos, p.visitante)}${escapeHtml(p.visitante||'')}</div>
-        ${btnCompartir}
       </div>`;
     }
     if(estado === 'jugado'){
@@ -2027,6 +2172,7 @@ async function cargarFixture(categoria, modo){
         <div class="partido-equipo">${escudoTagPoli(escudos, p.local)}${escapeHtml(p.local||'')}</div>
         <div class="partido-resultado">${(p.ptsLocal ?? '-') + ' - ' + (p.ptsVisitante ?? '-')}</div>
         <div class="partido-equipo" style="text-align:right">${escudoTagPoli(escudos, p.visitante)}${escapeHtml(p.visitante||'')}</div>
+        <button type="button" class="btn-compartir-fx" onclick="compartirPartidoBasquet('${p._key}')" title="Compartir">📤</button>
       </div>`;
     }
     // Pendiente con día/hora cargados: franja tipo "ticket"
@@ -2047,7 +2193,6 @@ async function cargarFixture(categoria, modo){
           </div>
           ${p.lugar ? `<div class="fx-lugar">📍 ${escapeHtml(p.lugar)}</div>` : ''}
         </div>
-        ${btnCompartir}
       </div>`;
     }
     // Pendiente sin día/hora cargados: fila simple, como antes
@@ -2059,15 +2204,16 @@ async function cargarFixture(categoria, modo){
         ${p.lugar ? `<div class="partido-info-extra">${escapeHtml(p.lugar)}</div>` : ''}
       </div>
       <div class="partido-equipo" style="text-align:right">${escudoTagPoli(escudos, p.visitante)}${escapeHtml(p.visitante||'')}</div>
-      ${btnCompartir}
     </div>`;
   };
 
-  if(modo === 'fixture') _partidosBasquetMapa = {};
+  if(modo === 'fixture') _zonasBasquetMapa = {};
+  if(modo === 'resultados') _partidosBasquetMapa = {};
   cont.innerHTML = ordenZonas.map(zonaKey=>{
     const partidosZona = porZona[zonaKey].slice().sort((a,b)=>(a.orden||0)-(b.orden||0));
     const zonaLabel = etiquetaSubSegBasquet(categoria, zonaKey, nombresGrupos);
-    if(modo === 'fixture') partidosZona.forEach(p=>{ _partidosBasquetMapa[p._key] = {p, zonaLabel}; });
+    if(modo === 'fixture') _zonasBasquetMapa[zonaKey] = {partidos: partidosZona, zonaLabel};
+    if(modo === 'resultados') partidosZona.forEach(p=>{ _partidosBasquetMapa[p._key] = {p, zonaLabel}; });
 
     // 2) Dentro de la zona, agrupar por Fecha
     const porFecha = {};
@@ -2083,7 +2229,11 @@ async function cargarFixture(categoria, modo){
       porFecha[fecha].map(partidoRowHTML).join('')
     ).join('');
 
-    return `<div class="card">${zonaLabel ? `<div class="card-titulo">${escapeHtml(zonaLabel)}</div>` : ''}${cuerpo}</div>`;
+    const header = modo === 'fixture'
+      ? `<div class="card-header-fx">${zonaLabel ? `<div class="card-titulo">${escapeHtml(zonaLabel)}</div>` : '<div></div>'}<button type="button" class="btn-compartir-fx" onclick="compartirZonaBasquet('${zonaKey}')" title="Compartir esta zona">📤</button></div>`
+      : (zonaLabel ? `<div class="card-titulo">${escapeHtml(zonaLabel)}</div>` : '');
+
+    return `<div class="card">${header}${cuerpo}</div>`;
   }).join('');
   if(keysEnJuego.length) arrancarTickBasquet();
 
@@ -2437,11 +2587,17 @@ function slugEquipoBasquet(nombre){
 // en Firestore bajo la clave "crono_<clave del partido>"
 // ============================================================
 let _cronosBasquetCache = {}; // clave del partido -> {corriendo, inicio, base}
-let _partidosBasquetMapa = {}; // clave del partido -> {p, zonaLabel}, para el botón Compartir
+let _partidosBasquetMapa = {}; // clave del partido -> {p, zonaLabel} (Resultados: Compartir por partido)
+let _zonasBasquetMapa = {}; // clave de zona -> {partidos, zonaLabel} (Fixture: Compartir por zona)
 function compartirPartidoBasquet(key){
   const entry = _partidosBasquetMapa[key];
   if(!entry) return;
   abrirSharePoli(()=>generarImagenPartidoBasquet(entry.p, entry.zonaLabel));
+}
+function compartirZonaBasquet(zonaKey){
+  const entry = _zonasBasquetMapa[zonaKey];
+  if(!entry || !entry.partidos.length) return;
+  abrirSharePoli(()=>generarImagenZonaBasquet(entry.partidos, entry.zonaLabel));
 }
 
 async function precargarCronosBasquet(keys){
