@@ -324,6 +324,8 @@ header{
 .fx-crest-ini{background:var(--negro4);display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:11px;color:var(--gris);}
 .fx-vs{font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--accent-light);padding:0 8px;flex-shrink:0;}
 .fx-lugar{font-size:12px;color:var(--gris);padding-left:2px;}
+.btn-compartir-fx{background:none;border:none;color:var(--gris);font-size:15px;cursor:pointer;padding:6px 8px;opacity:.7;flex-shrink:0;align-self:center;}
+.btn-compartir-fx:hover{opacity:1;color:var(--accent-light);}
 .equipo-card-basquet{display:flex;align-items:center;gap:12px;padding:12px;border-bottom:1px solid var(--negro4);font-family:'Rajdhani',sans-serif;}
 .equipo-card-basquet:last-child{border-bottom:none;}
 .equipo-card-escudo{width:42px;height:42px;object-fit:contain;border-radius:8px;flex-shrink:0;}
@@ -523,6 +525,20 @@ body.bloqueado-poli .vista-deporte{display:none!important;}
     <div class="modal-btns">
       <button class="btn-secundario" onclick="cerrarLoginPoli()">Cancelar</button>
       <button class="btn-primario" onclick="loginPoli()">Ingresar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL COMPARTIR -->
+<div class="modal-overlay" id="share-overlay">
+  <div class="modal-box" style="max-width:360px;text-align:center">
+    <h3>Compartir</h3>
+    <div id="share-loading" class="placeholder" style="padding:40px 0">Generando imagen...</div>
+    <img id="share-preview" style="display:none;width:100%;border-radius:10px;margin-bottom:14px" alt="">
+    <div class="modal-btns" style="flex-wrap:wrap">
+      <button class="btn-secundario" onclick="cerrarSharePoli()">Cerrar</button>
+      <button class="btn-primario" onclick="descargarImagenPoli()">⬇ Descargar</button>
+      <button class="btn-primario" onclick="compartirImgPoli()">📤 Compartir</button>
     </div>
   </div>
 </div>
@@ -1727,6 +1743,233 @@ function crestOEscudoHTML(mapa, nombre){
   return `<div class="fx-crest fx-crest-ini">${escapeHtml(inicialesEquipoBasquet(nombre))}</div>`;
 }
 
+// ============================================================
+// IMAGEN PARA COMPARTIR — Fixture de Básquet (canvas 1080×1350)
+// ============================================================
+const CVP_W = 1080, CVP_H = 1350, CVP_S = CVP_W / 700;
+function cvp(v){ return Math.round(v * CVP_S); }
+const CVP_C = {
+  NEG:'#080808', NEG2:'#111113', NEG3:'#191920', NEG4:'#232330',
+  NARANJA:'#e8720c', NARANJA_L:'#f5943d', BLANCO:'#f5f5f5', GRIS:'#888888', ROJO:'#c0392b'
+};
+function cvpRoundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y);
+  ctx.closePath();
+}
+function cvpFillTextTrunc(ctx,text,x,y,maxW){
+  if(!maxW){ ctx.fillText(text,x,y); return; }
+  let t = String(text||'');
+  if(ctx.measureText(t).width <= maxW){ ctx.fillText(t,x,y); return; }
+  while(t.length && ctx.measureText(t+'…').width > maxW) t = t.slice(0,-1);
+  ctx.fillText(t+'…', x, y);
+}
+function cvpEscudoFallback(ctx, nombre, x, y, size){
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(x+size/2, y+size/2, size/2, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(232,114,12,0.15)';
+  ctx.fill();
+  ctx.fillStyle = CVP_C.NARANJA_L;
+  ctx.font = `700 ${Math.round(size*0.38)}px Arial`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(inicialesEquipoBasquet(nombre), x+size/2, y+size/2);
+  ctx.textBaseline = 'alphabetic';
+  ctx.restore();
+}
+function cvpDrawEscudo(ctx, src, nombre, x, y, size){
+  return new Promise(resolve=>{
+    if(!src){ cvpEscudoFallback(ctx,nombre,x,y,size); resolve(); return; }
+    const img = new Image();
+    img.onload = ()=>{
+      ctx.save(); ctx.beginPath();
+      ctx.arc(x+size/2,y+size/2,size/2,0,Math.PI*2); ctx.clip();
+      ctx.fillStyle = '#fff'; ctx.fillRect(x,y,size,size);
+      ctx.drawImage(img,x,y,size,size);
+      ctx.restore(); resolve();
+    };
+    img.onerror = ()=>{ cvpEscudoFallback(ctx,nombre,x,y,size); resolve(); };
+    img.src = src;
+  });
+}
+function cvpHeader(ctx, W, yStart){
+  const H = cvp(64);
+  const grad = ctx.createLinearGradient(0,yStart,W,yStart);
+  grad.addColorStop(0, CVP_C.NEG4); grad.addColorStop(1, 'rgba(232,114,12,0.18)');
+  ctx.fillStyle = grad; ctx.fillRect(0,yStart,W,H);
+  ctx.fillStyle = CVP_C.NARANJA; ctx.fillRect(0,yStart+H-2,W,2);
+  ctx.fillStyle = CVP_C.BLANCO;
+  ctx.font = `${cvp(28)}px "Bebas Neue", Arial, sans-serif`;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.fillText('POLIDEPORTIVO', cvp(20), yStart + cvp(36));
+  ctx.fillStyle = 'rgba(232,114,12,0.75)';
+  ctx.font = `500 ${cvp(12)}px "DM Sans", Arial, sans-serif`;
+  ctx.fillText('Básquetbol · Río Tercero', cvp(20), yStart + cvp(52));
+  return yStart + H;
+}
+function cvpFooter(ctx, W, yStart){
+  const H = cvp(40);
+  ctx.fillStyle = CVP_C.NEG4; ctx.fillRect(0,yStart,W,H);
+  ctx.fillStyle = 'rgba(232,114,12,0.6)';
+  ctx.font = `600 ${cvp(16)}px "DM Sans", Arial, sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  cvpFillTextTrunc(ctx, 'POLIDEPORTIVO · deportemas.pages.dev/polideportivo', W/2, yStart+H/2, W-cvp(40));
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+}
+
+async function generarImagenPartidoBasquet(p, torneoLabel){
+  await document.fonts.ready;
+  const escudos = await mapaEscudosPoli('basquet');
+  const escLocalSrc = escudos[normalizarPoli(p.local)];
+  const escVisitSrc = escudos[normalizarPoli(p.visitante)];
+  const estado = estadoPartidoBasquet(p);
+
+  const W = CVP_W, CX = W/2;
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = CVP_H;
+  const ctx = canvas.getContext('2d');
+  ctx.textBaseline = 'alphabetic';
+
+  const bgGrad = ctx.createLinearGradient(0,0,0,CVP_H);
+  bgGrad.addColorStop(0, CVP_C.NEG3); bgGrad.addColorStop(1, CVP_C.NEG);
+  ctx.fillStyle = bgGrad; ctx.fillRect(0,0,W,CVP_H);
+
+  let y = cvpHeader(ctx, W, 0);
+
+  const heroH = Math.round(CVP_H * 0.4);
+  const heroY = y;
+  const heroGrad = ctx.createLinearGradient(0,heroY,0,heroY+heroH);
+  heroGrad.addColorStop(0,'rgba(232,114,12,0.09)'); heroGrad.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle = heroGrad; ctx.fillRect(0,heroY,W,heroH);
+
+  // Zona / torneo
+  ctx.fillStyle = 'rgba(232,114,12,0.7)';
+  ctx.font = `700 ${cvp(14)}px "Rajdhani", Arial, sans-serif`;
+  ctx.textAlign = 'center';
+  cvpFillTextTrunc(ctx, (torneoLabel||'').toUpperCase(), CX, heroY+cvp(30), W-cvp(80));
+
+  // Marcador / VS
+  const marcTxt = estado === 'en-juego' ? `${p.ptsLocal ?? 0} - ${p.ptsVisitante ?? 0}` : 'VS';
+  ctx.font = `${cvp(100)}px "Bebas Neue", Arial, sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.shadowColor = 'rgba(232,114,12,0.35)'; ctx.shadowBlur = cvp(28);
+  ctx.fillStyle = CVP_C.NARANJA_L;
+  ctx.fillText(marcTxt, CX, heroY + heroH*0.46);
+  ctx.shadowBlur = 0;
+  ctx.textBaseline = 'alphabetic';
+
+  // Badge de estado
+  const estadoTxt = estado === 'en-juego' ? ('● EN VIVO' + (p.cuarto ? '  ·  ' + (CUARTO_LABELS_BASQUET[p.cuarto]||'').toUpperCase() : '')) : 'PRÓXIMO PARTIDO';
+  const bCol = estado === 'en-juego' ? 'rgba(192,57,43,0.6)' : 'rgba(232,114,12,0.2)';
+  const bTxt = estado === 'en-juego' ? '#ff6b6b' : CVP_C.NARANJA_L;
+  ctx.font = `700 ${cvp(14)}px "Rajdhani", Arial, sans-serif`;
+  const bW = ctx.measureText(estadoTxt).width + cvp(28);
+  const bY = heroY + heroH*0.7;
+  cvpRoundRect(ctx, CX-bW/2, bY, bW, cvp(26), cvp(13));
+  ctx.fillStyle = bCol; ctx.fill();
+  ctx.fillStyle = bTxt;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(estadoTxt, CX, bY+cvp(13));
+  ctx.textBaseline = 'alphabetic';
+
+  // Escudos y nombres
+  const ESC = cvp(92);
+  const escY = heroY + heroH*0.42 - ESC/2;
+  const escLX = cvp(60), escRX = W - cvp(60) - ESC;
+  await cvpDrawEscudo(ctx, escLocalSrc, p.local, escLX, escY, ESC);
+  ctx.fillStyle = CVP_C.BLANCO;
+  ctx.font = `${cvp(24)}px "Bebas Neue", Arial, sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  cvpFillTextTrunc(ctx, (p.local||'').toUpperCase(), escLX+ESC/2, escY+ESC+cvp(10), cvp(220));
+  await cvpDrawEscudo(ctx, escVisitSrc, p.visitante, escRX, escY, ESC);
+  ctx.font = `${cvp(24)}px "Bebas Neue", Arial, sans-serif`;
+  cvpFillTextTrunc(ctx, (p.visitante||'').toUpperCase(), escRX+ESC/2, escY+ESC+cvp(10), cvp(220));
+  ctx.textBaseline = 'alphabetic';
+
+  y = heroY + heroH;
+  const divGrad = ctx.createLinearGradient(0,y,W,y);
+  divGrad.addColorStop(0,'transparent'); divGrad.addColorStop(0.2,CVP_C.NARANJA);
+  divGrad.addColorStop(0.8,CVP_C.NARANJA); divGrad.addColorStop(1,'transparent');
+  ctx.fillStyle = divGrad; ctx.fillRect(0,y,W,2);
+  y += cvp(40);
+
+  // Día / hora / lugar
+  const partes = partesDiaHoraPartido(p.diaHora);
+  if(partes && estado !== 'en-juego'){
+    ctx.textAlign = 'center';
+    ctx.fillStyle = CVP_C.NARANJA_L;
+    ctx.font = `${cvp(46)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.fillText(`${partes.dow} ${partes.fecha}`, CX, y+cvp(40));
+    y += cvp(56);
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.font = `600 ${cvp(24)}px "DM Sans", Arial, sans-serif`;
+    ctx.fillText(partes.hora, CX, y+cvp(20));
+    y += cvp(46);
+  }
+  if(p.lugar){
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.font = `500 ${cvp(18)}px "DM Sans", Arial, sans-serif`;
+    ctx.textAlign = 'center';
+    cvpFillTextTrunc(ctx, '📍 ' + p.lugar, CX, y+cvp(18), W-cvp(80));
+    y += cvp(36);
+  }
+
+  cvpFooter(ctx, W, CVP_H - cvp(40));
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  return canvas;
+}
+
+// ── Modal Compartir (Polideportivo) ────────────────────────────
+let _sharePoliCanvas = null;
+function abrirSharePoli(generadorFn){
+  const loadEl = document.getElementById('share-loading');
+  const imgEl  = document.getElementById('share-preview');
+  _sharePoliCanvas = null;
+  imgEl.style.display = 'none';
+  loadEl.style.display = 'block';
+  document.getElementById('share-overlay').classList.add('open');
+  requestAnimationFrame(async ()=>{
+    try{
+      const canvas = await generadorFn();
+      _sharePoliCanvas = canvas;
+      imgEl.src = canvas.toDataURL('image/png');
+      imgEl.style.display = 'block';
+      loadEl.style.display = 'none';
+    }catch(e){
+      console.error(e);
+      loadEl.textContent = 'No se pudo generar la imagen.';
+    }
+  });
+}
+function cerrarSharePoli(){
+  document.getElementById('share-overlay').classList.remove('open');
+}
+function descargarImagenPoli(){
+  if(!_sharePoliCanvas) return;
+  const a = document.createElement('a');
+  a.download = 'polideportivo-basquet.png';
+  a.href = _sharePoliCanvas.toDataURL('image/png');
+  a.click();
+}
+async function compartirImgPoli(){
+  if(!_sharePoliCanvas) return;
+  try{
+    const blob = await new Promise(res=>_sharePoliCanvas.toBlob(res,'image/png'));
+    const file = new File([blob],'polideportivo-basquet.png',{type:'image/png'});
+    if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
+      await navigator.share({ files:[file], title:'Polideportivo', text:'Polideportivo · Básquetbol – ¡Mirá el partido! 🏀' });
+      return;
+    }
+  }catch(e){
+    if(e && e.name === 'AbortError') return;
+  }
+  descargarImagenPoli();
+  alert('Imagen descargada. Adjuntala donde quieras compartirla.');
+}
+
 async function cargarFixture(categoria, modo){
   modo = modo || 'fixture'; // 'fixture' = pendientes + en juego · 'resultados' = jugados
   const cont = document.getElementById(modo === 'resultados' ? 'resultados-lista' : 'fixture-lista');
@@ -1760,6 +2003,7 @@ async function cargarFixture(categoria, modo){
 
   const partidoRowHTML = p => {
     const estado = estadoPartidoBasquet(p);
+    const btnCompartir = `<button type="button" class="btn-compartir-fx" onclick="compartirPartidoBasquet('${p._key}')" title="Compartir">📤</button>`;
     if(estado === 'en-juego'){
       return `
       <div class="partido-row en-juego">
@@ -1774,6 +2018,7 @@ async function cargarFixture(categoria, modo){
           ${p.lugar ? `<div class="partido-info-extra">${escapeHtml(p.lugar)}</div>` : ''}
         </div>
         <div class="partido-equipo" style="text-align:right">${escudoTagPoli(escudos, p.visitante)}${escapeHtml(p.visitante||'')}</div>
+        ${btnCompartir}
       </div>`;
     }
     if(estado === 'jugado'){
@@ -1802,6 +2047,7 @@ async function cargarFixture(categoria, modo){
           </div>
           ${p.lugar ? `<div class="fx-lugar">📍 ${escapeHtml(p.lugar)}</div>` : ''}
         </div>
+        ${btnCompartir}
       </div>`;
     }
     // Pendiente sin día/hora cargados: fila simple, como antes
@@ -1813,12 +2059,15 @@ async function cargarFixture(categoria, modo){
         ${p.lugar ? `<div class="partido-info-extra">${escapeHtml(p.lugar)}</div>` : ''}
       </div>
       <div class="partido-equipo" style="text-align:right">${escudoTagPoli(escudos, p.visitante)}${escapeHtml(p.visitante||'')}</div>
+      ${btnCompartir}
     </div>`;
   };
 
+  if(modo === 'fixture') _partidosBasquetMapa = {};
   cont.innerHTML = ordenZonas.map(zonaKey=>{
     const partidosZona = porZona[zonaKey].slice().sort((a,b)=>(a.orden||0)-(b.orden||0));
     const zonaLabel = etiquetaSubSegBasquet(categoria, zonaKey, nombresGrupos);
+    if(modo === 'fixture') partidosZona.forEach(p=>{ _partidosBasquetMapa[p._key] = {p, zonaLabel}; });
 
     // 2) Dentro de la zona, agrupar por Fecha
     const porFecha = {};
@@ -2188,6 +2437,12 @@ function slugEquipoBasquet(nombre){
 // en Firestore bajo la clave "crono_<clave del partido>"
 // ============================================================
 let _cronosBasquetCache = {}; // clave del partido -> {corriendo, inicio, base}
+let _partidosBasquetMapa = {}; // clave del partido -> {p, zonaLabel}, para el botón Compartir
+function compartirPartidoBasquet(key){
+  const entry = _partidosBasquetMapa[key];
+  if(!entry) return;
+  abrirSharePoli(()=>generarImagenPartidoBasquet(entry.p, entry.zonaLabel));
+}
 
 async function precargarCronosBasquet(keys){
   const fb = await esperarFB();
