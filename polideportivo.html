@@ -625,7 +625,7 @@ body.bloqueado-poli .vista-deporte{display:none!important;}
           <option value="en-juego">En juego</option>
           <option value="jugado">Jugado</option>
         </select>
-        <select id="ap-cuarto" class="admin-input" style="display:none">
+        <select id="ap-cuarto" class="admin-input" style="display:none;margin-bottom:6px">
           <option value="1">1er cuarto</option>
           <option value="2">2do cuarto</option>
           <option value="3">3er cuarto</option>
@@ -633,6 +633,22 @@ body.bloqueado-poli .vista-deporte{display:none!important;}
           <option value="entretiempo">Entretiempo</option>
           <option value="prorroga">Prórroga</option>
         </select>
+        <div id="ap-basquet-cuartos" style="display:none">
+          <label class="admin-label" style="margin-bottom:2px">Puntaje por cuarto — Local</label>
+          <div style="display:flex;gap:6px;margin-bottom:6px">
+            <input type="number" id="ap-q1-local" class="admin-input" placeholder="1Q">
+            <input type="number" id="ap-q2-local" class="admin-input" placeholder="2Q">
+            <input type="number" id="ap-q3-local" class="admin-input" placeholder="3Q">
+            <input type="number" id="ap-q4-local" class="admin-input" placeholder="4Q">
+          </div>
+          <label class="admin-label" style="margin-bottom:2px">Puntaje por cuarto — Visitante</label>
+          <div style="display:flex;gap:6px">
+            <input type="number" id="ap-q1-visitante" class="admin-input" placeholder="1Q">
+            <input type="number" id="ap-q2-visitante" class="admin-input" placeholder="2Q">
+            <input type="number" id="ap-q3-visitante" class="admin-input" placeholder="3Q">
+            <input type="number" id="ap-q4-visitante" class="admin-input" placeholder="4Q">
+          </div>
+        </div>
       </div>
       <div class="admin-grid">
         <input type="text" id="ap-local" class="admin-input" placeholder="Equipo local" list="datalist-equipos-poli">
@@ -1859,7 +1875,8 @@ async function generarImagenPartidoBasquet(p, torneoLabel){
   cvpFillTextTrunc(ctx, (torneoLabel||'').toUpperCase(), CX, heroY+cvp(30), W-cvp(80));
 
   // Marcador / VS
-  const marcTxt = estado === 'en-juego' ? `${p.ptsLocal ?? 0} - ${p.ptsVisitante ?? 0}` : 'VS';
+  const marcTxt = estado === 'jugado' ? `${p.ptsLocal ?? '-'} - ${p.ptsVisitante ?? '-'}`
+                 : estado === 'en-juego' ? `${p.ptsLocal ?? 0} - ${p.ptsVisitante ?? 0}` : 'VS';
   ctx.font = `${cvp(100)}px "Bebas Neue", Arial, sans-serif`;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.shadowColor = 'rgba(232,114,12,0.35)'; ctx.shadowBlur = cvp(28);
@@ -1869,9 +1886,11 @@ async function generarImagenPartidoBasquet(p, torneoLabel){
   ctx.textBaseline = 'alphabetic';
 
   // Badge de estado
-  const estadoTxt = estado === 'en-juego' ? ('● EN VIVO' + (p.cuarto ? '  ·  ' + (CUARTO_LABELS_BASQUET[p.cuarto]||'').toUpperCase() : '')) : 'PRÓXIMO PARTIDO';
-  const bCol = estado === 'en-juego' ? 'rgba(192,57,43,0.6)' : 'rgba(232,114,12,0.2)';
-  const bTxt = estado === 'en-juego' ? '#ff6b6b' : CVP_C.NARANJA_L;
+  const estadoTxt = estado === 'jugado' ? 'FINAL'
+                   : estado === 'en-juego' ? ('● EN VIVO' + (p.cuarto ? '  ·  ' + (CUARTO_LABELS_BASQUET[p.cuarto]||'').toUpperCase() : ''))
+                   : 'PRÓXIMO PARTIDO';
+  const bCol = estado === 'jugado' ? 'rgba(26,107,47,0.55)' : estado === 'en-juego' ? 'rgba(192,57,43,0.6)' : 'rgba(232,114,12,0.2)';
+  const bTxt = estado === 'jugado' ? '#4fce7d' : estado === 'en-juego' ? '#ff6b6b' : CVP_C.NARANJA_L;
   ctx.font = `700 ${cvp(14)}px "Rajdhani", Arial, sans-serif`;
   const bW = ctx.measureText(estadoTxt).width + cvp(28);
   const bY = heroY + heroH*0.7;
@@ -1903,9 +1922,9 @@ async function generarImagenPartidoBasquet(p, torneoLabel){
   ctx.fillStyle = divGrad; ctx.fillRect(0,y,W,2);
   y += cvp(40);
 
-  // Día / hora / lugar
+  // Día / hora / lugar (el bloque grande de fecha solo tiene sentido para partidos que todavía no se jugaron)
   const partes = partesDiaHoraPartido(p.diaHora);
-  if(partes && estado !== 'en-juego'){
+  if(partes && estado === 'pendiente'){
     ctx.textAlign = 'center';
     ctx.fillStyle = CVP_C.NARANJA_L;
     ctx.font = `${cvp(46)}px "Bebas Neue", Arial, sans-serif`;
@@ -1922,6 +1941,45 @@ async function generarImagenPartidoBasquet(p, torneoLabel){
     ctx.textAlign = 'center';
     cvpFillTextTrunc(ctx, '📍 ' + p.lugar, CX, y+cvp(18), W-cvp(80));
     y += cvp(36);
+  }
+
+  // Puntaje por cuarto (solo si el partido está Jugado y se cargaron los parciales)
+  if(estado === 'jugado' && p.cuartos){
+    const c = p.cuartos;
+    const colW = cvp(64), labelW = cvp(150);
+    const tableW = labelW + colW*4;
+    const tableX = CX - tableW/2;
+    const rowH = cvp(34);
+    y += cvp(14);
+
+    cvpRoundRect(ctx, tableX-cvp(14), y-cvp(8), tableW+cvp(28), rowH*3+cvp(16), cvp(10));
+    ctx.fillStyle = 'rgba(255,255,255,0.03)'; ctx.fill();
+
+    ctx.font = `700 ${cvp(13)}px "Rajdhani", Arial, sans-serif`;
+    ctx.fillStyle = 'rgba(232,114,12,0.75)';
+    ctx.textAlign = 'center';
+    ['1Q','2Q','3Q','4Q'].forEach((lbl,i)=>{
+      ctx.fillText(lbl, tableX+labelW+colW*i+colW/2, y+cvp(14));
+    });
+
+    const filas = [
+      [p.local, [c.q1Local, c.q2Local, c.q3Local, c.q4Local]],
+      [p.visitante, [c.q1Visitante, c.q2Visitante, c.q3Visitante, c.q4Visitante]]
+    ];
+    filas.forEach((fila,fi)=>{
+      const fy = y + rowH*(fi+1) + cvp(4);
+      ctx.font = `600 ${cvp(16)}px "DM Sans", Arial, sans-serif`;
+      ctx.fillStyle = CVP_C.BLANCO;
+      ctx.textAlign = 'left';
+      cvpFillTextTrunc(ctx, fila[0]||'', tableX, fy, labelW-cvp(10));
+      ctx.font = `${cvp(19)}px "Bebas Neue", Arial, sans-serif`;
+      ctx.fillStyle = CVP_C.NARANJA_L;
+      ctx.textAlign = 'center';
+      fila[1].forEach((v,i)=>{
+        ctx.fillText((v===null||v===undefined) ? '-' : String(v), tableX+labelW+colW*i+colW/2, fy);
+      });
+    });
+    y += rowH*3 + cvp(16);
   }
 
   cvpFooter(ctx, W, CVP_H - cvp(40));
@@ -2000,11 +2058,21 @@ async function _generarImagenZonaBasquetGrupo(ps, zonaLabel){
     } else {
       const partes = partesDiaHoraPartido(p.diaHora);
       if(partes){
-        ctx.fillStyle = 'rgba(255,255,255,0.5)';
-        ctx.font = `600 ${cvp(14)}px "DM Sans", Arial, sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.fillText(`${partes.dow} ${partes.fecha} · ${partes.hora}`, CX, cy+cvp(14));
-        cy += cvp(22);
+        // Mismo lenguaje visual que la franja "ticket" del sitio: chip con acento naranja a la izquierda
+        const chipTxt = `${partes.dow} ${partes.fecha}  ·  ${partes.hora}`;
+        ctx.font = `700 ${cvp(14)}px "Rajdhani", Arial, sans-serif`;
+        const chipW = ctx.measureText(chipTxt).width + cvp(34);
+        const chipH = cvp(28);
+        const chipX = CX - chipW/2, chipY = cy;
+        cvpRoundRect(ctx, chipX, chipY, chipW, chipH, cvp(6));
+        ctx.fillStyle = 'rgba(232,114,12,0.12)'; ctx.fill();
+        ctx.fillStyle = CVP_C.NARANJA;
+        ctx.fillRect(chipX, chipY, cvp(4), chipH);
+        ctx.fillStyle = CVP_C.NARANJA_L;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(chipTxt, CX + cvp(4), chipY+chipH/2);
+        ctx.textBaseline = 'alphabetic';
+        cy += chipH + cvp(8);
       }
     }
 
@@ -3676,6 +3744,7 @@ let _partidoEditandoKey = null; // ídem, para "Agregar partido" (Básquet)
 function cambiarEstadoPartidoAdmin(){
   const estado = document.getElementById('ap-estado').value;
   document.getElementById('ap-cuarto').style.display = (estado === 'en-juego') ? 'block' : 'none';
+  document.getElementById('ap-basquet-cuartos').style.display = (estado === 'jugado') ? 'block' : 'none';
 }
 
 // Comprime una imagen a base64 (mismo criterio que Fútbol: máx 300px, calidad .85)
@@ -3812,6 +3881,13 @@ async function editarPartidoPoli(key){
     document.getElementById('ap-estado').value = estado;
     cambiarEstadoPartidoAdmin();
     if(estado === 'en-juego') document.getElementById('ap-cuarto').value = p.cuarto || '1';
+    if(estado === 'jugado'){
+      const cuartos = p.cuartos || {};
+      ['1','2','3','4'].forEach(q=>{
+        document.getElementById('ap-q'+q+'-local').value = cuartos['q'+q+'Local'] ?? '';
+        document.getElementById('ap-q'+q+'-visitante').value = cuartos['q'+q+'Visitante'] ?? '';
+      });
+    }
     if(p.subSeg) await precargarNivelesBasquetDesdeSubSeg('ap-b', p.subSeg);
   }
   document.getElementById('ap-btn-guardar').textContent = 'Guardar cambios';
@@ -3827,6 +3903,10 @@ function cancelarEdicionPartidoPoli(){
   if(pl) pl.value = ''; if(pv) pv.value = ''; if(f) f.value = '';
   const dh = document.getElementById('ap-dia-hora'), lg = document.getElementById('ap-lugar');
   if(dh) dh.value = ''; if(lg) lg.value = '';
+  ['1','2','3','4'].forEach(q=>{
+    const qlEl = document.getElementById('ap-q'+q+'-local'), qvEl = document.getElementById('ap-q'+q+'-visitante');
+    if(qlEl) qlEl.value = ''; if(qvEl) qvEl.value = '';
+  });
   const estadoSel = document.getElementById('ap-estado');
   if(estadoSel){ estadoSel.value = 'pendiente'; cambiarEstadoPartidoAdmin(); }
   const btnG = document.getElementById('ap-btn-guardar'), btnC = document.getElementById('ap-btn-cancelar');
@@ -3863,6 +3943,17 @@ async function agregarPartidoPoli(){
   if(esBasquet){
     datos.estado = estado;
     datos.cuarto = estado === 'en-juego' ? document.getElementById('ap-cuarto').value : null;
+    if(estado === 'jugado'){
+      const q = n => { const v = document.getElementById(n).value; return v === '' ? null : Number(v); };
+      const cuartos = {
+        q1Local: q('ap-q1-local'), q2Local: q('ap-q2-local'), q3Local: q('ap-q3-local'), q4Local: q('ap-q4-local'),
+        q1Visitante: q('ap-q1-visitante'), q2Visitante: q('ap-q2-visitante'), q3Visitante: q('ap-q3-visitante'), q4Visitante: q('ap-q4-visitante')
+      };
+      // Solo se guarda si se cargó al menos un cuarto, para no ensuciar partidos que no lo usan
+      datos.cuartos = Object.values(cuartos).some(v=>v!==null) ? cuartos : null;
+    } else {
+      datos.cuartos = null;
+    }
   }
   let subSeg = '';
   if(esBasquet){ subSeg = subSegmentoBasquetAdmin('ap-b'); datos.subSeg = subSeg; }
