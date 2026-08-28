@@ -1786,6 +1786,19 @@ function cvpRoundRect(ctx,x,y,w,h,r){
   ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y);
   ctx.closePath();
 }
+// Tarjeta con acento superior de color, respetando las esquinas redondeadas, más borde sutil
+function cvpTarjetaAcento(ctx, x, y, w, h, r, accentColor, borderColor){
+  ctx.save();
+  cvpRoundRect(ctx, x, y, w, h, r);
+  ctx.clip();
+  ctx.fillStyle = CVP_C.NEG2; ctx.fillRect(x, y, w, h);
+  ctx.fillStyle = accentColor; ctx.fillRect(x, y, w, r*1.6);
+  ctx.restore();
+  cvpRoundRect(ctx, x, y, w, h, r);
+  ctx.strokeStyle = borderColor || 'rgba(255,255,255,0.12)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+}
 function cvpFillTextTrunc(ctx,text,x,y,maxW){
   if(!maxW){ ctx.fillText(text,x,y); return; }
   let t = String(text||'');
@@ -2119,12 +2132,10 @@ async function _generarImagenZonaBasquetGrupo(ps, zonaLabel){
     }
 
     // Bloque de fecha estilo "calendario" (o indicador de vivo) donde antes iba el número
-    const blockW = cvp(58), blockH = cvp(64);
+    const blockW = cvp(58), blockH = cvp(64), blockR = cvp(8);
     const blockX = cvp(24), blockY = midY - blockH/2;
     if(estado === 'en-juego'){
-      cvpRoundRect(ctx, blockX, blockY, blockW, blockH, cvp(8));
-      ctx.fillStyle = CVP_C.NEG2; ctx.fill();
-      ctx.fillStyle = '#c0392b'; ctx.fillRect(blockX, blockY, blockW, cvp(4));
+      cvpTarjetaAcento(ctx, blockX, blockY, blockW, blockH, blockR, '#c0392b', 'rgba(192,57,43,0.4)');
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillStyle = '#ff6b6b';
       ctx.font = `700 ${cvp(11)}px "Rajdhani", Arial, sans-serif`;
@@ -2136,13 +2147,11 @@ async function _generarImagenZonaBasquetGrupo(ps, zonaLabel){
     } else {
       const partesBloque = partesDiaHoraPartido(p.diaHora);
       if(partesBloque){
-        cvpRoundRect(ctx, blockX, blockY, blockW, blockH, cvp(8));
-        ctx.fillStyle = CVP_C.NEG2; ctx.fill();
-        ctx.fillStyle = CVP_C.NARANJA; ctx.fillRect(blockX, blockY, blockW, cvp(4));
+        cvpTarjetaAcento(ctx, blockX, blockY, blockW, blockH, blockR, CVP_C.NARANJA, 'rgba(232,114,12,0.35)');
         ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
         ctx.fillStyle = CVP_C.NARANJA_L;
         ctx.font = `800 ${cvp(12)}px "Rajdhani", Arial, sans-serif`;
-        ctx.fillText(partesBloque.dow, blockX+blockW/2, blockY+cvp(24));
+        ctx.fillText(partesBloque.dow, blockX+blockW/2, blockY+cvp(26));
         ctx.font = `${cvp(27)}px "Bebas Neue", Arial, sans-serif`;
         ctx.fillStyle = CVP_C.BLANCO;
         ctx.fillText(partesBloque.fecha.split('/')[0], blockX+blockW/2, blockY+cvp(54));
@@ -2646,9 +2655,13 @@ async function generarImagenPosicionesBasquet(){
     }
 
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    if(i < 3){
-      ctx.font = `${cvp(21)}px Arial, sans-serif`;
-      ctx.fillText(['🥇','🥈','🥉'][i], C1+cvp(16), fy+cvp(1));
+    if(i===0){
+      ctx.shadowColor = 'rgba(232,114,12,0.5)'; ctx.shadowBlur = cvp(10);
+      ctx.beginPath(); ctx.arc(C1+cvp(16), fy, cvp(16), 0, Math.PI*2);
+      ctx.fillStyle = CVP_C.NARANJA; ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = CVP_C.NEG; ctx.font = `700 ${cvp(14)}px "Rajdhani", Arial, sans-serif`;
+      ctx.fillText('1', C1+cvp(16), fy);
     } else {
       ctx.fillStyle = 'rgba(255,255,255,0.4)';
       ctx.font = `600 ${cvp(14)}px "Rajdhani", Arial, sans-serif`;
