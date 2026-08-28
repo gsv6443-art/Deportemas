@@ -2118,18 +2118,43 @@ async function _generarImagenZonaBasquetGrupo(ps, zonaLabel){
       ctx.fillRect(cvp(24), rowY, W-cvp(48), 1);
     }
 
-    // Número grande semitransparente
-    ctx.font = `${cvp(50)}px "Bebas Neue", Arial, sans-serif`;
-    ctx.fillStyle = 'rgba(232,114,12,0.22)';
-    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    ctx.fillText(String(i+1).padStart(2,'0'), cvp(28), midY);
+    // Bloque de fecha estilo "calendario" (o indicador de vivo) donde antes iba el número
+    const blockW = cvp(58), blockH = cvp(64);
+    const blockX = cvp(24), blockY = midY - blockH/2;
+    if(estado === 'en-juego'){
+      cvpRoundRect(ctx, blockX, blockY, blockW, blockH, cvp(8));
+      ctx.fillStyle = CVP_C.NEG2; ctx.fill();
+      ctx.fillStyle = '#c0392b'; ctx.fillRect(blockX, blockY, blockW, cvp(4));
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#ff6b6b';
+      ctx.font = `700 ${cvp(11)}px "Rajdhani", Arial, sans-serif`;
+      ctx.fillText('● VIVO', blockX+blockW/2, blockY+blockH*0.35);
+      ctx.font = `${cvp(20)}px "Bebas Neue", Arial, sans-serif`;
+      ctx.fillStyle = CVP_C.BLANCO;
+      ctx.fillText((CUARTO_LABELS_BASQUET[p.cuarto]||'').split(' ')[0] || '', blockX+blockW/2, blockY+blockH*0.74);
+      ctx.textBaseline = 'alphabetic';
+    } else {
+      const partesBloque = partesDiaHoraPartido(p.diaHora);
+      if(partesBloque){
+        cvpRoundRect(ctx, blockX, blockY, blockW, blockH, cvp(8));
+        ctx.fillStyle = CVP_C.NEG2; ctx.fill();
+        ctx.fillStyle = CVP_C.NARANJA; ctx.fillRect(blockX, blockY, blockW, cvp(4));
+        ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+        ctx.fillStyle = CVP_C.NARANJA_L;
+        ctx.font = `800 ${cvp(12)}px "Rajdhani", Arial, sans-serif`;
+        ctx.fillText(partesBloque.dow, blockX+blockW/2, blockY+cvp(24));
+        ctx.font = `${cvp(27)}px "Bebas Neue", Arial, sans-serif`;
+        ctx.fillStyle = CVP_C.BLANCO;
+        ctx.fillText(partesBloque.fecha.split('/')[0], blockX+blockW/2, blockY+cvp(54));
+      }
+    }
 
     const contentX = cvp(96);
     const escArea = cvp(120);
     const contentW = W - contentX - escArea;
-    let cy = midY - cvp(22);
+    let cy = midY - cvp(24);
 
-    // Línea superior: día/hora o "en vivo"
+    // Línea superior: hora (o "en vivo")
     ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
     if(estado === 'en-juego'){
       ctx.fillStyle = '#ff6b6b';
@@ -2138,36 +2163,36 @@ async function _generarImagenZonaBasquetGrupo(ps, zonaLabel){
     } else {
       const partes = partesDiaHoraPartido(p.diaHora);
       if(partes){
-        ctx.fillStyle = CVP_C.NARANJA_L;
-        ctx.font = `700 ${cvp(15)}px "Rajdhani", Arial, sans-serif`;
-        cvpFillTextTrunc(ctx, `${partes.dow} ${partes.fecha} · ${partes.hora}`, contentX, cy, contentW);
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        ctx.font = `700 ${cvp(17)}px "Rajdhani", Arial, sans-serif`;
+        ctx.fillText(partes.hora.toUpperCase(), contentX, cy);
       }
     }
-    cy += cvp(28);
+    cy += cvp(32);
 
     // Línea de equipos: "Local  VS/marcador  Visitante"
     const marcTxt = estado === 'en-juego' ? `${p.ptsLocal ?? 0}-${p.ptsVisitante ?? 0}` : 'vs';
-    ctx.font = `${cvp(24)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.font = `${cvp(28)}px "Bebas Neue", Arial, sans-serif`;
     const marcW = ctx.measureText(marcTxt).width;
     const maxTeamW = (contentW - marcW - cvp(24)) / 2;
-    ctx.font = `700 ${cvp(19)}px "DM Sans", Arial, sans-serif`;
+    ctx.font = `700 ${cvp(23)}px "DM Sans", Arial, sans-serif`;
     let tx = contentX;
     ctx.fillStyle = CVP_C.BLANCO;
     cvpFillTextTrunc(ctx, p.local||'', tx, cy, maxTeamW);
     tx += Math.min(ctx.measureText(p.local||'').width, maxTeamW) + cvp(12);
-    ctx.font = `${cvp(24)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.font = `${cvp(28)}px "Bebas Neue", Arial, sans-serif`;
     ctx.fillStyle = CVP_C.NARANJA_L;
     ctx.fillText(marcTxt, tx, cy);
     tx += marcW + cvp(12);
-    ctx.font = `700 ${cvp(19)}px "DM Sans", Arial, sans-serif`;
+    ctx.font = `700 ${cvp(23)}px "DM Sans", Arial, sans-serif`;
     ctx.fillStyle = CVP_C.BLANCO;
     cvpFillTextTrunc(ctx, p.visitante||'', tx, cy, maxTeamW);
-    cy += cvp(24);
+    cy += cvp(30);
 
     // Lugar
     if(p.lugar){
-      ctx.font = `500 ${cvp(13)}px "DM Sans", Arial, sans-serif`;
-      ctx.fillStyle = 'rgba(255,255,255,0.4)';
+      ctx.font = `500 ${cvp(16)}px "DM Sans", Arial, sans-serif`;
+      ctx.fillStyle = 'rgba(255,255,255,0.45)';
       cvpFillTextTrunc(ctx, '📍 ' + p.lugar, contentX, cy, contentW);
     }
 
@@ -2593,7 +2618,7 @@ async function generarImagenPosicionesBasquet(){
     {l:'PTS', x:C3+EQMAX+cvp(178), w:cvp(64)},
   ];
 
-  ctx.fillStyle = 'rgba(232,114,12,0.1)'; ctx.fillRect(0,y,W,HDR_H);
+  ctx.fillStyle = 'rgba(232,114,12,0.14)'; ctx.fillRect(0,y,W,HDR_H);
   ctx.fillStyle = 'rgba(232,114,12,0.8)';
   ctx.font = `700 ${cvp(13)}px "Rajdhani", Arial, sans-serif`;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -2608,26 +2633,29 @@ async function generarImagenPosicionesBasquet(){
 
   for(let i=0;i<rows;i++){
     const f = filas[i];
-    const fy = y + ROW_H/2;
+    const ROW_GAP = cvp(6);
+    const cardH = ROW_H - ROW_GAP;
+    const cardY = y;
+    const fy = cardY + cardH/2;
 
-    ctx.fillStyle = i%2===0 ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.15)';
-    ctx.fillRect(0,y,W,ROW_H);
+    cvpRoundRect(ctx, cvp(14), cardY, W-cvp(28), cardH, cvp(10));
+    ctx.fillStyle = i===0 ? 'rgba(232,114,12,0.10)' : (i%2===0 ? 'rgba(255,255,255,0.025)' : 'rgba(255,255,255,0.05)');
+    ctx.fill();
+    if(i===0){
+      ctx.strokeStyle = 'rgba(232,114,12,0.45)'; ctx.lineWidth = cvp(1.5); ctx.stroke();
+    }
 
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    if(i===0){
-      ctx.shadowColor = 'rgba(232,114,12,0.5)'; ctx.shadowBlur = cvp(10);
-      ctx.beginPath(); ctx.arc(C1+cvp(16), fy, cvp(16), 0, Math.PI*2);
-      ctx.fillStyle = CVP_C.NARANJA; ctx.fill();
-      ctx.shadowBlur = 0;
-      ctx.fillStyle = CVP_C.NEG; ctx.font = `700 ${cvp(14)}px "Rajdhani", Arial, sans-serif`;
-      ctx.fillText('1', C1+cvp(16), fy);
+    if(i < 3){
+      ctx.font = `${cvp(21)}px Arial, sans-serif`;
+      ctx.fillText(['🥇','🥈','🥉'][i], C1+cvp(16), fy+cvp(1));
     } else {
-      ctx.fillStyle = 'rgba(255,255,255,0.45)';
+      ctx.fillStyle = 'rgba(255,255,255,0.4)';
       ctx.font = `600 ${cvp(14)}px "Rajdhani", Arial, sans-serif`;
       ctx.fillText(String(i+1), C1+cvp(16), fy);
     }
 
-    const eSize = cvp(28), eX = C2+cvp(2), eY = y+(ROW_H-eSize)/2;
+    const eSize = cvp(28), eX = C2+cvp(2), eY = cardY+(cardH-eSize)/2;
     await cvpDrawEscudo(ctx, escudos[normalizarPoli(f.equipo)], f.equipo, eX, eY, eSize);
 
     ctx.fillStyle = i===0 ? CVP_C.BLANCO : 'rgba(255,255,255,0.85)';
@@ -2641,9 +2669,17 @@ async function generarImagenPosicionesBasquet(){
     ctx.fillText(String(f.pj ?? 0), numCols[0].x+numCols[0].w/2, fy);
     ctx.fillText(String(f.g ?? 0), numCols[1].x+numCols[1].w/2, fy);
     ctx.fillText(String(f.p ?? 0), numCols[2].x+numCols[2].w/2, fy);
-    ctx.font = `${cvp(21)}px "Bebas Neue", Arial, sans-serif`;
+
+    // Píldora de fondo para el puntaje
+    const ptsTxt = String(f.pts ?? 0);
+    ctx.font = `${cvp(19)}px "Bebas Neue", Arial, sans-serif`;
+    const ptsW = Math.max(cvp(34), ctx.measureText(ptsTxt).width + cvp(22));
+    const pillCX = numCols[3].x+numCols[3].w/2;
+    const pillH = cvp(26);
+    cvpRoundRect(ctx, pillCX-ptsW/2, fy-pillH/2, ptsW, pillH, cvp(13));
+    ctx.fillStyle = 'rgba(232,114,12,0.2)'; ctx.fill();
     ctx.fillStyle = CVP_C.NARANJA_L;
-    ctx.fillText(String(f.pts ?? 0), numCols[3].x+numCols[3].w/2, fy);
+    ctx.fillText(ptsTxt, pillCX, fy);
 
     y += ROW_H;
   }
