@@ -849,7 +849,10 @@ body.bloqueado-poli .vista-deporte{display:none!important;}
     <div class="categorias-row" id="pos-nivel3-row"></div>
     <div class="categorias-row" id="pos-nivel4-row"></div>
     <div class="card">
-      <div class="card-titulo" id="pos-titulo">Tabla de posiciones</div>
+      <div class="card-header-fx">
+        <div class="card-titulo" id="pos-titulo">Tabla de posiciones</div>
+        <button type="button" class="btn-compartir-fx" onclick="compartirPosicionesBasquet()" title="Compartir">📤</button>
+      </div>
       <table class="tabla-pos">
         <tr><th>#</th><th>Equipo</th><th>PJ</th><th>G</th><th>P</th><th>Pts</th></tr>
         <tbody id="posiciones-tbody"><tr><td colspan="6" class="placeholder">Cargando...</td></tr></tbody>
@@ -1872,11 +1875,73 @@ async function generarImagenPartidoBasquet(p, torneoLabel){
   ctx.fillStyle = 'rgba(232,114,12,0.7)';
   ctx.font = `700 ${cvp(14)}px "Rajdhani", Arial, sans-serif`;
   ctx.textAlign = 'center';
-  cvpFillTextTrunc(ctx, (torneoLabel||'').toUpperCase(), CX, heroY+cvp(30), W-cvp(80));
+  cvpFillTextTrunc(ctx, (torneoLabel||'').toUpperCase(), CX, heroY+cvp(28), W-cvp(80));
 
+  if(estado === 'jugado'){
+    // ── Concepto "scoreboard de transmisión": marcador apilado, ganador destacado ──
+    const ptsL = p.ptsLocal ?? 0, ptsV = p.ptsVisitante ?? 0;
+    const ganador = ptsL > ptsV ? 'local' : (ptsV > ptsL ? 'visitante' : null);
+    const colorGanador = '#4fce7d';
+
+    // Badge FINAL
+    ctx.font = `700 ${cvp(15)}px "Rajdhani", Arial, sans-serif`;
+    const bTxt2 = 'FINAL';
+    const bW2 = ctx.measureText(bTxt2).width + cvp(30);
+    const bY2 = heroY + cvp(44);
+    cvpRoundRect(ctx, CX-bW2/2, bY2, bW2, cvp(28), cvp(14));
+    ctx.fillStyle = 'rgba(26,107,47,0.55)'; ctx.fill();
+    ctx.fillStyle = colorGanador;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(bTxt2, CX, bY2+cvp(14));
+    ctx.textBaseline = 'alphabetic';
+
+    const ESC = cvp(96);
+    const escY = bY2 + cvp(50);
+    const escLX = cvp(70), escRX = W - cvp(70) - ESC;
+
+    await cvpDrawEscudo(ctx, escLocalSrc, p.local, escLX, escY, ESC);
+    if(ganador === 'local'){
+      ctx.save(); ctx.beginPath(); ctx.arc(escLX+ESC/2, escY+ESC/2, ESC/2+cvp(4), 0, Math.PI*2);
+      ctx.lineWidth = cvp(5); ctx.strokeStyle = colorGanador;
+      ctx.shadowColor = 'rgba(79,206,125,0.5)'; ctx.shadowBlur = cvp(14);
+      ctx.stroke(); ctx.restore();
+    }
+    await cvpDrawEscudo(ctx, escVisitSrc, p.visitante, escRX, escY, ESC);
+    if(ganador === 'visitante'){
+      ctx.save(); ctx.beginPath(); ctx.arc(escRX+ESC/2, escY+ESC/2, ESC/2+cvp(4), 0, Math.PI*2);
+      ctx.lineWidth = cvp(5); ctx.strokeStyle = colorGanador;
+      ctx.shadowColor = 'rgba(79,206,125,0.5)'; ctx.shadowBlur = cvp(14);
+      ctx.stroke(); ctx.restore();
+    }
+
+    ctx.font = `${cvp(24)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillStyle = ganador === 'visitante' ? 'rgba(255,255,255,0.5)' : CVP_C.BLANCO;
+    cvpFillTextTrunc(ctx, (p.local||'').toUpperCase(), escLX+ESC/2, escY+ESC+cvp(12), cvp(200));
+    ctx.fillStyle = ganador === 'local' ? 'rgba(255,255,255,0.5)' : CVP_C.BLANCO;
+    cvpFillTextTrunc(ctx, (p.visitante||'').toUpperCase(), escRX+ESC/2, escY+ESC+cvp(12), cvp(200));
+    ctx.textBaseline = 'alphabetic';
+
+    // Marcador apilado en el centro: el ganador arriba y más grande
+    const topScore = ganador === 'visitante' ? ptsV : ptsL;
+    const botScore = ganador === 'visitante' ? ptsL : ptsV;
+    ctx.textAlign = 'center';
+    ctx.font = `${cvp(64)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.fillStyle = ganador ? colorGanador : CVP_C.NARANJA_L;
+    ctx.shadowColor = 'rgba(79,206,125,0.4)'; ctx.shadowBlur = cvp(18);
+    ctx.fillText(String(topScore), CX, escY+ESC*0.42);
+    ctx.shadowBlur = 0;
+    ctx.font = `${cvp(18)}px "Rajdhani", Arial, sans-serif`;
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.fillText('—', CX, escY+ESC*0.42+cvp(26));
+    ctx.font = `${cvp(46)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.fillStyle = 'rgba(255,255,255,0.45)';
+    ctx.fillText(String(botScore), CX, escY+ESC*0.42+cvp(58));
+
+    y = heroY + heroH;
+  } else {
   // Marcador / VS
-  const marcTxt = estado === 'jugado' ? `${p.ptsLocal ?? '-'} - ${p.ptsVisitante ?? '-'}`
-                 : estado === 'en-juego' ? `${p.ptsLocal ?? 0} - ${p.ptsVisitante ?? 0}` : 'VS';
+  const marcTxt = estado === 'en-juego' ? `${p.ptsLocal ?? 0} - ${p.ptsVisitante ?? 0}` : 'VS';
   ctx.font = `${cvp(100)}px "Bebas Neue", Arial, sans-serif`;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.shadowColor = 'rgba(232,114,12,0.35)'; ctx.shadowBlur = cvp(28);
@@ -1886,11 +1951,10 @@ async function generarImagenPartidoBasquet(p, torneoLabel){
   ctx.textBaseline = 'alphabetic';
 
   // Badge de estado
-  const estadoTxt = estado === 'jugado' ? 'FINAL'
-                   : estado === 'en-juego' ? ('● EN VIVO' + (p.cuarto ? '  ·  ' + (CUARTO_LABELS_BASQUET[p.cuarto]||'').toUpperCase() : ''))
+  const estadoTxt = estado === 'en-juego' ? ('● EN VIVO' + (p.cuarto ? '  ·  ' + (CUARTO_LABELS_BASQUET[p.cuarto]||'').toUpperCase() : ''))
                    : 'PRÓXIMO PARTIDO';
-  const bCol = estado === 'jugado' ? 'rgba(26,107,47,0.55)' : estado === 'en-juego' ? 'rgba(192,57,43,0.6)' : 'rgba(232,114,12,0.2)';
-  const bTxt = estado === 'jugado' ? '#4fce7d' : estado === 'en-juego' ? '#ff6b6b' : CVP_C.NARANJA_L;
+  const bCol = estado === 'en-juego' ? 'rgba(192,57,43,0.6)' : 'rgba(232,114,12,0.2)';
+  const bTxt = estado === 'en-juego' ? '#ff6b6b' : CVP_C.NARANJA_L;
   ctx.font = `700 ${cvp(14)}px "Rajdhani", Arial, sans-serif`;
   const bW = ctx.measureText(estadoTxt).width + cvp(28);
   const bY = heroY + heroH*0.7;
@@ -1916,6 +1980,7 @@ async function generarImagenPartidoBasquet(p, torneoLabel){
   ctx.textBaseline = 'alphabetic';
 
   y = heroY + heroH;
+  }
   const divGrad = ctx.createLinearGradient(0,y,W,y);
   divGrad.addColorStop(0,'transparent'); divGrad.addColorStop(0.2,CVP_C.NARANJA);
   divGrad.addColorStop(0.8,CVP_C.NARANJA); divGrad.addColorStop(1,'transparent');
@@ -1946,40 +2011,43 @@ async function generarImagenPartidoBasquet(p, torneoLabel){
   // Puntaje por cuarto (solo si el partido está Jugado y se cargaron los parciales)
   if(estado === 'jugado' && p.cuartos){
     const c = p.cuartos;
+    const ptsL = p.ptsLocal ?? 0, ptsV = p.ptsVisitante ?? 0;
+    const ganador = ptsL > ptsV ? 'local' : (ptsV > ptsL ? 'visitante' : null);
     const colW = cvp(64), labelW = cvp(150);
     const tableW = labelW + colW*4;
     const tableX = CX - tableW/2;
-    const rowH = cvp(34);
-    y += cvp(14);
+    const rowH = cvp(36);
+    y += cvp(10);
 
-    cvpRoundRect(ctx, tableX-cvp(14), y-cvp(8), tableW+cvp(28), rowH*3+cvp(16), cvp(10));
-    ctx.fillStyle = 'rgba(255,255,255,0.03)'; ctx.fill();
+    cvpRoundRect(ctx, tableX-cvp(16), y-cvp(6), tableW+cvp(32), rowH*3+cvp(14), cvp(12));
+    ctx.fillStyle = CVP_C.NEG2; ctx.fill();
 
     ctx.font = `700 ${cvp(13)}px "Rajdhani", Arial, sans-serif`;
-    ctx.fillStyle = 'rgba(232,114,12,0.75)';
+    ctx.fillStyle = CVP_C.NARANJA_L;
     ctx.textAlign = 'center';
     ['1Q','2Q','3Q','4Q'].forEach((lbl,i)=>{
-      ctx.fillText(lbl, tableX+labelW+colW*i+colW/2, y+cvp(14));
+      ctx.fillText(lbl, tableX+labelW+colW*i+colW/2, y+cvp(16));
     });
 
     const filas = [
-      [p.local, [c.q1Local, c.q2Local, c.q3Local, c.q4Local]],
-      [p.visitante, [c.q1Visitante, c.q2Visitante, c.q3Visitante, c.q4Visitante]]
+      ['local', p.local, [c.q1Local, c.q2Local, c.q3Local, c.q4Local]],
+      ['visitante', p.visitante, [c.q1Visitante, c.q2Visitante, c.q3Visitante, c.q4Visitante]]
     ];
-    filas.forEach((fila,fi)=>{
-      const fy = y + rowH*(fi+1) + cvp(4);
-      ctx.font = `600 ${cvp(16)}px "DM Sans", Arial, sans-serif`;
-      ctx.fillStyle = CVP_C.BLANCO;
+    filas.forEach(([lado, nombre, valores], fi)=>{
+      const fy = y + rowH*(fi+1) + cvp(6);
+      const esGanador = ganador === lado;
+      ctx.font = `700 ${cvp(16)}px "DM Sans", Arial, sans-serif`;
+      ctx.fillStyle = esGanador ? CVP_C.BLANCO : 'rgba(255,255,255,0.55)';
       ctx.textAlign = 'left';
-      cvpFillTextTrunc(ctx, fila[0]||'', tableX, fy, labelW-cvp(10));
+      cvpFillTextTrunc(ctx, nombre||'', tableX, fy, labelW-cvp(10));
       ctx.font = `${cvp(19)}px "Bebas Neue", Arial, sans-serif`;
-      ctx.fillStyle = CVP_C.NARANJA_L;
+      ctx.fillStyle = esGanador ? '#4fce7d' : 'rgba(255,255,255,0.4)';
       ctx.textAlign = 'center';
-      fila[1].forEach((v,i)=>{
+      valores.forEach((v,i)=>{
         ctx.fillText((v===null||v===undefined) ? '-' : String(v), tableX+labelW+colW*i+colW/2, fy);
       });
     });
-    y += rowH*3 + cvp(16);
+    y += rowH*3 + cvp(14);
   }
 
   cvpFooter(ctx, W, CVP_H - cvp(40));
@@ -2016,93 +2084,105 @@ async function _generarImagenZonaBasquetGrupo(ps, zonaLabel){
   ctx.fillStyle = bgGrad; ctx.fillRect(0,0,W,CVP_H);
 
   let y = cvpHeader(ctx, W, 0);
+  ctx.fillStyle = CVP_C.NARANJA; ctx.fillRect(0, y-2, W, 3);
 
-  ctx.fillStyle = CVP_C.NARANJA_L;
-  ctx.font = `${cvp(26)}px "Bebas Neue", Arial, sans-serif`;
   ctx.textAlign = 'center';
-  ctx.fillText('PRÓXIMOS PARTIDOS', CX, y+cvp(34));
-  ctx.fillStyle = 'rgba(232,114,12,0.6)';
-  ctx.font = `600 ${cvp(14)}px "DM Sans", Arial, sans-serif`;
-  cvpFillTextTrunc(ctx, zonaLabel || 'Básquetbol', CX, y+cvp(52), W-cvp(80));
-
-  const dg = ctx.createLinearGradient(0,0,W,0);
-  dg.addColorStop(0,'transparent'); dg.addColorStop(0.2,CVP_C.NARANJA);
-  dg.addColorStop(0.8,CVP_C.NARANJA); dg.addColorStop(1,'transparent');
-  ctx.fillStyle = dg; ctx.fillRect(0,y+cvp(60),W,1);
-  y += cvp(62);
+  ctx.font = `${cvp(38)}px "Bebas Neue", Arial, sans-serif`;
+  ctx.fillStyle = CVP_C.BLANCO;
+  const zonaTxt = (zonaLabel || 'BÁSQUETBOL').toUpperCase();
+  const partesZona = zonaTxt.split('·').map(s=>s.trim());
+  if(partesZona.length > 1){
+    const w1 = ctx.measureText(partesZona[0]+' ').width;
+    ctx.textAlign = 'left';
+    ctx.fillText(partesZona[0]+' ', CX - (w1 + ctx.measureText('· '+partesZona[1]).width)/2, y+cvp(48));
+    ctx.fillStyle = CVP_C.NARANJA_L;
+    ctx.fillText('· '+partesZona[1], CX - (w1 + ctx.measureText('· '+partesZona[1]).width)/2 + w1, y+cvp(48));
+    ctx.textAlign = 'center';
+  } else {
+    cvpFillTextTrunc(ctx, zonaTxt, CX, y+cvp(48), W-cvp(80));
+  }
+  y += cvp(70);
 
   const disponible = CVP_H - y - cvp(40);
   const ROW_H = Math.floor(disponible / ps.length);
-  const ECSIZE = Math.max(cvp(44), Math.min(cvp(70), ROW_H - cvp(74)));
+  const ESC = Math.max(cvp(38), Math.min(cvp(52), ROW_H - cvp(50)));
 
   for(let i=0;i<ps.length;i++){
     const p = ps[i];
     const estado = estadoPartidoBasquet(p);
+    const rowY = y;
+    const midY = rowY + ROW_H/2;
 
-    ctx.fillStyle = i%2===0 ? 'rgba(232,114,12,0.03)' : 'transparent';
-    ctx.fillRect(0,y,W,ROW_H);
     if(i>0){
-      const sepGrad = ctx.createLinearGradient(0,y,W,y);
-      sepGrad.addColorStop(0,'transparent'); sepGrad.addColorStop(0.15,'rgba(232,114,12,0.2)');
-      sepGrad.addColorStop(0.85,'rgba(232,114,12,0.2)'); sepGrad.addColorStop(1,'transparent');
-      ctx.fillStyle = sepGrad; ctx.fillRect(0,y,W,1);
+      ctx.fillStyle = 'rgba(255,255,255,0.06)';
+      ctx.fillRect(cvp(24), rowY, W-cvp(48), 1);
     }
 
-    let cy = y + cvp(12);
+    // Número grande semitransparente
+    ctx.font = `${cvp(50)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.fillStyle = 'rgba(232,114,12,0.22)';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText(String(i+1).padStart(2,'0'), cvp(28), midY);
+
+    const contentX = cvp(96);
+    const escArea = cvp(120);
+    const contentW = W - contentX - escArea;
+    let cy = midY - cvp(22);
+
+    // Línea superior: día/hora o "en vivo"
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
     if(estado === 'en-juego'){
       ctx.fillStyle = '#ff6b6b';
       ctx.font = `700 ${cvp(15)}px "Rajdhani", Arial, sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.fillText('● EN VIVO' + (p.cuarto ? '  ·  ' + (CUARTO_LABELS_BASQUET[p.cuarto]||'').toUpperCase() : ''), CX, cy+cvp(14));
-      cy += cvp(24);
+      cvpFillTextTrunc(ctx, '● EN VIVO' + (p.cuarto ? '  ·  ' + (CUARTO_LABELS_BASQUET[p.cuarto]||'').toUpperCase() : ''), contentX, cy, contentW);
     } else {
       const partes = partesDiaHoraPartido(p.diaHora);
       if(partes){
-        // Mismo lenguaje visual que la franja "ticket" del sitio: chip con acento naranja a la izquierda
-        const chipTxt = `${partes.dow} ${partes.fecha}  ·  ${partes.hora}`;
-        ctx.font = `700 ${cvp(14)}px "Rajdhani", Arial, sans-serif`;
-        const chipW = ctx.measureText(chipTxt).width + cvp(34);
-        const chipH = cvp(28);
-        const chipX = CX - chipW/2, chipY = cy;
-        cvpRoundRect(ctx, chipX, chipY, chipW, chipH, cvp(6));
-        ctx.fillStyle = 'rgba(232,114,12,0.12)'; ctx.fill();
-        ctx.fillStyle = CVP_C.NARANJA;
-        ctx.fillRect(chipX, chipY, cvp(4), chipH);
         ctx.fillStyle = CVP_C.NARANJA_L;
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText(chipTxt, CX + cvp(4), chipY+chipH/2);
-        ctx.textBaseline = 'alphabetic';
-        cy += chipH + cvp(8);
+        ctx.font = `700 ${cvp(15)}px "Rajdhani", Arial, sans-serif`;
+        cvpFillTextTrunc(ctx, `${partes.dow} ${partes.fecha} · ${partes.hora}`, contentX, cy, contentW);
       }
     }
+    cy += cvp(28);
 
-    const escLX = cvp(70), escVX = W-cvp(70)-ECSIZE;
-    await cvpDrawEscudo(ctx, escudos[normalizarPoli(p.local)], p.local, escLX, cy, ECSIZE);
-    await cvpDrawEscudo(ctx, escudos[normalizarPoli(p.visitante)], p.visitante, escVX, cy, ECSIZE);
-
+    // Línea de equipos: "Local  VS/marcador  Visitante"
+    const marcTxt = estado === 'en-juego' ? `${p.ptsLocal ?? 0}-${p.ptsVisitante ?? 0}` : 'vs';
+    ctx.font = `${cvp(24)}px "Bebas Neue", Arial, sans-serif`;
+    const marcW = ctx.measureText(marcTxt).width;
+    const maxTeamW = (contentW - marcW - cvp(24)) / 2;
+    ctx.font = `700 ${cvp(19)}px "DM Sans", Arial, sans-serif`;
+    let tx = contentX;
     ctx.fillStyle = CVP_C.BLANCO;
-    ctx.font = `${cvp(17)}px "Bebas Neue", Arial, sans-serif`;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-    cvpFillTextTrunc(ctx, (p.local||'').toUpperCase(), escLX+ECSIZE/2, cy+ECSIZE+cvp(6), cvp(220));
-    cvpFillTextTrunc(ctx, (p.visitante||'').toUpperCase(), escVX+ECSIZE/2, cy+ECSIZE+cvp(6), cvp(220));
-    ctx.textBaseline = 'alphabetic';
-
-    const marcTxt = estado === 'en-juego' ? `${p.ptsLocal ?? 0}-${p.ptsVisitante ?? 0}` : 'VS';
-    const vsW = cvp(64), vsH = cvp(30);
-    cvpRoundRect(ctx, CX-vsW/2, cy+ECSIZE/2-vsH/2, vsW, vsH, cvp(7));
-    ctx.fillStyle = CVP_C.NEG4; ctx.fill();
+    cvpFillTextTrunc(ctx, p.local||'', tx, cy, maxTeamW);
+    tx += Math.min(ctx.measureText(p.local||'').width, maxTeamW) + cvp(12);
+    ctx.font = `${cvp(24)}px "Bebas Neue", Arial, sans-serif`;
     ctx.fillStyle = CVP_C.NARANJA_L;
-    ctx.font = `${cvp(19)}px "Bebas Neue", Arial, sans-serif`;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(marcTxt, CX, cy+ECSIZE/2);
-    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(marcTxt, tx, cy);
+    tx += marcW + cvp(12);
+    ctx.font = `700 ${cvp(19)}px "DM Sans", Arial, sans-serif`;
+    ctx.fillStyle = CVP_C.BLANCO;
+    cvpFillTextTrunc(ctx, p.visitante||'', tx, cy, maxTeamW);
+    cy += cvp(24);
 
+    // Lugar
     if(p.lugar){
+      ctx.font = `500 ${cvp(13)}px "DM Sans", Arial, sans-serif`;
       ctx.fillStyle = 'rgba(255,255,255,0.4)';
-      ctx.font = `500 ${cvp(12)}px "DM Sans", Arial, sans-serif`;
-      ctx.textAlign = 'center';
-      cvpFillTextTrunc(ctx, '📍 ' + p.lugar, CX, cy+ECSIZE+cvp(28), W-cvp(100));
+      cvpFillTextTrunc(ctx, '📍 ' + p.lugar, contentX, cy, contentW);
     }
+
+    // Escudos superpuestos a la derecha
+    const escRX = W - cvp(36) - ESC;
+    const escLX = escRX - ESC*0.55;
+    await cvpDrawEscudo(ctx, escudos[normalizarPoli(p.local)], p.local, escLX, midY-ESC/2, ESC);
+    await cvpDrawEscudo(ctx, escudos[normalizarPoli(p.visitante)], p.visitante, escRX, midY-ESC/2, ESC);
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(escRX+ESC/2, midY, ESC/2+cvp(2), 0, Math.PI*2);
+    ctx.lineWidth = cvp(3);
+    ctx.strokeStyle = CVP_C.NEG3;
+    ctx.stroke();
+    ctx.restore();
 
     y += ROW_H;
   }
@@ -2453,6 +2533,132 @@ function segmentoPosicionesBasquetPublico(){
 }
 function cargarPosicionesBasquetPublico(){
   cargarPosiciones(segmentoPosicionesBasquetPublico());
+}
+
+const TORNEO_LABELS_BASQUET = {'liga-cordobesa':'Liga Cordobesa','interasociativo':'Torneo Interasociativo','asociativo':'Torneo Asociativo','formativas':'Ligas Formativas','amistosos':'Amistosos'};
+
+function compartirPosicionesBasquet(){
+  abrirSharePoli(()=>generarImagenPosicionesBasquet());
+}
+
+async function generarImagenPosicionesBasquet(){
+  await document.fonts.ready;
+  const categoria = segmentoPosicionesBasquetPublico();
+  const escudos = await mapaEscudosPoli('basquet');
+  const fb = await esperarFB();
+  const datos = await fb.getAllByPrefix('basquet_posicion_' + categoria + '_');
+  const filas = Object.values(datos).sort((a,b)=>(b.pts||0)-(a.pts||0));
+  if(!filas.length) return [];
+
+  const subSeg = categoria.startsWith(posTorneo+'_') ? categoria.slice(posTorneo.length+1) : '';
+  let zonaLabel = '';
+  if(subSeg){
+    const nombresGrupos = (posTorneo === 'formativas') ? await nombresGruposFormativasBasquet() : null;
+    zonaLabel = etiquetaSubSegBasquet(posTorneo, subSeg, nombresGrupos);
+  }
+  const subtitulo = (TORNEO_LABELS_BASQUET[posTorneo] || 'Básquetbol') + (zonaLabel ? ' · ' + zonaLabel : '');
+
+  const W = CVP_W, CX = W/2;
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = CVP_H;
+  const ctx = canvas.getContext('2d');
+  ctx.textBaseline = 'alphabetic';
+
+  const bgGrad = ctx.createLinearGradient(0,0,0,CVP_H);
+  bgGrad.addColorStop(0, CVP_C.NEG3); bgGrad.addColorStop(1, CVP_C.NEG);
+  ctx.fillStyle = bgGrad; ctx.fillRect(0,0,W,CVP_H);
+
+  let y = cvpHeader(ctx, W, 0);
+
+  ctx.fillStyle = CVP_C.NARANJA_L;
+  ctx.font = `${cvp(28)}px "Bebas Neue", Arial, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.fillText('POSICIONES', CX, y+cvp(34));
+  ctx.fillStyle = 'rgba(232,114,12,0.6)';
+  ctx.font = `600 ${cvp(14)}px "DM Sans", Arial, sans-serif`;
+  cvpFillTextTrunc(ctx, subtitulo, CX, y+cvp(52), W-cvp(80));
+  y += cvp(56);
+
+  const HDR_H = cvp(32), hFooter = cvp(40);
+  const rows = Math.min(filas.length, 16);
+  const hDisp = CVP_H - y - HDR_H - hFooter;
+  const ROW_H = Math.floor(hDisp / rows);
+
+  // Columnas (unidad de referencia 700px, igual criterio que fútbol)
+  const C1 = cvp(10), C2 = cvp(42), C3 = cvp(82), EQMAX = cvp(330);
+  const numCols = [
+    {l:'PJ',  x:C3+EQMAX+cvp(6),   w:cvp(50)},
+    {l:'G',   x:C3+EQMAX+cvp(62),  w:cvp(50)},
+    {l:'P',   x:C3+EQMAX+cvp(118), w:cvp(50)},
+    {l:'PTS', x:C3+EQMAX+cvp(178), w:cvp(64)},
+  ];
+
+  ctx.fillStyle = 'rgba(232,114,12,0.1)'; ctx.fillRect(0,y,W,HDR_H);
+  ctx.fillStyle = 'rgba(232,114,12,0.8)';
+  ctx.font = `700 ${cvp(13)}px "Rajdhani", Arial, sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('#', C1+cvp(16), y+HDR_H/2);
+  ctx.textAlign = 'left';
+  ctx.fillText('EQUIPO', C3, y+HDR_H/2);
+  numCols.forEach(c=>{ ctx.textAlign = 'center'; ctx.fillText(c.l, c.x+c.w/2, y+HDR_H/2); });
+  ctx.fillStyle = 'rgba(232,114,12,0.35)';
+  ctx.fillRect(0, y+HDR_H-1, W, 1);
+  ctx.textBaseline = 'alphabetic';
+  y += HDR_H;
+
+  for(let i=0;i<rows;i++){
+    const f = filas[i];
+    const fy = y + ROW_H/2;
+
+    ctx.fillStyle = i%2===0 ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.15)';
+    ctx.fillRect(0,y,W,ROW_H);
+
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    if(i===0){
+      ctx.shadowColor = 'rgba(232,114,12,0.5)'; ctx.shadowBlur = cvp(10);
+      ctx.beginPath(); ctx.arc(C1+cvp(16), fy, cvp(16), 0, Math.PI*2);
+      ctx.fillStyle = CVP_C.NARANJA; ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = CVP_C.NEG; ctx.font = `700 ${cvp(14)}px "Rajdhani", Arial, sans-serif`;
+      ctx.fillText('1', C1+cvp(16), fy);
+    } else {
+      ctx.fillStyle = 'rgba(255,255,255,0.45)';
+      ctx.font = `600 ${cvp(14)}px "Rajdhani", Arial, sans-serif`;
+      ctx.fillText(String(i+1), C1+cvp(16), fy);
+    }
+
+    const eSize = cvp(28), eX = C2+cvp(2), eY = y+(ROW_H-eSize)/2;
+    await cvpDrawEscudo(ctx, escudos[normalizarPoli(f.equipo)], f.equipo, eX, eY, eSize);
+
+    ctx.fillStyle = i===0 ? CVP_C.BLANCO : 'rgba(255,255,255,0.85)';
+    ctx.font = `600 ${cvp(17)}px "DM Sans", Arial, sans-serif`;
+    ctx.textAlign = 'left';
+    cvpFillTextTrunc(ctx, f.equipo||'', C3, fy, EQMAX);
+
+    ctx.font = `600 ${cvp(15)}px "DM Sans", Arial, sans-serif`;
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.textAlign = 'center';
+    ctx.fillText(String(f.pj ?? 0), numCols[0].x+numCols[0].w/2, fy);
+    ctx.fillText(String(f.g ?? 0), numCols[1].x+numCols[1].w/2, fy);
+    ctx.fillText(String(f.p ?? 0), numCols[2].x+numCols[2].w/2, fy);
+    ctx.font = `${cvp(21)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.fillStyle = CVP_C.NARANJA_L;
+    ctx.fillText(String(f.pts ?? 0), numCols[3].x+numCols[3].w/2, fy);
+
+    y += ROW_H;
+  }
+  ctx.textBaseline = 'alphabetic';
+
+  if(filas.length > rows){
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.font = `500 ${cvp(13)}px "DM Sans", Arial, sans-serif`;
+    ctx.fillText(`+ ${filas.length-rows} equipos más`, CX, y+cvp(18));
+  }
+
+  cvpFooter(ctx, W, CVP_H - cvp(40));
+  ctx.textAlign = 'left';
+  return canvas;
 }
 
 document.getElementById('pos-torneo-row').addEventListener('click', e=>{
