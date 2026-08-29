@@ -1909,22 +1909,6 @@ async function generarImagenPartidoBasquet(p, torneoLabel){
   const torneoTxt = (torneoLabel||'').toUpperCase();
   cvpFillTextTrunc(ctx, torneoTxt, CX, heroY+cvp(28), W-cvp(80));
 
-  const esPlayoffLabel = torneoTxt.includes('PLAYOFFS');
-  // Pequeña etiqueta cuando la zona es Playoffs
-  if(esPlayoffLabel){
-    const tagTxt = '🏆 PLAYOFFS';
-    ctx.font = `700 ${cvp(12)}px "Rajdhani", Arial, sans-serif`;
-    const tagW = ctx.measureText(tagTxt).width + cvp(22);
-    const tagH = cvp(22);
-    const tagY = heroY + cvp(38);
-    cvpRoundRect(ctx, CX-tagW/2, tagY, tagW, tagH, cvp(11));
-    ctx.fillStyle = 'rgba(232,114,12,0.18)'; ctx.fill();
-    ctx.fillStyle = CVP_C.NARANJA_L;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(tagTxt, CX, tagY+tagH/2+cvp(1));
-    ctx.textBaseline = 'alphabetic';
-  }
-
   if(estado === 'jugado'){
     // ── Concepto "scoreboard de transmisión": marcador apilado, ganador destacado ──
     const ptsL = p.ptsLocal ?? 0, ptsV = p.ptsVisitante ?? 0;
@@ -1935,7 +1919,7 @@ async function generarImagenPartidoBasquet(p, torneoLabel){
     ctx.font = `700 ${cvp(15)}px "Rajdhani", Arial, sans-serif`;
     const bTxt2 = 'FINAL';
     const bW2 = ctx.measureText(bTxt2).width + cvp(30);
-    const bY2 = heroY + cvp(44) + (esPlayoffLabel ? cvp(26) : 0);
+    const bY2 = heroY + cvp(44);
     cvpRoundRect(ctx, CX-bW2/2, bY2, bW2, cvp(28), cvp(14));
     ctx.fillStyle = 'rgba(26,107,47,0.55)'; ctx.fill();
     ctx.fillStyle = colorGanador;
@@ -2152,22 +2136,7 @@ async function _generarImagenZonaBasquetGrupo(ps, zonaLabel){
   } else {
     cvpFillTextTrunc(ctx, zonaTxt, CX, y+cvp(48), W-cvp(80));
   }
-  y += cvp(56);
-
-  // Pequeña etiqueta cuando la zona es Playoffs
-  if(zonaTxt.includes('PLAYOFFS')){
-    const tagTxt = '🏆 PLAYOFFS';
-    ctx.font = `700 ${cvp(13)}px "Rajdhani", Arial, sans-serif`;
-    const tagW = ctx.measureText(tagTxt).width + cvp(24);
-    const tagH = cvp(24);
-    cvpRoundRect(ctx, CX-tagW/2, y, tagW, tagH, cvp(12));
-    ctx.fillStyle = 'rgba(232,114,12,0.18)'; ctx.fill();
-    ctx.fillStyle = CVP_C.NARANJA_L;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(tagTxt, CX, y+tagH/2+cvp(1));
-    ctx.textBaseline = 'alphabetic';
-    y += tagH + cvp(14);
-  }
+  y += cvp(70);
 
   const disponible = CVP_H - y - cvp(40);
   const ROW_H = Math.floor(disponible / ps.length);
