@@ -678,6 +678,17 @@ body.bloqueado-poli .vista-deporte{display:none!important;}
       <div class="admin-lista" id="admin-lista-posiciones"></div>
     </div>
 
+    <div class="admin-seccion" id="admin-seccion-logo-torneo" style="display:none">
+      <h4>Logo del torneo</h4>
+      <p style="font-size:13px;color:var(--gris-claro);margin:0 0 8px">Se aplica al torneo elegido arriba ("<span id="logo-torneo-nombre">Torneo</span>"). Se muestra junto al nombre del torneo en el sitio y en las imágenes para compartir.</p>
+      <div class="upload-area" onclick="document.getElementById('alt-file').click()">
+        <input type="file" id="alt-file" accept="image/*" style="display:none" onchange="subirLogoTorneoBasquet(event)">
+        <img id="alt-preview" style="display:none;max-width:70px;max-height:70px;margin:0 auto 6px;border-radius:8px">
+        <span id="alt-placeholder">Click para subir el logo</span>
+      </div>
+      <button type="button" class="btn-primario" style="margin-top:8px;background:#555" onclick="borrarLogoTorneoBasquet()">Quitar logo</button>
+    </div>
+
     <div class="admin-seccion" id="admin-seccion-posiciones-auto" style="display:none">
       <h4>Posiciones (calculadas automáticamente)</h4>
       <p style="font-size:13px;color:var(--gris-claro);margin:0 0 8px">Se arman solas a partir de los resultados cargados en "Agregar partido". Elegí el Torneo y la Zona/Categoría/Tira arriba en esa sección para ver la tabla correspondiente acá abajo.</p>
@@ -1834,7 +1845,7 @@ function cvpDrawEscudo(ctx, src, nombre, x, y, size){
     img.src = src;
   });
 }
-function cvpHeader(ctx, W, yStart){
+async function cvpHeader(ctx, W, yStart, logoTorneo){
   const H = cvp(64);
   const grad = ctx.createLinearGradient(0,yStart,W,yStart);
   grad.addColorStop(0, CVP_C.NEG4); grad.addColorStop(1, 'rgba(232,114,12,0.18)');
@@ -1847,6 +1858,10 @@ function cvpHeader(ctx, W, yStart){
   ctx.fillStyle = 'rgba(232,114,12,0.75)';
   ctx.font = `500 ${cvp(12)}px "DM Sans", Arial, sans-serif`;
   ctx.fillText('Básquetbol · Río Tercero', cvp(20), yStart + cvp(52));
+  if(logoTorneo){
+    const logoSize = cvp(44);
+    await cvpDrawEscudo(ctx, logoTorneo, '', W - cvp(20) - logoSize, yStart + (H-logoSize)/2, logoSize);
+  }
   return yStart + H;
 }
 function cvpFooter(ctx, W, yStart){
@@ -1876,7 +1891,10 @@ async function generarImagenPartidoBasquet(p, torneoLabel){
   bgGrad.addColorStop(0, CVP_C.NEG3); bgGrad.addColorStop(1, CVP_C.NEG);
   ctx.fillStyle = bgGrad; ctx.fillRect(0,0,W,CVP_H);
 
-  let y = cvpHeader(ctx, W, 0);
+  const torneoIdMatch = (p._key||'').replace('basquet_partido_','').replace(/_\d+$/,'');
+  const fbHeader = await esperarFB();
+  const logoTorneoMatch = await fbHeader.get('basquet_logo_torneo_' + torneoIdMatch);
+  let y = await cvpHeader(ctx, W, 0, logoTorneoMatch);
 
   const heroH = Math.round(CVP_H * 0.4);
   const heroY = y;
@@ -2113,7 +2131,10 @@ async function _generarImagenZonaBasquetGrupo(ps, zonaLabel){
   bgGrad.addColorStop(0, CVP_C.NEG3); bgGrad.addColorStop(1, CVP_C.NEG);
   ctx.fillStyle = bgGrad; ctx.fillRect(0,0,W,CVP_H);
 
-  let y = cvpHeader(ctx, W, 0);
+  const torneoIdZona = ((ps[0]&&ps[0]._key)||'').replace('basquet_partido_','').replace(/_\d+$/,'');
+  const fbHeader = await esperarFB();
+  const logoTorneoZona = await fbHeader.get('basquet_logo_torneo_' + torneoIdZona);
+  let y = await cvpHeader(ctx, W, 0, logoTorneoZona);
   ctx.fillStyle = CVP_C.NARANJA; ctx.fillRect(0, y-2, W, 3);
 
   ctx.textAlign = 'center';
@@ -2347,6 +2368,7 @@ async function cargarFixture(categoria, modo){
   }
 
   const nombresGrupos = (categoria === 'formativas') ? await nombresGruposFormativasBasquet() : null;
+  const logoTorneo = await fb.get('basquet_logo_torneo_' + categoria);
 
   // Cronómetros de los partidos en juego, para mostrarlos ya arrancados
   const keysEnJuego = filas.filter(p=>estadoPartidoBasquet(p)==='en-juego').map(p=>p._key);
@@ -2443,9 +2465,10 @@ async function cargarFixture(categoria, modo){
       porFecha[fecha].map(partidoRowHTML).join('')
     ).join('');
 
+    const logoHtml = logoTorneo ? `<img src="${logoTorneo}" alt="" style="width:22px;height:22px;object-fit:contain;border-radius:5px;margin-right:8px;vertical-align:middle">` : '';
     const header = modo === 'fixture'
-      ? `<div class="card-header-fx">${zonaLabel ? `<div class="card-titulo">${escapeHtml(zonaLabel)}</div>` : '<div></div>'}<button type="button" class="btn-compartir-fx" onclick="compartirZonaBasquet('${zonaKey}')" title="Compartir esta zona">📤</button></div>`
-      : (zonaLabel ? `<div class="card-titulo">${escapeHtml(zonaLabel)}</div>` : '');
+      ? `<div class="card-header-fx">${zonaLabel ? `<div class="card-titulo" style="display:flex;align-items:center">${logoHtml}${escapeHtml(zonaLabel)}</div>` : '<div></div>'}<button type="button" class="btn-compartir-fx" onclick="compartirZonaBasquet('${zonaKey}')" title="Compartir esta zona">📤</button></div>`
+      : (zonaLabel ? `<div class="card-titulo" style="display:flex;align-items:center">${logoHtml}${escapeHtml(zonaLabel)}</div>` : '');
 
     return `<div class="card">${header}${cuerpo}</div>`;
   }).join('');
@@ -2603,6 +2626,47 @@ function cargarPosicionesBasquetPublico(){
 
 const TORNEO_LABELS_BASQUET = {'liga-cordobesa':'Liga Cordobesa','interasociativo':'Torneo Interasociativo','asociativo':'Torneo Asociativo','formativas':'Ligas Formativas','amistosos':'Amistosos'};
 
+// ── Logo por torneo (Básquet) — Firestore: basquet_logo_torneo_<torneo> ──
+async function mapaLogosTorneosBasquet(){
+  const fb = await esperarFB();
+  const datos = await fb.getAllByPrefix('basquet_logo_torneo_');
+  const mapa = {};
+  Object.entries(datos).forEach(([k,v])=>{ mapa[k.replace('basquet_logo_torneo_','')] = v; });
+  return mapa;
+}
+async function cargarPreviewLogoTorneoBasquet(){
+  const torneo = document.getElementById('admin-categoria').value;
+  document.getElementById('logo-torneo-nombre').textContent = TORNEO_LABELS_BASQUET[torneo] || torneo;
+  const fb = await esperarFB();
+  const logo = await fb.get('basquet_logo_torneo_' + torneo);
+  const img = document.getElementById('alt-preview'), placeholder = document.getElementById('alt-placeholder');
+  if(logo){ img.src = logo; img.style.display = 'block'; placeholder.style.display = 'none'; }
+  else { img.style.display = 'none'; placeholder.style.display = 'block'; }
+}
+async function subirLogoTorneoBasquet(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const torneo = document.getElementById('admin-categoria').value;
+  try{
+    const b64 = await comprimirABase64Poli(file, 300, 0.85);
+    const fb = await esperarFB();
+    const ok = await fb.set('basquet_logo_torneo_' + torneo, b64);
+    if(!ok){ alert('⚠ No se pudo guardar el logo. Revisá tu conexión e intentá de nuevo.'); return; }
+    cargarPreviewLogoTorneoBasquet();
+    refrescarPublico('basquet');
+  }catch(err){
+    alert('No se pudo procesar la imagen. Probá con otro archivo.');
+  }
+}
+async function borrarLogoTorneoBasquet(){
+  const torneo = document.getElementById('admin-categoria').value;
+  const fb = await esperarFB();
+  const ok = await fb.del('basquet_logo_torneo_' + torneo);
+  if(!ok){ alert('⚠ No se pudo quitar el logo. Revisá tu conexión e intentá de nuevo.'); return; }
+  cargarPreviewLogoTorneoBasquet();
+  refrescarPublico('basquet');
+}
+
 function compartirPosicionesBasquet(){
   abrirSharePoli(()=>generarImagenPosicionesBasquet());
 }
@@ -2634,7 +2698,8 @@ async function generarImagenPosicionesBasquet(){
   bgGrad.addColorStop(0, CVP_C.NEG3); bgGrad.addColorStop(1, CVP_C.NEG);
   ctx.fillStyle = bgGrad; ctx.fillRect(0,0,W,CVP_H);
 
-  let y = cvpHeader(ctx, W, 0);
+  const logoTorneoPos = await fb.get('basquet_logo_torneo_' + posTorneo);
+  let y = await cvpHeader(ctx, W, 0, logoTorneoPos);
 
   ctx.fillStyle = CVP_C.NARANJA_L;
   ctx.font = `${cvp(28)}px "Bebas Neue", Arial, sans-serif`;
@@ -3831,6 +3896,7 @@ function cambiarDeporteAdmin(){
   document.getElementById('admin-seccion-torneos').style.display = esBasquet ? 'none' : 'block';
   document.getElementById('admin-seccion-posiciones-manual').style.display = esBasquet ? 'none' : 'block';
   document.getElementById('admin-seccion-posiciones-auto').style.display = esBasquet ? 'block' : 'none';
+  document.getElementById('admin-seccion-logo-torneo').style.display = esBasquet ? 'block' : 'none';
   document.getElementById('admin-seccion-sanciones').style.display = esBasquet ? 'none' : 'block';
   document.getElementById('ap-basquet-estado').style.display = esBasquet ? 'block' : 'none';
   cancelarEdicionPartidoPoli();
@@ -3838,6 +3904,7 @@ function cambiarDeporteAdmin(){
   poblarCategoriasAdmin();
   poblarNivelesBasquetForm('ap-b');
   poblarNivelesBasquetForm('aan-b');
+  if(esBasquet) cargarPreviewLogoTorneoBasquet();
   renderAdminListas();
 }
 function generoAdminCambio(){
@@ -4020,7 +4087,7 @@ function abrirAdminParaDeporte(dep){
 function cerrarAdminPoli(){
   document.getElementById('admin-overlay').classList.remove('open');
 }
-document.getElementById('admin-categoria').addEventListener('change', ()=>{ poblarNivelesBasquetForm('ap-b'); poblarNivelesBasquetForm('aan-b'); renderAdminListas(); });
+document.getElementById('admin-categoria').addEventListener('change', ()=>{ poblarNivelesBasquetForm('ap-b'); poblarNivelesBasquetForm('aan-b'); if(prefijoAdmin()==='basquet') cargarPreviewLogoTorneoBasquet(); renderAdminListas(); });
 
 let _escudoB64Poli = '';
 let _escudoPreviewPromisePoli = null; // referencia a la compresión en curso, para poder esperarla
