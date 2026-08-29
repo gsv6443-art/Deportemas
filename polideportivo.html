@@ -620,6 +620,10 @@ body.bloqueado-poli .vista-deporte{display:none!important;}
         </div>
       </div>
       <div id="ap-basquet-estado" style="display:none;margin-bottom:8px">
+        <label class="admin-check" style="display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:13px;color:var(--gris-claro)">
+          <input type="checkbox" id="ap-playoff" style="width:auto">
+          Este partido es de Playoffs (no suma a la tabla de posiciones)
+        </label>
         <select id="ap-estado" class="admin-input" style="margin-bottom:6px" onchange="cambiarEstadoPartidoAdmin()">
           <option value="pendiente">Pendiente</option>
           <option value="en-juego">En juego</option>
@@ -1704,6 +1708,7 @@ function etiquetaSubSegBasquet(torneo, subSeg, nombresGrupos){
 // Orden natural de zonas/subSeg dentro de un torneo (en vez de alfabético,
 // que dejaría mal ubicada "Tabla General" o mezclaría A/B con Apertura/Clausura)
 function ordenSubSegBasquet(torneo, subSeg){
+  if(subSeg === '__playoff__') return 9999; // Playoffs siempre al final
   const cfg = POS_BASQUET[torneo];
   if(!cfg) return 0;
   if(torneo === 'interasociativo'){
@@ -2320,11 +2325,11 @@ async function cargarFixture(categoria, modo){
   const keysEnJuego = filas.filter(p=>estadoPartidoBasquet(p)==='en-juego').map(p=>p._key);
   if(keysEnJuego.length) await precargarCronosBasquet(keysEnJuego);
 
-  // 1) Agrupar por Zona/subSeg
+  // 1) Agrupar por Zona/subSeg (los partidos de Playoffs van en su propio grupo, separado de la fase regular)
   const porZona = {};
   const ordenZonas = [];
   filas.forEach(p=>{
-    const key = p.subSeg || '';
+    const key = p.playoff ? '__playoff__' : (p.subSeg || '');
     if(!porZona[key]){ porZona[key] = []; ordenZonas.push(key); }
     porZona[key].push(p);
   });
@@ -2393,7 +2398,7 @@ async function cargarFixture(categoria, modo){
   if(modo === 'resultados') _partidosBasquetMapa = {};
   cont.innerHTML = ordenZonas.map(zonaKey=>{
     const partidosZona = porZona[zonaKey].slice().sort((a,b)=>(a.orden||0)-(b.orden||0));
-    const zonaLabel = etiquetaSubSegBasquet(categoria, zonaKey, nombresGrupos);
+    const zonaLabel = zonaKey === '__playoff__' ? 'Playoffs' : etiquetaSubSegBasquet(categoria, zonaKey, nombresGrupos);
     if(modo === 'fixture') _zonasBasquetMapa[zonaKey] = {partidos: partidosZona, zonaLabel};
     if(modo === 'resultados') partidosZona.forEach(p=>{ _partidosBasquetMapa[p._key] = {p, zonaLabel}; });
 
@@ -3001,7 +3006,7 @@ async function recalcularPosicionesBasquet(torneo, subSeg){
   const partidos = await fb.getAllByPrefix('basquet_partido_' + torneo + '_');
   const stats = {};
   Object.values(partidos).forEach(p=>{
-    if(!p.jugado || p.ptsLocal == null || p.ptsVisitante == null) return;
+    if(!p.jugado || p.ptsLocal == null || p.ptsVisitante == null || p.playoff) return;
     const coincide = esGeneralCordobesa ? (p.subSeg || '').startsWith(division + '_zona-') : (p.subSeg === subSeg);
     if(!coincide) return;
     [[p.local, p.ptsLocal, p.ptsVisitante],[p.visitante, p.ptsVisitante, p.ptsLocal]].forEach(([nombre, favor, contra])=>{
@@ -4132,6 +4137,7 @@ async function editarPartidoPoli(key){
   document.getElementById('ap-dia-hora').value = p.diaHora || '';
   document.getElementById('ap-lugar').value = p.lugar || '';
   if(prefijoAdmin() === 'basquet'){
+    document.getElementById('ap-playoff').checked = !!p.playoff;
     const estado = p.estado || (p.jugado ? 'jugado' : 'pendiente');
     document.getElementById('ap-estado').value = estado;
     cambiarEstadoPartidoAdmin();
@@ -4162,6 +4168,8 @@ function cancelarEdicionPartidoPoli(){
     const qlEl = document.getElementById('ap-q'+q+'-local'), qvEl = document.getElementById('ap-q'+q+'-visitante');
     if(qlEl) qlEl.value = ''; if(qvEl) qvEl.value = '';
   });
+  const playoffChk = document.getElementById('ap-playoff');
+  if(playoffChk) playoffChk.checked = false;
   const estadoSel = document.getElementById('ap-estado');
   if(estadoSel){ estadoSel.value = 'pendiente'; cambiarEstadoPartidoAdmin(); }
   const btnG = document.getElementById('ap-btn-guardar'), btnC = document.getElementById('ap-btn-cancelar');
@@ -4197,6 +4205,7 @@ async function agregarPartidoPoli(){
   };
   if(esBasquet){
     datos.estado = estado;
+    datos.playoff = document.getElementById('ap-playoff').checked;
     datos.cuarto = estado === 'en-juego' ? document.getElementById('ap-cuarto').value : null;
     if(estado === 'jugado'){
       const q = n => { const v = document.getElementById(n).value; return v === '' ? null : Number(v); };
@@ -4405,6 +4414,7 @@ async function renderAdminListas(){
     const marcador = p.jugado ? `${p.ptsLocal} - ${p.ptsVisitante}` : 'sin jugar';
     const estadoLabel = estado === 'en-juego' ? 'En juego' : estado === 'jugado' ? 'Jugado' : 'Pendiente';
     const badge = estado ? `<span class="estado-badge ${estado}">${estadoLabel}</span>` : '';
+    const playoffBadge = p.playoff ? `<span class="estado-badge" style="background:#5a3d9922;color:#b98cf0">Playoff</span>` : '';
     const cronoHtml = (estado === 'en-juego') ? `
       <div class="admin-crono-controles">
         <span class="partido-crono" id="crono-adm-basquet-${k}">${formatCronoBasquet(cronoBasquetSegundosSync(k))}</span>
@@ -4415,7 +4425,7 @@ async function renderAdminListas(){
         <button type="button" onclick="cronoBasquetPausar('${k}')">⏸</button>
         <button type="button" onclick="cronoBasquetReset('${k}')">⟲</button>
       </div>` : '';
-    return `<div class="admin-lista-row"><span>${escapeHtml(p.local)} vs ${escapeHtml(p.visitante)} (${marcador})${badge}${cronoHtml}</span><span><button onclick="editarPartidoPoli('${k}')" style="margin-right:6px">Editar</button><button onclick="borrarItemPoli('${k}','${dep}','partido')">Borrar</button></span></div>`;
+    return `<div class="admin-lista-row"><span>${escapeHtml(p.local)} vs ${escapeHtml(p.visitante)} (${marcador})${badge}${playoffBadge}${cronoHtml}</span><span><button onclick="editarPartidoPoli('${k}')" style="margin-right:6px">Editar</button><button onclick="borrarItemPoli('${k}','${dep}','partido')">Borrar</button></span></div>`;
   }).join('') : '<div class="placeholder">Sin partidos en esta categoría</div>';
   if(dep === 'basquet') arrancarTickBasquet();
 
