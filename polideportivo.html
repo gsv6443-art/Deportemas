@@ -620,10 +620,6 @@ body.bloqueado-poli .vista-deporte{display:none!important;}
         </div>
       </div>
       <div id="ap-basquet-estado" style="display:none;margin-bottom:8px">
-        <label class="admin-check" style="display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:13px;color:var(--gris-claro)">
-          <input type="checkbox" id="ap-playoff" style="width:auto">
-          Este partido es de Playoffs (no suma a la tabla de posiciones)
-        </label>
         <select id="ap-estado" class="admin-input" style="margin-bottom:6px" onchange="cambiarEstadoPartidoAdmin()">
           <option value="pendiente">Pendiente</option>
           <option value="en-juego">En juego</option>
@@ -1708,7 +1704,6 @@ function etiquetaSubSegBasquet(torneo, subSeg, nombresGrupos){
 // Orden natural de zonas/subSeg dentro de un torneo (en vez de alfabético,
 // que dejaría mal ubicada "Tabla General" o mezclaría A/B con Apertura/Clausura)
 function ordenSubSegBasquet(torneo, subSeg){
-  if(subSeg === '__playoff__') return 9999; // Playoffs siempre al final
   const cfg = POS_BASQUET[torneo];
   if(!cfg) return 0;
   if(torneo === 'interasociativo'){
@@ -1893,7 +1888,24 @@ async function generarImagenPartidoBasquet(p, torneoLabel){
   ctx.fillStyle = 'rgba(232,114,12,0.7)';
   ctx.font = `700 ${cvp(14)}px "Rajdhani", Arial, sans-serif`;
   ctx.textAlign = 'center';
-  cvpFillTextTrunc(ctx, (torneoLabel||'').toUpperCase(), CX, heroY+cvp(28), W-cvp(80));
+  const torneoTxt = (torneoLabel||'').toUpperCase();
+  cvpFillTextTrunc(ctx, torneoTxt, CX, heroY+cvp(28), W-cvp(80));
+
+  const esPlayoffLabel = torneoTxt.includes('PLAYOFFS');
+  // Pequeña etiqueta cuando la zona es Playoffs
+  if(esPlayoffLabel){
+    const tagTxt = '🏆 PLAYOFFS';
+    ctx.font = `700 ${cvp(12)}px "Rajdhani", Arial, sans-serif`;
+    const tagW = ctx.measureText(tagTxt).width + cvp(22);
+    const tagH = cvp(22);
+    const tagY = heroY + cvp(38);
+    cvpRoundRect(ctx, CX-tagW/2, tagY, tagW, tagH, cvp(11));
+    ctx.fillStyle = 'rgba(232,114,12,0.18)'; ctx.fill();
+    ctx.fillStyle = CVP_C.NARANJA_L;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(tagTxt, CX, tagY+tagH/2+cvp(1));
+    ctx.textBaseline = 'alphabetic';
+  }
 
   if(estado === 'jugado'){
     // ── Concepto "scoreboard de transmisión": marcador apilado, ganador destacado ──
@@ -1905,7 +1917,7 @@ async function generarImagenPartidoBasquet(p, torneoLabel){
     ctx.font = `700 ${cvp(15)}px "Rajdhani", Arial, sans-serif`;
     const bTxt2 = 'FINAL';
     const bW2 = ctx.measureText(bTxt2).width + cvp(30);
-    const bY2 = heroY + cvp(44);
+    const bY2 = heroY + cvp(44) + (esPlayoffLabel ? cvp(26) : 0);
     cvpRoundRect(ctx, CX-bW2/2, bY2, bW2, cvp(28), cvp(14));
     ctx.fillStyle = 'rgba(26,107,47,0.55)'; ctx.fill();
     ctx.fillStyle = colorGanador;
@@ -2119,7 +2131,22 @@ async function _generarImagenZonaBasquetGrupo(ps, zonaLabel){
   } else {
     cvpFillTextTrunc(ctx, zonaTxt, CX, y+cvp(48), W-cvp(80));
   }
-  y += cvp(70);
+  y += cvp(56);
+
+  // Pequeña etiqueta cuando la zona es Playoffs
+  if(zonaTxt.includes('PLAYOFFS')){
+    const tagTxt = '🏆 PLAYOFFS';
+    ctx.font = `700 ${cvp(13)}px "Rajdhani", Arial, sans-serif`;
+    const tagW = ctx.measureText(tagTxt).width + cvp(24);
+    const tagH = cvp(24);
+    cvpRoundRect(ctx, CX-tagW/2, y, tagW, tagH, cvp(12));
+    ctx.fillStyle = 'rgba(232,114,12,0.18)'; ctx.fill();
+    ctx.fillStyle = CVP_C.NARANJA_L;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(tagTxt, CX, y+tagH/2+cvp(1));
+    ctx.textBaseline = 'alphabetic';
+    y += tagH + cvp(14);
+  }
 
   const disponible = CVP_H - y - cvp(40);
   const ROW_H = Math.floor(disponible / ps.length);
@@ -2325,11 +2352,11 @@ async function cargarFixture(categoria, modo){
   const keysEnJuego = filas.filter(p=>estadoPartidoBasquet(p)==='en-juego').map(p=>p._key);
   if(keysEnJuego.length) await precargarCronosBasquet(keysEnJuego);
 
-  // 1) Agrupar por Zona/subSeg (los partidos de Playoffs van en su propio grupo, separado de la fase regular)
+  // 1) Agrupar por Zona/subSeg
   const porZona = {};
   const ordenZonas = [];
   filas.forEach(p=>{
-    const key = p.playoff ? '__playoff__' : (p.subSeg || '');
+    const key = p.subSeg || '';
     if(!porZona[key]){ porZona[key] = []; ordenZonas.push(key); }
     porZona[key].push(p);
   });
@@ -2398,7 +2425,7 @@ async function cargarFixture(categoria, modo){
   if(modo === 'resultados') _partidosBasquetMapa = {};
   cont.innerHTML = ordenZonas.map(zonaKey=>{
     const partidosZona = porZona[zonaKey].slice().sort((a,b)=>(a.orden||0)-(b.orden||0));
-    const zonaLabel = zonaKey === '__playoff__' ? 'Playoffs' : etiquetaSubSegBasquet(categoria, zonaKey, nombresGrupos);
+    const zonaLabel = etiquetaSubSegBasquet(categoria, zonaKey, nombresGrupos);
     if(modo === 'fixture') _zonasBasquetMapa[zonaKey] = {partidos: partidosZona, zonaLabel};
     if(modo === 'resultados') partidosZona.forEach(p=>{ _partidosBasquetMapa[p._key] = {p, zonaLabel}; });
 
@@ -2461,12 +2488,12 @@ const POS_BASQUET = {
   'liga-cordobesa': {
     nivel2: [['a','A'],['b','B']],
     nivel3: {
-      a: [['zona-1','Zona 1'],['zona-2','Zona 2'],['zona-3','Zona 3'],['general','Tabla General']],
-      b: [['zona-1','Zona 1'],['zona-2','Zona 2'],['general','Tabla General']]
+      a: [['zona-1','Zona 1'],['zona-2','Zona 2'],['zona-3','Zona 3'],['general','Tabla General'],['playoffs','Playoffs']],
+      b: [['zona-1','Zona 1'],['zona-2','Zona 2'],['general','Tabla General'],['playoffs','Playoffs']]
     }
   },
   'interasociativo': {
-    nivel2: [['zona-1','Zona 1'],['zona-2','Zona 2']]
+    nivel2: [['zona-1','Zona 1'],['zona-2','Zona 2'],['playoffs','Playoffs']]
   },
   'asociativo': {
     nivel2: [['apertura','Apertura'],['clausura','Clausura']],
@@ -3006,7 +3033,7 @@ async function recalcularPosicionesBasquet(torneo, subSeg){
   const partidos = await fb.getAllByPrefix('basquet_partido_' + torneo + '_');
   const stats = {};
   Object.values(partidos).forEach(p=>{
-    if(!p.jugado || p.ptsLocal == null || p.ptsVisitante == null || p.playoff) return;
+    if(!p.jugado || p.ptsLocal == null || p.ptsVisitante == null) return;
     const coincide = esGeneralCordobesa ? (p.subSeg || '').startsWith(division + '_zona-') : (p.subSeg === subSeg);
     if(!coincide) return;
     [[p.local, p.ptsLocal, p.ptsVisitante],[p.visitante, p.ptsVisitante, p.ptsLocal]].forEach(([nombre, favor, contra])=>{
@@ -4137,7 +4164,6 @@ async function editarPartidoPoli(key){
   document.getElementById('ap-dia-hora').value = p.diaHora || '';
   document.getElementById('ap-lugar').value = p.lugar || '';
   if(prefijoAdmin() === 'basquet'){
-    document.getElementById('ap-playoff').checked = !!p.playoff;
     const estado = p.estado || (p.jugado ? 'jugado' : 'pendiente');
     document.getElementById('ap-estado').value = estado;
     cambiarEstadoPartidoAdmin();
@@ -4168,8 +4194,6 @@ function cancelarEdicionPartidoPoli(){
     const qlEl = document.getElementById('ap-q'+q+'-local'), qvEl = document.getElementById('ap-q'+q+'-visitante');
     if(qlEl) qlEl.value = ''; if(qvEl) qvEl.value = '';
   });
-  const playoffChk = document.getElementById('ap-playoff');
-  if(playoffChk) playoffChk.checked = false;
   const estadoSel = document.getElementById('ap-estado');
   if(estadoSel){ estadoSel.value = 'pendiente'; cambiarEstadoPartidoAdmin(); }
   const btnG = document.getElementById('ap-btn-guardar'), btnC = document.getElementById('ap-btn-cancelar');
@@ -4205,7 +4229,6 @@ async function agregarPartidoPoli(){
   };
   if(esBasquet){
     datos.estado = estado;
-    datos.playoff = document.getElementById('ap-playoff').checked;
     datos.cuarto = estado === 'en-juego' ? document.getElementById('ap-cuarto').value : null;
     if(estado === 'jugado'){
       const q = n => { const v = document.getElementById(n).value; return v === '' ? null : Number(v); };
@@ -4414,7 +4437,6 @@ async function renderAdminListas(){
     const marcador = p.jugado ? `${p.ptsLocal} - ${p.ptsVisitante}` : 'sin jugar';
     const estadoLabel = estado === 'en-juego' ? 'En juego' : estado === 'jugado' ? 'Jugado' : 'Pendiente';
     const badge = estado ? `<span class="estado-badge ${estado}">${estadoLabel}</span>` : '';
-    const playoffBadge = p.playoff ? `<span class="estado-badge" style="background:#5a3d9922;color:#b98cf0">Playoff</span>` : '';
     const cronoHtml = (estado === 'en-juego') ? `
       <div class="admin-crono-controles">
         <span class="partido-crono" id="crono-adm-basquet-${k}">${formatCronoBasquet(cronoBasquetSegundosSync(k))}</span>
@@ -4425,7 +4447,7 @@ async function renderAdminListas(){
         <button type="button" onclick="cronoBasquetPausar('${k}')">⏸</button>
         <button type="button" onclick="cronoBasquetReset('${k}')">⟲</button>
       </div>` : '';
-    return `<div class="admin-lista-row"><span>${escapeHtml(p.local)} vs ${escapeHtml(p.visitante)} (${marcador})${badge}${playoffBadge}${cronoHtml}</span><span><button onclick="editarPartidoPoli('${k}')" style="margin-right:6px">Editar</button><button onclick="borrarItemPoli('${k}','${dep}','partido')">Borrar</button></span></div>`;
+    return `<div class="admin-lista-row"><span>${escapeHtml(p.local)} vs ${escapeHtml(p.visitante)} (${marcador})${badge}${cronoHtml}</span><span><button onclick="editarPartidoPoli('${k}')" style="margin-right:6px">Editar</button><button onclick="borrarItemPoli('${k}','${dep}','partido')">Borrar</button></span></div>`;
   }).join('') : '<div class="placeholder">Sin partidos en esta categoría</div>';
   if(dep === 'basquet') arrancarTickBasquet();
 
