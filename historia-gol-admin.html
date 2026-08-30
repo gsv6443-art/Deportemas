@@ -1,0 +1,128 @@
+<!-- ══════════════════════════════════════════════════════════════════
+     HISTORIA DE GOL — fragmentos de HTML para el panel de admin
+     ══════════════════════════════════════════════════════════════════ -->
+
+<!-- 1) Botón de pestaña — agregar dentro de <div class="admin-tabs"> ────
+     (junto a los demás <button class="admin-tab" onclick="switchAdminTab(...)">)  -->
+<button class="admin-tab" onclick="switchAdminTab('historiagol',this)">🎬 Historia</button>
+
+
+<!-- 2) Sección del formulario — agregar dentro de <div class="admin-body">,
+     junto a las demás <div class="admin-section" id="admin-...">          -->
+<div class="admin-section" id="admin-historiagol">
+  <div class="admin-title">🎬 Historia de Partido</div>
+  <p style="font-size:11px;color:var(--gris);margin-bottom:14px;font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px">
+    Generá una imagen (o video, si es un gol) para subir como historia de Instagram.
+  </p>
+
+  <datalist id="hg-equipos-datalist"></datalist>
+
+  <div class="form-group">
+    <label>Evento</label>
+    <select id="hg-evento" onchange="hgActualizarCamposEvento()">
+      <option value="inicio">Inicio del partido</option>
+      <option value="entretiempo">Fin del primer tiempo</option>
+      <option value="segundo-tiempo">Inicio del segundo tiempo</option>
+      <option value="gol" selected>Gol (video animado)</option>
+      <option value="penales">Se define por penales</option>
+      <option value="final">Final del partido</option>
+    </select>
+  </div>
+
+  <div class="form-row">
+    <div class="form-group"><label>Equipo Local</label>
+      <input type="text" id="hg-local" list="hg-equipos-datalist" placeholder="Nombre exacto del equipo"/>
+    </div>
+    <div class="form-group"><label>Equipo Visitante</label>
+      <input type="text" id="hg-visit" list="hg-equipos-datalist" placeholder="Nombre exacto del equipo"/>
+    </div>
+  </div>
+
+  <div class="form-row">
+    <div class="form-group"><label>Marcador</label>
+      <input type="text" id="hg-marcador" placeholder="Ej: 1 - 0"/>
+    </div>
+    <div class="form-group"><label>Tiempo (minuto)</label>
+      <input type="number" id="hg-minuto" placeholder="45"/>
+    </div>
+  </div>
+
+  <div class="form-row">
+    <div class="form-group"><label>Fecha</label>
+      <input type="text" id="hg-fecha" placeholder="Ej: Fecha 12"/>
+    </div>
+    <div class="form-group"><label>Torneo</label>
+      <select id="hg-torneo">
+        <option value="apertura">Apertura 2026</option>
+        <option value="clausura">Clausura 2026</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Solo se muestra si el evento es "Gol" -->
+  <div class="form-row" id="hg-campos-gol">
+    <div class="form-group"><label>Autor del gol</label>
+      <input type="text" id="hg-autor" placeholder="Nombre del jugador"/>
+    </div>
+    <div class="form-group"><label>¿Quién convierte?</label>
+      <select id="hg-convierte">
+        <option value="local">Equipo Local</option>
+        <option value="visit">Equipo Visitante</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Solo se muestra si el evento es "Se define por penales" -->
+  <div class="form-group" id="hg-campos-penales" style="display:none">
+    <label>Resultado en penales</label>
+    <input type="text" id="hg-penales" placeholder="Ej: 5-4"/>
+  </div>
+
+  <div style="display:flex;gap:8px;margin-top:14px">
+    <button class="btn-primary" id="hg-generar-btn" onclick="hgGenerar()">🎬 Generar</button>
+    <button class="btn-edit" onclick="hgLimpiarForm()">Limpiar</button>
+  </div>
+</div>
+
+
+<!-- 3) Modal para previsualizar y compartir el VIDEO (solo se usa para el
+     evento "Gol") — agregar junto al <div id="share-modal"> ya existente
+     (mismo nivel en el DOM). Para los otros 5 eventos (imagen) se reutiliza
+     el <div id="share-modal"> que ya tenés, vía abrirShare().              -->
+<div id="video-share-modal">
+  <div class="share-box">
+    <div class="share-box-header">
+      <span>🎬 Historia de Gol</span>
+      <button class="share-box-close" onclick="cerrarVideoShare()">✕</button>
+    </div>
+    <div class="share-img-preview-wrap" id="video-share-wrap">
+      <div class="share-img-loading" id="video-share-loading">
+        <div class="share-spinner"></div>
+        Generando video...
+      </div>
+      <video id="video-share-preview" style="display:none;width:100%;border-radius:8px" muted playsinline loop autoplay></video>
+    </div>
+    <div class="share-redes">
+      <button class="share-red-btn instagram" onclick="compartirVideoEn('instagram')">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
+        Instagram
+      </button>
+      <button class="share-red-btn whatsapp" onclick="compartirVideoEn('whatsapp')">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347"/></svg>
+        WhatsApp
+      </button>
+      <button class="share-red-btn descargar" onclick="descargarVideoHistoria()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Descargar video
+      </button>
+    </div>
+    <div class="share-note" id="video-share-note"></div>
+  </div>
+</div>
+
+
+<!-- 4) En switchAdminTab(tab, el) agregar esta línea junto a las demás
+     ramas "if(tab==='...')":                                             -->
+<!--
+  if(tab==='historiagol'){ hgPoblarEquipos(); hgActualizarCamposEvento(); }
+-->
