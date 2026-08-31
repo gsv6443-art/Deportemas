@@ -3017,6 +3017,8 @@ table.posiciones td:nth-child(8){
 .btn-share svg{width:13px;height:13px;flex-shrink:0;}
 #share-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:8000;align-items:center;justify-content:center;padding:1rem;}
 #share-modal.open{display:flex;}
+#video-share-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:8000;align-items:center;justify-content:center;padding:1rem;}
+#video-share-modal.open{display:flex;}
 .share-box{background:var(--negro2);border:1px solid var(--dorado-border);border-radius:var(--r-lg);width:460px;max-width:98vw;box-shadow:0 12px 60px rgba(0,0,0,.9);overflow:hidden;}
 .share-box-header{background:linear-gradient(90deg,var(--negro4),rgba(201,162,39,.15));border-bottom:1px solid var(--dorado-border);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;}
 .share-box-header span{font-family:'Rajdhani',sans-serif;font-weight:900;font-size:16px;color:var(--dorado);letter-spacing:1.2px;}
@@ -3276,6 +3278,38 @@ table.posiciones td:nth-child(8){
   </div>
 </div>
 
+<!-- HISTORIA DE GOL — video -->
+<div id="video-share-modal">
+  <div class="share-box">
+    <div class="share-box-header">
+      <span>🎬 Historia de Gol</span>
+      <button class="share-box-close" onclick="cerrarVideoShare()">✕</button>
+    </div>
+    <div class="share-img-preview-wrap" id="video-share-wrap">
+      <div class="share-img-loading" id="video-share-loading">
+        <div class="share-spinner"></div>
+        Generando video...
+      </div>
+      <video id="video-share-preview" style="display:none;width:100%;border-radius:8px" muted playsinline loop autoplay></video>
+    </div>
+    <div class="share-redes">
+      <button class="share-red-btn instagram" onclick="compartirVideoEn('instagram')">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
+        Instagram
+      </button>
+      <button class="share-red-btn whatsapp" onclick="compartirVideoEn('whatsapp')">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347"/></svg>
+        WhatsApp
+      </button>
+      <button class="share-red-btn descargar" onclick="descargarVideoHistoria()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Descargar video
+      </button>
+    </div>
+    <div class="share-note" id="video-share-note"></div>
+  </div>
+</div>
+
 <!-- LOGIN -->
 <div id="login-overlay">
   <div class="login-box">
@@ -3317,6 +3351,7 @@ table.posiciones td:nth-child(8){
       <button class="admin-tab" onclick="switchAdminTab('estadisticas',this)">📊 Estadisticas</button>
       <button class="admin-tab" onclick="switchAdminTab('sanciones',this)">🟥 Sanciones</button>
       <button class="admin-tab" onclick="switchAdminTab('alineaciones',this)">🧩 Alineaciones</button>
+      <button class="admin-tab" onclick="switchAdminTab('historiagol',this)">🎬 Historia</button>
       <button class="admin-tab" onclick="switchAdminTab('notificaciones',this)">🔔 Notificaciones</button>
     </div>
     <div class="admin-body">
@@ -4550,6 +4585,82 @@ table.posiciones td:nth-child(8){
         </div>
 
         <div class="admin-list" id="alin-lista"></div>
+      </div>
+
+      <!-- HISTORIA DE PARTIDO -->
+      <div class="admin-section" id="admin-historiagol">
+        <div class="admin-title">🎬 Historia de Partido</div>
+        <p style="font-size:11px;color:var(--gris);margin-bottom:14px;font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px">
+          Generá una imagen (o video, si es un gol) para subir como historia de Instagram.
+        </p>
+
+        <datalist id="hg-equipos-datalist"></datalist>
+
+        <div class="form-group">
+          <label>Evento</label>
+          <select id="hg-evento" onchange="hgActualizarCamposEvento()">
+            <option value="inicio">Inicio del partido</option>
+            <option value="entretiempo">Fin del primer tiempo</option>
+            <option value="segundo-tiempo">Inicio del segundo tiempo</option>
+            <option value="gol" selected>Gol (video animado)</option>
+            <option value="penales">Se define por penales</option>
+            <option value="final">Final del partido</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group"><label>Equipo Local</label>
+            <input type="text" id="hg-local" list="hg-equipos-datalist" placeholder="Nombre exacto del equipo"/>
+          </div>
+          <div class="form-group"><label>Equipo Visitante</label>
+            <input type="text" id="hg-visit" list="hg-equipos-datalist" placeholder="Nombre exacto del equipo"/>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group"><label>Marcador</label>
+            <input type="text" id="hg-marcador" placeholder="Ej: 1 - 0"/>
+          </div>
+          <div class="form-group"><label>Tiempo (minuto)</label>
+            <input type="number" id="hg-minuto" placeholder="45"/>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group"><label>Fecha</label>
+            <input type="text" id="hg-fecha" placeholder="Ej: Fecha 12"/>
+          </div>
+          <div class="form-group"><label>Torneo</label>
+            <select id="hg-torneo">
+              <option value="apertura">Apertura 2026</option>
+              <option value="clausura">Clausura 2026</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Solo se muestra si el evento es "Gol" -->
+        <div class="form-row" id="hg-campos-gol">
+          <div class="form-group"><label>Autor del gol</label>
+            <input type="text" id="hg-autor" placeholder="Nombre del jugador"/>
+          </div>
+          <div class="form-group"><label>¿Quién convierte?</label>
+            <select id="hg-convierte">
+              <option value="local">Equipo Local</option>
+              <option value="visit">Equipo Visitante</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Solo se muestra si el evento es "Se define por penales" -->
+        <div class="form-group" id="hg-campos-penales" style="display:none">
+          <label>Resultado en penales</label>
+          <input type="text" id="hg-penales" placeholder="Ej: 5-4"/>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:14px">
+          <button class="btn-primary" id="hg-generar-btn" onclick="hgGenerar()">🎬 Generar</button>
+          <button class="btn-edit" onclick="hgLimpiarForm()">Limpiar</button>
+        </div>
       </div>
 
     </div>
@@ -11040,7 +11151,8 @@ function switchAdminTab(tab,el){
   if(tab==='sanciones'){ poblarSelectClubSancion('am'); renderAdminListaAmonestaciones(); recalcularSancionesVigentes(); }
   if(tab==='torneos'){ renderTorneoClubesChecklist(); toActualizarVisEstado(); }
   if(tab==='notificaciones'){ actualizarContadorSubs(); }
-  if(tab==='alineaciones'){ poblarSelectPartidoAlineacion(); renderAdminListaAlineaciones(); alinRenderSlots(); }}
+  if(tab==='alineaciones'){ poblarSelectPartidoAlineacion(); renderAdminListaAlineaciones(); alinRenderSlots(); }
+  if(tab==='historiagol'){ hgPoblarEquipos(); hgActualizarCamposEvento(); }}
 function cambiarPassword(){
   // La contraseña se gestiona desde Firebase Console → Authentication
   const msg=document.getElementById('conf-msg');
@@ -11730,6 +11842,522 @@ async function generarImagenPartido(p){
   return canvas;
 }
 
+
+/* ══════════════════════════════════════════════════════════════
+   HISTORIA DE INSTAGRAM — imagen de evento de partido (1080×1920)
+   ══════════════════════════════════════════════════════════════ */
+
+const CV_W_HIST = 1080;
+const CV_H_HIST = 1920;
+
+async function cvBloqueHistoria(ctx, p, opciones, W, yStart, medirSolo){
+  const { tipoEvento = 'en-vivo', golData, tarjetaData } = opciones;
+  const esGol = tipoEvento === 'gol';
+  const CX = W / 2;
+  let y = yStart;
+
+  const badges = {
+    'inicio':     { txt: '¡COMENZÓ EL PARTIDO!', col: C.DORADO,  bg: 'rgba(201,162,39,0.15)' },
+    'gol':        { txt: '¡GOOOL!',   col: '#ff5555',  bg: 'rgba(192,57,43,0.35)' },
+    'tarjeta':    { txt: 'TARJETA',   col: '#ffdd66',  bg: 'rgba(120,90,0,0.4)' },
+    'entretiempo':{ txt: 'ENTRETIEMPO', col: C.DORADO, bg: 'rgba(201,162,39,0.15)' },
+    'segundo-tiempo': { txt: 'COMIENZA EL 2ºT', col: C.DORADO, bg: 'rgba(201,162,39,0.15)' },
+    'penales':    { txt: 'DEFINICIÓN POR PENALES', col: '#ffdd66', bg: 'rgba(120,90,0,0.4)' },
+    'final':      { txt: 'FINAL',     col: '#4caf74',  bg: 'rgba(26,107,47,0.5)' },
+  };
+  const esEnVivo = !badges[tipoEvento];
+
+  if(esEnVivo){
+    // ── Cronómetro (reemplaza el badge "EN VIVO") ─────────────
+    const mm = String(p.minuto || 0).padStart(2, '0');
+    const ss = String(opciones.segundo || 0).padStart(2, '0');
+    const cronoTxt = `${mm}:${ss}`;
+    ctx.font = `700 ${s(40)}px "Rajdhani", Arial, sans-serif`;
+    const iconD = s(32);
+    const padX  = s(28);
+    const bh2   = s(68);
+    const bw2   = iconD + s(16) + ctx.measureText(cronoTxt).width + padX*2;
+    if(!medirSolo){
+      cvRoundRect(ctx, CX - bw2/2, y, bw2, bh2, bh2/2);
+      ctx.fillStyle = 'rgba(192,57,43,0.35)'; ctx.fill();
+      ctx.strokeStyle = '#ff5555'; ctx.lineWidth = 2; ctx.stroke();
+      const icx = CX - bw2/2 + padX + iconD/2;
+      const icy = y + bh2/2;
+      ctx.strokeStyle = '#ff5555'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(icx, icy, iconD/2, 0, Math.PI*2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(icx, icy); ctx.lineTo(icx, icy - iconD*0.32); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(icx, icy); ctx.lineTo(icx + iconD*0.22, icy + iconD*0.14); ctx.stroke();
+      ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#ff5555';
+      ctx.fillText(cronoTxt, CX - bw2/2 + padX + iconD + s(16), icy);
+      ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    }
+    y += bh2 + s(34);
+  } else {
+    // ── Badge de estado ──
+    const badge = badges[tipoEvento];
+    ctx.font = `700 ${s(24)}px "Rajdhani", Arial, sans-serif`;
+    const bw = ctx.measureText(badge.txt).width + s(46);
+    const bh = s(50);
+    if(!medirSolo){
+      cvRoundRect(ctx, CX - bw/2, y, bw, bh, bh/2);
+      ctx.fillStyle = badge.bg; ctx.fill();
+      ctx.strokeStyle = badge.col; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = badge.col;
+      ctx.textBaseline = 'middle';
+      ctx.fillText(badge.txt, CX, y + bh/2);
+      ctx.textBaseline = 'alphabetic';
+    }
+    y += bh + s(34);
+  }
+
+  // ── Fecha / minuto / torneo ────────────────────────────────
+  const tornLabel2 = p.torneo ? ' · ' + torneoLabel(p.torneo) : '';
+  const fechaLabel = opciones.fecha ? ' · ' + opciones.fecha : '';
+  const minTxt = p.minuto ? p.minuto + "'  " : '';
+  if(!medirSolo){
+    ctx.fillStyle = 'rgba(201,162,39,0.65)';
+    ctx.font = `700 ${s(26)}px "Rajdhani", Arial, sans-serif`;
+    ctx.fillText((minTxt + tornLabel2 + fechaLabel).replace(/^\s*·\s*/, ''), CX, y);
+  }
+  y += s(64);
+
+  // ── Escudos + nombres + marcador ───────────────────────────
+  const ESCUDO_H = s(110);
+  const escY = y;
+  const escLX = s(80);
+  const escRX = W - s(80) - ESCUDO_H;
+  if(!medirSolo){
+    await cvDrawEscudo(ctx, p.local, escLX, escY, ESCUDO_H);
+    await cvDrawEscudo(ctx, p.visit, escRX, escY, ESCUDO_H);
+
+    ctx.font = `${s(85)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = C.DORADO;
+    ctx.fillText(p.resultado || '0 - 0', CX, escY + ESCUDO_H/2);
+    ctx.textBaseline = 'alphabetic';
+
+    ctx.font = `${s(30)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.fillStyle = C.BLANCO;
+    ctx.textBaseline = 'top';
+    cvFillTextTrunc(ctx, p.local.toUpperCase(), escLX + ESCUDO_H/2, escY + ESCUDO_H + s(20), s(260));
+    cvFillTextTrunc(ctx, p.visit.toUpperCase(), escRX + ESCUDO_H/2, escY + ESCUDO_H + s(20), s(260));
+    ctx.textBaseline = 'alphabetic';
+  }
+  y = escY + ESCUDO_H + s(70);
+
+  // ── Divisor dorado ──────────────────────────────────────────
+  if(!medirSolo){
+    const divGrad = ctx.createLinearGradient(0, y, W, y);
+    divGrad.addColorStop(0, 'transparent');
+    divGrad.addColorStop(0.2, C.DORADO);
+    divGrad.addColorStop(0.8, C.DORADO);
+    divGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = divGrad;
+    ctx.fillRect(0, y, W, 2);
+  }
+  y += s(38);
+
+  // ── Detalle del evento (gol / tarjeta / penales) ────────────
+  if(esGol && golData){
+    if(!medirSolo){
+      const eqNom = golData.equipo === 'local' ? p.local : p.visit;
+      ctx.fillStyle = C.BLANCO;
+      ctx.font = `700 ${s(27)}px "Rajdhani", Arial, sans-serif`;
+      ctx.fillText(`⚽ GOL DE ${eqNom.toUpperCase()}`, CX, y);
+    }
+    y += s(42);
+    if(!medirSolo){
+      ctx.fillStyle = C.DORADO;
+      ctx.font = `500 ${s(20)}px "DM Sans", Arial, sans-serif`;
+      ctx.fillText(`${golData.jugador}${golData.min ? '  ·  ' + golData.min + "'" : ''}`, CX, y);
+    }
+    y += s(20);
+  } else if(tipoEvento === 'tarjeta' && tarjetaData){
+    if(!medirSolo){
+      const eqNom = tarjetaData.equipo === 'local' ? p.local : p.visit;
+      const col = tarjetaData.color === 'roja' ? '#e05555' : '#ffdd66';
+      ctx.fillStyle = col;
+      ctx.font = `700 ${s(24)}px "Rajdhani", Arial, sans-serif`;
+      ctx.fillText(`TARJETA ${tarjetaData.color.toUpperCase()} · ${tarjetaData.jugador} · ${eqNom.toUpperCase()}`, CX, y);
+    }
+    y += s(20);
+  } else if(tipoEvento === 'penales' && opciones.penales){
+    if(!medirSolo){
+      ctx.fillStyle = C.BLANCO;
+      ctx.font = `700 ${s(27)}px "Rajdhani", Arial, sans-serif`;
+      ctx.fillText('PENALES', CX, y);
+    }
+    y += s(42);
+    if(!medirSolo){
+      ctx.fillStyle = C.DORADO;
+      ctx.font = `700 ${s(34)}px "Bebas Neue", Arial, sans-serif`;
+      ctx.fillText(opciones.penales, CX, y+s(6));
+    }
+    y += s(20);
+  }
+
+  return y;
+}
+
+async function generarImagenHistoriaPartido(p, opciones = {}){
+  await document.fonts.ready;
+  const id   = getIdentidad();
+  const liga = id.nombre || 'DEPORTEMAS';
+  const W    = CV_W_HIST;
+  const H    = CV_H_HIST;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.textBaseline = 'alphabetic';
+
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, C.NEG3);
+  bg.addColorStop(1, C.NEG);
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  const v1 = ctx.createRadialGradient(W*0.15, H*0.06, 0, W*0.15, H*0.06, W*0.6);
+  v1.addColorStop(0, 'rgba(201,162,39,0.06)'); v1.addColorStop(1, 'transparent');
+  ctx.fillStyle = v1; ctx.fillRect(0, 0, W, H);
+  const v2 = ctx.createRadialGradient(W*0.85, H*0.92, 0, W*0.85, H*0.92, W*0.6);
+  v2.addColorStop(0, 'rgba(201,162,39,0.04)'); v2.addColorStop(1, 'transparent');
+  ctx.fillStyle = v2; ctx.fillRect(0, 0, W, H);
+
+  const yHeader = await cvHeader(ctx, W, id, 0);
+  const footH = s(40);
+
+  const yFinMedido = await cvBloqueHistoria(ctx, p, opciones, W, 0, true);
+  const disponible = (H - footH) - yHeader;
+  const yInicio = yHeader + Math.max(0, (disponible - yFinMedido) / 2);
+
+  ctx.textAlign = 'center';
+  await cvBloqueHistoria(ctx, p, opciones, W, yInicio, false);
+
+  cvFooter(ctx, W, H - footH, liga);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  return canvas;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   HISTORIA DE GOL — video animado desde el panel de admin
+   ══════════════════════════════════════════════════════════════ */
+
+function easeOutBack(t){
+  const c1 = 1.70158, c3 = c1 + 1;
+  return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+}
+
+function hgCargarImgEscudo(nombre){
+  return new Promise(resolve => {
+    const entry = escudos[nombre] || escudos[normalizar(nombre)];
+    const src = entry && typeof entry === 'object' ? entry.img : entry;
+    if(!src){ resolve(null); return; }
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
+
+function hgDrawEscudo(ctx, img, nombre, x, y, size){
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(x+size/2, y+size/2, size/2, 0, Math.PI*2);
+  if(img){ ctx.clip(); cvDrawEscudoImg(ctx, img, x, y, size); ctx.restore(); return; }
+  ctx.fillStyle = 'rgba(201,162,39,0.15)'; ctx.fill(); ctx.restore();
+  ctx.fillStyle = C.DORADO;
+  ctx.font = `700 ${Math.round(size*0.38)}px Arial`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText((nombre||'?').substring(0,2).toUpperCase(), x+size/2, y+size/2);
+  ctx.textBaseline = 'alphabetic';
+}
+
+function hgCalcularLayout(ctx, W, yHeader, H, footH){
+  const medir = (yStart) => {
+    let y = yStart;
+    y += s(50) + s(34);
+    y += s(64);
+    const escY = y;
+    y = escY + s(110) + s(70);
+    y += s(38);
+    y += s(42) + s(20);
+    return y;
+  };
+  const contentH = medir(0);
+  const disponible = (H - footH) - yHeader;
+  const yInicio = yHeader + Math.max(0, (disponible - contentH) / 2);
+
+  let y = yInicio;
+  const badgeY = y; y += s(50) + s(34);
+  const fechaY = y; y += s(64);
+  const escY = y;   y = escY + s(110) + s(70);
+  const divY = y;   y += s(38);
+  const golTxtY = y; y += s(42);
+  const jugadorY = y;
+
+  return { badgeY, fechaY, escY, divY, golTxtY, jugadorY };
+}
+
+async function hgCapaEstatica(datos, imgLocal, imgVisit){
+  const W = CV_W_HIST, H = CV_H_HIST;
+  const cvs = document.createElement('canvas');
+  cvs.width = W; cvs.height = H;
+  const ctx = cvs.getContext('2d');
+  const id = getIdentidad();
+
+  const bg = ctx.createLinearGradient(0,0,0,H);
+  bg.addColorStop(0, C.NEG3); bg.addColorStop(1, C.NEG);
+  ctx.fillStyle = bg; ctx.fillRect(0,0,W,H);
+  const v1 = ctx.createRadialGradient(W*0.15,H*0.06,0,W*0.15,H*0.06,W*0.6);
+  v1.addColorStop(0,'rgba(201,162,39,0.06)'); v1.addColorStop(1,'transparent');
+  ctx.fillStyle=v1; ctx.fillRect(0,0,W,H);
+  const v2 = ctx.createRadialGradient(W*0.85,H*0.92,0,W*0.85,H*0.92,W*0.6);
+  v2.addColorStop(0,'rgba(201,162,39,0.04)'); v2.addColorStop(1,'transparent');
+  ctx.fillStyle=v2; ctx.fillRect(0,0,W,H);
+
+  const yHeader = await cvHeader(ctx, W, id, 0);
+  const footH = s(40);
+  const L = hgCalcularLayout(ctx, W, yHeader, H, footH);
+  const CX = W/2;
+
+  ctx.font = `700 ${s(26)}px "Rajdhani", Arial, sans-serif`;
+  ctx.fillStyle = 'rgba(201,162,39,0.65)'; ctx.textAlign = 'center';
+  ctx.fillText(`${datos.minuto}'  ·  ${datos.torneoLabel}  ·  ${datos.fecha}`, CX, L.fechaY);
+
+  const ESCUDO_H = s(110);
+  const escLX = s(80), escRX = W - s(80) - ESCUDO_H;
+  hgDrawEscudo(ctx, imgLocal, datos.local, escLX, L.escY, ESCUDO_H);
+  hgDrawEscudo(ctx, imgVisit, datos.visit, escRX, L.escY, ESCUDO_H);
+  ctx.font = `54px "Bebas Neue", Arial, sans-serif`; ctx.fillStyle = C.BLANCO;
+  cvFillTextTrunc(ctx, datos.local.toUpperCase(), escLX+ESCUDO_H/2, L.escY+ESCUDO_H+s(44), s(260));
+  cvFillTextTrunc(ctx, datos.visit.toUpperCase(), escRX+ESCUDO_H/2, L.escY+ESCUDO_H+s(44), s(260));
+
+  ctx.fillStyle = C.DORADO; ctx.fillRect(s(40), L.divY, W-s(80), 2);
+
+  ctx.font = `700 ${s(27)}px "Rajdhani", Arial, sans-serif`; ctx.fillStyle = C.BLANCO;
+  ctx.fillText(`⚽ GOL DE ${datos.golEquipoNombre.toUpperCase()}`, CX, L.golTxtY);
+  ctx.font = `500 ${s(20)}px "DM Sans", Arial, sans-serif`; ctx.fillStyle = C.DORADO;
+  ctx.fillText(`${datos.jugador}${datos.minuto ? '  ·  ' + datos.minuto + "'" : ''}`, CX, L.jugadorY);
+
+  cvFooter(ctx, W, H - footH, id.nombre || 'DEPORTEMAS');
+
+  return { canvas: cvs, layout: L };
+}
+
+function hgDibujarAnimado(ctx, t, datos, layout){
+  const W = CV_W_HIST, CX = W/2;
+
+  const bStart = 150, bIn = 500;
+  const pB = Math.max(0, Math.min(1, (t-bStart)/bIn));
+  let sB = easeOutBack(pB);
+  if(t > bStart+bIn) sB = 1 + 0.05*Math.sin((t-bStart-bIn)/260);
+  if(pB > 0){
+    ctx.save();
+    ctx.translate(CX, layout.badgeY + s(25));
+    ctx.scale(sB, sB);
+    ctx.font = `700 ${s(24)}px "Rajdhani", Arial, sans-serif`;
+    const txt = '¡GOOOL!';
+    const tw = ctx.measureText(txt).width;
+    const bw = tw + s(46), bh = s(50);
+    cvRoundRect(ctx, -bw/2, -bh/2, bw, bh, bh/2);
+    ctx.fillStyle = 'rgba(192,57,43,0.35)'; ctx.fill();
+    ctx.strokeStyle = '#ff5555'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = '#ff5555'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(txt, 0, 2);
+    ctx.restore();
+  }
+
+  const mIn = 550;
+  const pM = Math.max(0, Math.min(1, t/mIn));
+  let sM = easeOutBack(pM);
+  if(t > mIn) sM = 1 + 0.04*Math.sin((t-mIn)/300);
+  ctx.save();
+  ctx.translate(CX, layout.escY + s(55));
+  ctx.scale(Math.max(0.01,sM), Math.max(0.01,sM));
+  ctx.font = `${s(85)}px "Bebas Neue", Arial, sans-serif`;
+  ctx.fillStyle = C.DORADO; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(datos.resultado, 0, 0);
+  ctx.restore();
+
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+}
+
+async function generarVideoHistoriaGol(datos, duracionMs = 3200){
+  await document.fonts.ready;
+  const [imgLocal, imgVisit] = await Promise.all([
+    hgCargarImgEscudo(datos.local),
+    hgCargarImgEscudo(datos.visit),
+  ]);
+  const { canvas: capaEstatica, layout } = await hgCapaEstatica(datos, imgLocal, imgVisit);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = CV_W_HIST; canvas.height = CV_H_HIST;
+  canvas.style.position = 'fixed'; canvas.style.left = '-9999px';
+  document.body.appendChild(canvas);
+  const ctx = canvas.getContext('2d');
+
+  const stream = canvas.captureStream(30);
+  const candidatos = ['video/mp4;codecs=avc1', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+  const mimeType = candidatos.find(m => MediaRecorder.isTypeSupported(m)) || '';
+  const recorder = new MediaRecorder(stream, mimeType ? { mimeType, videoBitsPerSecond: 6_000_000 } : undefined);
+  const chunks = [];
+  recorder.ondataavailable = e => { if(e.data.size) chunks.push(e.data); };
+
+  const listo = new Promise(resolve => {
+    recorder.onstop = () => {
+      document.body.removeChild(canvas);
+      resolve(new Blob(chunks, { type: recorder.mimeType || 'video/webm' }));
+    };
+  });
+
+  recorder.start();
+  const t0 = performance.now();
+  function loop(){
+    const t = performance.now() - t0;
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(capaEstatica, 0, 0);
+    hgDibujarAnimado(ctx, t, datos, layout);
+    if(t < duracionMs) requestAnimationFrame(loop);
+    else recorder.stop();
+  }
+  requestAnimationFrame(loop);
+
+  return listo;
+}
+
+// ── Formulario del panel de admin ───────────────────────────────────
+
+function hgPoblarEquipos(){
+  const dl = document.getElementById('hg-equipos-datalist');
+  if(!dl) return;
+  dl.innerHTML = (data.equipos||[]).map(e => `<option value="${(e.nombre||'').replace(/"/g,'&quot;')}">`).join('');
+}
+
+function hgLimpiarForm(){
+  ['hg-local','hg-visit','hg-marcador','hg-minuto','hg-fecha','hg-autor','hg-penales'].forEach(id=>{
+    const el = document.getElementById(id); if(el) el.value = '';
+  });
+}
+
+function hgActualizarCamposEvento(){
+  const evento = document.getElementById('hg-evento').value;
+  document.getElementById('hg-campos-gol').style.display = evento === 'gol' ? 'grid' : 'none';
+  document.getElementById('hg-campos-penales').style.display = evento === 'penales' ? 'block' : 'none';
+  document.getElementById('hg-generar-btn').textContent = evento === 'gol' ? '🎬 Generar video' : '🖼️ Generar imagen';
+}
+
+let _hgVideoBlob = null;
+
+function hgGenerar(){
+  const evento = document.getElementById('hg-evento').value;
+  if(evento === 'gol') return hgGenerarVideoGol();
+  return hgGenerarImagenEvento(evento);
+}
+
+function hgLeerComun(){
+  const local = document.getElementById('hg-local').value.trim();
+  const visit = document.getElementById('hg-visit').value.trim();
+  const marcador = document.getElementById('hg-marcador').value.trim();
+  if(!local || !visit){
+    alert('Completá al menos equipo local y visitante.');
+    return null;
+  }
+  return {
+    local, visit,
+    resultado: marcador,
+    minuto: document.getElementById('hg-minuto').value || '',
+    fecha: document.getElementById('hg-fecha').value.trim(),
+    torneo: document.getElementById('hg-torneo').value,
+  };
+}
+
+function hgGenerarImagenEvento(evento){
+  const comun = hgLeerComun();
+  if(!comun) return;
+
+  const p = { local: comun.local, visit: comun.visit, resultado: comun.resultado, minuto: comun.minuto, torneo: comun.torneo };
+  const opciones = { tipoEvento: evento, fecha: comun.fecha };
+  if(evento === 'penales'){
+    const penales = document.getElementById('hg-penales').value.trim();
+    if(!penales){ alert('Completá el resultado en penales.'); return; }
+    opciones.penales = penales;
+  }
+
+  abrirShare(() => generarImagenHistoriaPartido(p, opciones));
+}
+
+async function hgGenerarVideoGol(){
+  const comun = hgLeerComun();
+  if(!comun || !comun.resultado){
+    alert('Completá equipo local, visitante y marcador.');
+    return;
+  }
+  const convierte = document.getElementById('hg-convierte').value;
+
+  const datos = {
+    local: comun.local, visit: comun.visit,
+    resultado: comun.resultado,
+    minuto: comun.minuto,
+    fecha: comun.fecha,
+    torneoLabel: torneoLabel(comun.torneo),
+    golEquipoNombre: convierte === 'local' ? comun.local : comun.visit,
+    jugador: document.getElementById('hg-autor').value.trim(),
+  };
+
+  const loadEl = document.getElementById('video-share-loading');
+  const videoEl = document.getElementById('video-share-preview');
+  const noteEl = document.getElementById('video-share-note');
+  videoEl.style.display = 'none';
+  loadEl.style.display = 'flex';
+  noteEl.textContent = '';
+  document.getElementById('video-share-modal').classList.add('open');
+
+  requestAnimationFrame(async () => {
+    try{
+      _hgVideoBlob = await generarVideoHistoriaGol(datos);
+      videoEl.src = URL.createObjectURL(_hgVideoBlob);
+      videoEl.style.display = 'block';
+      loadEl.style.display = 'none';
+      const tieneWebShare = navigator.share && navigator.canShare && navigator.canShare({files:[new File([''],'t.mp4',{type:'video/mp4'})]});
+      noteEl.textContent = tieneWebShare
+        ? 'Tocá una red social para compartir el video directamente.'
+        : 'Descargá el video y subilo como historia desde la app de Instagram.';
+    }catch(e){
+      loadEl.textContent = 'Error al generar el video.';
+      console.error(e);
+    }
+  });
+}
+
+function cerrarVideoShare(){
+  document.getElementById('video-share-modal').classList.remove('open');
+  const videoEl = document.getElementById('video-share-preview');
+  videoEl.pause(); videoEl.src = '';
+  _hgVideoBlob = null;
+}
+
+function descargarVideoHistoria(){
+  if(!_hgVideoBlob) return;
+  const ext = _hgVideoBlob.type.includes('mp4') ? 'mp4' : 'webm';
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(_hgVideoBlob);
+  a.download = `historia-gol.${ext}`;
+  a.click();
+}
+
+async function compartirVideoEn(red){
+  if(!_hgVideoBlob) return;
+  const ext = _hgVideoBlob.type.includes('mp4') ? 'mp4' : 'webm';
+  const id = getIdentidad();
+  const file = new File([_hgVideoBlob], `historia-gol.${ext}`, { type: _hgVideoBlob.type });
+  if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
+    try{
+      await navigator.share({ files:[file], title: id.nombre || 'DeporteMás', text: '¡Gol! ⚽' });
+      return;
+    }catch(e){ /* usuario canceló o no soportado — cae a descarga */ }
+  }
+  descargarVideoHistoria();
+}
 async function generarImagenPosiciones(){
   await document.fonts.ready;
   const id    = getIdentidad();
