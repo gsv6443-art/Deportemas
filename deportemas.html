@@ -12192,25 +12192,60 @@ async function generarVideoHistoriaGol(datos, duracionMs = 3200){
 
   const canvas = document.createElement('canvas');
   canvas.width = CV_W_HIST; canvas.height = CV_H_HIST;
-  canvas.style.position = 'fixed'; canvas.style.left = '-9999px';
+  // OJO: el canvas tiene que quedar "visible" dentro del viewport (aunque
+  // sea imperceptible). Muchos navegadores móviles dejan de pintar un
+  // canvas ubicado muy lejos de la pantalla (left:-9999px) y la grabación
+  // sale vacía (0 bytes) — por eso lo dejamos en la esquina, achicado y
+  // casi transparente, en vez de fuera de pantalla.
+  canvas.style.position = 'fixed';
+  canvas.style.top = '0';
+  canvas.style.left = '0';
+  canvas.style.width = '2px';
+  canvas.style.height = '2px';
+  canvas.style.opacity = '0.01';
+  canvas.style.zIndex = '-1';
+  canvas.style.pointerEvents = 'none';
   document.body.appendChild(canvas);
   const ctx = canvas.getContext('2d');
 
+  // Pintamos el primer cuadro ANTES de arrancar a grabar, para que el
+  // stream ya tenga contenido real desde el primer instante.
+  ctx.drawImage(capaEstatica, 0, 0);
+  hgDibujarAnimado(ctx, 0, datos, layout);
+  await new Promise(r => requestAnimationFrame(r));
+
+  if(!canvas.captureStream){
+    document.body.removeChild(canvas);
+    throw new Error('Este navegador no soporta grabar video (captureStream).');
+  }
   const stream = canvas.captureStream(30);
   const candidatos = ['video/mp4;codecs=avc1', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
-  const mimeType = candidatos.find(m => MediaRecorder.isTypeSupported(m)) || '';
-  const recorder = new MediaRecorder(stream, mimeType ? { mimeType, videoBitsPerSecond: 6_000_000 } : undefined);
-  const chunks = [];
-  recorder.ondataavailable = e => { if(e.data.size) chunks.push(e.data); };
+  const mimeType = candidatos.find(m => window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) || '';
 
-  const listo = new Promise(resolve => {
+  let recorder;
+  try{
+    recorder = new MediaRecorder(stream, mimeType ? { mimeType, videoBitsPerSecond: 6_000_000 } : undefined);
+  }catch(e){
+    document.body.removeChild(canvas);
+    throw new Error('No se pudo iniciar la grabación de video en este navegador.');
+  }
+
+  const chunks = [];
+  recorder.ondataavailable = e => { if(e.data && e.data.size) chunks.push(e.data); };
+  let errorGrabacion = null;
+  recorder.onerror = e => { errorGrabacion = e.error || e; };
+
+  const listo = new Promise((resolve, reject) => {
     recorder.onstop = () => {
       document.body.removeChild(canvas);
-      resolve(new Blob(chunks, { type: recorder.mimeType || 'video/webm' }));
+      if(errorGrabacion) return reject(errorGrabacion);
+      const blob = new Blob(chunks, { type: recorder.mimeType || mimeType || 'video/webm' });
+      if(!blob.size) return reject(new Error('La grabación quedó vacía. Probá de nuevo o cambiá de navegador.'));
+      resolve(blob);
     };
   });
 
-  recorder.start();
+  recorder.start(200); // timeslice: fuerza volcados periódicos de datos (evita blobs vacíos)
   const t0 = performance.now();
   function loop(){
     const t = performance.now() - t0;
@@ -12323,7 +12358,7 @@ async function hgGenerarVideoGol(){
         ? 'Tocá una red social para compartir el video directamente.'
         : 'Descargá el video y subilo como historia desde la app de Instagram.';
     }catch(e){
-      loadEl.textContent = 'Error al generar el video.';
+      loadEl.textContent = 'Error al generar el video: ' + (e && e.message ? e.message : 'probá de nuevo.');
       console.error(e);
     }
   });
