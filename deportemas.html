@@ -12182,6 +12182,71 @@ function hgDibujarAnimado(ctx, t, datos, layout){
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
 }
 
+// Intenta grabar UNA vez con un mimeType puntual. Resuelve con el Blob
+// si salió bien, o rechaza (con motivo) si el navegador lo produjo vacío.
+function hgIntentarGrabarVideo(capaEstatica, layout, datos, duracionMs, mimeType){
+  return new Promise((resolve, reject) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = CV_W_HIST; canvas.height = CV_H_HIST;
+    // El canvas debe quedar "visible" dentro del viewport (aunque sea
+    // imperceptible): muchos navegadores dejan de pintar un canvas
+    // ubicado muy lejos de la pantalla y la grabación sale vacía.
+    canvas.style.position = 'fixed';
+    canvas.style.top = '0'; canvas.style.left = '0';
+    canvas.style.width = '2px'; canvas.style.height = '2px';
+    canvas.style.opacity = '0.01'; canvas.style.zIndex = '-1';
+    canvas.style.pointerEvents = 'none';
+    document.body.appendChild(canvas);
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(capaEstatica, 0, 0);
+    hgDibujarAnimado(ctx, 0, datos, layout);
+
+    const limpiar = () => { if(canvas.parentNode) document.body.removeChild(canvas); };
+
+    if(!canvas.captureStream){
+      limpiar(); reject(new Error('Este navegador no soporta captureStream.')); return;
+    }
+    const stream = canvas.captureStream(30);
+
+    let recorder;
+    try{
+      recorder = mimeType
+        ? new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 6_000_000 })
+        : new MediaRecorder(stream);
+    }catch(e){ limpiar(); reject(e); return; }
+
+    const chunks = [];
+    recorder.ondataavailable = e => { if(e.data && e.data.size) chunks.push(e.data); };
+    recorder.onerror = e => { limpiar(); reject(e.error || e); };
+    recorder.onstop = () => {
+      limpiar();
+      const blob = new Blob(chunks, { type: recorder.mimeType || mimeType || 'video/webm' });
+      if(!blob.size){ reject(new Error(`Grabación vacía con ${mimeType || 'formato por defecto'}`)); return; }
+      resolve(blob);
+    };
+
+    requestAnimationFrame(() => {
+      recorder.start(200); // timeslice: fuerza volcados periódicos de datos
+      const t0 = performance.now();
+      function loop(){
+        const t = performance.now() - t0;
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        ctx.drawImage(capaEstatica, 0, 0);
+        hgDibujarAnimado(ctx, t, datos, layout);
+        if(t < duracionMs) requestAnimationFrame(loop);
+        else recorder.stop();
+      }
+      requestAnimationFrame(loop);
+    });
+  });
+}
+
+/**
+ * Genera el video animado de gol. Prueba varios formatos en orden hasta
+ * que uno funcione de verdad (algunos navegadores "dicen" soportar un
+ * formato pero producen un archivo vacío al grabar un canvas — por eso
+ * no confiamos en un solo intento).
+ */
 async function generarVideoHistoriaGol(datos, duracionMs = 3200){
   await document.fonts.ready;
   const [imgLocal, imgVisit] = await Promise.all([
@@ -12190,74 +12255,28 @@ async function generarVideoHistoriaGol(datos, duracionMs = 3200){
   ]);
   const { canvas: capaEstatica, layout } = await hgCapaEstatica(datos, imgLocal, imgVisit);
 
-  const canvas = document.createElement('canvas');
-  canvas.width = CV_W_HIST; canvas.height = CV_H_HIST;
-  // OJO: el canvas tiene que quedar "visible" dentro del viewport (aunque
-  // sea imperceptible). Muchos navegadores móviles dejan de pintar un
-  // canvas ubicado muy lejos de la pantalla (left:-9999px) y la grabación
-  // sale vacía (0 bytes) — por eso lo dejamos en la esquina, achicado y
-  // casi transparente, en vez de fuera de pantalla.
-  canvas.style.position = 'fixed';
-  canvas.style.top = '0';
-  canvas.style.left = '0';
-  canvas.style.width = '2px';
-  canvas.style.height = '2px';
-  canvas.style.opacity = '0.01';
-  canvas.style.zIndex = '-1';
-  canvas.style.pointerEvents = 'none';
-  document.body.appendChild(canvas);
-  const ctx = canvas.getContext('2d');
+  // WebM primero: es lo más confiable para grabar un canvas en Chrome/Firefox/Android.
+  // MP4 queda como alternativa (necesario en Safari/iOS, que no soporta WebM).
+  const candidatos = [
+    'video/webm;codecs=vp9',
+    'video/webm;codecs=vp8',
+    'video/webm',
+    'video/mp4;codecs=avc1',
+    '', // que el navegador elija por defecto, como último recurso
+  ];
 
-  // Pintamos el primer cuadro ANTES de arrancar a grabar, para que el
-  // stream ya tenga contenido real desde el primer instante.
-  ctx.drawImage(capaEstatica, 0, 0);
-  hgDibujarAnimado(ctx, 0, datos, layout);
-  await new Promise(r => requestAnimationFrame(r));
-
-  if(!canvas.captureStream){
-    document.body.removeChild(canvas);
-    throw new Error('Este navegador no soporta grabar video (captureStream).');
+  let ultimoError = null;
+  for(const mimeType of candidatos){
+    if(mimeType && !(window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(mimeType))) continue;
+    try{
+      const blob = await hgIntentarGrabarVideo(capaEstatica, layout, datos, duracionMs, mimeType);
+      if(blob && blob.size) return blob;
+    }catch(e){
+      ultimoError = e;
+      console.warn('Historia de gol: falló grabar con', mimeType || '(default)', e);
+    }
   }
-  const stream = canvas.captureStream(30);
-  const candidatos = ['video/mp4;codecs=avc1', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
-  const mimeType = candidatos.find(m => window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) || '';
-
-  let recorder;
-  try{
-    recorder = new MediaRecorder(stream, mimeType ? { mimeType, videoBitsPerSecond: 6_000_000 } : undefined);
-  }catch(e){
-    document.body.removeChild(canvas);
-    throw new Error('No se pudo iniciar la grabación de video en este navegador.');
-  }
-
-  const chunks = [];
-  recorder.ondataavailable = e => { if(e.data && e.data.size) chunks.push(e.data); };
-  let errorGrabacion = null;
-  recorder.onerror = e => { errorGrabacion = e.error || e; };
-
-  const listo = new Promise((resolve, reject) => {
-    recorder.onstop = () => {
-      document.body.removeChild(canvas);
-      if(errorGrabacion) return reject(errorGrabacion);
-      const blob = new Blob(chunks, { type: recorder.mimeType || mimeType || 'video/webm' });
-      if(!blob.size) return reject(new Error('La grabación quedó vacía. Probá de nuevo o cambiá de navegador.'));
-      resolve(blob);
-    };
-  });
-
-  recorder.start(200); // timeslice: fuerza volcados periódicos de datos (evita blobs vacíos)
-  const t0 = performance.now();
-  function loop(){
-    const t = performance.now() - t0;
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    ctx.drawImage(capaEstatica, 0, 0);
-    hgDibujarAnimado(ctx, t, datos, layout);
-    if(t < duracionMs) requestAnimationFrame(loop);
-    else recorder.stop();
-  }
-  requestAnimationFrame(loop);
-
-  return listo;
+  throw ultimoError || new Error('No se pudo grabar el video con ningún formato soportado por este navegador.');
 }
 
 // ── Formulario del panel de admin ───────────────────────────────────
