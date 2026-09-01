@@ -12077,12 +12077,12 @@ function hgCalcularLayout(ctx, W, yHeader, H, footH){
   const medir = (yStart) => {
     let y = yStart;
     y += s(40) + s(26);   // fecha/torneo
-    y += s(50) + s(30);   // badge "¡GOOOOOOOOL!"
+    y += s(90) + s(30);   // "GOOOOOOOOL" (texto grande tipográfico)
     y += s(40) + s(30);   // cronómetro
     const escY = y;
-    y = escY + s(110) + s(70); // escudos + nombres
+    y = escY + s(110) + s(70); // escudos + nombres — SIN TOCAR (marcador centrado acá)
     y += s(38);            // divisor
-    y += s(56) + s(20);    // autor del gol (grande)
+    y += s(72) + s(20);    // autor del gol (recuadro con borde)
     return y;
   };
   const contentH = medir(0);
@@ -12091,7 +12091,7 @@ function hgCalcularLayout(ctx, W, yHeader, H, footH){
 
   let y = yInicio;
   const fechaY = y; y += s(40) + s(26);
-  const badgeY = y; y += s(50) + s(30);
+  const badgeY = y; y += s(90) + s(30);
   const cronoY = y + s(20); y += s(40) + s(30);
   const escY = y;   y = escY + s(110) + s(70);
   const divY = y;   y += s(38);
@@ -12154,9 +12154,18 @@ async function hgCapaEstatica(datos, imgLocal, imgVisit){
   // Divisor
   ctx.fillStyle = C.DORADO; ctx.fillRect(s(40), L.divY, W-s(80), 2);
 
-  // Autor del gol — grande, debajo del marcador
-  ctx.font = `56px "Bebas Neue", Arial, sans-serif`; ctx.fillStyle = C.DORADO;
-  ctx.fillText((datos.jugador||'').toUpperCase(), CX, L.autorY + s(40));
+  // Autor del gol — recuadro con borde fino (maqueta E)
+  ctx.font = `700 ${s(32)}px "Rajdhani", Arial, sans-serif`;
+  const nombreTxt = (datos.jugador||'').toUpperCase();
+  const twNombre = ctx.measureText(nombreTxt).width;
+  const padX = s(35), padY = s(20);
+  const boxW = twNombre + padX*2, boxH = s(32) + padY*2;
+  const boxX = CX - boxW/2, boxY = L.autorY;
+  ctx.strokeStyle = C.DORADO2; ctx.lineWidth = 3;
+  ctx.strokeRect(boxX, boxY, boxW, boxH);
+  ctx.fillStyle = C.DORADO2; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(nombreTxt, CX, boxY + boxH/2);
+  ctx.textBaseline = 'alphabetic';
 
   cvFooter(ctx, W, H - footH, id.nombre || 'DEPORTEMAS');
 
@@ -12176,28 +12185,36 @@ function hgMarcadorPrevioNuevo(datos){
 function hgDibujarAnimado(ctx, t, datos, layout){
   const W = CV_W_HIST, CX = W/2;
 
-  // "¡GOOOOOOOOL!" — aparece con rebote y después pulsa
+  // "GOOOOOOOOL" — texto grande tipográfico con contorno + resplandor
+  // dorado (maqueta C), aparece con rebote y después pulsa
   const bStart = 150, bIn = 500;
   const pB = Math.max(0, Math.min(1, (t-bStart)/bIn));
   let sB = easeOutBack(pB);
   if(t > bStart+bIn) sB = 1 + 0.05*Math.sin((t-bStart-bIn)/260);
   if(pB > 0){
     ctx.save();
-    ctx.translate(CX, layout.badgeY + s(25));
+    ctx.translate(CX, layout.badgeY + s(45));
     ctx.scale(sB, sB);
-    ctx.font = `700 ${s(26)}px "Rajdhani", Arial, sans-serif`;
-    const txt = '¡GOOOOOOOOL!';
-    const tw = ctx.measureText(txt).width;
-    const bw = tw + s(50), bh = s(52);
-    cvRoundRect(ctx, -bw/2, -bh/2, bw, bh, bh/2);
-    ctx.fillStyle = 'rgba(192,57,43,0.35)'; ctx.fill();
-    ctx.strokeStyle = '#ff5555'; ctx.lineWidth = 2; ctx.stroke();
-    ctx.fillStyle = '#ff5555'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(txt, 0, 2);
+    ctx.font = `${s(80)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const txt = 'GOOOOOOOOL';
+    // resplandor dorado detrás
+    ctx.shadowColor = 'rgba(240,192,64,0.9)';
+    ctx.shadowBlur = s(22);
+    ctx.fillStyle = C.DORADO2;
+    ctx.fillText(txt, 0, 0);
+    ctx.shadowBlur = 0;
+    // contorno oscuro + relleno blanco encima, nítido
+    ctx.lineWidth = s(5);
+    ctx.strokeStyle = '#000';
+    ctx.strokeText(txt, 0, 0);
+    ctx.fillStyle = C.BLANCO;
+    ctx.fillText(txt, 0, 0);
     ctx.restore();
   }
 
-  // Marcador: sostiene el resultado anterior, "cambia de ficha" al nuevo, y pulsa
+  // Marcador: sostiene el resultado anterior, "cambia de ficha" al nuevo, y
+  // pulsa — SIN CAMBIOS de posición (sigue centrado en layout.escY)
   const { previo, nuevo } = hgMarcadorPrevioNuevo(datos);
   const holdEnd = 600, shrinkDur = 200, growDur = 450;
   let texto, escala;
@@ -12235,7 +12252,14 @@ function hgIntentarGrabarVideo(canvasEl, capaEstatica, layout, datos, duracionMs
     if(!canvas.captureStream){
       reject(new Error('Este navegador no soporta captureStream.')); return;
     }
-    const stream = canvas.captureStream(30);
+    // captureStream(0): NO auto-muestrea a un fps fijo (eso es lo que
+    // causaba cuadros salteados/perdidos). En vez de eso, pedimos
+    // manualmente un cuadro nuevo (track.requestFrame()) cada vez que
+    // terminamos de dibujar — así lo que se graba es exactamente lo que
+    // se dibuja, sin depender del temporizador interno del navegador.
+    const stream = canvas.captureStream(0);
+    const [track] = stream.getVideoTracks();
+    const puedeForzarCuadro = track && typeof track.requestFrame === 'function';
 
     let recorder;
     try{
@@ -12266,12 +12290,14 @@ function hgIntentarGrabarVideo(canvasEl, capaEstatica, layout, datos, duracionMs
     requestAnimationFrame(() => {
       wallStart = performance.now();
       recorder.start(200); // timeslice: fuerza volcados periódicos de datos
+      if(puedeForzarCuadro) track.requestFrame();
       const t0 = performance.now();
       function loop(){
         const t = performance.now() - t0;
         ctx.clearRect(0,0,canvas.width,canvas.height);
         ctx.drawImage(capaEstatica, 0, 0);
         hgDibujarAnimado(ctx, t, datos, layout);
+        if(puedeForzarCuadro) track.requestFrame();
         if(t < duracionMs) requestAnimationFrame(loop);
         else recorder.stop();
       }
@@ -12288,7 +12314,7 @@ function hgIntentarGrabarVideo(canvasEl, capaEstatica, layout, datos, duracionMs
  * canvasEl debe ser un <canvas> visible ya insertado en el DOM (evita que
  * el navegador deje de "pintarlo" durante la grabación).
  */
-async function generarVideoHistoriaGol(datos, canvasEl, duracionMs = 3200){
+async function generarVideoHistoriaGol(datos, canvasEl, duracionMs = 6000){
   await document.fonts.ready;
   const [imgLocal, imgVisit] = await Promise.all([
     hgCargarImgEscudo(datos.local),
