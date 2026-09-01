@@ -3290,6 +3290,7 @@ table.posiciones td:nth-child(8){
         <div class="share-spinner"></div>
         Generando video...
       </div>
+      <canvas id="video-share-live-canvas" style="display:none;width:100%;border-radius:8px"></canvas>
       <video id="video-share-preview" style="display:none;width:100%;border-radius:8px" muted playsinline loop autoplay></video>
     </div>
     <div class="share-redes">
@@ -12075,12 +12076,13 @@ function hgDrawEscudo(ctx, img, nombre, x, y, size){
 function hgCalcularLayout(ctx, W, yHeader, H, footH){
   const medir = (yStart) => {
     let y = yStart;
-    y += s(50) + s(34);
-    y += s(64);
+    y += s(40) + s(26);   // fecha/torneo
+    y += s(50) + s(30);   // badge "¡GOOOOOOOOL!"
+    y += s(40) + s(30);   // cronómetro
     const escY = y;
-    y = escY + s(110) + s(70);
-    y += s(38);
-    y += s(42) + s(20);
+    y = escY + s(110) + s(70); // escudos + nombres
+    y += s(38);            // divisor
+    y += s(56) + s(20);    // autor del gol (grande)
     return y;
   };
   const contentH = medir(0);
@@ -12088,14 +12090,14 @@ function hgCalcularLayout(ctx, W, yHeader, H, footH){
   const yInicio = yHeader + Math.max(0, (disponible - contentH) / 2);
 
   let y = yInicio;
-  const badgeY = y; y += s(50) + s(34);
-  const fechaY = y; y += s(64);
+  const fechaY = y; y += s(40) + s(26);
+  const badgeY = y; y += s(50) + s(30);
+  const cronoY = y + s(20); y += s(40) + s(30);
   const escY = y;   y = escY + s(110) + s(70);
   const divY = y;   y += s(38);
-  const golTxtY = y; y += s(42);
-  const jugadorY = y;
+  const autorY = y;
 
-  return { badgeY, fechaY, escY, divY, golTxtY, jugadorY };
+  return { fechaY, badgeY, cronoY, escY, divY, autorY };
 }
 
 async function hgCapaEstatica(datos, imgLocal, imgVisit){
@@ -12120,10 +12122,27 @@ async function hgCapaEstatica(datos, imgLocal, imgVisit){
   const L = hgCalcularLayout(ctx, W, yHeader, H, footH);
   const CX = W/2;
 
-  ctx.font = `700 ${s(26)}px "Rajdhani", Arial, sans-serif`;
+  // Fecha / torneo
+  ctx.font = `700 ${s(24)}px "Rajdhani", Arial, sans-serif`;
   ctx.fillStyle = 'rgba(201,162,39,0.65)'; ctx.textAlign = 'center';
-  ctx.fillText(`${datos.minuto}'  ·  ${datos.torneoLabel}  ·  ${datos.fecha}`, CX, L.fechaY);
+  ctx.fillText(`${datos.torneoLabel}  ·  ${datos.fecha}`, CX, L.fechaY);
 
+  // Cronómetro (ícono de reloj + minuto) — arriba del marcador
+  const minTxt = `${datos.minuto || 0}'`;
+  ctx.font = `700 ${s(34)}px "Rajdhani", Arial, sans-serif`;
+  const iconD = s(30), gapIco = s(14);
+  const twMin = ctx.measureText(minTxt).width;
+  const totalWCrono = iconD + gapIco + twMin;
+  const cx0 = CX - totalWCrono/2, cy = L.cronoY;
+  ctx.strokeStyle = '#ff5555'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(cx0+iconD/2, cy, iconD/2, 0, Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx0+iconD/2, cy); ctx.lineTo(cx0+iconD/2, cy-iconD*0.32); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx0+iconD/2, cy); ctx.lineTo(cx0+iconD/2+iconD*0.22, cy+iconD*0.14); ctx.stroke();
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#ff5555';
+  ctx.fillText(minTxt, cx0+iconD+gapIco, cy);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+
+  // Escudos + nombres
   const ESCUDO_H = s(110);
   const escLX = s(80), escRX = W - s(80) - ESCUDO_H;
   hgDrawEscudo(ctx, imgLocal, datos.local, escLX, L.escY, ESCUDO_H);
@@ -12132,21 +12151,32 @@ async function hgCapaEstatica(datos, imgLocal, imgVisit){
   cvFillTextTrunc(ctx, datos.local.toUpperCase(), escLX+ESCUDO_H/2, L.escY+ESCUDO_H+s(44), s(260));
   cvFillTextTrunc(ctx, datos.visit.toUpperCase(), escRX+ESCUDO_H/2, L.escY+ESCUDO_H+s(44), s(260));
 
+  // Divisor
   ctx.fillStyle = C.DORADO; ctx.fillRect(s(40), L.divY, W-s(80), 2);
 
-  ctx.font = `700 ${s(27)}px "Rajdhani", Arial, sans-serif`; ctx.fillStyle = C.BLANCO;
-  ctx.fillText(`⚽ GOL DE ${datos.golEquipoNombre.toUpperCase()}`, CX, L.golTxtY);
-  ctx.font = `500 ${s(20)}px "DM Sans", Arial, sans-serif`; ctx.fillStyle = C.DORADO;
-  ctx.fillText(`${datos.jugador}${datos.minuto ? '  ·  ' + datos.minuto + "'" : ''}`, CX, L.jugadorY);
+  // Autor del gol — grande, debajo del marcador
+  ctx.font = `56px "Bebas Neue", Arial, sans-serif`; ctx.fillStyle = C.DORADO;
+  ctx.fillText((datos.jugador||'').toUpperCase(), CX, L.autorY + s(40));
 
   cvFooter(ctx, W, H - footH, id.nombre || 'DEPORTEMAS');
 
   return { canvas: cvs, layout: L };
 }
 
+function hgMarcadorPrevioNuevo(datos){
+  const m = (datos.resultado || '0 - 0').match(/(\d+)\s*-\s*(\d+)/);
+  let L = 0, V = 0;
+  if(m){ L = parseInt(m[1], 10); V = parseInt(m[2], 10); }
+  let pL = L, pV = V;
+  if(datos.convierte === 'visit') pV = Math.max(0, V-1);
+  else pL = Math.max(0, L-1);
+  return { previo: `${pL} - ${pV}`, nuevo: `${L} - ${V}` };
+}
+
 function hgDibujarAnimado(ctx, t, datos, layout){
   const W = CV_W_HIST, CX = W/2;
 
+  // "¡GOOOOOOOOL!" — aparece con rebote y después pulsa
   const bStart = 150, bIn = 500;
   const pB = Math.max(0, Math.min(1, (t-bStart)/bIn));
   let sB = easeOutBack(pB);
@@ -12155,10 +12185,10 @@ function hgDibujarAnimado(ctx, t, datos, layout){
     ctx.save();
     ctx.translate(CX, layout.badgeY + s(25));
     ctx.scale(sB, sB);
-    ctx.font = `700 ${s(24)}px "Rajdhani", Arial, sans-serif`;
-    const txt = '¡GOOOL!';
+    ctx.font = `700 ${s(26)}px "Rajdhani", Arial, sans-serif`;
+    const txt = '¡GOOOOOOOOL!';
     const tw = ctx.measureText(txt).width;
-    const bw = tw + s(46), bh = s(50);
+    const bw = tw + s(50), bh = s(52);
     cvRoundRect(ctx, -bw/2, -bh/2, bw, bh, bh/2);
     ctx.fillStyle = 'rgba(192,57,43,0.35)'; ctx.fill();
     ctx.strokeStyle = '#ff5555'; ctx.lineWidth = 2; ctx.stroke();
@@ -12167,44 +12197,43 @@ function hgDibujarAnimado(ctx, t, datos, layout){
     ctx.restore();
   }
 
-  const mIn = 550;
-  const pM = Math.max(0, Math.min(1, t/mIn));
-  let sM = easeOutBack(pM);
-  if(t > mIn) sM = 1 + 0.04*Math.sin((t-mIn)/300);
+  // Marcador: sostiene el resultado anterior, "cambia de ficha" al nuevo, y pulsa
+  const { previo, nuevo } = hgMarcadorPrevioNuevo(datos);
+  const holdEnd = 600, shrinkDur = 200, growDur = 450;
+  let texto, escala;
+  if(t < holdEnd){
+    texto = previo; escala = 1;
+  } else if(t < holdEnd+shrinkDur){
+    texto = previo; escala = 1 - ((t-holdEnd)/shrinkDur);
+  } else if(t < holdEnd+shrinkDur+growDur){
+    texto = nuevo; escala = easeOutBack((t-holdEnd-shrinkDur)/growDur);
+  } else {
+    texto = nuevo; escala = 1 + 0.04*Math.sin((t-holdEnd-shrinkDur-growDur)/300);
+  }
   ctx.save();
   ctx.translate(CX, layout.escY + s(55));
-  ctx.scale(Math.max(0.01,sM), Math.max(0.01,sM));
+  ctx.scale(Math.max(0.01,escala), Math.max(0.01,escala));
   ctx.font = `${s(85)}px "Bebas Neue", Arial, sans-serif`;
   ctx.fillStyle = C.DORADO; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText(datos.resultado, 0, 0);
+  ctx.fillText(texto, 0, 0);
   ctx.restore();
 
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
 }
 
-// Intenta grabar UNA vez con un mimeType puntual. Resuelve con el Blob
-// si salió bien, o rechaza (con motivo) si el navegador lo produjo vacío.
-function hgIntentarGrabarVideo(capaEstatica, layout, datos, duracionMs, mimeType){
+// Intenta grabar UNA vez con un mimeType puntual, usando un <canvas> que
+// YA está en el DOM y visible (canvasEl). Resuelve con el Blob si salió
+// bien, o rechaza si el navegador lo produjo vacío / incompleto.
+function hgIntentarGrabarVideo(canvasEl, capaEstatica, layout, datos, duracionMs, mimeType){
   return new Promise((resolve, reject) => {
-    const canvas = document.createElement('canvas');
+    const canvas = canvasEl;
     canvas.width = CV_W_HIST; canvas.height = CV_H_HIST;
-    // El canvas debe quedar "visible" dentro del viewport (aunque sea
-    // imperceptible): muchos navegadores dejan de pintar un canvas
-    // ubicado muy lejos de la pantalla y la grabación sale vacía.
-    canvas.style.position = 'fixed';
-    canvas.style.top = '0'; canvas.style.left = '0';
-    canvas.style.width = '2px'; canvas.style.height = '2px';
-    canvas.style.opacity = '0.01'; canvas.style.zIndex = '-1';
-    canvas.style.pointerEvents = 'none';
-    document.body.appendChild(canvas);
     const ctx = canvas.getContext('2d');
     ctx.drawImage(capaEstatica, 0, 0);
     hgDibujarAnimado(ctx, 0, datos, layout);
 
-    const limpiar = () => { if(canvas.parentNode) document.body.removeChild(canvas); };
-
     if(!canvas.captureStream){
-      limpiar(); reject(new Error('Este navegador no soporta captureStream.')); return;
+      reject(new Error('Este navegador no soporta captureStream.')); return;
     }
     const stream = canvas.captureStream(30);
 
@@ -12213,19 +12242,29 @@ function hgIntentarGrabarVideo(capaEstatica, layout, datos, duracionMs, mimeType
       recorder = mimeType
         ? new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 6_000_000 })
         : new MediaRecorder(stream);
-    }catch(e){ limpiar(); reject(e); return; }
+    }catch(e){ reject(e); return; }
 
     const chunks = [];
     recorder.ondataavailable = e => { if(e.data && e.data.size) chunks.push(e.data); };
-    recorder.onerror = e => { limpiar(); reject(e.error || e); };
+    recorder.onerror = e => { reject(e.error || e); };
+
+    let wallStart = 0;
     recorder.onstop = () => {
-      limpiar();
+      const elapsedReal = performance.now() - wallStart;
       const blob = new Blob(chunks, { type: recorder.mimeType || mimeType || 'video/webm' });
-      if(!blob.size){ reject(new Error(`Grabación vacía con ${mimeType || 'formato por defecto'}`)); return; }
+      // Si el navegador cortó de grabar mucho antes de tiempo (canvas
+      // "sub-priorizado" por el motor de renderizado), el archivo puede
+      // no estar vacío pero sí sería un video cortado a un instante.
+      // Lo tratamos como fallo para que se reintente con otro formato.
+      if(!blob.size || elapsedReal < duracionMs*0.7){
+        reject(new Error(`Grabación incompleta con ${mimeType || 'formato por defecto'} (${Math.round(elapsedReal)}ms de ${duracionMs}ms)`));
+        return;
+      }
       resolve(blob);
     };
 
     requestAnimationFrame(() => {
+      wallStart = performance.now();
       recorder.start(200); // timeslice: fuerza volcados periódicos de datos
       const t0 = performance.now();
       function loop(){
@@ -12244,10 +12283,12 @@ function hgIntentarGrabarVideo(capaEstatica, layout, datos, duracionMs, mimeType
 /**
  * Genera el video animado de gol. Prueba varios formatos en orden hasta
  * que uno funcione de verdad (algunos navegadores "dicen" soportar un
- * formato pero producen un archivo vacío al grabar un canvas — por eso
- * no confiamos en un solo intento).
+ * formato, o directamente sub-priorizan el canvas, y terminan grabando
+ * un archivo vacío o cortado — por eso no confiamos en un solo intento).
+ * canvasEl debe ser un <canvas> visible ya insertado en el DOM (evita que
+ * el navegador deje de "pintarlo" durante la grabación).
  */
-async function generarVideoHistoriaGol(datos, duracionMs = 3200){
+async function generarVideoHistoriaGol(datos, canvasEl, duracionMs = 3200){
   await document.fonts.ready;
   const [imgLocal, imgVisit] = await Promise.all([
     hgCargarImgEscudo(datos.local),
@@ -12269,7 +12310,7 @@ async function generarVideoHistoriaGol(datos, duracionMs = 3200){
   for(const mimeType of candidatos){
     if(mimeType && !(window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(mimeType))) continue;
     try{
-      const blob = await hgIntentarGrabarVideo(capaEstatica, layout, datos, duracionMs, mimeType);
+      const blob = await hgIntentarGrabarVideo(canvasEl, capaEstatica, layout, datos, duracionMs, mimeType);
       if(blob && blob.size) return blob;
     }catch(e){
       ultimoError = e;
@@ -12354,30 +12395,34 @@ async function hgGenerarVideoGol(){
     minuto: comun.minuto,
     fecha: comun.fecha,
     torneoLabel: torneoLabel(comun.torneo),
+    convierte,
     golEquipoNombre: convierte === 'local' ? comun.local : comun.visit,
     jugador: document.getElementById('hg-autor').value.trim(),
   };
 
   const loadEl = document.getElementById('video-share-loading');
+  const liveCanvas = document.getElementById('video-share-live-canvas');
   const videoEl = document.getElementById('video-share-preview');
   const noteEl = document.getElementById('video-share-note');
   videoEl.style.display = 'none';
-  loadEl.style.display = 'flex';
-  noteEl.textContent = '';
+  loadEl.style.display = 'none';
+  liveCanvas.style.display = 'block'; // el canvas real que se graba, visible durante la generación
+  noteEl.textContent = 'Generando video...';
   document.getElementById('video-share-modal').classList.add('open');
 
   requestAnimationFrame(async () => {
     try{
-      _hgVideoBlob = await generarVideoHistoriaGol(datos);
+      _hgVideoBlob = await generarVideoHistoriaGol(datos, liveCanvas);
       videoEl.src = URL.createObjectURL(_hgVideoBlob);
+      liveCanvas.style.display = 'none';
       videoEl.style.display = 'block';
-      loadEl.style.display = 'none';
       const tieneWebShare = navigator.share && navigator.canShare && navigator.canShare({files:[new File([''],'t.mp4',{type:'video/mp4'})]});
       noteEl.textContent = tieneWebShare
         ? 'Tocá una red social para compartir el video directamente.'
         : 'Descargá el video y subilo como historia desde la app de Instagram.';
     }catch(e){
-      loadEl.textContent = 'Error al generar el video: ' + (e && e.message ? e.message : 'probá de nuevo.');
+      liveCanvas.style.display = 'none';
+      noteEl.textContent = 'Error al generar el video: ' + (e && e.message ? e.message : 'probá de nuevo.');
       console.error(e);
     }
   });
@@ -12387,6 +12432,7 @@ function cerrarVideoShare(){
   document.getElementById('video-share-modal').classList.remove('open');
   const videoEl = document.getElementById('video-share-preview');
   videoEl.pause(); videoEl.src = '';
+  document.getElementById('video-share-live-canvas').style.display = 'none';
   _hgVideoBlob = null;
 }
 
