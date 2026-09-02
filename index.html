@@ -11857,18 +11857,6 @@ async function cvBloqueHistoria(ctx, p, opciones, W, yStart, medirSolo){
   const CX = W / 2;
   let y = yStart;
 
-  // ── Fecha / minuto / torneo ────────────────────────────────
-  const tornLabel2 = p.torneo ? ' · ' + torneoLabel(p.torneo) : '';
-  const fechaLabel = opciones.fecha ? ' · ' + opciones.fecha : '';
-  const minTxtFecha = p.minuto ? p.minuto + "'  " : '';
-  if(!medirSolo){
-    ctx.fillStyle = 'rgba(201,162,39,0.65)';
-    ctx.font = `700 ${s(24)}px "Rajdhani", Arial, sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.fillText((minTxtFecha + tornLabel2 + fechaLabel).replace(/^\s*·\s*/, ''), CX, y);
-  }
-  y += s(40) + s(26);
-
   // ── Texto grande del evento — misma tipografía que "GOOOOOOOOL"
   // del video: Bebas Neue grande, contorno negro y resplandor de color ──
   const eventos = {
@@ -11918,10 +11906,19 @@ async function cvBloqueHistoria(ctx, p, opciones, W, yStart, medirSolo){
     await cvDrawEscudo(ctx, p.local, escLX, escY, ESCUDO_H);
     await cvDrawEscudo(ctx, p.visit, escRX, escY, ESCUDO_H);
 
-    ctx.font = `${s(85)}px "Bebas Neue", Arial, sans-serif`;
+    // Panel oscuro detrás del marcador (maqueta B)
+    ctx.font = `${s(123)}px "Bebas Neue", Arial, sans-serif`;
+    const marcTxt = p.resultado || '0 - 0';
+    const wMarc = ctx.measureText(marcTxt).width;
+    const panelW = wMarc + s(90), panelH = s(150);
+    const panelCy = escY + ESCUDO_H/2;
+    cvRoundRect(ctx, CX - panelW/2, panelCy - panelH/2, panelW, panelH, s(12));
+    ctx.fillStyle = 'rgba(15,15,20,0.9)'; ctx.fill();
+    ctx.strokeStyle = C.DORADO; ctx.lineWidth = 3; ctx.stroke();
+
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillStyle = C.DORADO;
-    ctx.fillText(p.resultado || '0 - 0', CX, escY + ESCUDO_H/2);
+    ctx.fillStyle = C.DORADO2;
+    ctx.fillText(marcTxt, CX, panelCy);
     ctx.textBaseline = 'alphabetic';
 
     ctx.font = `${s(30)}px "Bebas Neue", Arial, sans-serif`;
@@ -12085,7 +12082,6 @@ function hgDrawEscudo(ctx, img, nombre, x, y, size){
 function hgCalcularLayout(ctx, W, yHeader, H, footH){
   const medir = (yStart) => {
     let y = yStart;
-    y += s(40) + s(26);   // fecha/torneo
     y += s(90) + s(30);   // "GOOOOOOOOL" (texto grande tipográfico)
     y += s(40) + s(30);   // cronómetro
     const escY = y;
@@ -12099,14 +12095,13 @@ function hgCalcularLayout(ctx, W, yHeader, H, footH){
   const yInicio = yHeader + Math.max(0, (disponible - contentH) / 2);
 
   let y = yInicio;
-  const fechaY = y; y += s(40) + s(26);
   const badgeY = y; y += s(90) + s(30);
   const cronoY = y + s(20); y += s(40) + s(30);
   const escY = y;   y = escY + s(110) + s(70);
   const divY = y;   y += s(38);
   const autorY = y;
 
-  return { fechaY, badgeY, cronoY, escY, divY, autorY };
+  return { badgeY, cronoY, escY, divY, autorY };
 }
 
 async function hgCapaEstatica(datos, imgLocal, imgVisit){
@@ -12131,11 +12126,6 @@ async function hgCapaEstatica(datos, imgLocal, imgVisit){
   const L = hgCalcularLayout(ctx, W, yHeader, H, footH);
   const CX = W/2;
 
-  // Fecha / torneo
-  ctx.font = `700 ${s(24)}px "Rajdhani", Arial, sans-serif`;
-  ctx.fillStyle = 'rgba(201,162,39,0.65)'; ctx.textAlign = 'center';
-  ctx.fillText(`${datos.torneoLabel}  ·  ${datos.fecha}`, CX, L.fechaY);
-
   // Cronómetro — anillo de progreso (minuto respecto a los 90)
   hgDibujarCronoAnillo(ctx, CX, L.cronoY, datos.minuto);
   ctx.textAlign = 'center';
@@ -12148,6 +12138,17 @@ async function hgCapaEstatica(datos, imgLocal, imgVisit){
   ctx.font = `54px "Bebas Neue", Arial, sans-serif`; ctx.fillStyle = C.BLANCO;
   cvFillTextTrunc(ctx, datos.local.toUpperCase(), escLX+ESCUDO_H/2, L.escY+ESCUDO_H+s(44), s(260));
   cvFillTextTrunc(ctx, datos.visit.toUpperCase(), escRX+ESCUDO_H/2, L.escY+ESCUDO_H+s(44), s(260));
+
+  // Panel oscuro detrás del marcador (maqueta B) — el número en sí se
+  // dibuja animado encima, en hgDibujarAnimado, con el mismo tamaño
+  const { previo, nuevo } = hgMarcadorPrevioNuevo(datos);
+  ctx.font = `${s(123)}px "Bebas Neue", Arial, sans-serif`;
+  const wMarc = Math.max(ctx.measureText(previo).width, ctx.measureText(nuevo).width);
+  const panelW = wMarc + s(90), panelH = s(150);
+  const panelCy = L.escY + ESCUDO_H/2;
+  cvRoundRect(ctx, CX - panelW/2, panelCy - panelH/2, panelW, panelH, s(12));
+  ctx.fillStyle = 'rgba(15,15,20,0.9)'; ctx.fill();
+  ctx.strokeStyle = C.DORADO; ctx.lineWidth = 3; ctx.stroke();
 
   // Divisor
   ctx.fillStyle = C.DORADO; ctx.fillRect(s(40), L.divY, W-s(80), 2);
@@ -12228,8 +12229,8 @@ function hgDibujarAnimado(ctx, t, datos, layout){
   ctx.save();
   ctx.translate(CX, layout.escY + s(55));
   ctx.scale(Math.max(0.01,escala), Math.max(0.01,escala));
-  ctx.font = `${s(85)}px "Bebas Neue", Arial, sans-serif`;
-  ctx.fillStyle = C.DORADO; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = `${s(123)}px "Bebas Neue", Arial, sans-serif`;
+  ctx.fillStyle = C.DORADO2; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText(texto, 0, 0);
   ctx.restore();
 
