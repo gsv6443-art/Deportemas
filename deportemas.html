@@ -3389,6 +3389,12 @@ table.posiciones td:nth-child(8){
         <!-- campo nombre libre del torneo extra liga -->
         <div id="p-torneo-extra-wrap" class="form-group" style="display:none"><label>Nombre del Torneo</label>
           <input type="text" id="p-torneo-extra" placeholder="Ej: Copa Amistad 2026"/>
+          <label style="margin-top:10px">Logo del torneo</label>
+          <div class="upload-area" style="padding:12px">
+            <input type="file" accept="image/*" id="p-logo-extra-file" onchange="pPreviewLogoExtra(this)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%"/>
+            <p style="pointer-events:none;font-size:11px">Hacé clic para subir el logo</p>
+          </div>
+          <div class="preview-wrap" id="p-logo-extra-wrap"><img id="p-logo-extra-preview" style="max-height:80px;border-radius:8px"/><button type="button" class="btn-quitar-img" onclick="pQuitarLogoExtra()">✕ Quitar</button></div>
         </div>
         <!-- playoff flag solo primera -->
         <div id="p-playoff-wrap" class="form-group" style="display:none">
@@ -4115,6 +4121,30 @@ table.posiciones td:nth-child(8){
           <div class="preview-wrap" id="id-logo-wrap-prev">
             <img id="id-logo-preview" src="" alt=""/>
             <button type="button" class="btn-quitar-img" onclick="quitarImagen('id-logo-preview','id-logo-wrap-prev','id-logo-file','_logoB64')">✕ Quitar</button>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Logo Primera División <span style="color:var(--gris);font-weight:400">(imágenes para compartir)</span></label>
+            <div class="upload-area" style="padding:12px">
+              <input type="file" accept="image/*" id="id-logo-primera-file" onchange="previewLogoPrimera(this)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%"/>
+              <p style="pointer-events:none;font-size:11px">Hacé clic para subir el logo</p>
+            </div>
+            <div class="preview-wrap" id="id-logo-primera-wrap-prev">
+              <img id="id-logo-primera-preview" src="" alt="" style="max-height:70px;border-radius:8px"/>
+              <button type="button" class="btn-quitar-img" onclick="quitarImagen('id-logo-primera-preview','id-logo-primera-wrap-prev','id-logo-primera-file','_logoPrimeraB64')">✕ Quitar</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Logo Segunda División <span style="color:var(--gris);font-weight:400">(imágenes para compartir)</span></label>
+            <div class="upload-area" style="padding:12px">
+              <input type="file" accept="image/*" id="id-logo-segunda-file" onchange="previewLogoSegunda(this)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%"/>
+              <p style="pointer-events:none;font-size:11px">Hacé clic para subir el logo</p>
+            </div>
+            <div class="preview-wrap" id="id-logo-segunda-wrap-prev">
+              <img id="id-logo-segunda-preview" src="" alt="" style="max-height:70px;border-radius:8px"/>
+              <button type="button" class="btn-quitar-img" onclick="quitarImagen('id-logo-segunda-preview','id-logo-segunda-wrap-prev','id-logo-segunda-file','_logoSegundaB64')">✕ Quitar</button>
+            </div>
           </div>
         </div>
         <div style="display:flex;gap:10px;margin-top:4px">
@@ -5131,6 +5161,8 @@ let currentGrupo='campeonato'; // fase2: campeonato|repechaje
 let currentFaseRes='fase1';  // resultados segunda: fase1|fase2|fase3
 let currentFaseGol='fase1';  // goleadores segunda: fase1|fase2|fase3
 let _logoB64='';
+let _logoPrimeraB64='';
+let _logoSegundaB64='';
 let _escudoB64='';
 let _editEscudoB64='';
 
@@ -5203,11 +5235,29 @@ function previewLogo(input){
     const w=document.getElementById('id-logo-wrap-prev');if(w)w.classList.add('visible');
   });
 }
+function previewLogoPrimera(input){
+  const file=input.files[0];if(!file)return;
+  comprimirABase64(file, 400, 0.85).then(dataUrl=>{
+    _logoPrimeraB64=dataUrl;
+    const p=document.getElementById('id-logo-primera-preview');if(p)p.src=_logoPrimeraB64;
+    const w=document.getElementById('id-logo-primera-wrap-prev');if(w)w.classList.add('visible');
+  });
+}
+function previewLogoSegunda(input){
+  const file=input.files[0];if(!file)return;
+  comprimirABase64(file, 400, 0.85).then(dataUrl=>{
+    _logoSegundaB64=dataUrl;
+    const p=document.getElementById('id-logo-segunda-preview');if(p)p.src=_logoSegundaB64;
+    const w=document.getElementById('id-logo-segunda-wrap-prev');if(w)w.classList.add('visible');
+  });
+}
 async function guardarIdentidad(){
   const id=getIdentidad();
   const n=document.getElementById('id-nombre').value.trim();
   const s=document.getElementById('id-subtitulo').value.trim();
   if(n)id.nombre=n;if(s)id.subtitulo=s;if(_logoB64)id.logo=_logoB64;
+  if(_logoPrimeraB64)id.logoPrimera=_logoPrimeraB64;
+  if(_logoSegundaB64)id.logoSegunda=_logoSegundaB64;
   const m=document.getElementById('id-msg');
   m.textContent='Guardando...';m.style.color='var(--gris)';m.style.display='block';
   const res=(await saveIdentidad(id))||{ok:false,motivo:'error'};
@@ -6748,8 +6798,11 @@ function renderFixture(){
       const [torneoNom,fecha]=key.split(' ||| ');
       const mapaKey = 'fx_' + idx;
       window._fixtureMapa[mapaKey] = arr.map(p=>String(p.id));
+      const logoHTML = arr[0].logoExtra
+        ? `<img src="${arr[0].logoExtra}" alt="${torneoNom}" style="height:22px;width:22px;object-fit:contain;border-radius:4px"/>`
+        : `<span class="div-badge">EXTRA LIGA</span>`;
       return `
-      <div class="card"><div class="card-header"><span>${torneoNom} · ${fecha}</span><div style="display:flex;align-items:center;gap:8px"><span class="div-badge">EXTRA LIGA</span><button class="btn-share" onclick="abrirShare(()=>generarImagenProximos(window._fixtureMapa['${mapaKey}']))">${SVG_SHARE} Compartir</button></div></div>
+      <div class="card"><div class="card-header"><span>${torneoNom} · ${fecha}</span><div style="display:flex;align-items:center;gap:8px">${logoHTML}<button class="btn-share" onclick="abrirShare(()=>generarImagenProximos(window._fixtureMapa['${mapaKey}']))">${SVG_SHARE} Compartir</button></div></div>
       ${arr.map(p=>partidoHTML(p,false)).join('')}</div>`;
     }).join('');
     return;
@@ -6828,7 +6881,9 @@ function renderResultados(){
     });
     el.innerHTML=ordenTorneos.map(t=>{
       const html=acordeonFechas(porTorneo[t],'EXTRA LIGA');
-      return `<div class="card-header" style="margin:18px 0 6px"><span>${t}</span></div>${html||''}`;
+      const logo=porTorneo[t][0].logoExtra;
+      const logoHTML=logo?`<img src="${logo}" alt="${t}" style="height:32px;width:32px;object-fit:contain;border-radius:6px"/>`:'';
+      return `<div class="card-header" style="margin:18px 0 6px;display:flex;align-items:center;justify-content:space-between"><span>${t}</span>${logoHTML}</div>${html||''}`;
     }).join('');
     return;
   }
@@ -9517,6 +9572,7 @@ function agregarPartido(){
   };
   if(div==='extraliga'){
     d.torneoExtra=document.getElementById('p-torneo-extra').value.trim();
+    d.logoExtra=_pLogoExtra||'';
   }
   else if(div==='primera'){
     d.torneo=document.getElementById('p-torneo-sel').value;
@@ -9538,6 +9594,7 @@ function agregarPartido(){
   document.getElementById('p-exp-list').innerHTML='';
   document.getElementById('p-div').value='primera';
   document.getElementById('p-torneo-extra').value='';
+  pQuitarLogoExtra();
   document.getElementById('p-tiene-penales').checked=false;
   document.getElementById('p-penales').value='';
   togglePenalesInput('p');
@@ -9825,6 +9882,36 @@ function toPreviewLogo(input){
     const w=document.getElementById('to-logo-wrap'); if(w) w.classList.add('visible');
   });
 }
+let _pLogoExtra = '';
+function pPreviewLogoExtra(input){
+  const file=input.files[0]; if(!file) return;
+  comprimirABase64(file, 400, 0.85).then(dataUrl=>{
+    _pLogoExtra=dataUrl;
+    const p=document.getElementById('p-logo-extra-preview'); if(p) p.src=_pLogoExtra;
+    const w=document.getElementById('p-logo-extra-wrap'); if(w) w.classList.add('visible');
+  });
+}
+function pQuitarLogoExtra(){
+  _pLogoExtra='';
+  const p=document.getElementById('p-logo-extra-preview'); if(p) p.src='';
+  const w=document.getElementById('p-logo-extra-wrap'); if(w) w.classList.remove('visible');
+  const f=document.getElementById('p-logo-extra-file'); if(f) f.value='';
+}
+let _edLogoExtra = '';
+function edPreviewLogoExtra(input){
+  const file=input.files[0]; if(!file) return;
+  comprimirABase64(file, 400, 0.85).then(dataUrl=>{
+    _edLogoExtra=dataUrl;
+    const p=document.getElementById('ed-logo-extra-preview'); if(p) p.src=_edLogoExtra;
+    const w=document.getElementById('ed-logo-extra-wrap'); if(w) w.classList.add('visible');
+  });
+}
+function edQuitarLogoExtra(){
+  _edLogoExtra='';
+  const p=document.getElementById('ed-logo-extra-preview'); if(p) p.src='';
+  const w=document.getElementById('ed-logo-extra-wrap'); if(w) w.classList.remove('visible');
+  const f=document.getElementById('ed-logo-extra-file'); if(f) f.value='';
+}
 function toQuitarLogo(){
   _toLogo='';
   const p=document.getElementById('to-logo-preview'); if(p) p.src='';
@@ -10009,6 +10096,7 @@ function abrirModalEdicion(tipo,id,objOverride){
     const esPrimera=efectivoDiv==='primera';
     const faseResOpts=['fase1','fase2','fase3'].map(f=>`<option value="${f}" ${(obj.faseRes||'fase1')===f?'selected':''}>${f==='fase1'?'1ª':f==='fase2'?'2ª':'3ª'} Fase</option>`).join('');
     const esExtraObj = (!esReservaObj && efectivoDiv==='extraliga');
+    _edLogoExtra = obj.logoExtra || '';
     const divSelectPartido=`<select id="ed-div-partido" onchange="edUpdateDivVis()">
       <option value="primera" ${(!esReservaObj&&efectivoDiv==='primera')?'selected':''}>Primera División</option>
       <option value="segunda" ${(!esReservaObj&&efectivoDiv==='segunda')?'selected':''}>Segunda División</option>
@@ -10028,6 +10116,12 @@ function abrirModalEdicion(tipo,id,objOverride){
       <div class="form-group" ${esPrimera?'':'style="display:none"'} id="ed-torneo-partido-wrap"><label>Torneo (Primera)</label>${torneoSelect}</div>
       <div class="form-group" ${esExtraObj?'':'style="display:none"'} id="ed-torneo-extra-wrap"><label>Nombre del Torneo</label>
         <input type="text" id="ed-torneo-extra" placeholder="Ej: Copa Amistad 2026" value="${obj.torneoExtra||''}"/>
+        <label style="margin-top:10px">Logo del torneo</label>
+        <div class="upload-area" style="padding:12px">
+          <input type="file" accept="image/*" id="ed-logo-extra-file" onchange="edPreviewLogoExtra(this)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%"/>
+          <p style="pointer-events:none;font-size:11px">Hacé clic para subir el logo</p>
+        </div>
+        <div class="preview-wrap ${obj.logoExtra?'visible':''}" id="ed-logo-extra-wrap"><img id="ed-logo-extra-preview" src="${obj.logoExtra||''}" style="max-height:80px;border-radius:8px"/><button type="button" class="btn-quitar-img" onclick="edQuitarLogoExtra()">✕ Quitar</button></div>
       </div>
       <div class="form-group" ${esPrimera?'':'style="display:none"'} id="ed-playoff-wrap">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
@@ -10541,6 +10635,7 @@ function guardarEdicion(tipo,id){
     const updated={...data.partidos[idx],div:divVal,fecha:val('ed-fecha'),dia:val('ed-dia'),local:val('ed-local'),visit:val('ed-visit'),hora:val('ed-hora'),estado:val('ed-estado'),resultado:val('ed-resultado'),periodo:val('ed-periodo')||'PT',arbitros:arbs,goles,expulsiones};
     if(divVal==='extraliga'){
       updated.torneoExtra=val('ed-torneo-extra').trim();
+      updated.logoExtra=_edLogoExtra||'';
       delete updated.faseRes;delete updated.zona;delete updated.torneo;
       delete updated.esPlayoff;delete updated.tienePenales;delete updated.penales;
     } else if(divVal==='primera'){
@@ -10550,14 +10645,14 @@ function guardarEdicion(tipo,id){
       const chkPen=document.getElementById('ed-tiene-penales');
       updated.tienePenales = updated.esPlayoff ? (chkPen?chkPen.checked:false) : false;
       updated.penales = updated.tienePenales ? val('ed-penales').trim() : '';
-      delete updated.faseRes;delete updated.zona;delete updated.torneoExtra;
+      delete updated.faseRes;delete updated.zona;delete updated.torneoExtra;delete updated.logoExtra;
     } else if(esReserva){
-      delete updated.faseRes;delete updated.zona;delete updated.torneo;delete updated.torneoExtra;
+      delete updated.faseRes;delete updated.zona;delete updated.torneo;delete updated.torneoExtra;delete updated.logoExtra;
     } else {
       updated.faseRes=val('ed-faseRes')||'fase1';
       if(updated.faseRes==='fase1'||updated.faseRes==='fase2') updated.zona=val('ed-zona')||'';
       else delete updated.zona;
-      delete updated.torneo;delete updated.torneoExtra;
+      delete updated.torneo;delete updated.torneoExtra;delete updated.logoExtra;
     }
     updated.esReserva=esReserva;
     updated.torneoReserva=null;
@@ -10695,6 +10790,8 @@ function quitarImagen(previewId, wrapId, inputId, varName){
   else if(varName==='_pubImgDataB64')   _pubImgDataB64='';
   else if(varName==='_escudoB64')   _escudoB64='';
   else if(varName==='_logoB64')     _logoB64='';
+  else if(varName==='_logoPrimeraB64') _logoPrimeraB64='';
+  else if(varName==='_logoSegundaB64') _logoSegundaB64='';
   else if(varName==='_fotoPrevB64') _fotoPrevB64='';
   else if(varName==='_gFoto')       _gFoto='';
   else if(varName==='_xpImg')       _xpImg='';
@@ -11209,6 +11306,8 @@ function openAdmin(){
   if(id.nombre)document.getElementById('id-nombre').value=id.nombre;
   if(id.subtitulo)document.getElementById('id-subtitulo').value=id.subtitulo;
   if(id.logo){const p=document.getElementById('id-logo-preview');if(p){p.src=id.logo;}const w=document.getElementById('id-logo-wrap-prev');if(w)w.classList.add('visible');}
+  if(id.logoPrimera){const p=document.getElementById('id-logo-primera-preview');if(p){p.src=id.logoPrimera;}const w=document.getElementById('id-logo-primera-wrap-prev');if(w)w.classList.add('visible');}
+  if(id.logoSegunda){const p=document.getElementById('id-logo-segunda-preview');if(p){p.src=id.logoSegunda;}const w=document.getElementById('id-logo-segunda-wrap-prev');if(w)w.classList.add('visible');}
   const gEstilo=document.getElementById('g-estilo-img'); if(gEstilo) gEstilo.value=id.estiloGoleadores||'hero';
   actualizarInfoFotoEstilo();
   asegurarIds(); // asignar IDs faltantes una sola vez al abrir
@@ -11726,6 +11825,22 @@ function cvEscudoFallback(ctx, nombre, x, y, size){
   ctx.restore();
 }
 
+function cargarImagenAsync(src){
+  return new Promise(res=>{
+    if(!src){res(null);return;}
+    const img=new Image();
+    img.onload=()=>res(img);
+    img.onerror=()=>res(null);
+    img.src=src;
+  });
+}
+function logoParaPartido(p){
+  const id=getIdentidad();
+  if(p.div==='extraliga') return p.logoExtra||'';
+  if(p.div==='primera')   return id.logoPrimera||'';
+  if(p.div==='segunda')   return id.logoSegunda||'';
+  return '';
+}
 async function generarImagenPartido(p){
   await document.fonts.ready;
   const id   = getIdentidad();
@@ -11765,10 +11880,24 @@ async function generarImagenPartido(p){
   // Fecha / info
   const divLabel  = p.div==='primera'?'1ª División':p.div==='segunda'?'2ª División':(p.torneoExtra||'Extra Liga');
   const tornLabel2 = (p.div!=='extraliga'&&p.torneo)?' · '+torneoLabel(p.torneo):'';
-  ctx.fillStyle = 'rgba(201,162,39,0.65)';
+  const infoTxt = [(p.fecha||''),(p.dia||''), divLabel+tornLabel2].filter(Boolean).join('  ·  ');
+  const infoY = heroY + s(28);
+  const logoImgPartido = await cargarImagenAsync(logoParaPartido(p));
   ctx.font = `700 ${s(13)}px "Rajdhani", Arial, sans-serif`;
-  ctx.textAlign = 'center';
-  ctx.fillText([(p.fecha||''),(p.dia||''), divLabel+tornLabel2].filter(Boolean).join('  ·  '), CX, heroY + s(28));
+  if(logoImgPartido){
+    const logoSize = s(20);
+    const textW = ctx.measureText(infoTxt).width;
+    const totalW = textW + logoSize + s(8);
+    const startX = CX - totalW/2;
+    ctx.drawImage(logoImgPartido, startX, infoY - logoSize + s(4), logoSize, logoSize);
+    ctx.fillStyle = 'rgba(201,162,39,0.65)';
+    ctx.textAlign = 'left';
+    ctx.fillText(infoTxt, startX + logoSize + s(8), infoY);
+  } else {
+    ctx.fillStyle = 'rgba(201,162,39,0.65)';
+    ctx.textAlign = 'center';
+    ctx.fillText(infoTxt, CX, infoY);
+  }
 
   // Marcador gigante
   const marcTxt = p.resultado||(p.estado==='en-juego'?'0 - 0':'VS');
@@ -13490,9 +13619,23 @@ async function _generarImagenProximosGrupo(ids){
   ctx.font = `${s(26)}px "Bebas Neue", Arial, sans-serif`;
   ctx.textAlign = 'center';
   ctx.fillText('PRÓXIMOS PARTIDOS', CX, y+s(32));
-  ctx.fillStyle = 'rgba(201,162,39,0.55)';
+  const infoTxtPx = fechaLabel+divLabel;
   ctx.font = `600 ${s(14)}px "DM Sans", Arial, sans-serif`;
-  ctx.fillText(fechaLabel+divLabel, CX, y+s(50));
+  const logoImgPx = await cargarImagenAsync(logoParaPartido(ps[0]));
+  if(logoImgPx){
+    const logoSize = s(22);
+    const textW = ctx.measureText(infoTxtPx).width;
+    const totalW = textW + logoSize + s(8);
+    const startX = CX - totalW/2;
+    ctx.drawImage(logoImgPx, startX, y+s(50)-logoSize+s(4), logoSize, logoSize);
+    ctx.fillStyle = 'rgba(201,162,39,0.55)';
+    ctx.textAlign = 'left';
+    ctx.fillText(infoTxtPx, startX + logoSize + s(8), y+s(50));
+    ctx.textAlign = 'center';
+  } else {
+    ctx.fillStyle = 'rgba(201,162,39,0.55)';
+    ctx.fillText(infoTxtPx, CX, y+s(50));
+  }
 
   // Divisor
   const dg1=ctx.createLinearGradient(0,0,W,0);
@@ -14033,9 +14176,23 @@ async function generarImagenReserva(ids){
   ctx.font = `${s(26)}px "Bebas Neue", Arial, sans-serif`;
   ctx.textAlign = 'center';
   ctx.fillText('RESERVA', CX, y+s(32));
-  ctx.fillStyle = 'rgba(201,162,39,0.55)';
+  const infoTxtRes = fechaLabel+divLabel;
   ctx.font = `600 ${s(14)}px "DM Sans", Arial, sans-serif`;
-  ctx.fillText(fechaLabel+divLabel, CX, y+s(50));
+  const logoImgRes = await cargarImagenAsync(logoParaPartido(ps[0]));
+  if(logoImgRes){
+    const logoSize = s(22);
+    const textW = ctx.measureText(infoTxtRes).width;
+    const totalW = textW + logoSize + s(8);
+    const startX = CX - totalW/2;
+    ctx.drawImage(logoImgRes, startX, y+s(50)-logoSize+s(4), logoSize, logoSize);
+    ctx.fillStyle = 'rgba(201,162,39,0.55)';
+    ctx.textAlign = 'left';
+    ctx.fillText(infoTxtRes, startX + logoSize + s(8), y+s(50));
+    ctx.textAlign = 'center';
+  } else {
+    ctx.fillStyle = 'rgba(201,162,39,0.55)';
+    ctx.fillText(infoTxtRes, CX, y+s(50));
+  }
 
   // Divisor dorado
   const dg=ctx.createLinearGradient(0,0,W,0);
