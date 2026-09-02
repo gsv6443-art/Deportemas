@@ -11785,7 +11785,7 @@ function cvFillTextTrunc(ctx, text, x, y, maxW){
 function cvDrawEscudoImg(ctx, img, x, y, size){
   const iw = img.naturalWidth || img.width || 1;
   const ih = img.naturalHeight || img.height || 1;
-  const scale = Math.min(size/iw, size/ih);
+  const scale = Math.max(size/iw, size/ih);
   const dw = iw*scale, dh = ih*scale;
   const dx = x + (size-dw)/2, dy = y + (size-dh)/2;
   ctx.drawImage(img, dx, dy, dw, dh);
