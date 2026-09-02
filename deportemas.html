@@ -11903,21 +11903,9 @@ async function cvBloqueHistoria(ctx, p, opciones, W, yStart, medirSolo){
   }
   y += s(90) + s(30);
 
-  // ── Cronómetro (ícono de reloj + minuto) ────────────────────
+  // ── Cronómetro — anillo de progreso (minuto respecto a los 90) ──
   if(!medirSolo){
-    const minTxt = `${p.minuto || 0}'`;
-    ctx.font = `700 ${s(34)}px "Rajdhani", Arial, sans-serif`;
-    const iconD = s(30), gapIco = s(14);
-    const twMin = ctx.measureText(minTxt).width;
-    const cx0 = CX - (iconD+gapIco+twMin)/2;
-    const cy = y + s(20);
-    ctx.strokeStyle = '#ff5555'; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.arc(cx0+iconD/2, cy, iconD/2, 0, Math.PI*2); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(cx0+iconD/2, cy); ctx.lineTo(cx0+iconD/2, cy-iconD*0.32); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(cx0+iconD/2, cy); ctx.lineTo(cx0+iconD/2+iconD*0.22, cy+iconD*0.14); ctx.stroke();
-    ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#ff5555';
-    ctx.fillText(minTxt, cx0+iconD+gapIco, cy);
-    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    hgDibujarCronoAnillo(ctx, CX, y + s(20), p.minuto);
   }
   y += s(40) + s(30);
 
@@ -12046,6 +12034,29 @@ function easeOutBack(t){
   return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
 }
 
+function easeOutCubic(t){
+  return 1 - Math.pow(1 - t, 3);
+}
+
+// Cronómetro en forma de anillo de progreso (minuto respecto a los 90).
+// Se usa igual en el video y en las imágenes estáticas.
+function hgDibujarCronoAnillo(ctx, cx, cy, minuto){
+  const r = s(36);
+  const frac = Math.max(0, Math.min(1, (minuto || 0) / 90));
+  ctx.lineCap = 'round';
+  ctx.lineWidth = s(5);
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.stroke();
+  ctx.strokeStyle = C.DORADO2;
+  ctx.beginPath(); ctx.arc(cx, cy, r, -Math.PI/2, -Math.PI/2 + Math.PI*2*frac); ctx.stroke();
+  ctx.lineCap = 'butt';
+  ctx.fillStyle = C.BLANCO;
+  ctx.font = `700 ${s(25)}px "Rajdhani", Arial, sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(`${minuto || 0}'`, cx, cy);
+  ctx.textBaseline = 'alphabetic';
+}
+
 function hgCargarImgEscudo(nombre){
   return new Promise(resolve => {
     const entry = escudos[nombre] || escudos[normalizar(nombre)];
@@ -12125,20 +12136,9 @@ async function hgCapaEstatica(datos, imgLocal, imgVisit){
   ctx.fillStyle = 'rgba(201,162,39,0.65)'; ctx.textAlign = 'center';
   ctx.fillText(`${datos.torneoLabel}  ·  ${datos.fecha}`, CX, L.fechaY);
 
-  // Cronómetro (ícono de reloj + minuto) — arriba del marcador
-  const minTxt = `${datos.minuto || 0}'`;
-  ctx.font = `700 ${s(34)}px "Rajdhani", Arial, sans-serif`;
-  const iconD = s(30), gapIco = s(14);
-  const twMin = ctx.measureText(minTxt).width;
-  const totalWCrono = iconD + gapIco + twMin;
-  const cx0 = CX - totalWCrono/2, cy = L.cronoY;
-  ctx.strokeStyle = '#ff5555'; ctx.lineWidth = 3;
-  ctx.beginPath(); ctx.arc(cx0+iconD/2, cy, iconD/2, 0, Math.PI*2); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx0+iconD/2, cy); ctx.lineTo(cx0+iconD/2, cy-iconD*0.32); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx0+iconD/2, cy); ctx.lineTo(cx0+iconD/2+iconD*0.22, cy+iconD*0.14); ctx.stroke();
-  ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#ff5555';
-  ctx.fillText(minTxt, cx0+iconD+gapIco, cy);
-  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  // Cronómetro — anillo de progreso (minuto respecto a los 90)
+  hgDibujarCronoAnillo(ctx, CX, L.cronoY, datos.minuto);
+  ctx.textAlign = 'center';
 
   // Escudos + nombres
   const ESCUDO_H = s(110);
@@ -12183,16 +12183,15 @@ function hgMarcadorPrevioNuevo(datos){
 function hgDibujarAnimado(ctx, t, datos, layout){
   const W = CV_W_HIST, CX = W/2;
 
-  // "GOOOOOOOOL" — texto grande tipográfico con contorno + resplandor
-  // dorado (maqueta C), aparece con rebote y después pulsa
-  const bStart = 150, bIn = 500;
+  // "GOOOOOOOOL" — desliza de izquierda a derecha como un tren llegando
+  // y frenando (sin rebote, sin pulso: una sola vez y queda fijo)
+  const bStart = 150, bIn = 550;
   const pB = Math.max(0, Math.min(1, (t-bStart)/bIn));
-  let sB = easeOutBack(pB);
-  if(t > bStart+bIn) sB = 1 + 0.05*Math.sin((t-bStart-bIn)/260);
   if(pB > 0){
+    const eased = easeOutCubic(pB);
+    const offsetX = (1 - eased) * -(W*0.9);
     ctx.save();
-    ctx.translate(CX, layout.badgeY + s(45));
-    ctx.scale(sB, sB);
+    ctx.translate(CX + offsetX, layout.badgeY + s(45));
     ctx.font = `${s(80)}px "Bebas Neue", Arial, sans-serif`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     const txt = 'GOOOOOOOOL';
@@ -12211,8 +12210,9 @@ function hgDibujarAnimado(ctx, t, datos, layout){
     ctx.restore();
   }
 
-  // Marcador: sostiene el resultado anterior, "cambia de ficha" al nuevo, y
-  // pulsa — SIN CAMBIOS de posición (sigue centrado en layout.escY)
+  // Marcador: sostiene el resultado anterior y "cambia de ficha" al nuevo
+  // una sola vez — SIN pulso continuo, queda estático (sigue centrado en
+  // layout.escY, misma posición de siempre)
   const { previo, nuevo } = hgMarcadorPrevioNuevo(datos);
   const holdEnd = 600, shrinkDur = 200, growDur = 450;
   let texto, escala;
@@ -12223,7 +12223,7 @@ function hgDibujarAnimado(ctx, t, datos, layout){
   } else if(t < holdEnd+shrinkDur+growDur){
     texto = nuevo; escala = easeOutBack((t-holdEnd-shrinkDur)/growDur);
   } else {
-    texto = nuevo; escala = 1 + 0.04*Math.sin((t-holdEnd-shrinkDur-growDur)/300);
+    texto = nuevo; escala = 1;
   }
   ctx.save();
   ctx.translate(CX, layout.escY + s(55));
