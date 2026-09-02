@@ -1624,7 +1624,7 @@ table.posiciones td:nth-child(8){
 
 /* ESCUDO MINI */
 .escudo-mini{width:30px;height:30px;border-radius:50%;background:var(--negro4);display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-weight:900;font-size:9px;color:var(--dorado);border:0.5px solid var(--dorado-border);flex-shrink:0;overflow:hidden;}
-.escudo-mini img{width:100%;height:100%;object-fit:contain;}
+.escudo-mini img{width:100%;height:100%;object-fit:cover;}
 
 /* GOLEADORES */
 .goleador-row{display:flex;align-items:center;gap:14px;padding:11px 18px;border-bottom:1px solid rgba(255,255,255,.04);}
@@ -1647,7 +1647,7 @@ table.posiciones td:nth-child(8){
 .equipo-card:hover{border-color:var(--dorado);transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.4);}
 .equipo-escudo-lg{width:62px;height:62px;border-radius:50%;background:var(--negro4);border:2px solid var(--dorado-border);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-family:'Rajdhani',sans-serif;font-weight:900;font-size:17px;color:var(--dorado);overflow:hidden;transition:border-color .18s;}
 .equipo-card:hover .equipo-escudo-lg{border-color:var(--dorado);}
-.equipo-escudo-lg img{width:100%;height:100%;object-fit:contain;}
+.equipo-escudo-lg img{width:100%;height:100%;object-fit:cover;}
 .equipo-nombre{font-size:13px;font-weight:700;font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.3px;color:var(--blanco);line-height:1.2;}
 .equipo-div{font-size:10px;color:var(--gris);margin-top:3px;font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.3px;}
 
@@ -2177,7 +2177,7 @@ table.posiciones td:nth-child(8){
 .admin-list-item:hover{border-color:rgba(201,162,39,.2);}
 .admin-list-item span{flex:1;color:rgba(255,255,255,.75);}
 .mini-escudo-preview{width:24px;height:24px;border-radius:50%;overflow:hidden;background:var(--negro4);border:1px solid var(--dorado-border);display:flex;align-items:center;justify-content:center;font-size:8px;color:var(--dorado);font-weight:900;flex-shrink:0;}
-.mini-escudo-preview img{width:100%;height:100%;object-fit:contain;}
+.mini-escudo-preview img{width:100%;height:100%;object-fit:cover;}
 
 /* UPLOAD AREA */
 .upload-area{border:2px dashed var(--dorado-border);border-radius:var(--r-md);padding:20px;text-align:center;cursor:pointer;transition:border-color .15s;background:var(--negro3);position:relative;}
@@ -2927,7 +2927,7 @@ table.posiciones td:nth-child(8){
   font-family:'Rajdhani',sans-serif;font-weight:900;font-size:22px;color:var(--dorado);
   flex-shrink:0;overflow:hidden;
 }
-.club-modal-escudo img{width:100%;height:100%;object-fit:contain;}
+.club-modal-escudo img{width:100%;height:100%;object-fit:cover;}
 .club-modal-info h2{
   font-family:'Bebas Neue',sans-serif;font-weight:400;font-size:28px;
   color:var(--dorado);letter-spacing:2px;text-transform:uppercase;line-height:1;margin-bottom:4px;
@@ -6799,7 +6799,7 @@ function renderFixture(){
       const mapaKey = 'fx_' + idx;
       window._fixtureMapa[mapaKey] = arr.map(p=>String(p.id));
       const logoHTML = arr[0].logoExtra
-        ? `<img src="${arr[0].logoExtra}" alt="${torneoNom}" style="height:22px;width:22px;object-fit:contain;border-radius:4px"/>`
+        ? `<img src="${arr[0].logoExtra}" alt="${torneoNom}" style="height:22px;width:auto;max-width:60px;object-fit:contain;border-radius:4px"/>`
         : `<span class="div-badge">EXTRA LIGA</span>`;
       return `
       <div class="card"><div class="card-header"><span>${torneoNom} · ${fecha}</span><div style="display:flex;align-items:center;gap:8px">${logoHTML}<button class="btn-share" onclick="abrirShare(()=>generarImagenProximos(window._fixtureMapa['${mapaKey}']))">${SVG_SHARE} Compartir</button></div></div>
@@ -6882,7 +6882,7 @@ function renderResultados(){
     el.innerHTML=ordenTorneos.map(t=>{
       const html=acordeonFechas(porTorneo[t],'EXTRA LIGA');
       const logo=porTorneo[t][0].logoExtra;
-      const logoHTML=logo?`<img src="${logo}" alt="${t}" style="height:32px;width:32px;object-fit:contain;border-radius:6px"/>`:'';
+      const logoHTML=logo?`<img src="${logo}" alt="${t}" style="height:32px;width:auto;max-width:90px;object-fit:contain;border-radius:6px"/>`:'';
       return `<div class="card-header" style="margin:18px 0 6px;display:flex;align-items:center;justify-content:space-between"><span>${t}</span>${logoHTML}</div>${html||''}`;
     }).join('');
     return;
