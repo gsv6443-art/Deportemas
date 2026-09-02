@@ -3366,6 +3366,7 @@ table.posiciones td:nth-child(8){
               <option value="primera">Primera División</option>
               <option value="segunda">Segunda División</option>
               <option value="reserva">Reserva</option>
+              <option value="extraliga">Torneo Extra Liga</option>
             </select>
           </div>
           <div class="form-group"><label>Fecha / Jornada</label><input type="text" id="p-fecha" placeholder="Ej: Fecha 5"/></div>
@@ -3384,6 +3385,10 @@ table.posiciones td:nth-child(8){
             <option value="apertura">Apertura 2026</option>
             <option value="clausura">Clausura 2026</option>
           </select>
+        </div>
+        <!-- campo nombre libre del torneo extra liga -->
+        <div id="p-torneo-extra-wrap" class="form-group" style="display:none"><label>Nombre del Torneo</label>
+          <input type="text" id="p-torneo-extra" placeholder="Ej: Copa Amistad 2026"/>
         </div>
         <!-- playoff flag solo primera -->
         <div id="p-playoff-wrap" class="form-group" style="display:none">
@@ -4795,6 +4800,7 @@ table.posiciones td:nth-child(8){
         <div class="tabs-row">
           <button class="div-tab active" onclick="switchDivTab('primera',this)">Primera División</button>
           <button class="div-tab" onclick="switchDivTab('segunda',this)">Segunda División</button>
+          <button class="div-tab" onclick="switchDivTab('extraliga',this)">Extra Liga</button>
         </div>
         
         
@@ -4808,6 +4814,7 @@ table.posiciones td:nth-child(8){
         <div class="tabs-row">
           <button class="div-tab active" onclick="switchDivTab('primera',this)">Primera División</button>
           <button class="div-tab" onclick="switchDivTab('segunda',this)">Segunda División</button>
+          <button class="div-tab" onclick="switchDivTab('extraliga',this)">Extra Liga</button>
         </div>
         <!-- sub-tab Primera / Reserva -->
         <div class="tabs-row" id="pos-cat-tabs">
@@ -4848,6 +4855,7 @@ table.posiciones td:nth-child(8){
         <div class="tabs-row">
           <button class="div-tab active" onclick="switchDivTab('primera',this)">Primera División</button>
           <button class="div-tab" onclick="switchDivTab('segunda',this)">Segunda División</button>
+          <button class="div-tab" onclick="switchDivTab('extraliga',this)">Extra Liga</button>
         </div>
         <!-- sub-tab Primera / Reserva -->
         <div class="tabs-row" id="res-cat-tabs">
@@ -5332,28 +5340,35 @@ function switchDivTab(div,el){
 
   if(currentSection==='posiciones'){
     const esPrimera=div==='primera';
+    const esExtra=div==='extraliga';
+    // sub-tab Primera/Reserva: no aplica a extraliga
+    const catTabs=document.getElementById('pos-cat-tabs');
+    if(catTabs) catTabs.style.display=esExtra?'none':'flex';
     // primera: torneos + general
-    document.getElementById('pos-torneo-tabs').style.display=esPrimera?'flex':'none';
-    // segunda: fases (ocultas si estamos viendo la categoría Reserva, que es tabla única)
-    const esReservaSegunda = !esPrimera && currentCatPos==='reserva';
-    document.getElementById('pos-fase-tabs').style.display=(esPrimera||esReservaSegunda)?'none':'flex';
+    document.getElementById('pos-torneo-tabs').style.display=(esPrimera&&!esExtra)?'flex':'none';
+    // segunda: fases (ocultas si estamos viendo la categoría Reserva, que es tabla única, o si es extraliga)
+    const esReservaSegunda = !esPrimera && !esExtra && currentCatPos==='reserva';
+    document.getElementById('pos-fase-tabs').style.display=(esExtra||esPrimera||esReservaSegunda)?'none':'flex';
     // sub-tabs
     actualizarSubTabsSegunda();
     // tab general solo primera
     const tabGeneral=document.getElementById('tab-general');
-    if(tabGeneral) tabGeneral.style.display=esPrimera?'':'none';
+    if(tabGeneral) tabGeneral.style.display=(esPrimera&&!esExtra)?'':'none';
     // si venía en general y cambió a segunda, reset
-    if(!esPrimera&&currentTorneo.pos==='general'){
+    if(!esPrimera&&!esExtra&&currentTorneo.pos==='general'){
       currentTorneo.pos='apertura';
       document.querySelectorAll('#pos-torneo-tabs .torneo-tab').forEach((t,i)=>{t.classList.toggle('active',i===0);});
     }
   }
   if(currentSection==='resultados'){
     const esPrimera=div==='primera';
-    document.getElementById('res-torneo-tabs').style.display=esPrimera?'flex':'none';
-    const esReservaSegunda = !esPrimera && currentCatRes==='reserva';
-    document.getElementById('res-fase-tabs').style.display=(esPrimera||esReservaSegunda)?'none':'flex';
-    if(!esPrimera){currentFaseRes='fase1';document.querySelectorAll('#res-fase-tabs .torneo-tab').forEach((t,i)=>t.classList.toggle('active',i===0));}
+    const esExtra=div==='extraliga';
+    const catTabsRes=document.getElementById('res-cat-tabs');
+    if(catTabsRes) catTabsRes.style.display=esExtra?'none':'flex';
+    document.getElementById('res-torneo-tabs').style.display=(esPrimera&&!esExtra)?'flex':'none';
+    const esReservaSegunda = !esPrimera && !esExtra && currentCatRes==='reserva';
+    document.getElementById('res-fase-tabs').style.display=(esExtra||esPrimera||esReservaSegunda)?'none':'flex';
+    if(!esPrimera&&!esExtra){currentFaseRes='fase1';document.querySelectorAll('#res-fase-tabs .torneo-tab').forEach((t,i)=>t.classList.toggle('active',i===0));}
   }
   if(currentSection==='goleadores'){
     const esPrimera=div==='primera';
@@ -6716,8 +6731,31 @@ window._fixtureMapa = {};
 
 function renderFixture(){
   const div=currentDivision;
-  const ps=data.partidos.filter(p=>p.div===div&&p.estado!=='jugado');
   const el=document.getElementById('fixture-content');
+
+  if(div==='extraliga'){
+    const ps=data.partidos.filter(p=>p.div==='extraliga'&&p.estado!=='jugado');
+    if(!ps.length){el.innerHTML=`<div class="card"><div class="card-header"><span>Próximos Partidos</span><span class="div-badge">EXTRA LIGA</span></div><div class="empty-msg">No hay partidos programados de Torneos Extra Liga</div></div>`;return;}
+    const byF={};const orden=[];
+    ps.forEach(p=>{
+      const key=(p.torneoExtra||'Torneo Extra Liga')+' ||| '+p.fecha;
+      if(!byF[key]){byF[key]=[];orden.push(key);}
+      byF[key].push(p);
+    });
+    window._fixtureMapa = {};
+    el.innerHTML=orden.map((key,idx)=>{
+      const arr=byF[key];
+      const [torneoNom,fecha]=key.split(' ||| ');
+      const mapaKey = 'fx_' + idx;
+      window._fixtureMapa[mapaKey] = arr.map(p=>String(p.id));
+      return `
+      <div class="card"><div class="card-header"><span>${torneoNom} · ${fecha}</span><div style="display:flex;align-items:center;gap:8px"><span class="div-badge">EXTRA LIGA</span><button class="btn-share" onclick="abrirShare(()=>generarImagenProximos(window._fixtureMapa['${mapaKey}']))">${SVG_SHARE} Compartir</button></div></div>
+      ${arr.map(p=>partidoHTML(p,false)).join('')}</div>`;
+    }).join('');
+    return;
+  }
+
+  const ps=data.partidos.filter(p=>p.div===div&&p.estado!=='jugado');
   if(!ps.length){el.innerHTML=`<div class="card"><div class="card-header"><span>Próximos Partidos</span><span class="div-badge">${div==='primera'?'1ª':'2ª'}</span></div><div class="empty-msg">No hay partidos programados para esta división</div></div>`;return;}
   const byF={};ps.forEach(p=>{if(!byF[p.fecha])byF[p.fecha]=[];byF[p.fecha].push(p);});
   // Limpiar mapa y cargar IDs de esta renderización
@@ -6776,6 +6814,23 @@ function renderResultados(){
         <div class="fecha-acordeon-body ${isLast?'open':''}">${arr.map(p=>partidoHTML(p,true)).join('')}</div>
       </div>`;
     }).join('');
+  }
+
+  // ---- TORNEOS EXTRA LIGA ----
+  if(div==='extraliga'){
+    const ps=data.partidos.filter(p=>p.div==='extraliga'&&p.estado==='jugado');
+    if(!ps.length){el.innerHTML=`<div class="card"><div class="card-header"><span>Resultados · Extra Liga</span><span class="div-badge">EXTRA LIGA</span></div><div class="empty-msg">No hay resultados de Torneos Extra Liga</div></div>`;return;}
+    const porTorneo={};const ordenTorneos=[];
+    ps.forEach(p=>{
+      const t=p.torneoExtra||'Torneo Extra Liga';
+      if(!porTorneo[t]){porTorneo[t]=[];ordenTorneos.push(t);}
+      porTorneo[t].push(p);
+    });
+    el.innerHTML=ordenTorneos.map(t=>{
+      const html=acordeonFechas(porTorneo[t],'EXTRA LIGA');
+      return `<div class="card-header" style="margin:18px 0 6px"><span>${t}</span></div>${html||''}`;
+    }).join('');
+    return;
   }
 
   // ---- SEGUNDA DIVISIÓN ----
@@ -6951,6 +7006,12 @@ function renderPosiciones(){
   const div=currentDivision;
   const torneo=currentTorneo.pos;
   const el=document.getElementById('posiciones-content');
+
+  // ---- TORNEOS EXTRA LIGA ----
+  if(div==='extraliga'){
+    el.innerHTML=`<div class="card"><div class="card-header"><span>Torneos Extra Liga</span><span class="div-badge">EXTRA LIGA</span></div><div class="empty-msg">Próximamente vas a poder ver acá el cuadro de Play Off de cada torneo extra liga.</div></div>`;
+    return;
+  }
 
   // ---- RESERVA ----
   if(currentCatPos === 'reserva'){
@@ -9328,18 +9389,20 @@ function togglePenalesInput(prefix){
 function updateAdminPartidoDiv(){
   const divVal = document.getElementById('p-div').value;
   const esReserva = divVal === 'reserva';
+  const esExtra = divVal === 'extraliga';
   const subdivWrap = document.getElementById('p-reserva-subdiv-wrap');
   if(subdivWrap) subdivWrap.style.display = esReserva ? '' : 'none';
   const efectivo = esReserva ? document.getElementById('p-reserva-subdiv').value : divVal;
-  const esPrimera = efectivo==='primera';
+  const esPrimera = efectivo==='primera' && !esExtra;
   const esReservaSegunda = esReserva && efectivo==='segunda';
   document.getElementById('p-torneo-wrap').style.display=esPrimera?'':'none';
+  document.getElementById('p-torneo-extra-wrap').style.display=esExtra?'':'none';
   document.getElementById('p-playoff-wrap').style.display=esPrimera?'':'none';
   if(!esPrimera){
     const chk=document.getElementById('p-es-playoff'); if(chk) chk.checked=false;
   }
   updateAdminPenalesVis('p');
-  document.getElementById('p-fase-wrap').style.display=(esPrimera||esReservaSegunda)?'none':'';
+  document.getElementById('p-fase-wrap').style.display=(esExtra||esPrimera||esReservaSegunda)?'none':'';
   const eventosWrap=document.getElementById('p-eventos-wrap');
   if(eventosWrap){
     eventosWrap.style.display = esReserva ? 'none' : '';
@@ -9378,13 +9441,16 @@ function edUpdateDivVis(){
   if(!divEl) return;
   const divVal = divEl.value;
   const esReserva = divVal === 'reserva';
+  const esExtra = divVal === 'extraliga';
   const subdivWrap = document.getElementById('ed-reserva-subdiv-wrap');
   if(subdivWrap) subdivWrap.style.display = esReserva ? '' : 'none';
   const efectivo = esReserva ? document.getElementById('ed-reserva-subdiv').value : divVal;
-  const esPrimera = efectivo === 'primera';
+  const esPrimera = efectivo === 'primera' && !esExtra;
   const esReservaSegunda = esReserva && efectivo==='segunda';
   const torneoWrap=document.getElementById('ed-torneo-partido-wrap');
   if(torneoWrap) torneoWrap.style.display = esPrimera ? '' : 'none';
+  const torneoExtraWrap=document.getElementById('ed-torneo-extra-wrap');
+  if(torneoExtraWrap) torneoExtraWrap.style.display = esExtra ? '' : 'none';
   const playoffWrap=document.getElementById('ed-playoff-wrap');
   if(playoffWrap) playoffWrap.style.display = esPrimera ? '' : 'none';
   if(!esPrimera){
@@ -9392,11 +9458,11 @@ function edUpdateDivVis(){
   }
   updateAdminPenalesVis('ed');
   const faseWrap=document.getElementById('ed-faseRes-wrap');
-  if(faseWrap) faseWrap.style.display = (esPrimera||esReservaSegunda) ? 'none' : '';
+  if(faseWrap) faseWrap.style.display = (esExtra||esPrimera||esReservaSegunda) ? 'none' : '';
   const zonaWrap=document.getElementById('ed-zona-wrap');
   if(zonaWrap){
     const fase = document.getElementById('ed-faseRes')?.value || 'fase1';
-    const mostrarZona = (!esPrimera && (fase==='fase1'||fase==='fase2') && !esReservaSegunda);
+    const mostrarZona = (!esExtra && !esPrimera && (fase==='fase1'||fase==='fase2') && !esReservaSegunda);
     zonaWrap.style.display = mostrarZona ? '' : 'none';
     const zonaLabel=document.getElementById('ed-zona-label');
     const zonaSelect=document.getElementById('ed-zona');
@@ -9449,7 +9515,10 @@ function agregarPartido(){
     torneoReserva:null,
     arbitros,goles,expulsiones
   };
-  if(div==='primera'){
+  if(div==='extraliga'){
+    d.torneoExtra=document.getElementById('p-torneo-extra').value.trim();
+  }
+  else if(div==='primera'){
     d.torneo=document.getElementById('p-torneo-sel').value;
     d.esPlayoff=document.getElementById('p-es-playoff').checked;
     d.tienePenales = d.esPlayoff ? document.getElementById('p-tiene-penales').checked : false;
@@ -9468,6 +9537,7 @@ function agregarPartido(){
   document.getElementById('p-goles-list').innerHTML='';
   document.getElementById('p-exp-list').innerHTML='';
   document.getElementById('p-div').value='primera';
+  document.getElementById('p-torneo-extra').value='';
   document.getElementById('p-tiene-penales').checked=false;
   document.getElementById('p-penales').value='';
   togglePenalesInput('p');
@@ -9938,10 +10008,12 @@ function abrirModalEdicion(tipo,id,objOverride){
     const efectivoDiv=obj.div||'primera';
     const esPrimera=efectivoDiv==='primera';
     const faseResOpts=['fase1','fase2','fase3'].map(f=>`<option value="${f}" ${(obj.faseRes||'fase1')===f?'selected':''}>${f==='fase1'?'1ª':f==='fase2'?'2ª':'3ª'} Fase</option>`).join('');
+    const esExtraObj = (!esReservaObj && efectivoDiv==='extraliga');
     const divSelectPartido=`<select id="ed-div-partido" onchange="edUpdateDivVis()">
       <option value="primera" ${(!esReservaObj&&efectivoDiv==='primera')?'selected':''}>Primera División</option>
       <option value="segunda" ${(!esReservaObj&&efectivoDiv==='segunda')?'selected':''}>Segunda División</option>
       <option value="reserva" ${esReservaObj?'selected':''}>Reserva</option>
+      <option value="extraliga" ${esExtraObj?'selected':''}>Torneo Extra Liga</option>
     </select>`;
     const subdivSelect=`<select id="ed-reserva-subdiv" onchange="edUpdateDivVis()">
       <option value="primera" ${efectivoDiv==='primera'?'selected':''}>Primera División</option>
@@ -9954,6 +10026,9 @@ function abrirModalEdicion(tipo,id,objOverride){
         <label>Corresponde a</label>${subdivSelect}
       </div>
       <div class="form-group" ${esPrimera?'':'style="display:none"'} id="ed-torneo-partido-wrap"><label>Torneo (Primera)</label>${torneoSelect}</div>
+      <div class="form-group" ${esExtraObj?'':'style="display:none"'} id="ed-torneo-extra-wrap"><label>Nombre del Torneo</label>
+        <input type="text" id="ed-torneo-extra" placeholder="Ej: Copa Amistad 2026" value="${obj.torneoExtra||''}"/>
+      </div>
       <div class="form-group" ${esPrimera?'':'style="display:none"'} id="ed-playoff-wrap">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
           <input type="checkbox" id="ed-es-playoff" ${obj.esPlayoff?'checked':''} onchange="updateAdminPenalesVis('ed')" style="width:16px;height:16px;accent-color:var(--dorado)"/>
@@ -9967,8 +10042,8 @@ function abrirModalEdicion(tipo,id,objOverride){
         </label>
         <input type="text" id="ed-penales" placeholder="Ej: 5-4" value="${obj.penales||''}" style="${obj.tienePenales?'':'display:none'};margin-top:8px"/>
       </div>
-      <div class="form-group" ${!esPrimera?'':'style="display:none"'} id="ed-faseRes-wrap"><label>Fase (Segunda)</label><select id="ed-faseRes" onchange="edUpdateDivVis()">${faseResOpts}</select></div>
-      <div class="form-group" ${(!esPrimera&&((obj.faseRes||'fase1')==='fase1'||(obj.faseRes||'fase1')==='fase2'))?'':'style="display:none"'} id="ed-zona-wrap"><label id="ed-zona-label">${(obj.faseRes||'fase1')==='fase2'?'Grupo (2ª Fase)':'Zona (1ª Fase)'}</label>
+      <div class="form-group" ${(!esPrimera&&!esExtraObj)?'':'style="display:none"'} id="ed-faseRes-wrap"><label>Fase (Segunda)</label><select id="ed-faseRes" onchange="edUpdateDivVis()">${faseResOpts}</select></div>
+      <div class="form-group" ${(!esPrimera&&!esExtraObj&&((obj.faseRes||'fase1')==='fase1'||(obj.faseRes||'fase1')==='fase2'))?'':'style="display:none"'} id="ed-zona-wrap"><label id="ed-zona-label">${(obj.faseRes||'fase1')==='fase2'?'Grupo (2ª Fase)':'Zona (1ª Fase)'}</label>
         <select id="ed-zona">
           ${(obj.faseRes||'fase1')==='fase2' ? `
           <option value="campeonato" ${(obj.zona||'')==='campeonato'?'selected':''}>Campeonato</option>
@@ -10464,21 +10539,25 @@ function guardarEdicion(tipo,id){
     // Guardar copia del partido anterior para detectar el tipo de evento
     const partidoViejo={...data.partidos[idx], goles:[...(data.partidos[idx].goles||[])], expulsiones:[...(data.partidos[idx].expulsiones||[])]};
     const updated={...data.partidos[idx],div:divVal,fecha:val('ed-fecha'),dia:val('ed-dia'),local:val('ed-local'),visit:val('ed-visit'),hora:val('ed-hora'),estado:val('ed-estado'),resultado:val('ed-resultado'),periodo:val('ed-periodo')||'PT',arbitros:arbs,goles,expulsiones};
-    if(divVal==='primera'){
+    if(divVal==='extraliga'){
+      updated.torneoExtra=val('ed-torneo-extra').trim();
+      delete updated.faseRes;delete updated.zona;delete updated.torneo;
+      delete updated.esPlayoff;delete updated.tienePenales;delete updated.penales;
+    } else if(divVal==='primera'){
       updated.torneo=val('ed-torneo');
       const chk=document.getElementById('ed-es-playoff');
       updated.esPlayoff=chk?chk.checked:false;
       const chkPen=document.getElementById('ed-tiene-penales');
       updated.tienePenales = updated.esPlayoff ? (chkPen?chkPen.checked:false) : false;
       updated.penales = updated.tienePenales ? val('ed-penales').trim() : '';
-      delete updated.faseRes;delete updated.zona;
+      delete updated.faseRes;delete updated.zona;delete updated.torneoExtra;
     } else if(esReserva){
-      delete updated.faseRes;delete updated.zona;delete updated.torneo;
+      delete updated.faseRes;delete updated.zona;delete updated.torneo;delete updated.torneoExtra;
     } else {
       updated.faseRes=val('ed-faseRes')||'fase1';
       if(updated.faseRes==='fase1'||updated.faseRes==='fase2') updated.zona=val('ed-zona')||'';
       else delete updated.zona;
-      delete updated.torneo;
+      delete updated.torneo;delete updated.torneoExtra;
     }
     updated.esReserva=esReserva;
     updated.torneoReserva=null;
@@ -10754,6 +10833,7 @@ function recalcularTodo(){
     if(p.estado !== 'jugado') return;
     if(p.esPlayoff) return;   // playoff no suma en posiciones
     if(p.esReserva) return;   // reserva tiene su propia tabla separada
+    if(p.div === 'extraliga') return; // extra liga: formato libre por torneo, sin tabla fija
     const res = parsearResultado(p.resultado);
     if(!res) return;
 
@@ -10959,7 +11039,7 @@ function renderAdminListas(){
       </div>` : '';
     return `<div class="admin-list-item" style="flex-direction:column;align-items:stretch;gap:4px">
       <div style="display:flex;align-items:center;gap:8px">
-        <span><b>${p.div==='primera'?'1ª':'2ª'}</b> | ${p.fecha}${p.dia?' | 📅 '+p.dia:''} | <b>${p.local}</b> vs <b>${p.visit}</b> | ${p.hora} | <em>${p.estado}</em>${p.resultado?' | '+p.resultado:''}${p.esPlayoff&&p.tienePenales&&p.penales?' | Penales: '+p.penales:''}${p.esPlayoff?' | <b style="color:var(--dorado)">PLAY OFF</b>':''}</span>
+        <span><b>${p.div==='primera'?'1ª':p.div==='segunda'?'2ª':'Extra Liga'}</b>${p.div==='extraliga'&&p.torneoExtra?' ('+p.torneoExtra+')':''} | ${p.fecha}${p.dia?' | 📅 '+p.dia:''} | <b>${p.local}</b> vs <b>${p.visit}</b> | ${p.hora} | <em>${p.estado}</em>${p.resultado?' | '+p.resultado:''}${p.esPlayoff&&p.tienePenales&&p.penales?' | Penales: '+p.penales:''}${p.esPlayoff?' | <b style="color:var(--dorado)">PLAY OFF</b>':''}</span>
         ${btnAcciones('partidos',p.id)}
       </div>
       ${cronoControls}
@@ -10975,7 +11055,7 @@ function renderAdminListas(){
       etiqueta=`<b>${fL}${zL?' – '+zL:''}</b>`;
     }
     return `<div class="admin-list-item">
-      <span>${etiqueta} | <b>${p.div==='primera'?'1ª':'2ª'}</b> | ${p.equipo} | PJ:${p.pj} G:${p.g} E:${p.e} P:${p.p} GF:${p.gf||0} GC:${p.gc||0} PTS:${p.pts}</span>
+      <span>${etiqueta} | <b>${p.div==='primera'?'1ª':p.div==='segunda'?'2ª':'Extra Liga'}</b> | ${p.equipo} | PJ:${p.pj} G:${p.g} E:${p.e} P:${p.p} GF:${p.gf||0} GC:${p.gc||0} PTS:${p.pts}</span>
       ${btnAcciones('posiciones',p.id)}
     </div>`;
   }).join('')||'<p class="admin-empty">Sin posiciones cargadas</p>';
@@ -11000,7 +11080,7 @@ function renderAdminListas(){
         : `<span style="background:rgba(224,84,84,.12);color:#e05454;border:1px solid rgba(224,84,84,.3);border-radius:6px;padding:2px 7px;font-size:10px;font-weight:700;letter-spacing:.3px;white-space:nowrap">⚠ SIN FOTO</span>`;
     }
     return `<div class="admin-list-item">
-      <span><b>${torneoLabel(g.torneo||'apertura')}</b> | <b>${g.div==='primera'?'1ª':'2ª'}</b> | ${g.nombre} (${g.equipo}) – ${g.goles} goles</span>
+      <span><b>${torneoLabel(g.torneo||'apertura')}</b> | <b>${g.div==='primera'?'1ª':g.div==='segunda'?'2ª':'Extra Liga'}</b> | ${g.nombre} (${g.equipo}) – ${g.goles} goles</span>
       ${fotoTag}
       ${btnAcciones('goleadores',g.id)}
     </div>`;
@@ -11683,8 +11763,8 @@ async function generarImagenPartido(p){
   ctx.fillRect(0, heroY, W, heroH);
 
   // Fecha / info
-  const divLabel  = p.div==='primera'?'1ª División':'2ª División';
-  const tornLabel2 = p.torneo?' · '+torneoLabel(p.torneo):'';
+  const divLabel  = p.div==='primera'?'1ª División':p.div==='segunda'?'2ª División':(p.torneoExtra||'Extra Liga');
+  const tornLabel2 = (p.div!=='extraliga'&&p.torneo)?' · '+torneoLabel(p.torneo):'';
   ctx.fillStyle = 'rgba(201,162,39,0.65)';
   ctx.font = `700 ${s(13)}px "Rajdhani", Arial, sans-serif`;
   ctx.textAlign = 'center';
@@ -13404,7 +13484,7 @@ async function _generarImagenProximosGrupo(ids){
   let y = await cvHeader(ctx,W,id,0);
 
   // Titulo seccion
-  const divLabel = ps[0].div==='primera'?'PRIMERA DIVISIÓN':'SEGUNDA DIVISIÓN';
+  const divLabel = ps[0].div==='primera'?'PRIMERA DIVISIÓN':ps[0].div==='segunda'?'SEGUNDA DIVISIÓN':(ps[0].torneoExtra||'EXTRA LIGA').toUpperCase();
   const fechaLabel = ps[0].fecha ? ps[0].fecha+'  ·  ' : '';
   ctx.fillStyle = C.DORADO;
   ctx.font = `${s(26)}px "Bebas Neue", Arial, sans-serif`;
