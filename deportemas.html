@@ -11857,71 +11857,69 @@ async function cvBloqueHistoria(ctx, p, opciones, W, yStart, medirSolo){
   const CX = W / 2;
   let y = yStart;
 
-  const badges = {
-    'inicio':     { txt: '¡COMENZÓ EL PARTIDO!', col: C.DORADO,  bg: 'rgba(201,162,39,0.15)' },
-    'gol':        { txt: '¡GOOOL!',   col: '#ff5555',  bg: 'rgba(192,57,43,0.35)' },
-    'tarjeta':    { txt: 'TARJETA',   col: '#ffdd66',  bg: 'rgba(120,90,0,0.4)' },
-    'entretiempo':{ txt: 'ENTRETIEMPO', col: C.DORADO, bg: 'rgba(201,162,39,0.15)' },
-    'segundo-tiempo': { txt: 'COMIENZA EL 2ºT', col: C.DORADO, bg: 'rgba(201,162,39,0.15)' },
-    'penales':    { txt: 'DEFINICIÓN POR PENALES', col: '#ffdd66', bg: 'rgba(120,90,0,0.4)' },
-    'final':      { txt: 'FINAL',     col: '#4caf74',  bg: 'rgba(26,107,47,0.5)' },
-  };
-  const esEnVivo = !badges[tipoEvento];
-
-  if(esEnVivo){
-    // ── Cronómetro (reemplaza el badge "EN VIVO") ─────────────
-    const mm = String(p.minuto || 0).padStart(2, '0');
-    const ss = String(opciones.segundo || 0).padStart(2, '0');
-    const cronoTxt = `${mm}:${ss}`;
-    ctx.font = `700 ${s(40)}px "Rajdhani", Arial, sans-serif`;
-    const iconD = s(32);
-    const padX  = s(28);
-    const bh2   = s(68);
-    const bw2   = iconD + s(16) + ctx.measureText(cronoTxt).width + padX*2;
-    if(!medirSolo){
-      cvRoundRect(ctx, CX - bw2/2, y, bw2, bh2, bh2/2);
-      ctx.fillStyle = 'rgba(192,57,43,0.35)'; ctx.fill();
-      ctx.strokeStyle = '#ff5555'; ctx.lineWidth = 2; ctx.stroke();
-      const icx = CX - bw2/2 + padX + iconD/2;
-      const icy = y + bh2/2;
-      ctx.strokeStyle = '#ff5555'; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.arc(icx, icy, iconD/2, 0, Math.PI*2); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(icx, icy); ctx.lineTo(icx, icy - iconD*0.32); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(icx, icy); ctx.lineTo(icx + iconD*0.22, icy + iconD*0.14); ctx.stroke();
-      ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-      ctx.fillStyle = '#ff5555';
-      ctx.fillText(cronoTxt, CX - bw2/2 + padX + iconD + s(16), icy);
-      ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-    }
-    y += bh2 + s(34);
-  } else {
-    // ── Badge de estado ──
-    const badge = badges[tipoEvento];
-    ctx.font = `700 ${s(24)}px "Rajdhani", Arial, sans-serif`;
-    const bw = ctx.measureText(badge.txt).width + s(46);
-    const bh = s(50);
-    if(!medirSolo){
-      cvRoundRect(ctx, CX - bw/2, y, bw, bh, bh/2);
-      ctx.fillStyle = badge.bg; ctx.fill();
-      ctx.strokeStyle = badge.col; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = badge.col;
-      ctx.textBaseline = 'middle';
-      ctx.fillText(badge.txt, CX, y + bh/2);
-      ctx.textBaseline = 'alphabetic';
-    }
-    y += bh + s(34);
-  }
-
   // ── Fecha / minuto / torneo ────────────────────────────────
   const tornLabel2 = p.torneo ? ' · ' + torneoLabel(p.torneo) : '';
   const fechaLabel = opciones.fecha ? ' · ' + opciones.fecha : '';
-  const minTxt = p.minuto ? p.minuto + "'  " : '';
+  const minTxtFecha = p.minuto ? p.minuto + "'  " : '';
   if(!medirSolo){
     ctx.fillStyle = 'rgba(201,162,39,0.65)';
-    ctx.font = `700 ${s(26)}px "Rajdhani", Arial, sans-serif`;
-    ctx.fillText((minTxt + tornLabel2 + fechaLabel).replace(/^\s*·\s*/, ''), CX, y);
+    ctx.font = `700 ${s(24)}px "Rajdhani", Arial, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText((minTxtFecha + tornLabel2 + fechaLabel).replace(/^\s*·\s*/, ''), CX, y);
   }
-  y += s(64);
+  y += s(40) + s(26);
+
+  // ── Texto grande del evento — misma tipografía que "GOOOOOOOOL"
+  // del video: Bebas Neue grande, contorno negro y resplandor de color ──
+  const eventos = {
+    'en-vivo':        { txt: 'EN VIVO',               fill: C.BLANCO,  glow: 'rgba(255,85,85,0.8)' },
+    'inicio':         { txt: '¡COMENZÓ EL PARTIDO!',  fill: C.BLANCO,  glow: 'rgba(240,192,64,0.9)' },
+    'gol':            { txt: 'GOOOOOOOOL',            fill: C.BLANCO,  glow: 'rgba(240,192,64,0.9)' },
+    'tarjeta':        { txt: 'TARJETA',                fill: '#ffdd66', glow: 'rgba(255,221,102,0.7)' },
+    'entretiempo':    { txt: 'ENTRETIEMPO',            fill: C.BLANCO,  glow: 'rgba(240,192,64,0.9)' },
+    'segundo-tiempo': { txt: 'COMIENZA EL 2ºT',        fill: C.BLANCO,  glow: 'rgba(240,192,64,0.9)' },
+    'penales':        { txt: 'DEFINICIÓN POR PENALES', fill: '#ffdd66', glow: 'rgba(255,221,102,0.7)' },
+    'final':          { txt: 'FINAL',                  fill: '#4caf74', glow: 'rgba(76,175,116,0.7)' },
+  };
+  const evento = eventos[tipoEvento] || eventos['en-vivo'];
+  if(!medirSolo){
+    let fontSize = s(80);
+    ctx.font = `${fontSize}px "Bebas Neue", Arial, sans-serif`;
+    const maxW = W - s(120);
+    const tw = ctx.measureText(evento.txt).width;
+    if(tw > maxW) fontSize = fontSize * (maxW/tw);
+    ctx.font = `${fontSize}px "Bebas Neue", Arial, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const cy = y + s(45);
+    ctx.shadowColor = evento.glow; ctx.shadowBlur = s(22);
+    ctx.fillStyle = evento.fill === C.BLANCO ? C.DORADO2 : evento.fill;
+    ctx.fillText(evento.txt, CX, cy);
+    ctx.shadowBlur = 0;
+    ctx.lineWidth = s(5); ctx.strokeStyle = '#000';
+    ctx.strokeText(evento.txt, CX, cy);
+    ctx.fillStyle = evento.fill;
+    ctx.fillText(evento.txt, CX, cy);
+    ctx.textBaseline = 'alphabetic';
+  }
+  y += s(90) + s(30);
+
+  // ── Cronómetro (ícono de reloj + minuto) ────────────────────
+  if(!medirSolo){
+    const minTxt = `${p.minuto || 0}'`;
+    ctx.font = `700 ${s(34)}px "Rajdhani", Arial, sans-serif`;
+    const iconD = s(30), gapIco = s(14);
+    const twMin = ctx.measureText(minTxt).width;
+    const cx0 = CX - (iconD+gapIco+twMin)/2;
+    const cy = y + s(20);
+    ctx.strokeStyle = '#ff5555'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(cx0+iconD/2, cy, iconD/2, 0, Math.PI*2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx0+iconD/2, cy); ctx.lineTo(cx0+iconD/2, cy-iconD*0.32); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx0+iconD/2, cy); ctx.lineTo(cx0+iconD/2+iconD*0.22, cy+iconD*0.14); ctx.stroke();
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#ff5555';
+    ctx.fillText(minTxt, cx0+iconD+gapIco, cy);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  }
+  y += s(40) + s(30);
 
   // ── Escudos + nombres + marcador ───────────────────────────
   const ESCUDO_H = s(110);
