@@ -5229,7 +5229,7 @@ function aplicarIdentidad(){
 }
 function previewLogo(input){
   const file=input.files[0];if(!file)return;
-  comprimirABase64(file, 400, 0.85).then(dataUrl=>{
+  comprimirABase64(file, 400, 0.85, 'image/png').then(dataUrl=>{
     _logoB64=dataUrl;
     const p=document.getElementById('id-logo-preview');if(p)p.src=_logoB64;
     const w=document.getElementById('id-logo-wrap-prev');if(w)w.classList.add('visible');
@@ -5237,7 +5237,7 @@ function previewLogo(input){
 }
 function previewLogoPrimera(input){
   const file=input.files[0];if(!file)return;
-  comprimirABase64(file, 400, 0.85).then(dataUrl=>{
+  comprimirABase64(file, 400, 0.85, 'image/png').then(dataUrl=>{
     _logoPrimeraB64=dataUrl;
     const p=document.getElementById('id-logo-primera-preview');if(p)p.src=_logoPrimeraB64;
     const w=document.getElementById('id-logo-primera-wrap-prev');if(w)w.classList.add('visible');
@@ -5245,7 +5245,7 @@ function previewLogoPrimera(input){
 }
 function previewLogoSegunda(input){
   const file=input.files[0];if(!file)return;
-  comprimirABase64(file, 400, 0.85).then(dataUrl=>{
+  comprimirABase64(file, 400, 0.85, 'image/png').then(dataUrl=>{
     _logoSegundaB64=dataUrl;
     const p=document.getElementById('id-logo-segunda-preview');if(p)p.src=_logoSegundaB64;
     const w=document.getElementById('id-logo-segunda-wrap-prev');if(w)w.classList.add('visible');
@@ -7700,7 +7700,7 @@ let _dmRadioLogoB64 = '';
 
 function dmPreviewLogo(input){
   const file=input.files[0]; if(!file) return;
-  comprimirABase64(file, 300, 0.85).then(dataUrl=>{
+  comprimirABase64(file, 300, 0.85, 'image/png').then(dataUrl=>{
     _dmRadioLogoB64=dataUrl;
     const p=document.getElementById('dm-radio-logo-preview'); if(p) p.src=_dmRadioLogoB64;
     const w=document.getElementById('dm-radio-logo-wrap'); if(w) w.classList.add('visible');
@@ -7972,8 +7972,11 @@ function _noSetUploading(activo){
   btn.style.cursor  = activo ? 'not-allowed' : '';
 }
 
-// Comprime un File de imagen a JPEG (máx maxW px, calidad q) y devuelve un data URL (base64).
-function comprimirABase64(file, maxW=1600, q=0.82){
+// Comprime un File de imagen (máx maxW px, calidad q) y devuelve un data URL (base64).
+// formato: 'image/jpeg' (por defecto, para fotos) o 'image/png' (para escudos/logos,
+// que necesitan mantener el fondo transparente — JPEG no soporta transparencia y
+// la reemplaza por negro al aplanar el canvas).
+function comprimirABase64(file, maxW=1600, q=0.82, formato='image/jpeg'){
   return new Promise((resolve,reject)=>{
     const objUrl = URL.createObjectURL(file);
     const img = new Image();
@@ -7985,7 +7988,7 @@ function comprimirABase64(file, maxW=1600, q=0.82){
       c.width = w; c.height = h;
       c.getContext('2d').drawImage(img,0,0,w,h);
       URL.revokeObjectURL(objUrl);
-      resolve(c.toDataURL('image/jpeg', q));
+      resolve(formato==='image/png' ? c.toDataURL('image/png') : c.toDataURL('image/jpeg', q));
     };
     img.onerror = ()=>{ URL.revokeObjectURL(objUrl); reject(new Error('No se pudo leer la imagen')); };
     img.src = objUrl;
@@ -8670,7 +8673,7 @@ function tfPreviewFoto(input){
 // cargado en la sección Equipos. lado es 'origen' o 'destino'.
 function tfPreviewEscudo(input, lado){
   const file = input.files[0]; if(!file) return;
-  comprimirABase64(file, 300, 0.85).then(dataUrl => {
+  comprimirABase64(file, 300, 0.85, 'image/png').then(dataUrl => {
     if(lado==='origen') _tfEscudoOrigen = dataUrl; else _tfEscudoDestino = dataUrl;
     const prev = document.getElementById(`tf-escudo-${lado}-preview`);
     const wrap = document.getElementById(`tf-escudo-${lado}-wrap`);
@@ -8812,7 +8815,7 @@ function editarTransferencia(id){
 // Comprime y guarda el escudo personalizado dentro del modal de edición de transferencia
 function edTfPreviewEscudo(input, lado){
   const file = input.files[0]; if(!file) return;
-  comprimirABase64(file, 300, 0.85).then(dataUrl=>{
+  comprimirABase64(file, 300, 0.85, 'image/png').then(dataUrl=>{
     if(lado==='origen') window._edTfEscudoOrigen = dataUrl; else window._edTfEscudoDestino = dataUrl;
     const p = document.getElementById(`ed-tf-escudo-${lado}-preview`);
     if(p){ p.src = dataUrl; p.style.display='block'; }
@@ -9687,7 +9690,7 @@ function edToActualizarVisLigaNuevoClub(){
 }
 function edToPreviewNuevoClubEscudo(input){
   const file=input.files[0]; if(!file) return;
-  comprimirABase64(file,300,0.85).then(dataUrl=>{
+  comprimirABase64(file, 300, 0.85, 'image/png').then(dataUrl=>{
     _edToNuevoClubEscudo=dataUrl;
     const p=document.getElementById('ed-to-nuevo-club-escudo-preview'); if(p) p.src=_edToNuevoClubEscudo;
     const w=document.getElementById('ed-to-nuevo-club-escudo-wrap'); if(w) w.classList.add('visible');
@@ -9717,7 +9720,7 @@ function edToAgregarClubNuevo(){
 }
 function edToPreviewLogo(input){
   const file=input.files[0]; if(!file) return;
-  comprimirABase64(file, 400, 0.85).then(dataUrl=>{
+  comprimirABase64(file, 400, 0.85, 'image/png').then(dataUrl=>{
     window._edToLogo=dataUrl;
     const w=document.getElementById('ed-to-logo-wrap');
     if(w) w.innerHTML=`<div class="preview-wrap visible" style="margin-top:6px"><img src="${window._edToLogo}" style="max-height:80px;border-radius:8px"/><button type="button" class="btn-quitar-img" onclick="edToQuitarLogo()">✕ Quitar</button></div>`;
@@ -9774,7 +9777,7 @@ function agregarGoleador(){
 
 function previewEscudo(input){
   const file=input.files[0];if(!file)return;
-  comprimirABase64(file, 300, 0.85).then(dataUrl=>{_escudoB64=dataUrl;const p=document.getElementById('eq-escudo-preview');if(p)p.src=_escudoB64;const w=document.getElementById('eq-escudo-wrap');if(w)w.classList.add('visible');});
+  comprimirABase64(file, 300, 0.85, 'image/png').then(dataUrl=>{_escudoB64=dataUrl;const p=document.getElementById('eq-escudo-preview');if(p)p.src=_escudoB64;const w=document.getElementById('eq-escudo-wrap');if(w)w.classList.add('visible');});
 }
 
 function eqActualizarVisLiga(){
@@ -9844,7 +9847,7 @@ function toActualizarVisLigaNuevoClub(){
 }
 function toPreviewNuevoClubEscudo(input){
   const file=input.files[0]; if(!file) return;
-  comprimirABase64(file,300,0.85).then(dataUrl=>{
+  comprimirABase64(file, 300, 0.85, 'image/png').then(dataUrl=>{
     _toNuevoClubEscudo=dataUrl;
     const p=document.getElementById('to-nuevo-club-escudo-preview'); if(p) p.src=_toNuevoClubEscudo;
     const w=document.getElementById('to-nuevo-club-escudo-wrap'); if(w) w.classList.add('visible');
@@ -9876,7 +9879,7 @@ function toAgregarClubNuevo(){
 let _toLogo='', _toCampeonFoto='';
 function toPreviewLogo(input){
   const file=input.files[0]; if(!file) return;
-  comprimirABase64(file, 400, 0.85).then(dataUrl=>{
+  comprimirABase64(file, 400, 0.85, 'image/png').then(dataUrl=>{
     _toLogo=dataUrl;
     const p=document.getElementById('to-logo-preview'); if(p) p.src=_toLogo;
     const w=document.getElementById('to-logo-wrap'); if(w) w.classList.add('visible');
@@ -9885,7 +9888,7 @@ function toPreviewLogo(input){
 let _pLogoExtra = '';
 function pPreviewLogoExtra(input){
   const file=input.files[0]; if(!file) return;
-  comprimirABase64(file, 400, 0.85).then(dataUrl=>{
+  comprimirABase64(file, 400, 0.85, 'image/png').then(dataUrl=>{
     _pLogoExtra=dataUrl;
     const p=document.getElementById('p-logo-extra-preview'); if(p) p.src=_pLogoExtra;
     const w=document.getElementById('p-logo-extra-wrap'); if(w) w.classList.add('visible');
@@ -9900,7 +9903,7 @@ function pQuitarLogoExtra(){
 let _edLogoExtra = '';
 function edPreviewLogoExtra(input){
   const file=input.files[0]; if(!file) return;
-  comprimirABase64(file, 400, 0.85).then(dataUrl=>{
+  comprimirABase64(file, 400, 0.85, 'image/png').then(dataUrl=>{
     _edLogoExtra=dataUrl;
     const p=document.getElementById('ed-logo-extra-preview'); if(p) p.src=_edLogoExtra;
     const w=document.getElementById('ed-logo-extra-wrap'); if(w) w.classList.add('visible');
@@ -10350,7 +10353,7 @@ function abrirModalEdicion(tipo,id,objOverride){
 
 function editPreviewEscudo(input){
   const file=input.files[0];if(!file)return;
-  comprimirABase64(file, 300, 0.85).then(dataUrl=>{_editEscudoB64=dataUrl;const p=document.getElementById('ed-escudo-preview');p.src=_editEscudoB64;p.style.display='block';});
+  comprimirABase64(file, 300, 0.85, 'image/png').then(dataUrl=>{_editEscudoB64=dataUrl;const p=document.getElementById('ed-escudo-preview');p.src=_editEscudoB64;p.style.display='block';});
 }
 
 function cerrarModalEdicion(){document.getElementById('edit-modal').style.display='none';_editEscudoB64='';}
@@ -11885,14 +11888,15 @@ async function generarImagenPartido(p){
   const logoImgPartido = await cargarImagenAsync(logoParaPartido(p));
   ctx.font = `700 ${s(13)}px "Rajdhani", Arial, sans-serif`;
   if(logoImgPartido){
-    const logoSize = s(20);
+    const logoH = s(20);
+    const logoW = logoH * (logoImgPartido.naturalWidth/logoImgPartido.naturalHeight || 1);
     const textW = ctx.measureText(infoTxt).width;
-    const totalW = textW + logoSize + s(8);
+    const totalW = textW + logoW + s(8);
     const startX = CX - totalW/2;
-    ctx.drawImage(logoImgPartido, startX, infoY - logoSize + s(4), logoSize, logoSize);
+    ctx.drawImage(logoImgPartido, startX, infoY - logoH + s(4), logoW, logoH);
     ctx.fillStyle = 'rgba(201,162,39,0.65)';
     ctx.textAlign = 'left';
-    ctx.fillText(infoTxt, startX + logoSize + s(8), infoY);
+    ctx.fillText(infoTxt, startX + logoW + s(8), infoY);
   } else {
     ctx.fillStyle = 'rgba(201,162,39,0.65)';
     ctx.textAlign = 'center';
@@ -13623,14 +13627,15 @@ async function _generarImagenProximosGrupo(ids){
   ctx.font = `600 ${s(14)}px "DM Sans", Arial, sans-serif`;
   const logoImgPx = await cargarImagenAsync(logoParaPartido(ps[0]));
   if(logoImgPx){
-    const logoSize = s(22);
+    const logoH = s(22);
+    const logoW = logoH * (logoImgPx.naturalWidth/logoImgPx.naturalHeight || 1);
     const textW = ctx.measureText(infoTxtPx).width;
-    const totalW = textW + logoSize + s(8);
+    const totalW = textW + logoW + s(8);
     const startX = CX - totalW/2;
-    ctx.drawImage(logoImgPx, startX, y+s(50)-logoSize+s(4), logoSize, logoSize);
+    ctx.drawImage(logoImgPx, startX, y+s(50)-logoH+s(4), logoW, logoH);
     ctx.fillStyle = 'rgba(201,162,39,0.55)';
     ctx.textAlign = 'left';
-    ctx.fillText(infoTxtPx, startX + logoSize + s(8), y+s(50));
+    ctx.fillText(infoTxtPx, startX + logoW + s(8), y+s(50));
     ctx.textAlign = 'center';
   } else {
     ctx.fillStyle = 'rgba(201,162,39,0.55)';
@@ -14180,14 +14185,15 @@ async function generarImagenReserva(ids){
   ctx.font = `600 ${s(14)}px "DM Sans", Arial, sans-serif`;
   const logoImgRes = await cargarImagenAsync(logoParaPartido(ps[0]));
   if(logoImgRes){
-    const logoSize = s(22);
+    const logoH = s(22);
+    const logoW = logoH * (logoImgRes.naturalWidth/logoImgRes.naturalHeight || 1);
     const textW = ctx.measureText(infoTxtRes).width;
-    const totalW = textW + logoSize + s(8);
+    const totalW = textW + logoW + s(8);
     const startX = CX - totalW/2;
-    ctx.drawImage(logoImgRes, startX, y+s(50)-logoSize+s(4), logoSize, logoSize);
+    ctx.drawImage(logoImgRes, startX, y+s(50)-logoH+s(4), logoW, logoH);
     ctx.fillStyle = 'rgba(201,162,39,0.55)';
     ctx.textAlign = 'left';
-    ctx.fillText(infoTxtRes, startX + logoSize + s(8), y+s(50));
+    ctx.fillText(infoTxtRes, startX + logoW + s(8), y+s(50));
     ctx.textAlign = 'center';
   } else {
     ctx.fillStyle = 'rgba(201,162,39,0.55)';
