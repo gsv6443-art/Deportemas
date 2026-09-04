@@ -12354,8 +12354,9 @@ async function hgCapaEstatica(datos, imgLocal, imgVisit){
   cvFillTextTrunc(ctx, datos.local.toUpperCase(), escLX+ESCUDO_H/2, L.escY+ESCUDO_H+s(44), s(260));
   cvFillTextTrunc(ctx, datos.visit.toUpperCase(), escRX+ESCUDO_H/2, L.escY+ESCUDO_H+s(44), s(260));
 
-  // Panel oscuro detrás del marcador (maqueta C) — el número en sí se
-  // dibuja animado encima, en hgDibujarAnimado, con el mismo tamaño
+  // Panel oscuro detrás del marcador (maqueta C) — el número y el
+  // borde dorado se dibujan encima en hgDibujarAnimado (el borde con
+  // un pulso sutil y continuo, ver el porqué ahí)
   const { previo, nuevo } = hgMarcadorPrevioNuevo(datos);
   ctx.font = `${s(140)}px "Bebas Neue", Arial, sans-serif`;
   const wMarc = Math.max(ctx.measureText(previo).width, ctx.measureText(nuevo).width);
@@ -12363,7 +12364,6 @@ async function hgCapaEstatica(datos, imgLocal, imgVisit){
   const panelCy = L.escY + ESCUDO_H/2;
   cvRoundRect(ctx, CX - panelW/2, panelCy - panelH/2, panelW, panelH, s(12));
   ctx.fillStyle = 'rgba(15,15,20,0.9)'; ctx.fill();
-  ctx.strokeStyle = C.DORADO; ctx.lineWidth = 3; ctx.stroke();
 
   // Minuto — subtítulo chico debajo del marcador (maqueta C)
   ctx.font = `600 ${s(26)}px "Rajdhani", Arial, sans-serif`;
@@ -12476,20 +12476,31 @@ function hgDibujarAnimado(ctx, t, datos, layout, tituloSprite){
   ctx.fillText(texto, 0, 0);
   ctx.restore();
 
+  // Borde dorado del panel — pulso sutil y continuo (no es solo estético:
+  // mientras nada cambia en el cuadro, algunos navegadores dejan de
+  // mandarle cuadros nuevos al grabador, aunque se lo pidamos a mano con
+  // requestFrame() — así el video termina "vacío" pasado cierto punto y
+  // se ve mucho más corto de lo pedido. Este pulso asegura que SIEMPRE
+  // haya algo distinto de un cuadro al siguiente).
+  ctx.font = `${s(140)}px "Bebas Neue", Arial, sans-serif`;
+  const wMarc = Math.max(ctx.measureText(previo).width, ctx.measureText(nuevo).width);
+  const panelW = wMarc + s(100), panelH = s(165);
+  const panelCy = layout.escY + s(61);
+  const pulso = 0.85 + 0.15*Math.sin(t/900);
+  ctx.save();
+  ctx.globalAlpha = pulso;
+  ctx.strokeStyle = C.DORADO;
+  ctx.lineWidth = s(3) * (0.9 + 0.1*Math.sin(t/900));
+  cvRoundRect(ctx, CX - panelW/2, panelCy - panelH/2, panelW, panelH, s(12));
+  ctx.stroke();
+  ctx.restore();
+
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
 }
 
 // Intenta grabar UNA vez con un mimeType puntual, usando un <canvas> que
 // YA está en el DOM y visible (canvasEl). Resuelve con el Blob si salió
 // bien, o rechaza si el navegador lo produjo vacío / incompleto.
-// Ambas animaciones (título deslizando, marcador cambiando de ficha)
-// terminan bastante antes que el video: el título a los ~700ms, el
-// marcador a los ~1250ms. Redibujar todo cuadro a cuadro durante los
-// segundos restantes es trabajo desperdiciado — una vez que termina la
-// animación se "congela" un cuadro final en un canvas aparte y de ahí
-// en más el loop solo copia esa imagen (un drawImage, barato) en vez
-// de repetir transform+drawImage+dibujo animado.
-const HG_ANIM_END = 1250;
 
 function hgIntentarGrabarVideo(canvasEl, capaEstatica, layout, datos, duracionMs, mimeType, tituloSprite){
   return new Promise((resolve, reject) => {
@@ -12542,22 +12553,11 @@ function hgIntentarGrabarVideo(canvasEl, capaEstatica, layout, datos, duracionMs
       recorder.start(200); // timeslice: fuerza volcados periódicos de datos
       if(puedeForzarCuadro) track.requestFrame();
       const t0 = performance.now();
-      let capaFinal = null;
       function loop(){
         const t = performance.now() - t0;
-        if(t < HG_ANIM_END || !capaFinal){
-          ctx.clearRect(0,0,canvas.width,canvas.height);
-          ctx.drawImage(capaEstatica, 0, 0);
-          hgDibujarAnimado(ctx, t, datos, layout, tituloSprite);
-          if(t >= HG_ANIM_END && !capaFinal){
-            capaFinal = document.createElement('canvas');
-            capaFinal.width = canvas.width; capaFinal.height = canvas.height;
-            capaFinal.getContext('2d').drawImage(canvas, 0, 0);
-          }
-        } else {
-          ctx.clearRect(0,0,canvas.width,canvas.height);
-          ctx.drawImage(capaFinal, 0, 0);
-        }
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        ctx.drawImage(capaEstatica, 0, 0);
+        hgDibujarAnimado(ctx, t, datos, layout, tituloSprite);
         if(puedeForzarCuadro) track.requestFrame();
         if(t < duracionMs) requestAnimationFrame(loop);
         else recorder.stop();
