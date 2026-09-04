@@ -12102,16 +12102,12 @@ async function cvBloqueHistoria(ctx, p, opciones, W, yStart, medirSolo){
     ctx.fillText(evento.txt, CX, cy);
     ctx.textBaseline = 'alphabetic';
   }
-  y += s(90) + s(30);
+  y += s(90) + s(22);
 
-  // ── Cronómetro — anillo de progreso (minuto respecto a los 90) ──
-  if(!medirSolo){
-    hgDibujarCronoAnillo(ctx, CX, y + s(20), p.minuto);
-  }
-  y += s(40) + s(30);
-
-  // ── Escudos + nombres + marcador ───────────────────────────
-  const ESCUDO_H = s(110);
+  // ── Escudos + nombres + marcador (maqueta C: el marcador es el
+  // protagonista del bloque, más grande; el minuto baja de jerarquía
+  // y se dibuja como subtítulo chico debajo, ver más abajo) ────────
+  const ESCUDO_H = s(122);
   const escY = y;
   const escLX = s(80);
   const escRX = W - s(80) - ESCUDO_H;
@@ -12119,11 +12115,11 @@ async function cvBloqueHistoria(ctx, p, opciones, W, yStart, medirSolo){
     await cvDrawEscudo(ctx, p.local, escLX, escY, ESCUDO_H);
     await cvDrawEscudo(ctx, p.visit, escRX, escY, ESCUDO_H);
 
-    // Panel oscuro detrás del marcador (maqueta B)
-    ctx.font = `${s(123)}px "Bebas Neue", Arial, sans-serif`;
+    // Panel oscuro detrás del marcador (maqueta C — hero)
+    ctx.font = `${s(140)}px "Bebas Neue", Arial, sans-serif`;
     const marcTxt = p.resultado || '0 - 0';
     const wMarc = ctx.measureText(marcTxt).width;
-    const panelW = wMarc + s(90), panelH = s(150);
+    const panelW = wMarc + s(100), panelH = s(165);
     const panelCy = escY + ESCUDO_H/2;
     cvRoundRect(ctx, CX - panelW/2, panelCy - panelH/2, panelW, panelH, s(12));
     ctx.fillStyle = 'rgba(15,15,20,0.9)'; ctx.fill();
@@ -12141,7 +12137,16 @@ async function cvBloqueHistoria(ctx, p, opciones, W, yStart, medirSolo){
     cvFillTextTrunc(ctx, p.visit.toUpperCase(), escRX + ESCUDO_H/2, escY + ESCUDO_H + s(20), s(260));
     ctx.textBaseline = 'alphabetic';
   }
-  y = escY + ESCUDO_H + s(70);
+  y = escY + ESCUDO_H + s(46);
+
+  // ── Minuto — subtítulo chico debajo del marcador (maqueta C) ────
+  if(!medirSolo){
+    ctx.font = `600 ${s(26)}px "Rajdhani", Arial, sans-serif`;
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    ctx.fillText(`MIN. ${p.minuto || 0}'`, CX, y);
+  }
+  y += s(34);
 
   // ── Divisor dorado ──────────────────────────────────────────
   if(!medirSolo){
@@ -12295,10 +12300,10 @@ function hgDrawEscudo(ctx, img, nombre, x, y, size){
 function hgCalcularLayout(ctx, W, yHeader, H, footH){
   const medir = (yStart) => {
     let y = yStart;
-    y += s(90) + s(30);   // "GOOOOOOOOL" (texto grande tipográfico)
-    y += s(40) + s(30);   // cronómetro
+    y += s(90) + s(22);    // "GOOOOOOOOL" (texto grande tipográfico)
     const escY = y;
-    y = escY + s(110) + s(70); // escudos + nombres — SIN TOCAR (marcador centrado acá)
+    y = escY + s(122) + s(46); // escudos + marcador hero (maqueta C)
+    y += s(26) + s(34);    // minuto — subtítulo chico
     y += s(38);            // divisor
     y += s(72) + s(20);    // autor del gol (recuadro con borde)
     return y;
@@ -12308,13 +12313,13 @@ function hgCalcularLayout(ctx, W, yHeader, H, footH){
   const yInicio = yHeader + Math.max(0, (disponible - contentH) / 2);
 
   let y = yInicio;
-  const badgeY = y; y += s(90) + s(30);
-  const cronoY = y + s(20); y += s(40) + s(30);
-  const escY = y;   y = escY + s(110) + s(70);
+  const badgeY = y; y += s(90) + s(22);
+  const escY = y;   y = escY + s(122) + s(46);
+  const minutoY = y; y += s(26) + s(34);
   const divY = y;   y += s(38);
   const autorY = y;
 
-  return { badgeY, cronoY, escY, divY, autorY };
+  return { badgeY, escY, minutoY, divY, autorY };
 }
 
 async function hgCapaEstatica(datos, imgLocal, imgVisit){
@@ -12338,13 +12343,10 @@ async function hgCapaEstatica(datos, imgLocal, imgVisit){
   const footH = s(40);
   const L = hgCalcularLayout(ctx, W, yHeader, H, footH);
   const CX = W/2;
-
-  // Cronómetro — anillo de progreso (minuto respecto a los 90)
-  hgDibujarCronoAnillo(ctx, CX, L.cronoY, datos.minuto);
   ctx.textAlign = 'center';
 
-  // Escudos + nombres
-  const ESCUDO_H = s(110);
+  // Escudos + nombres (maqueta C — hero)
+  const ESCUDO_H = s(122);
   const escLX = s(80), escRX = W - s(80) - ESCUDO_H;
   hgDrawEscudo(ctx, imgLocal, datos.local, escLX, L.escY, ESCUDO_H);
   hgDrawEscudo(ctx, imgVisit, datos.visit, escRX, L.escY, ESCUDO_H);
@@ -12352,16 +12354,21 @@ async function hgCapaEstatica(datos, imgLocal, imgVisit){
   cvFillTextTrunc(ctx, datos.local.toUpperCase(), escLX+ESCUDO_H/2, L.escY+ESCUDO_H+s(44), s(260));
   cvFillTextTrunc(ctx, datos.visit.toUpperCase(), escRX+ESCUDO_H/2, L.escY+ESCUDO_H+s(44), s(260));
 
-  // Panel oscuro detrás del marcador (maqueta B) — el número en sí se
+  // Panel oscuro detrás del marcador (maqueta C) — el número en sí se
   // dibuja animado encima, en hgDibujarAnimado, con el mismo tamaño
   const { previo, nuevo } = hgMarcadorPrevioNuevo(datos);
-  ctx.font = `${s(123)}px "Bebas Neue", Arial, sans-serif`;
+  ctx.font = `${s(140)}px "Bebas Neue", Arial, sans-serif`;
   const wMarc = Math.max(ctx.measureText(previo).width, ctx.measureText(nuevo).width);
-  const panelW = wMarc + s(90), panelH = s(150);
+  const panelW = wMarc + s(100), panelH = s(165);
   const panelCy = L.escY + ESCUDO_H/2;
   cvRoundRect(ctx, CX - panelW/2, panelCy - panelH/2, panelW, panelH, s(12));
   ctx.fillStyle = 'rgba(15,15,20,0.9)'; ctx.fill();
   ctx.strokeStyle = C.DORADO; ctx.lineWidth = 3; ctx.stroke();
+
+  // Minuto — subtítulo chico debajo del marcador (maqueta C)
+  ctx.font = `600 ${s(26)}px "Rajdhani", Arial, sans-serif`;
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.fillText(`MIN. ${datos.minuto || 0}'`, CX, L.minutoY + s(20));
 
   // Divisor
   ctx.fillStyle = C.DORADO; ctx.fillRect(s(40), L.divY, W-s(80), 2);
@@ -12394,34 +12401,56 @@ function hgMarcadorPrevioNuevo(datos){
   return { previo: `${pL} - ${pV}`, nuevo: `${L} - ${V}` };
 }
 
-function hgDibujarAnimado(ctx, t, datos, layout){
+// Pre-renderiza "GOOOOOOOOL" con su resplandor UNA sola vez, offscreen.
+// shadowBlur es carísimo en Canvas2D — hacerlo cuadro a cuadro durante
+// varios segundos es lo que trababa la página al grabar. Acá se paga
+// el costo una sola vez y en el loop de animación solo se copia la
+// imagen ya lista con drawImage (translate + scale), mucho más barato.
+function hgCrearSpriteTitulo(){
+  const txt = 'GOOOOOOOOL';
+  const fontSize = s(80);
+  const font = `${fontSize}px "Bebas Neue", Arial, sans-serif`;
+  const medirCtx = document.createElement('canvas').getContext('2d');
+  medirCtx.font = font;
+  const tw = medirCtx.measureText(txt).width;
+  const blur = s(22), stroke = s(5);
+  const padX = blur*2 + stroke*2 + s(20);
+  const padY = fontSize*0.7 + blur*2 + stroke*2;
+  const w = Math.ceil(tw + padX*2), h = Math.ceil(padY*2);
+  const cvs = document.createElement('canvas');
+  cvs.width = w; cvs.height = h;
+  const ctx = cvs.getContext('2d');
+  const cx = w/2, cy = h/2;
+  ctx.font = font;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.shadowColor = 'rgba(240,192,64,0.9)';
+  ctx.shadowBlur = blur;
+  ctx.fillStyle = C.DORADO2;
+  ctx.fillText(txt, cx, cy);
+  ctx.shadowBlur = 0;
+  ctx.lineWidth = stroke;
+  ctx.strokeStyle = '#000';
+  ctx.strokeText(txt, cx, cy);
+  ctx.fillStyle = C.BLANCO;
+  ctx.fillText(txt, cx, cy);
+  return { canvas: cvs, w, h };
+}
+
+function hgDibujarAnimado(ctx, t, datos, layout, tituloSprite){
   const W = CV_W_HIST, CX = W/2;
 
   // "GOOOOOOOOL" — desliza de izquierda a derecha como un tren llegando
   // y frenando (sin rebote, sin pulso: una sola vez y queda fijo)
   const bStart = 150, bIn = 550;
   const pB = Math.max(0, Math.min(1, (t-bStart)/bIn));
-  if(pB > 0){
+  if(pB > 0 && tituloSprite){
     const eased = easeOutCubic(pB);
     const offsetX = (1 - eased) * -(W*0.9);
-    ctx.save();
-    ctx.translate(CX + offsetX, layout.badgeY + s(45));
-    ctx.font = `${s(80)}px "Bebas Neue", Arial, sans-serif`;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    const txt = 'GOOOOOOOOL';
-    // resplandor dorado detrás
-    ctx.shadowColor = 'rgba(240,192,64,0.9)';
-    ctx.shadowBlur = s(22);
-    ctx.fillStyle = C.DORADO2;
-    ctx.fillText(txt, 0, 0);
-    ctx.shadowBlur = 0;
-    // contorno oscuro + relleno blanco encima, nítido
-    ctx.lineWidth = s(5);
-    ctx.strokeStyle = '#000';
-    ctx.strokeText(txt, 0, 0);
-    ctx.fillStyle = C.BLANCO;
-    ctx.fillText(txt, 0, 0);
-    ctx.restore();
+    ctx.drawImage(
+      tituloSprite.canvas,
+      CX + offsetX - tituloSprite.w/2,
+      layout.badgeY + s(45) - tituloSprite.h/2
+    );
   }
 
   // Marcador: sostiene el resultado anterior y "cambia de ficha" al nuevo
@@ -12440,9 +12469,9 @@ function hgDibujarAnimado(ctx, t, datos, layout){
     texto = nuevo; escala = 1;
   }
   ctx.save();
-  ctx.translate(CX, layout.escY + s(55));
+  ctx.translate(CX, layout.escY + s(61));
   ctx.scale(Math.max(0.01,escala), Math.max(0.01,escala));
-  ctx.font = `${s(123)}px "Bebas Neue", Arial, sans-serif`;
+  ctx.font = `${s(140)}px "Bebas Neue", Arial, sans-serif`;
   ctx.fillStyle = C.DORADO2; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText(texto, 0, 0);
   ctx.restore();
@@ -12453,13 +12482,22 @@ function hgDibujarAnimado(ctx, t, datos, layout){
 // Intenta grabar UNA vez con un mimeType puntual, usando un <canvas> que
 // YA está en el DOM y visible (canvasEl). Resuelve con el Blob si salió
 // bien, o rechaza si el navegador lo produjo vacío / incompleto.
-function hgIntentarGrabarVideo(canvasEl, capaEstatica, layout, datos, duracionMs, mimeType){
+// Ambas animaciones (título deslizando, marcador cambiando de ficha)
+// terminan bastante antes que el video: el título a los ~700ms, el
+// marcador a los ~1250ms. Redibujar todo cuadro a cuadro durante los
+// segundos restantes es trabajo desperdiciado — una vez que termina la
+// animación se "congela" un cuadro final en un canvas aparte y de ahí
+// en más el loop solo copia esa imagen (un drawImage, barato) en vez
+// de repetir transform+drawImage+dibujo animado.
+const HG_ANIM_END = 1250;
+
+function hgIntentarGrabarVideo(canvasEl, capaEstatica, layout, datos, duracionMs, mimeType, tituloSprite){
   return new Promise((resolve, reject) => {
     const canvas = canvasEl;
     canvas.width = CV_W_HIST; canvas.height = CV_H_HIST;
     const ctx = canvas.getContext('2d');
     ctx.drawImage(capaEstatica, 0, 0);
-    hgDibujarAnimado(ctx, 0, datos, layout);
+    hgDibujarAnimado(ctx, 0, datos, layout, tituloSprite);
 
     if(!canvas.captureStream){
       reject(new Error('Este navegador no soporta captureStream.')); return;
@@ -12504,11 +12542,22 @@ function hgIntentarGrabarVideo(canvasEl, capaEstatica, layout, datos, duracionMs
       recorder.start(200); // timeslice: fuerza volcados periódicos de datos
       if(puedeForzarCuadro) track.requestFrame();
       const t0 = performance.now();
+      let capaFinal = null;
       function loop(){
         const t = performance.now() - t0;
-        ctx.clearRect(0,0,canvas.width,canvas.height);
-        ctx.drawImage(capaEstatica, 0, 0);
-        hgDibujarAnimado(ctx, t, datos, layout);
+        if(t < HG_ANIM_END || !capaFinal){
+          ctx.clearRect(0,0,canvas.width,canvas.height);
+          ctx.drawImage(capaEstatica, 0, 0);
+          hgDibujarAnimado(ctx, t, datos, layout, tituloSprite);
+          if(t >= HG_ANIM_END && !capaFinal){
+            capaFinal = document.createElement('canvas');
+            capaFinal.width = canvas.width; capaFinal.height = canvas.height;
+            capaFinal.getContext('2d').drawImage(canvas, 0, 0);
+          }
+        } else {
+          ctx.clearRect(0,0,canvas.width,canvas.height);
+          ctx.drawImage(capaFinal, 0, 0);
+        }
         if(puedeForzarCuadro) track.requestFrame();
         if(t < duracionMs) requestAnimationFrame(loop);
         else recorder.stop();
@@ -12526,13 +12575,14 @@ function hgIntentarGrabarVideo(canvasEl, capaEstatica, layout, datos, duracionMs
  * canvasEl debe ser un <canvas> visible ya insertado en el DOM (evita que
  * el navegador deje de "pintarlo" durante la grabación).
  */
-async function generarVideoHistoriaGol(datos, canvasEl, duracionMs = 6000){
+async function generarVideoHistoriaGol(datos, canvasEl, duracionMs = 7500){
   await document.fonts.ready;
   const [imgLocal, imgVisit] = await Promise.all([
     hgCargarImgEscudo(datos.local),
     hgCargarImgEscudo(datos.visit),
   ]);
   const { canvas: capaEstatica, layout } = await hgCapaEstatica(datos, imgLocal, imgVisit);
+  const tituloSprite = hgCrearSpriteTitulo();
 
   // WebM primero: es lo más confiable para grabar un canvas en Chrome/Firefox/Android.
   // MP4 queda como alternativa (necesario en Safari/iOS, que no soporta WebM).
@@ -12548,7 +12598,7 @@ async function generarVideoHistoriaGol(datos, canvasEl, duracionMs = 6000){
   for(const mimeType of candidatos){
     if(mimeType && !(window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(mimeType))) continue;
     try{
-      const blob = await hgIntentarGrabarVideo(canvasEl, capaEstatica, layout, datos, duracionMs, mimeType);
+      const blob = await hgIntentarGrabarVideo(canvasEl, capaEstatica, layout, datos, duracionMs, mimeType, tituloSprite);
       if(blob && blob.size) return blob;
     }catch(e){
       ultimoError = e;
