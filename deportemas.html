@@ -3017,8 +3017,6 @@ table.posiciones td:nth-child(8){
 .btn-share svg{width:13px;height:13px;flex-shrink:0;}
 #share-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:8000;align-items:center;justify-content:center;padding:1rem;}
 #share-modal.open{display:flex;}
-#video-share-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:8000;align-items:center;justify-content:center;padding:1rem;}
-#video-share-modal.open{display:flex;}
 .share-box{background:var(--negro2);border:1px solid var(--dorado-border);border-radius:var(--r-lg);width:460px;max-width:98vw;box-shadow:0 12px 60px rgba(0,0,0,.9);overflow:hidden;}
 .share-box-header{background:linear-gradient(90deg,var(--negro4),rgba(201,162,39,.15));border-bottom:1px solid var(--dorado-border);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;}
 .share-box-header span{font-family:'Rajdhani',sans-serif;font-weight:900;font-size:16px;color:var(--dorado);letter-spacing:1.2px;}
@@ -3275,39 +3273,6 @@ table.posiciones td:nth-child(8){
       </button>
     </div>
     <div class="share-note" id="share-note"></div>
-  </div>
-</div>
-
-<!-- HISTORIA DE GOL — video -->
-<div id="video-share-modal">
-  <div class="share-box">
-    <div class="share-box-header">
-      <span>🎬 Historia de Gol</span>
-      <button class="share-box-close" onclick="cerrarVideoShare()">✕</button>
-    </div>
-    <div class="share-img-preview-wrap" id="video-share-wrap">
-      <div class="share-img-loading" id="video-share-loading">
-        <div class="share-spinner"></div>
-        Generando video...
-      </div>
-      <canvas id="video-share-live-canvas" style="display:none;width:100%;border-radius:8px"></canvas>
-      <video id="video-share-preview" style="display:none;width:100%;border-radius:8px" muted playsinline loop autoplay></video>
-    </div>
-    <div class="share-redes">
-      <button class="share-red-btn instagram" onclick="compartirVideoEn('instagram')">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
-        Instagram
-      </button>
-      <button class="share-red-btn whatsapp" onclick="compartirVideoEn('whatsapp')">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347"/></svg>
-        WhatsApp
-      </button>
-      <button class="share-red-btn descargar" onclick="descargarVideoHistoria()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Descargar video
-      </button>
-    </div>
-    <div class="share-note" id="video-share-note"></div>
   </div>
 </div>
 
@@ -4638,7 +4603,7 @@ table.posiciones td:nth-child(8){
             <option value="inicio">Inicio del partido</option>
             <option value="entretiempo">Fin del primer tiempo</option>
             <option value="segundo-tiempo">Inicio del segundo tiempo</option>
-            <option value="gol" selected>Gol (video animado)</option>
+            <option value="gol" selected>Gol</option>
             <option value="penales">Se define por penales</option>
             <option value="final">Final del partido</option>
           </select>
@@ -4694,7 +4659,7 @@ table.posiciones td:nth-child(8){
         </div>
 
         <div style="display:flex;gap:8px;margin-top:14px">
-          <button class="btn-primary" id="hg-generar-btn" onclick="hgGenerar()">🎬 Generar</button>
+          <button class="btn-primary" id="hg-generar-btn" onclick="hgGenerar()">🖼️ Generar</button>
           <button class="btn-edit" onclick="hgLimpiarForm()">Limpiar</button>
         </div>
       </div>
@@ -12070,44 +12035,45 @@ async function cvBloqueHistoria(ctx, p, opciones, W, yStart, medirSolo){
   const CX = W / 2;
   let y = yStart;
 
-  // ── Texto grande del evento — misma tipografía que "GOOOOOOOOL"
-  // del video: Bebas Neue grande, contorno negro y resplandor de color ──
+  // ── Cinta editorial del evento (maqueta A) — banda angulada tipo
+  // zócalo de transmisión deportiva, mucho más compacta que el título
+  // gigante de antes: por eso queda bien más cerca del marcador ──────
   const eventos = {
-    'en-vivo':        { txt: 'EN VIVO',               fill: C.BLANCO,  glow: 'rgba(255,85,85,0.8)' },
-    'inicio':         { txt: '¡COMENZÓ EL PARTIDO!',  fill: C.BLANCO,  glow: 'rgba(240,192,64,0.9)' },
-    'gol':            { txt: 'GOOOOOOOOL',            fill: C.BLANCO,  glow: 'rgba(240,192,64,0.9)' },
-    'tarjeta':        { txt: 'TARJETA',                fill: '#ffdd66', glow: 'rgba(255,221,102,0.7)' },
-    'entretiempo':    { txt: 'ENTRETIEMPO',            fill: C.BLANCO,  glow: 'rgba(240,192,64,0.9)' },
-    'segundo-tiempo': { txt: 'COMIENZA EL 2ºT',        fill: C.BLANCO,  glow: 'rgba(240,192,64,0.9)' },
-    'penales':        { txt: 'DEFINICIÓN POR PENALES', fill: '#ffdd66', glow: 'rgba(255,221,102,0.7)' },
-    'final':          { txt: 'FINAL',                  fill: '#4caf74', glow: 'rgba(76,175,116,0.7)' },
+    'en-vivo':        { txt: 'EN VIVO',               ribbonBg: '#e05555', ribbonText: C.BLANCO, accent: '#e05555' },
+    'inicio':         { txt: 'COMENZÓ EL PARTIDO',    ribbonBg: C.DORADO,  ribbonText: C.NEG,    accent: C.DORADO },
+    'gol':            { txt: 'GOL',                    ribbonBg: C.DORADO,  ribbonText: C.NEG,    accent: C.DORADO },
+    'tarjeta':        { txt: 'TARJETA',                ribbonBg: '#ffdd66', ribbonText: C.NEG,    accent: '#ffdd66' },
+    'entretiempo':    { txt: 'ENTRETIEMPO',            ribbonBg: C.DORADO,  ribbonText: C.NEG,    accent: C.DORADO },
+    'segundo-tiempo': { txt: 'COMIENZA EL 2ºT',        ribbonBg: C.DORADO,  ribbonText: C.NEG,    accent: C.DORADO },
+    'penales':        { txt: 'DEFINICIÓN POR PENALES', ribbonBg: '#ffdd66', ribbonText: C.NEG,    accent: '#ffdd66' },
+    'final':          { txt: 'FINAL',                  ribbonBg: '#4caf74', ribbonText: C.BLANCO, accent: '#4caf74' },
   };
   const evento = eventos[tipoEvento] || eventos['en-vivo'];
   if(!medirSolo){
-    let fontSize = s(80);
-    ctx.font = `${fontSize}px "Bebas Neue", Arial, sans-serif`;
-    const maxW = W - s(120);
+    let fontSize = s(30);
+    ctx.font = `600 ${fontSize}px "Rajdhani", Arial, sans-serif`;
+    const maxW = W - s(160);
     const tw = ctx.measureText(evento.txt).width;
     if(tw > maxW) fontSize = fontSize * (maxW/tw);
-    ctx.font = `${fontSize}px "Bebas Neue", Arial, sans-serif`;
+    ctx.font = `600 ${fontSize}px "Rajdhani", Arial, sans-serif`;
+    const padX = s(26), padY = s(15);
+    const rw = ctx.measureText(evento.txt).width + padX*2, rh = fontSize + padY*2;
+    ctx.save();
+    ctx.translate(CX, y + s(32));
+    ctx.rotate(-4 * Math.PI/180);
+    cvRoundRect(ctx, -rw/2, -rh/2, rw, rh, s(6));
+    ctx.fillStyle = evento.ribbonBg; ctx.fill();
+    ctx.fillStyle = evento.ribbonText;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    const cy = y + s(45);
-    ctx.shadowColor = evento.glow; ctx.shadowBlur = s(22);
-    ctx.fillStyle = evento.fill === C.BLANCO ? C.DORADO2 : evento.fill;
-    ctx.fillText(evento.txt, CX, cy);
-    ctx.shadowBlur = 0;
-    ctx.lineWidth = s(5); ctx.strokeStyle = '#000';
-    ctx.strokeText(evento.txt, CX, cy);
-    ctx.fillStyle = evento.fill;
-    ctx.fillText(evento.txt, CX, cy);
+    ctx.fillText(evento.txt, 0, s(2));
+    ctx.restore();
     ctx.textBaseline = 'alphabetic';
   }
-  y += s(90) + s(22);
+  y += s(72) + s(20);
 
-  // ── Escudos + nombres + marcador (maqueta C: el marcador es el
-  // protagonista del bloque, más grande; el minuto baja de jerarquía
-  // y se dibuja como subtítulo chico debajo, ver más abajo) ────────
-  const ESCUDO_H = s(122);
+  // ── Escudos + nombres + marcador (el marcador sigue siendo el
+  // protagonista del bloque, más grande) ───────────────────────────
+  const ESCUDO_H = s(110);
   const escY = y;
   const escLX = s(80);
   const escRX = W - s(80) - ESCUDO_H;
@@ -12115,11 +12081,22 @@ async function cvBloqueHistoria(ctx, p, opciones, W, yStart, medirSolo){
     await cvDrawEscudo(ctx, p.local, escLX, escY, ESCUDO_H);
     await cvDrawEscudo(ctx, p.visit, escRX, escY, ESCUDO_H);
 
-    // Panel oscuro detrás del marcador (maqueta C — hero)
-    ctx.font = `${s(140)}px "Bebas Neue", Arial, sans-serif`;
+    // Panel oscuro detrás del marcador. El ancho se acota al hueco real
+    // que dejan los escudos (si no, con marcadores largos como "10 - 8"
+    // el panel termina comiéndose los escudos), y el alto se deriva del
+    // de los escudos (si no, un panel más alto que ESCUDO_H termina
+    // invadiendo la fila de nombres de equipo que va justo debajo).
+    const maxPanelW = (escRX - (escLX + ESCUDO_H)) - s(24);
+    let markerFont = s(140);
+    ctx.font = `${markerFont}px "Bebas Neue", Arial, sans-serif`;
     const marcTxt = p.resultado || '0 - 0';
-    const wMarc = ctx.measureText(marcTxt).width;
-    const panelW = wMarc + s(100), panelH = s(165);
+    let wMarc = ctx.measureText(marcTxt).width;
+    if(wMarc + s(100) > maxPanelW){
+      markerFont = Math.max(s(70), Math.floor(markerFont * (maxPanelW - s(100)) / wMarc));
+      ctx.font = `${markerFont}px "Bebas Neue", Arial, sans-serif`;
+      wMarc = ctx.measureText(marcTxt).width;
+    }
+    const panelW = Math.min(wMarc + s(100), maxPanelW), panelH = ESCUDO_H + s(24);
     const panelCy = escY + ESCUDO_H/2;
     cvRoundRect(ctx, CX - panelW/2, panelCy - panelH/2, panelW, panelH, s(12));
     ctx.fillStyle = 'rgba(15,15,20,0.9)'; ctx.fill();
@@ -12137,35 +12114,22 @@ async function cvBloqueHistoria(ctx, p, opciones, W, yStart, medirSolo){
     cvFillTextTrunc(ctx, p.visit.toUpperCase(), escRX + ESCUDO_H/2, escY + ESCUDO_H + s(20), s(260));
     ctx.textBaseline = 'alphabetic';
   }
-  y = escY + ESCUDO_H + s(46);
+  y = escY + ESCUDO_H + s(56);
 
-  // ── Minuto — subtítulo chico debajo del marcador (maqueta C) ────
+  // ── Línea de acento — corta, con el color del evento (maqueta A) ──
   if(!medirSolo){
-    ctx.font = `600 ${s(26)}px "Rajdhani", Arial, sans-serif`;
-    ctx.fillStyle = 'rgba(255,255,255,0.55)';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-    ctx.fillText(`MIN. ${p.minuto || 0}'`, CX, y);
+    ctx.fillStyle = evento.accent;
+    ctx.fillRect(CX - s(35), y, s(70), s(4));
   }
-  y += s(34);
+  y += s(28);
 
-  // ── Divisor dorado ──────────────────────────────────────────
-  if(!medirSolo){
-    const divGrad = ctx.createLinearGradient(0, y, W, y);
-    divGrad.addColorStop(0, 'transparent');
-    divGrad.addColorStop(0.2, C.DORADO);
-    divGrad.addColorStop(0.8, C.DORADO);
-    divGrad.addColorStop(1, 'transparent');
-    ctx.fillStyle = divGrad;
-    ctx.fillRect(0, y, W, 2);
-  }
-  y += s(38);
-
-  // ── Detalle del evento (gol / tarjeta / penales) ────────────
+  // ── Detalle del evento (gol / tarjeta / penales) o minuto genérico ──
   if(esGol && golData){
     if(!medirSolo){
       const eqNom = golData.equipo === 'local' ? p.local : p.visit;
       ctx.fillStyle = C.BLANCO;
       ctx.font = `700 ${s(27)}px "Rajdhani", Arial, sans-serif`;
+      ctx.textAlign = 'center';
       ctx.fillText(`⚽ GOL DE ${eqNom.toUpperCase()}`, CX, y);
     }
     y += s(42);
@@ -12181,6 +12145,7 @@ async function cvBloqueHistoria(ctx, p, opciones, W, yStart, medirSolo){
       const col = tarjetaData.color === 'roja' ? '#e05555' : '#ffdd66';
       ctx.fillStyle = col;
       ctx.font = `700 ${s(24)}px "Rajdhani", Arial, sans-serif`;
+      ctx.textAlign = 'center';
       ctx.fillText(`TARJETA ${tarjetaData.color.toUpperCase()} · ${tarjetaData.jugador} · ${eqNom.toUpperCase()}`, CX, y);
     }
     y += s(20);
@@ -12188,16 +12153,45 @@ async function cvBloqueHistoria(ctx, p, opciones, W, yStart, medirSolo){
     if(!medirSolo){
       ctx.fillStyle = C.BLANCO;
       ctx.font = `700 ${s(27)}px "Rajdhani", Arial, sans-serif`;
+      ctx.textAlign = 'center';
       ctx.fillText('PENALES', CX, y);
     }
     y += s(42);
     if(!medirSolo){
       ctx.fillStyle = C.DORADO;
       ctx.font = `700 ${s(34)}px "Bebas Neue", Arial, sans-serif`;
+      ctx.textAlign = 'center';
       ctx.fillText(opciones.penales, CX, y+s(6));
     }
     y += s(20);
+  } else {
+    if(!medirSolo){
+      ctx.font = `600 ${s(26)}px "Rajdhani", Arial, sans-serif`;
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+      ctx.fillText(`MIN. ${p.minuto || 0}'`, CX, y);
+    }
+    y += s(20);
   }
+
+  // ── Franja angular al pie del bloque (maqueta A) — flourish sutil,
+  // muy baja opacidad, con el color del evento ────────────────────
+  y += s(22);
+  if(!medirSolo){
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(W, y - s(16));
+    ctx.lineTo(W, y + s(16));
+    ctx.lineTo(0, y + s(16));
+    ctx.closePath();
+    ctx.clip();
+    ctx.globalAlpha = 0.10;
+    ctx.fillStyle = evento.accent;
+    ctx.fillRect(0, y - s(16), W, s(32));
+    ctx.restore();
+  }
+  y += s(16);
 
   return y;
 }
@@ -12240,373 +12234,6 @@ async function generarImagenHistoriaPartido(p, opciones = {}){
   return canvas;
 }
 
-/* ══════════════════════════════════════════════════════════════
-   HISTORIA DE GOL — video animado desde el panel de admin
-   ══════════════════════════════════════════════════════════════ */
-
-function easeOutBack(t){
-  const c1 = 1.70158, c3 = c1 + 1;
-  return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
-}
-
-function easeOutCubic(t){
-  return 1 - Math.pow(1 - t, 3);
-}
-
-// Cronómetro en forma de anillo de progreso (minuto respecto a los 90).
-// Se usa igual en el video y en las imágenes estáticas.
-function hgDibujarCronoAnillo(ctx, cx, cy, minuto){
-  const r = s(36);
-  const frac = Math.max(0, Math.min(1, (minuto || 0) / 90));
-  ctx.lineCap = 'round';
-  ctx.lineWidth = s(5);
-  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
-  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.stroke();
-  ctx.strokeStyle = C.DORADO2;
-  ctx.beginPath(); ctx.arc(cx, cy, r, -Math.PI/2, -Math.PI/2 + Math.PI*2*frac); ctx.stroke();
-  ctx.lineCap = 'butt';
-  ctx.fillStyle = C.BLANCO;
-  ctx.font = `700 ${s(25)}px "Rajdhani", Arial, sans-serif`;
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText(`${minuto || 0}'`, cx, cy);
-  ctx.textBaseline = 'alphabetic';
-}
-
-function hgCargarImgEscudo(nombre){
-  return new Promise(resolve => {
-    const entry = escudos[nombre] || escudos[normalizar(nombre)];
-    const src = entry && typeof entry === 'object' ? entry.img : entry;
-    if(!src){ resolve(null); return; }
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = () => resolve(null);
-    img.src = src;
-  });
-}
-
-function hgDrawEscudo(ctx, img, nombre, x, y, size){
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(x+size/2, y+size/2, size/2, 0, Math.PI*2);
-  if(img){ ctx.clip(); cvDrawEscudoImg(ctx, img, x, y, size); ctx.restore(); return; }
-  ctx.fillStyle = 'rgba(201,162,39,0.15)'; ctx.fill(); ctx.restore();
-  ctx.fillStyle = C.DORADO;
-  ctx.font = `700 ${Math.round(size*0.38)}px Arial`;
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText((nombre||'?').substring(0,2).toUpperCase(), x+size/2, y+size/2);
-  ctx.textBaseline = 'alphabetic';
-}
-
-function hgCalcularLayout(ctx, W, yHeader, H, footH){
-  const medir = (yStart) => {
-    let y = yStart;
-    y += s(90) + s(22);    // "GOOOOOOOOL" (texto grande tipográfico)
-    const escY = y;
-    y = escY + s(122) + s(46); // escudos + marcador hero (maqueta C)
-    y += s(26) + s(34);    // minuto — subtítulo chico
-    y += s(38);            // divisor
-    y += s(72) + s(20);    // autor del gol (recuadro con borde)
-    return y;
-  };
-  const contentH = medir(0);
-  const disponible = (H - footH) - yHeader;
-  const yInicio = yHeader + Math.max(0, (disponible - contentH) / 2);
-
-  let y = yInicio;
-  const badgeY = y; y += s(90) + s(22);
-  const escY = y;   y = escY + s(122) + s(46);
-  const minutoY = y; y += s(26) + s(34);
-  const divY = y;   y += s(38);
-  const autorY = y;
-
-  return { badgeY, escY, minutoY, divY, autorY };
-}
-
-async function hgCapaEstatica(datos, imgLocal, imgVisit){
-  const W = CV_W_HIST, H = CV_H_HIST;
-  const cvs = document.createElement('canvas');
-  cvs.width = W; cvs.height = H;
-  const ctx = cvs.getContext('2d');
-  const id = getIdentidad();
-
-  const bg = ctx.createLinearGradient(0,0,0,H);
-  bg.addColorStop(0, C.NEG3); bg.addColorStop(1, C.NEG);
-  ctx.fillStyle = bg; ctx.fillRect(0,0,W,H);
-  const v1 = ctx.createRadialGradient(W*0.15,H*0.06,0,W*0.15,H*0.06,W*0.6);
-  v1.addColorStop(0,'rgba(201,162,39,0.06)'); v1.addColorStop(1,'transparent');
-  ctx.fillStyle=v1; ctx.fillRect(0,0,W,H);
-  const v2 = ctx.createRadialGradient(W*0.85,H*0.92,0,W*0.85,H*0.92,W*0.6);
-  v2.addColorStop(0,'rgba(201,162,39,0.04)'); v2.addColorStop(1,'transparent');
-  ctx.fillStyle=v2; ctx.fillRect(0,0,W,H);
-
-  const yHeader = await cvHeader(ctx, W, id, 0);
-  const footH = s(40);
-  const L = hgCalcularLayout(ctx, W, yHeader, H, footH);
-  const CX = W/2;
-  ctx.textAlign = 'center';
-
-  // Escudos + nombres (maqueta C — hero)
-  const ESCUDO_H = s(122);
-  const escLX = s(80), escRX = W - s(80) - ESCUDO_H;
-  hgDrawEscudo(ctx, imgLocal, datos.local, escLX, L.escY, ESCUDO_H);
-  hgDrawEscudo(ctx, imgVisit, datos.visit, escRX, L.escY, ESCUDO_H);
-  ctx.font = `54px "Bebas Neue", Arial, sans-serif`; ctx.fillStyle = C.BLANCO;
-  cvFillTextTrunc(ctx, datos.local.toUpperCase(), escLX+ESCUDO_H/2, L.escY+ESCUDO_H+s(44), s(260));
-  cvFillTextTrunc(ctx, datos.visit.toUpperCase(), escRX+ESCUDO_H/2, L.escY+ESCUDO_H+s(44), s(260));
-
-  // Panel oscuro detrás del marcador (maqueta C) — el número y el
-  // borde dorado se dibujan encima en hgDibujarAnimado (el borde con
-  // un pulso sutil y continuo, ver el porqué ahí)
-  const { previo, nuevo } = hgMarcadorPrevioNuevo(datos);
-  ctx.font = `${s(140)}px "Bebas Neue", Arial, sans-serif`;
-  const wMarc = Math.max(ctx.measureText(previo).width, ctx.measureText(nuevo).width);
-  const panelW = wMarc + s(100), panelH = s(165);
-  const panelCy = L.escY + ESCUDO_H/2;
-  cvRoundRect(ctx, CX - panelW/2, panelCy - panelH/2, panelW, panelH, s(12));
-  ctx.fillStyle = 'rgba(15,15,20,0.9)'; ctx.fill();
-
-  // Minuto — subtítulo chico debajo del marcador (maqueta C)
-  ctx.font = `600 ${s(26)}px "Rajdhani", Arial, sans-serif`;
-  ctx.fillStyle = 'rgba(255,255,255,0.55)';
-  ctx.fillText(`MIN. ${datos.minuto || 0}'`, CX, L.minutoY + s(20));
-
-  // Divisor
-  ctx.fillStyle = C.DORADO; ctx.fillRect(s(40), L.divY, W-s(80), 2);
-
-  // Autor del gol — recuadro con borde fino (maqueta E)
-  ctx.font = `700 ${s(32)}px "Rajdhani", Arial, sans-serif`;
-  const nombreTxt = (datos.jugador||'').toUpperCase();
-  const twNombre = ctx.measureText(nombreTxt).width;
-  const padX = s(35), padY = s(20);
-  const boxW = twNombre + padX*2, boxH = s(32) + padY*2;
-  const boxX = CX - boxW/2, boxY = L.autorY;
-  ctx.strokeStyle = C.DORADO2; ctx.lineWidth = 3;
-  ctx.strokeRect(boxX, boxY, boxW, boxH);
-  ctx.fillStyle = C.DORADO2; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText(nombreTxt, CX, boxY + boxH/2);
-  ctx.textBaseline = 'alphabetic';
-
-  cvFooter(ctx, W, H - footH, id.nombre || 'DEPORTEMAS');
-
-  return { canvas: cvs, layout: L };
-}
-
-function hgMarcadorPrevioNuevo(datos){
-  const m = (datos.resultado || '0 - 0').match(/(\d+)\s*-\s*(\d+)/);
-  let L = 0, V = 0;
-  if(m){ L = parseInt(m[1], 10); V = parseInt(m[2], 10); }
-  let pL = L, pV = V;
-  if(datos.convierte === 'visit') pV = Math.max(0, V-1);
-  else pL = Math.max(0, L-1);
-  return { previo: `${pL} - ${pV}`, nuevo: `${L} - ${V}` };
-}
-
-// Pre-renderiza "GOOOOOOOOL" con su resplandor UNA sola vez, offscreen.
-// shadowBlur es carísimo en Canvas2D — hacerlo cuadro a cuadro durante
-// varios segundos es lo que trababa la página al grabar. Acá se paga
-// el costo una sola vez y en el loop de animación solo se copia la
-// imagen ya lista con drawImage (translate + scale), mucho más barato.
-function hgCrearSpriteTitulo(){
-  const txt = 'GOOOOOOOOL';
-  const fontSize = s(80);
-  const font = `${fontSize}px "Bebas Neue", Arial, sans-serif`;
-  const medirCtx = document.createElement('canvas').getContext('2d');
-  medirCtx.font = font;
-  const tw = medirCtx.measureText(txt).width;
-  const blur = s(22), stroke = s(5);
-  const padX = blur*2 + stroke*2 + s(20);
-  const padY = fontSize*0.7 + blur*2 + stroke*2;
-  const w = Math.ceil(tw + padX*2), h = Math.ceil(padY*2);
-  const cvs = document.createElement('canvas');
-  cvs.width = w; cvs.height = h;
-  const ctx = cvs.getContext('2d');
-  const cx = w/2, cy = h/2;
-  ctx.font = font;
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.shadowColor = 'rgba(240,192,64,0.9)';
-  ctx.shadowBlur = blur;
-  ctx.fillStyle = C.DORADO2;
-  ctx.fillText(txt, cx, cy);
-  ctx.shadowBlur = 0;
-  ctx.lineWidth = stroke;
-  ctx.strokeStyle = '#000';
-  ctx.strokeText(txt, cx, cy);
-  ctx.fillStyle = C.BLANCO;
-  ctx.fillText(txt, cx, cy);
-  return { canvas: cvs, w, h };
-}
-
-function hgDibujarAnimado(ctx, t, datos, layout, tituloSprite){
-  const W = CV_W_HIST, CX = W/2;
-
-  // "GOOOOOOOOL" — desliza de izquierda a derecha como un tren llegando
-  // y frenando (sin rebote, sin pulso: una sola vez y queda fijo)
-  const bStart = 150, bIn = 550;
-  const pB = Math.max(0, Math.min(1, (t-bStart)/bIn));
-  if(pB > 0 && tituloSprite){
-    const eased = easeOutCubic(pB);
-    const offsetX = (1 - eased) * -(W*0.9);
-    ctx.drawImage(
-      tituloSprite.canvas,
-      CX + offsetX - tituloSprite.w/2,
-      layout.badgeY + s(45) - tituloSprite.h/2
-    );
-  }
-
-  // Marcador: sostiene el resultado anterior y "cambia de ficha" al nuevo
-  // una sola vez — SIN pulso continuo, queda estático (sigue centrado en
-  // layout.escY, misma posición de siempre)
-  const { previo, nuevo } = hgMarcadorPrevioNuevo(datos);
-  const holdEnd = 600, shrinkDur = 200, growDur = 450;
-  let texto, escala;
-  if(t < holdEnd){
-    texto = previo; escala = 1;
-  } else if(t < holdEnd+shrinkDur){
-    texto = previo; escala = 1 - ((t-holdEnd)/shrinkDur);
-  } else if(t < holdEnd+shrinkDur+growDur){
-    texto = nuevo; escala = easeOutBack((t-holdEnd-shrinkDur)/growDur);
-  } else {
-    texto = nuevo; escala = 1;
-  }
-  ctx.save();
-  ctx.translate(CX, layout.escY + s(61));
-  ctx.scale(Math.max(0.01,escala), Math.max(0.01,escala));
-  ctx.font = `${s(140)}px "Bebas Neue", Arial, sans-serif`;
-  ctx.fillStyle = C.DORADO2; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText(texto, 0, 0);
-  ctx.restore();
-
-  // Borde dorado del panel — pulso sutil y continuo (no es solo estético:
-  // mientras nada cambia en el cuadro, algunos navegadores dejan de
-  // mandarle cuadros nuevos al grabador, aunque se lo pidamos a mano con
-  // requestFrame() — así el video termina "vacío" pasado cierto punto y
-  // se ve mucho más corto de lo pedido. Este pulso asegura que SIEMPRE
-  // haya algo distinto de un cuadro al siguiente).
-  ctx.font = `${s(140)}px "Bebas Neue", Arial, sans-serif`;
-  const wMarc = Math.max(ctx.measureText(previo).width, ctx.measureText(nuevo).width);
-  const panelW = wMarc + s(100), panelH = s(165);
-  const panelCy = layout.escY + s(61);
-  const pulso = 0.85 + 0.15*Math.sin(t/900);
-  ctx.save();
-  ctx.globalAlpha = pulso;
-  ctx.strokeStyle = C.DORADO;
-  ctx.lineWidth = s(3) * (0.9 + 0.1*Math.sin(t/900));
-  cvRoundRect(ctx, CX - panelW/2, panelCy - panelH/2, panelW, panelH, s(12));
-  ctx.stroke();
-  ctx.restore();
-
-  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-}
-
-// Intenta grabar UNA vez con un mimeType puntual, usando un <canvas> que
-// YA está en el DOM y visible (canvasEl). Resuelve con el Blob si salió
-// bien, o rechaza si el navegador lo produjo vacío / incompleto.
-
-function hgIntentarGrabarVideo(canvasEl, capaEstatica, layout, datos, duracionMs, mimeType, tituloSprite){
-  return new Promise((resolve, reject) => {
-    const canvas = canvasEl;
-    canvas.width = CV_W_HIST; canvas.height = CV_H_HIST;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(capaEstatica, 0, 0);
-    hgDibujarAnimado(ctx, 0, datos, layout, tituloSprite);
-
-    if(!canvas.captureStream){
-      reject(new Error('Este navegador no soporta captureStream.')); return;
-    }
-    // captureStream(0): NO auto-muestrea a un fps fijo (eso es lo que
-    // causaba cuadros salteados/perdidos). En vez de eso, pedimos
-    // manualmente un cuadro nuevo (track.requestFrame()) cada vez que
-    // terminamos de dibujar — así lo que se graba es exactamente lo que
-    // se dibuja, sin depender del temporizador interno del navegador.
-    const stream = canvas.captureStream(0);
-    const [track] = stream.getVideoTracks();
-    const puedeForzarCuadro = track && typeof track.requestFrame === 'function';
-
-    let recorder;
-    try{
-      recorder = mimeType
-        ? new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 6_000_000 })
-        : new MediaRecorder(stream);
-    }catch(e){ reject(e); return; }
-
-    const chunks = [];
-    recorder.ondataavailable = e => { if(e.data && e.data.size) chunks.push(e.data); };
-    recorder.onerror = e => { reject(e.error || e); };
-
-    let wallStart = 0;
-    recorder.onstop = () => {
-      const elapsedReal = performance.now() - wallStart;
-      const blob = new Blob(chunks, { type: recorder.mimeType || mimeType || 'video/webm' });
-      // Si el navegador cortó de grabar mucho antes de tiempo (canvas
-      // "sub-priorizado" por el motor de renderizado), el archivo puede
-      // no estar vacío pero sí sería un video cortado a un instante.
-      // Lo tratamos como fallo para que se reintente con otro formato.
-      if(!blob.size || elapsedReal < duracionMs*0.7){
-        reject(new Error(`Grabación incompleta con ${mimeType || 'formato por defecto'} (${Math.round(elapsedReal)}ms de ${duracionMs}ms)`));
-        return;
-      }
-      resolve(blob);
-    };
-
-    requestAnimationFrame(() => {
-      wallStart = performance.now();
-      recorder.start(200); // timeslice: fuerza volcados periódicos de datos
-      if(puedeForzarCuadro) track.requestFrame();
-      const t0 = performance.now();
-      function loop(){
-        const t = performance.now() - t0;
-        ctx.clearRect(0,0,canvas.width,canvas.height);
-        ctx.drawImage(capaEstatica, 0, 0);
-        hgDibujarAnimado(ctx, t, datos, layout, tituloSprite);
-        if(puedeForzarCuadro) track.requestFrame();
-        if(t < duracionMs) requestAnimationFrame(loop);
-        else recorder.stop();
-      }
-      requestAnimationFrame(loop);
-    });
-  });
-}
-
-/**
- * Genera el video animado de gol. Prueba varios formatos en orden hasta
- * que uno funcione de verdad (algunos navegadores "dicen" soportar un
- * formato, o directamente sub-priorizan el canvas, y terminan grabando
- * un archivo vacío o cortado — por eso no confiamos en un solo intento).
- * canvasEl debe ser un <canvas> visible ya insertado en el DOM (evita que
- * el navegador deje de "pintarlo" durante la grabación).
- */
-async function generarVideoHistoriaGol(datos, canvasEl, duracionMs = 7500){
-  await document.fonts.ready;
-  const [imgLocal, imgVisit] = await Promise.all([
-    hgCargarImgEscudo(datos.local),
-    hgCargarImgEscudo(datos.visit),
-  ]);
-  const { canvas: capaEstatica, layout } = await hgCapaEstatica(datos, imgLocal, imgVisit);
-  const tituloSprite = hgCrearSpriteTitulo();
-
-  // WebM primero: es lo más confiable para grabar un canvas en Chrome/Firefox/Android.
-  // MP4 queda como alternativa (necesario en Safari/iOS, que no soporta WebM).
-  const candidatos = [
-    'video/webm;codecs=vp9',
-    'video/webm;codecs=vp8',
-    'video/webm',
-    'video/mp4;codecs=avc1',
-    '', // que el navegador elija por defecto, como último recurso
-  ];
-
-  let ultimoError = null;
-  for(const mimeType of candidatos){
-    if(mimeType && !(window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(mimeType))) continue;
-    try{
-      const blob = await hgIntentarGrabarVideo(canvasEl, capaEstatica, layout, datos, duracionMs, mimeType, tituloSprite);
-      if(blob && blob.size) return blob;
-    }catch(e){
-      ultimoError = e;
-      console.warn('Historia de gol: falló grabar con', mimeType || '(default)', e);
-    }
-  }
-  throw ultimoError || new Error('No se pudo grabar el video con ningún formato soportado por este navegador.');
-}
 
 // ── Formulario del panel de admin ───────────────────────────────────
 
@@ -12626,14 +12253,11 @@ function hgActualizarCamposEvento(){
   const evento = document.getElementById('hg-evento').value;
   document.getElementById('hg-campos-gol').style.display = evento === 'gol' ? 'grid' : 'none';
   document.getElementById('hg-campos-penales').style.display = evento === 'penales' ? 'block' : 'none';
-  document.getElementById('hg-generar-btn').textContent = evento === 'gol' ? '🎬 Generar video' : '🖼️ Generar imagen';
 }
 
-let _hgVideoBlob = null;
 
 function hgGenerar(){
   const evento = document.getElementById('hg-evento').value;
-  if(evento === 'gol') return hgGenerarVideoGol();
   return hgGenerarImagenEvento(evento);
 }
 
@@ -12660,6 +12284,15 @@ function hgGenerarImagenEvento(evento){
 
   const p = { local: comun.local, visit: comun.visit, resultado: comun.resultado, minuto: comun.minuto, torneo: comun.torneo };
   const opciones = { tipoEvento: evento, fecha: comun.fecha };
+  if(evento === 'gol'){
+    if(!comun.resultado){ alert('Completá el marcador.'); return; }
+    const convierte = document.getElementById('hg-convierte').value;
+    opciones.golData = {
+      equipo: convierte,
+      jugador: document.getElementById('hg-autor').value.trim(),
+      min: comun.minuto,
+    };
+  }
   if(evento === 'penales'){
     const penales = document.getElementById('hg-penales').value.trim();
     if(!penales){ alert('Completá el resultado en penales.'); return; }
@@ -12669,83 +12302,6 @@ function hgGenerarImagenEvento(evento){
   abrirShare(() => generarImagenHistoriaPartido(p, opciones));
 }
 
-async function hgGenerarVideoGol(){
-  const comun = hgLeerComun();
-  if(!comun || !comun.resultado){
-    alert('Completá equipo local, visitante y marcador.');
-    return;
-  }
-  const convierte = document.getElementById('hg-convierte').value;
-
-  const datos = {
-    local: comun.local, visit: comun.visit,
-    resultado: comun.resultado,
-    minuto: comun.minuto,
-    fecha: comun.fecha,
-    torneoLabel: torneoLabel(comun.torneo),
-    convierte,
-    golEquipoNombre: convierte === 'local' ? comun.local : comun.visit,
-    jugador: document.getElementById('hg-autor').value.trim(),
-  };
-
-  const loadEl = document.getElementById('video-share-loading');
-  const liveCanvas = document.getElementById('video-share-live-canvas');
-  const videoEl = document.getElementById('video-share-preview');
-  const noteEl = document.getElementById('video-share-note');
-  videoEl.style.display = 'none';
-  loadEl.style.display = 'none';
-  liveCanvas.style.display = 'block'; // el canvas real que se graba, visible durante la generación
-  noteEl.textContent = 'Generando video...';
-  document.getElementById('video-share-modal').classList.add('open');
-
-  requestAnimationFrame(async () => {
-    try{
-      _hgVideoBlob = await generarVideoHistoriaGol(datos, liveCanvas);
-      videoEl.src = URL.createObjectURL(_hgVideoBlob);
-      liveCanvas.style.display = 'none';
-      videoEl.style.display = 'block';
-      const tieneWebShare = navigator.share && navigator.canShare && navigator.canShare({files:[new File([''],'t.mp4',{type:'video/mp4'})]});
-      noteEl.textContent = tieneWebShare
-        ? 'Tocá una red social para compartir el video directamente.'
-        : 'Descargá el video y subilo como historia desde la app de Instagram.';
-    }catch(e){
-      liveCanvas.style.display = 'none';
-      noteEl.textContent = 'Error al generar el video: ' + (e && e.message ? e.message : 'probá de nuevo.');
-      console.error(e);
-    }
-  });
-}
-
-function cerrarVideoShare(){
-  document.getElementById('video-share-modal').classList.remove('open');
-  const videoEl = document.getElementById('video-share-preview');
-  videoEl.pause(); videoEl.src = '';
-  document.getElementById('video-share-live-canvas').style.display = 'none';
-  _hgVideoBlob = null;
-}
-
-function descargarVideoHistoria(){
-  if(!_hgVideoBlob) return;
-  const ext = _hgVideoBlob.type.includes('mp4') ? 'mp4' : 'webm';
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(_hgVideoBlob);
-  a.download = `historia-gol.${ext}`;
-  a.click();
-}
-
-async function compartirVideoEn(red){
-  if(!_hgVideoBlob) return;
-  const ext = _hgVideoBlob.type.includes('mp4') ? 'mp4' : 'webm';
-  const id = getIdentidad();
-  const file = new File([_hgVideoBlob], `historia-gol.${ext}`, { type: _hgVideoBlob.type });
-  if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
-    try{
-      await navigator.share({ files:[file], title: id.nombre || 'DeporteMás', text: '¡Gol! ⚽' });
-      return;
-    }catch(e){ /* usuario canceló o no soportado — cae a descarga */ }
-  }
-  descargarVideoHistoria();
-}
 async function generarImagenPosiciones(){
   await document.fonts.ready;
   const id    = getIdentidad();
