@@ -12035,77 +12035,100 @@ async function cvBloqueHistoria(ctx, p, opciones, W, yStart, medirSolo){
   const CX = W / 2;
   let y = yStart;
 
-  // ── Cinta editorial del evento (maqueta A) — banda angulada tipo
-  // zócalo de transmisión deportiva, mucho más compacta que el título
-  // gigante de antes: por eso queda bien más cerca del marcador ──────
+  // ── Chip de fecha/torneo (maqueta A — estadio nocturno): aprovecha
+  // el espacio que antes quedaba vacío arriba del bloque ──────────
+  const chipTxt = [p.torneo ? torneoLabel(p.torneo) : null, opciones.fecha || null].filter(Boolean).join(' · ');
+  if(chipTxt){
+    if(!medirSolo){
+      ctx.font = `500 ${s(20)}px "DM Sans", Arial, sans-serif`;
+      const padX = s(18);
+      const cw = ctx.measureText(chipTxt).width + padX*2, ch = s(34);
+      cvRoundRect(ctx, CX - cw/2, y, cw, ch, ch/2);
+      ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.7)';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(chipTxt, CX, y + ch/2 + s(1));
+      ctx.textBaseline = 'alphabetic';
+    }
+    y += s(34) + s(24);
+  }
+
+  // ── Kicker del evento (barra lateral de color + texto, sin caja) ──
   const eventos = {
-    'en-vivo':        { txt: 'EN VIVO',               ribbonBg: '#e05555', ribbonText: C.BLANCO, accent: '#e05555' },
-    'inicio':         { txt: 'COMENZÓ EL PARTIDO',    ribbonBg: C.DORADO,  ribbonText: C.NEG,    accent: C.DORADO },
-    'gol':            { txt: 'GOL',                    ribbonBg: C.DORADO,  ribbonText: C.NEG,    accent: C.DORADO },
-    'tarjeta':        { txt: 'TARJETA',                ribbonBg: '#ffdd66', ribbonText: C.NEG,    accent: '#ffdd66' },
-    'entretiempo':    { txt: 'ENTRETIEMPO',            ribbonBg: C.DORADO,  ribbonText: C.NEG,    accent: C.DORADO },
-    'segundo-tiempo': { txt: 'COMIENZA EL 2ºT',        ribbonBg: C.DORADO,  ribbonText: C.NEG,    accent: C.DORADO },
-    'penales':        { txt: 'DEFINICIÓN POR PENALES', ribbonBg: '#ffdd66', ribbonText: C.NEG,    accent: '#ffdd66' },
-    'final':          { txt: 'FINAL',                  ribbonBg: '#4caf74', ribbonText: C.BLANCO, accent: '#4caf74' },
+    'en-vivo':        { txt: 'EN VIVO',               accent: '#e05555', onAccent: C.BLANCO },
+    'inicio':         { txt: 'COMENZÓ EL PARTIDO',    accent: C.DORADO,  onAccent: C.NEG },
+    'gol':            { txt: 'GOL',                    accent: C.DORADO,  onAccent: C.NEG },
+    'tarjeta':        { txt: 'TARJETA',                accent: '#ffdd66', onAccent: C.NEG },
+    'entretiempo':    { txt: 'ENTRETIEMPO',            accent: C.DORADO,  onAccent: C.NEG },
+    'segundo-tiempo': { txt: 'COMIENZA EL 2ºT',        accent: C.DORADO,  onAccent: C.NEG },
+    'penales':        { txt: 'DEFINICIÓN POR PENALES', accent: '#ffdd66', onAccent: C.NEG },
+    'final':          { txt: 'FINAL',                  accent: '#4caf74', onAccent: C.BLANCO },
   };
   const evento = eventos[tipoEvento] || eventos['en-vivo'];
-  if(!medirSolo){
-    let fontSize = s(30);
-    ctx.font = `600 ${fontSize}px "Rajdhani", Arial, sans-serif`;
-    const maxW = W - s(160);
-    const tw = ctx.measureText(evento.txt).width;
-    if(tw > maxW) fontSize = fontSize * (maxW/tw);
-    ctx.font = `600 ${fontSize}px "Rajdhani", Arial, sans-serif`;
-    const padX = s(26), padY = s(15);
-    const rw = ctx.measureText(evento.txt).width + padX*2, rh = fontSize + padY*2;
-    ctx.save();
-    ctx.translate(CX, y + s(32));
-    ctx.rotate(-4 * Math.PI/180);
-    cvRoundRect(ctx, -rw/2, -rh/2, rw, rh, s(6));
-    ctx.fillStyle = evento.ribbonBg; ctx.fill();
-    ctx.fillStyle = evento.ribbonText;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(evento.txt, 0, s(2));
-    ctx.restore();
-    ctx.textBaseline = 'alphabetic';
+  let kickerTxt = evento.txt, kickerColor = evento.accent, kickerOn = evento.onAccent;
+  if(tipoEvento === 'tarjeta' && tarjetaData){
+    const roja = tarjetaData.color === 'roja';
+    kickerColor = roja ? '#e05555' : '#ffdd66';
+    kickerOn = roja ? C.BLANCO : C.NEG;
+    kickerTxt = `TARJETA ${tarjetaData.color.toUpperCase()}`;
   }
-  y += s(72) + s(20);
+  if(!medirSolo){
+    let fontSize = s(28);
+    ctx.font = `600 ${fontSize}px "Rajdhani", Arial, sans-serif`;
+    const maxW = W - s(180);
+    let tw = ctx.measureText(kickerTxt).width;
+    if(tw > maxW){ fontSize = fontSize * (maxW/tw); ctx.font = `600 ${fontSize}px "Rajdhani", Arial, sans-serif`; tw = ctx.measureText(kickerTxt).width; }
+    const barW = s(5), gap = s(12), barH = fontSize*0.82;
+    const groupW = barW + gap + tw;
+    const startX = CX - groupW/2;
+    ctx.fillStyle = kickerColor;
+    ctx.fillRect(startX, y + s(2), barW, barH);
+    ctx.fillStyle = C.BLANCO;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText(kickerTxt, startX + barW + gap, y + s(2) + barH/2 + s(1));
+    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  }
+  y += s(40) + s(28);
 
-  // ── Escudos + nombres + marcador (el marcador sigue siendo el
-  // protagonista del bloque, más grande) ───────────────────────────
+  // ── Escudos + nombres + marcador (tipográfico puro, sin recuadro:
+  // un filete de color hace de base en vez de una caja completa) ──
   const ESCUDO_H = s(110);
   const escY = y;
   const escLX = s(80);
   const escRX = W - s(80) - ESCUDO_H;
   if(!medirSolo){
+    // Resplandor tipo reflector de cancha detrás del marcador
+    const glowCy = escY + ESCUDO_H/2;
+    const glow = ctx.createRadialGradient(CX, glowCy, 0, CX, glowCy, W*0.42);
+    glow.addColorStop(0, 'rgba(240,192,64,0.16)');
+    glow.addColorStop(1, 'rgba(240,192,64,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, glowCy - W*0.42, W, W*0.84);
+
     await cvDrawEscudo(ctx, p.local, escLX, escY, ESCUDO_H);
     await cvDrawEscudo(ctx, p.visit, escRX, escY, ESCUDO_H);
 
-    // Panel oscuro detrás del marcador. El ancho se acota al hueco real
-    // que dejan los escudos (si no, con marcadores largos como "10 - 8"
-    // el panel termina comiéndose los escudos), y el alto se deriva del
-    // de los escudos (si no, un panel más alto que ESCUDO_H termina
-    // invadiendo la fila de nombres de equipo que va justo debajo).
-    const maxPanelW = (escRX - (escLX + ESCUDO_H)) - s(24);
-    let markerFont = s(140);
+    // El ancho disponible para el marcador se sigue acotando al hueco
+    // real entre escudos (si no, con "10 - 8" el texto se les monta encima).
+    const maxMarcW = (escRX - (escLX + ESCUDO_H)) - s(24);
+    let markerFont = s(150);
     ctx.font = `${markerFont}px "Bebas Neue", Arial, sans-serif`;
     const marcTxt = p.resultado || '0 - 0';
     let wMarc = ctx.measureText(marcTxt).width;
-    if(wMarc + s(100) > maxPanelW){
-      markerFont = Math.max(s(70), Math.floor(markerFont * (maxPanelW - s(100)) / wMarc));
+    if(wMarc > maxMarcW){
+      markerFont = Math.max(s(70), Math.floor(markerFont * maxMarcW / wMarc));
       ctx.font = `${markerFont}px "Bebas Neue", Arial, sans-serif`;
       wMarc = ctx.measureText(marcTxt).width;
     }
-    const panelW = Math.min(wMarc + s(100), maxPanelW), panelH = ESCUDO_H + s(24);
     const panelCy = escY + ESCUDO_H/2;
-    cvRoundRect(ctx, CX - panelW/2, panelCy - panelH/2, panelW, panelH, s(12));
-    ctx.fillStyle = 'rgba(15,15,20,0.9)'; ctx.fill();
-    ctx.strokeStyle = C.DORADO; ctx.lineWidth = 3; ctx.stroke();
-
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillStyle = C.DORADO2;
     ctx.fillText(marcTxt, CX, panelCy);
     ctx.textBaseline = 'alphabetic';
+
+    const underW = Math.min(wMarc * 0.55, s(90));
+    ctx.fillStyle = kickerColor;
+    ctx.fillRect(CX - underW/2, panelCy + markerFont*0.46, underW, s(4));
 
     ctx.font = `${s(30)}px "Bebas Neue", Arial, sans-serif`;
     ctx.fillStyle = C.BLANCO;
@@ -12114,65 +12137,38 @@ async function cvBloqueHistoria(ctx, p, opciones, W, yStart, medirSolo){
     cvFillTextTrunc(ctx, p.visit.toUpperCase(), escRX + ESCUDO_H/2, escY + ESCUDO_H + s(20), s(260));
     ctx.textBaseline = 'alphabetic';
   }
-  y = escY + ESCUDO_H + s(56);
+  y = escY + ESCUDO_H + s(62);
 
-  // ── Línea de acento — corta, con el color del evento (maqueta A) ──
-  if(!medirSolo){
-    ctx.fillStyle = evento.accent;
-    ctx.fillRect(CX - s(35), y, s(70), s(4));
-  }
-  y += s(28);
-
-  // ── Detalle del evento (gol / tarjeta / penales) o minuto genérico ──
+  // ── Badge con fondo — único elemento con relleno sólido del bloque,
+  // por eso es lo que más destaca (jugador, minuto, o resultado) ──
+  const pillH = s(44);
+  let pillTxt = null, pillBg = kickerColor, pillOn = kickerOn;
   if(esGol && golData){
-    if(!medirSolo){
-      const eqNom = golData.equipo === 'local' ? p.local : p.visit;
-      ctx.fillStyle = C.BLANCO;
-      ctx.font = `700 ${s(27)}px "Rajdhani", Arial, sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.fillText(`⚽ GOL DE ${eqNom.toUpperCase()}`, CX, y);
-    }
-    y += s(42);
-    if(!medirSolo){
-      ctx.fillStyle = C.DORADO;
-      ctx.font = `500 ${s(20)}px "DM Sans", Arial, sans-serif`;
-      ctx.fillText(`${golData.jugador}${golData.min ? '  ·  ' + golData.min + "'" : ''}`, CX, y);
-    }
-    y += s(20);
+    const eqNom = golData.equipo === 'local' ? p.local : p.visit;
+    pillTxt = `⚽  ${eqNom.toUpperCase()} · ${golData.jugador}${golData.min ? ' · ' + golData.min + "'" : ''}`;
   } else if(tipoEvento === 'tarjeta' && tarjetaData){
-    if(!medirSolo){
-      const eqNom = tarjetaData.equipo === 'local' ? p.local : p.visit;
-      const col = tarjetaData.color === 'roja' ? '#e05555' : '#ffdd66';
-      ctx.fillStyle = col;
-      ctx.font = `700 ${s(24)}px "Rajdhani", Arial, sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.fillText(`TARJETA ${tarjetaData.color.toUpperCase()} · ${tarjetaData.jugador} · ${eqNom.toUpperCase()}`, CX, y);
-    }
-    y += s(20);
+    const eqNom = tarjetaData.equipo === 'local' ? p.local : p.visit;
+    pillTxt = `${tarjetaData.jugador} · ${eqNom.toUpperCase()}`;
   } else if(tipoEvento === 'penales' && opciones.penales){
-    if(!medirSolo){
-      ctx.fillStyle = C.BLANCO;
-      ctx.font = `700 ${s(27)}px "Rajdhani", Arial, sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.fillText('PENALES', CX, y);
-    }
-    y += s(42);
-    if(!medirSolo){
-      ctx.fillStyle = C.DORADO;
-      ctx.font = `700 ${s(34)}px "Bebas Neue", Arial, sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.fillText(opciones.penales, CX, y+s(6));
-    }
-    y += s(20);
+    pillTxt = opciones.penales;
   } else {
-    if(!medirSolo){
-      ctx.font = `600 ${s(26)}px "Rajdhani", Arial, sans-serif`;
-      ctx.fillStyle = 'rgba(255,255,255,0.55)';
-      ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-      ctx.fillText(`MIN. ${p.minuto || 0}'`, CX, y);
-    }
-    y += s(20);
+    pillTxt = `MIN. ${p.minuto || 0}'`;
   }
+  if(!medirSolo && pillTxt){
+    let fontSize = s(24);
+    ctx.font = `600 ${fontSize}px "Rajdhani", Arial, sans-serif`;
+    const maxW = W - s(120);
+    let tw = ctx.measureText(pillTxt).width;
+    if(tw > maxW){ fontSize = fontSize * (maxW/tw); ctx.font = `600 ${fontSize}px "Rajdhani", Arial, sans-serif`; tw = ctx.measureText(pillTxt).width; }
+    const padX = s(22), pw = tw + padX*2;
+    cvRoundRect(ctx, CX - pw/2, y, pw, pillH, pillH/2);
+    ctx.fillStyle = pillBg; ctx.fill();
+    ctx.fillStyle = pillOn;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(pillTxt, CX, y + pillH/2 + s(1));
+    ctx.textBaseline = 'alphabetic';
+  }
+  y += pillH;
 
   // ── Franja angular al pie del bloque (maqueta A) — flourish sutil,
   // muy baja opacidad, con el color del evento ────────────────────
@@ -12218,6 +12214,20 @@ async function generarImagenHistoriaPartido(p, opciones = {}){
   const v2 = ctx.createRadialGradient(W*0.85, H*0.92, 0, W*0.85, H*0.92, W*0.6);
   v2.addColorStop(0, 'rgba(201,162,39,0.04)'); v2.addColorStop(1, 'transparent');
   ctx.fillStyle = v2; ctx.fillRect(0, 0, W, H);
+
+  // Textura de fondo — líneas de cancha muy tenues (maqueta A: estadio
+  // nocturno). Línea de mitad de cancha + círculo central, casi
+  // imperceptibles, solo para romper el negro plano.
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, H*0.5); ctx.lineTo(W, H*0.5);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(W/2, H*0.5, W*0.32, 0, Math.PI*2);
+  ctx.stroke();
+  ctx.restore();
 
   const yHeader = await cvHeader(ctx, W, id, 0);
   const footH = s(40);
