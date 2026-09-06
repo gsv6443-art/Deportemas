@@ -4632,10 +4632,7 @@ table.posiciones td:nth-child(8){
             <input type="text" id="hg-fecha" placeholder="Ej: Fecha 12"/>
           </div>
           <div class="form-group"><label>Torneo</label>
-            <select id="hg-torneo">
-              <option value="apertura">Apertura 2026</option>
-              <option value="clausura">Clausura 2026</option>
-            </select>
+            <input type="text" id="hg-torneo" placeholder="Ej: Apertura 2026, Copa Córdoba"/>
           </div>
         </div>
 
@@ -11793,6 +11790,31 @@ function cvEscudoFallback(ctx, nombre, x, y, size){
   ctx.restore();
 }
 
+// Variante para Historia: a diferencia de cvDrawEscudo (que recorta a un
+// círculo y escala en modo "cover" — puede cortar puntas de escudos con
+// forma de escudo/no circulares), esta dibuja el escudo COMPLETO, sin
+// recortar, escalando en modo "contain" para que entre entero en el
+// cuadro. Solo se usa acá; los otros 6 generadores siguen con el círculo
+// recortado de siempre.
+function cvDrawEscudoCompleto(ctx, nombre, x, y, size){
+  return new Promise(resolve => {
+    const entry = escudos[nombre] || escudos[normalizar(nombre)];
+    const src = entry && typeof entry === 'object' ? entry.img : entry;
+    if(!src){ cvEscudoFallback(ctx, nombre, x, y, size); resolve(); return; }
+    const img = new Image();
+    img.onload = () => {
+      const iw = img.naturalWidth || img.width || 1;
+      const ih = img.naturalHeight || img.height || 1;
+      const scale = Math.min(size/iw, size/ih);
+      const dw = iw*scale, dh = ih*scale;
+      ctx.drawImage(img, x + (size-dw)/2, y + (size-dh)/2, dw, dh);
+      resolve();
+    };
+    img.onerror = () => { cvEscudoFallback(ctx, nombre, x, y, size); resolve(); };
+    img.src = src;
+  });
+}
+
 function cargarImagenAsync(src){
   return new Promise(res=>{
     if(!src){res(null);return;}
@@ -12037,7 +12059,7 @@ async function cvBloqueHistoria(ctx, p, opciones, W, yStart, medirSolo){
 
   // ── Chip de fecha/torneo (maqueta A — estadio nocturno): aprovecha
   // el espacio que antes quedaba vacío arriba del bloque ──────────
-  const chipTxt = [p.torneo ? torneoLabel(p.torneo) : null, opciones.fecha || null].filter(Boolean).join(' · ');
+  const chipTxt = [p.torneo || null, opciones.fecha || null].filter(Boolean).join(' · ');
   if(chipTxt){
     if(!medirSolo){
       ctx.font = `500 ${s(20)}px "DM Sans", Arial, sans-serif`;
@@ -12092,7 +12114,7 @@ async function cvBloqueHistoria(ctx, p, opciones, W, yStart, medirSolo){
 
   // ── Escudos + nombres + marcador (tipográfico puro, sin recuadro:
   // un filete de color hace de base en vez de una caja completa) ──
-  const ESCUDO_H = s(110);
+  const ESCUDO_H = s(130);
   const escY = y;
   const escLX = s(80);
   const escRX = W - s(80) - ESCUDO_H;
@@ -12105,8 +12127,8 @@ async function cvBloqueHistoria(ctx, p, opciones, W, yStart, medirSolo){
     ctx.fillStyle = glow;
     ctx.fillRect(0, glowCy - W*0.42, W, W*0.84);
 
-    await cvDrawEscudo(ctx, p.local, escLX, escY, ESCUDO_H);
-    await cvDrawEscudo(ctx, p.visit, escRX, escY, ESCUDO_H);
+    await cvDrawEscudoCompleto(ctx, p.local, escLX, escY, ESCUDO_H);
+    await cvDrawEscudoCompleto(ctx, p.visit, escRX, escY, ESCUDO_H);
 
     // El ancho disponible para el marcador se sigue acotando al hueco
     // real entre escudos (si no, con "10 - 8" el texto se les monta encima).
@@ -12130,18 +12152,18 @@ async function cvBloqueHistoria(ctx, p, opciones, W, yStart, medirSolo){
     ctx.fillStyle = kickerColor;
     ctx.fillRect(CX - underW/2, panelCy + markerFont*0.46, underW, s(4));
 
-    ctx.font = `${s(30)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.font = `${s(36)}px "Bebas Neue", Arial, sans-serif`;
     ctx.fillStyle = C.BLANCO;
     ctx.textBaseline = 'top';
-    cvFillTextTrunc(ctx, p.local.toUpperCase(), escLX + ESCUDO_H/2, escY + ESCUDO_H + s(20), s(260));
-    cvFillTextTrunc(ctx, p.visit.toUpperCase(), escRX + ESCUDO_H/2, escY + ESCUDO_H + s(20), s(260));
+    cvFillTextTrunc(ctx, p.local.toUpperCase(), escLX + ESCUDO_H/2, escY + ESCUDO_H + s(22), s(280));
+    cvFillTextTrunc(ctx, p.visit.toUpperCase(), escRX + ESCUDO_H/2, escY + ESCUDO_H + s(22), s(280));
     ctx.textBaseline = 'alphabetic';
   }
-  y = escY + ESCUDO_H + s(62);
+  y = escY + ESCUDO_H + s(78);
 
   // ── Badge con fondo — único elemento con relleno sólido del bloque,
   // por eso es lo que más destaca (jugador, minuto, o resultado) ──
-  const pillH = s(44);
+  const pillH = s(52);
   let pillTxt = null, pillBg = kickerColor, pillOn = kickerOn;
   if(esGol && golData){
     const eqNom = golData.equipo === 'local' ? p.local : p.visit;
@@ -12155,7 +12177,7 @@ async function cvBloqueHistoria(ctx, p, opciones, W, yStart, medirSolo){
     pillTxt = `MIN. ${p.minuto || 0}'`;
   }
   if(!medirSolo && pillTxt){
-    let fontSize = s(24);
+    let fontSize = s(28);
     ctx.font = `600 ${fontSize}px "Rajdhani", Arial, sans-serif`;
     const maxW = W - s(120);
     let tw = ctx.measureText(pillTxt).width;
@@ -12284,7 +12306,7 @@ function hgLeerComun(){
     resultado: marcador,
     minuto: document.getElementById('hg-minuto').value || '',
     fecha: document.getElementById('hg-fecha').value.trim(),
-    torneo: document.getElementById('hg-torneo').value,
+    torneo: document.getElementById('hg-torneo').value.trim(),
   };
 }
 
