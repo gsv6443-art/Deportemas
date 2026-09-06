@@ -7498,6 +7498,12 @@ function renderPosicionesSegunda(){
 // ============================================================
 // RENDER GOLEADORES (filtrado por torneo)
 // ============================================================
+// Ordena goleadores por goles desc; en caso de empate, respeta la prioridad manual
+// definida desde el panel de administración (mayor prioridad = queda primero).
+// Si nadie tiene prioridad cargada, se mantiene el orden original (sort estable).
+function ordenarGoleadores(arr){
+  return arr.slice().sort((a,b)=> (b.goles-a.goles) || ((b.prioridad||0)-(a.prioridad||0)) );
+}
 function renderGoleadores(){
   const div=currentDivision;
   const el=document.getElementById('goleadores-content');
@@ -7515,7 +7521,7 @@ function renderGoleadores(){
   if(div==='segunda'){
     const faseLabels={'fase1':'1ª Fase','fase2':'2ª Fase','fase3':'3ª Fase'};
     const fase=currentFaseGol;
-    const gs=[...data.goleadores.filter(g=>g.div==='segunda'&&(g.faseGol||g.torneo||'fase1')===fase)].sort((a,b)=>b.goles-a.goles);
+    const gs=ordenarGoleadores(data.goleadores.filter(g=>g.div==='segunda'&&(g.faseGol||g.torneo||'fase1')===fase));
     if(!gs.length){
       el.innerHTML=`<div class="card"><div class="card-header"><span>Goleadores – ${faseLabels[fase]}</span><span class="div-badge">2ª</span></div><div class="empty-msg">No hay goleadores para esta fase</div></div>`;
       return;
@@ -7528,7 +7534,7 @@ function renderGoleadores(){
 
   // ---- PRIMERA DIVISIÓN: por torneo ----
   const torneo=currentTorneo.gol;
-  const gs=[...data.goleadores.filter(g=>g.div==='primera'&&(g.torneo||'apertura')===torneo)].sort((a,b)=>b.goles-a.goles);
+  const gs=ordenarGoleadores(data.goleadores.filter(g=>g.div==='primera'&&(g.torneo||'apertura')===torneo));
   if(!gs.length){
     el.innerHTML=`<div class="card"><div class="card-header"><span>Goleadores – ${torneoLabel(torneo)}</span><span class="div-badge">1ª</span></div><div class="empty-msg">No hay goleadores para este torneo</div></div>`;
     return;
@@ -9727,6 +9733,21 @@ function edToPoblarSelectCampeon(){
   sel.innerHTML='<option value="">Seleccioná el club campeón</option>'+clubes.map(n=>`<option value="${n.replace(/"/g,'&quot;')}" ${actual===n?'selected':''}>${n}</option>`).join('');
 }
 
+// Marca a un goleador como "primero" dentro de su grupo (división+torneo/fase)
+// cuando está empatado en goles con otro(s) en la punta de la tabla.
+// Le asigna una prioridad manual mayor a la de sus rivales empatados.
+function elegirPrimeroGol(id){
+  const g = data.goleadores.find(x=>String(x.id)===String(id));
+  if(!g) return;
+  const key = x => x.div+'|'+(x.div==='segunda'?(x.faseGol||x.torneo||'fase1'):(x.torneo||'apertura'));
+  const grupo = data.goleadores.filter(x=>key(x)===key(g));
+  const max = Math.max(...grupo.map(x=>x.goles));
+  const empatados = grupo.filter(x=>x.goles===max);
+  if(empatados.length<2 || g.goles!==max) return; // no hay empate real en la punta
+  const prioridadMax = Math.max(0, ...empatados.map(x=>x.prioridad||0));
+  g.prioridad = prioridadMax+1;
+  saveData(data); renderAdminListas(); renderSection(currentSection);
+}
 function agregarGoleador(){
   const nombre=document.getElementById('g-nombre').value.trim();
   if(!nombre){alert('Completá el nombre');return;}
@@ -11017,7 +11038,10 @@ function recalcularTodo(){
       if(reg.torneo) return (g.torneo||'apertura') === reg.torneo;
       return (g.faseGol||'fase1') === reg.faseGol;
     });
-    if(existente) reg.id = existente.id;
+    if(existente){
+      reg.id = existente.id;
+      if(existente.prioridad) reg.prioridad = existente.prioridad;
+    }
   });
 
   const idsAutoGol = new Set(Object.values(mapaGol).map(r => r.id));
@@ -11140,8 +11164,16 @@ function renderAdminListas(){
     const key = g.div+'|'+(g.div==='segunda'?(g.faseGol||g.torneo||'fase1'):(g.torneo||'apertura'));
     (gruposGol[key]=gruposGol[key]||[]).push(g);
   });
+  // Detecta, por grupo (división+torneo/fase), si hay empate en la punta (2+ jugadores
+  // con el máximo de goles) para poder ofrecer el botón "Poner primero".
+  const empatadosPunta = new Set();
   Object.values(gruposGol).forEach(arr=>{
-    arr.slice().sort((a,b)=>b.goles-a.goles).forEach((g,i)=>{ rankMapGol[g.id]=i+1; });
+    const max = Math.max(...arr.map(g=>g.goles));
+    const empatados = arr.filter(g=>g.goles===max);
+    if(empatados.length>1) empatados.forEach(g=>empatadosPunta.add(g.id));
+  });
+  Object.values(gruposGol).forEach(arr=>{
+    ordenarGoleadores(arr).forEach((g,i)=>{ rankMapGol[g.id]=i+1; });
   });
   document.getElementById('lista-goleadores').innerHTML=data.goleadores.map(g=>{
     const rank=rankMapGol[g.id]||999;
@@ -11151,9 +11183,16 @@ function renderAdminListas(){
         ? `<span style="background:rgba(201,162,39,.15);color:var(--dorado);border:1px solid rgba(201,162,39,.3);border-radius:6px;padding:2px 7px;font-size:10px;font-weight:700;letter-spacing:.3px;white-space:nowrap">📸 USA FOTO</span>`
         : `<span style="background:rgba(224,84,84,.12);color:#e05454;border:1px solid rgba(224,84,84,.3);border-radius:6px;padding:2px 7px;font-size:10px;font-weight:700;letter-spacing:.3px;white-space:nowrap">⚠ SIN FOTO</span>`;
     }
+    let empateTag='';
+    if(empatadosPunta.has(g.id)){
+      empateTag = rank===1
+        ? `<span style="background:rgba(201,162,39,.15);color:var(--dorado);border:1px solid rgba(201,162,39,.3);border-radius:6px;padding:2px 7px;font-size:10px;font-weight:700;letter-spacing:.3px;white-space:nowrap">🏆 1° elegido</span>`
+        : `<span style="background:rgba(255,255,255,.06);color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.12);border-radius:6px;padding:2px 7px;font-size:10px;font-weight:700;letter-spacing:.3px;white-space:nowrap">⚖ Empatado</span><button type="button" style="background:linear-gradient(135deg,var(--dorado),var(--dorado-light));color:var(--negro);border:none;border-radius:6px;padding:3px 9px;font-size:10px;font-weight:900;cursor:pointer;font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap;margin-left:4px" onclick="elegirPrimeroGol('${g.id}')">Poner 1°</button>`;
+    }
     return `<div class="admin-list-item">
       <span><b>${torneoLabel(g.torneo||'apertura')}</b> | <b>${g.div==='primera'?'1ª':g.div==='segunda'?'2ª':'Extra Liga'}</b> | ${g.nombre} (${g.equipo}) – ${g.goles} goles</span>
       ${fotoTag}
+      ${empateTag}
       ${btnAcciones('goleadores',g.id)}
     </div>`;
   }).join('')||'<p class="admin-empty">Sin goleadores cargados</p>';
@@ -12757,13 +12796,11 @@ async function generarImagenGoleadores(){
 
   if(currentDivision==='segunda'){
     const fl={'fase1':'1ª Fase','fase2':'2ª Fase','fase3':'3ª Fase'};
-    gs=[...data.goleadores.filter(g=>g.div==='segunda'&&(g.faseGol||g.torneo||'fase1')===currentFaseGol)]
-      .sort((a,b)=>b.goles-a.goles);
+    gs=ordenarGoleadores(data.goleadores.filter(g=>g.div==='segunda'&&(g.faseGol||g.torneo||'fase1')===currentFaseGol));
     subtitulo=(fl[currentFaseGol]||'')+' · Segunda División';
   } else {
     const torneo=currentTorneo.gol;
-    gs=[...data.goleadores.filter(g=>g.div==='primera'&&(g.torneo||'apertura')===torneo)]
-      .sort((a,b)=>b.goles-a.goles);
+    gs=ordenarGoleadores(data.goleadores.filter(g=>g.div==='primera'&&(g.torneo||'apertura')===torneo));
     subtitulo=torneoLabel(torneo)+' · Primera División';
   }
   if(!gs.length) return null;
