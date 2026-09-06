@@ -12280,7 +12280,14 @@ async function cvBloqueHistoria(ctx, p, opciones, W, yStart, medirSolo){
   }
   y += s(16);
 
-  return y;
+  // Posición aproximada de la línea dorada bajo el marcador (solo gol).
+  // Se calcula con el tamaño de fuente por defecto del marcador (s(150))
+  // sin importar si al final se achicó por un resultado largo — para
+  // el recorte de una foto de fondo detrás, unos pocos píxeles de
+  // margen no se notan.
+  const yLineaDorada = esGol ? (escY + ESCUDO_H/2 + s(150)*0.46 + s(4)) : null;
+
+  return { yFin: y, yLineaDorada };
 }
 
 async function generarImagenHistoriaPartido(p, opciones = {}){
@@ -12320,12 +12327,49 @@ async function generarImagenHistoriaPartido(p, opciones = {}){
   ctx.stroke();
   ctx.restore();
 
-  const yHeader = await cvHeader(ctx, W, id, 0);
+  // ── Medimos el bloque ANTES de dibujar nada más (header incluido):
+  // si el gol tiene foto del goleador, necesitamos saber hasta dónde
+  // llega la línea dorada del marcador para recortar la foto ahí antes
+  // de que el header se dibuje encima ──────────────────────────────
+  const { yFin: yFinMedido, yLineaDorada } = await cvBloqueHistoria(ctx, p, opciones, W, 0, true);
+  const yHeader = s(64); // alto fijo de cvHeader (ver cvHeader: H=s(64))
   const footH = s(40);
-
-  const yFinMedido = await cvBloqueHistoria(ctx, p, opciones, W, 0, true);
   const disponible = (H - footH) - yHeader;
   const yInicio = yHeader + Math.max(0, (disponible - yFinMedido) / 2);
+
+  // ── Foto del goleador de fondo — mismo tratamiento que la imagen de
+  // goleadores (foto + degradé oscuro encima para legibilidad), pero
+  // recortada desde arriba hasta la línea dorada bajo el marcador en
+  // vez de ocupar toda la imagen ───────────────────────────────────
+  if(opciones.golData && opciones.golData.foto && yLineaDorada != null){
+    await new Promise(res => {
+      const img = new Image();
+      img.onload = () => {
+        const limiteY = yInicio + yLineaDorada;
+        const iw = img.naturalWidth || img.width || 1, ih = img.naturalHeight || img.height || 1;
+        const scale = Math.max(W/iw, limiteY/ih);
+        const dw = iw*scale, dh = ih*scale;
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, 0, W, limiteY);
+        ctx.clip();
+        ctx.globalAlpha = 0.5;
+        ctx.drawImage(img, (W-dw)/2, limiteY-dh, dw, dh);
+        ctx.globalAlpha = 1;
+        const g2 = ctx.createLinearGradient(0, 0, 0, limiteY);
+        g2.addColorStop(0, 'rgba(8,8,8,.35)');
+        g2.addColorStop(0.6, 'rgba(8,8,8,.55)');
+        g2.addColorStop(1, 'rgba(8,8,8,.93)');
+        ctx.fillStyle = g2; ctx.fillRect(0, 0, W, limiteY);
+        ctx.restore();
+        res();
+      };
+      img.onerror = () => res();
+      img.src = opciones.golData.foto;
+    });
+  }
+
+  await cvHeader(ctx, W, id, 0);
 
   ctx.textAlign = 'center';
   await cvBloqueHistoria(ctx, p, opciones, W, yInicio, false);
@@ -12390,11 +12434,19 @@ function hgGenerarImagenEvento(evento){
   if(evento === 'gol'){
     if(!comun.resultado){ alert('Completá el marcador.'); return; }
     const convierte = document.getElementById('hg-convierte').value;
+    const jugador = document.getElementById('hg-autor').value.trim();
+    const eqNombre = convierte === 'local' ? comun.local : comun.visit;
+    // Si el jugador ya tiene foto cargada en la tabla de goleadores, la
+    // usamos de fondo en la imagen del gol (mismo criterio que ahí).
+    const golPlayer = (data.goleadores||[]).find(g =>
+      normalizar(g.nombre) === normalizar(jugador) && normalizar(g.equipo) === normalizar(eqNombre)
+    ) || (data.goleadores||[]).find(g => normalizar(g.nombre) === normalizar(jugador));
     opciones.golData = {
       equipo: convierte,
-      jugador: document.getElementById('hg-autor').value.trim(),
+      jugador,
       min: comun.minuto,
       parte: comun.parte,
+      foto: golPlayer && golPlayer.foto ? golPlayer.foto : null,
     };
   }
   if(evento === 'penales'){
