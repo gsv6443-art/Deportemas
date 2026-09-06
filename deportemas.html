@@ -4622,8 +4622,18 @@ table.posiciones td:nth-child(8){
           <div class="form-group"><label>Marcador</label>
             <input type="text" id="hg-marcador" placeholder="Ej: 1 - 0"/>
           </div>
+        </div>
+
+        <div class="form-row">
           <div class="form-group"><label>Tiempo (minuto)</label>
             <input type="number" id="hg-minuto" placeholder="45"/>
+          </div>
+          <div class="form-group"><label>Parte</label>
+            <select id="hg-parte">
+              <option value="">—</option>
+              <option value="PT">Primer Tiempo (PT)</option>
+              <option value="ST">Segundo Tiempo (ST)</option>
+            </select>
           </div>
         </div>
 
@@ -12057,6 +12067,31 @@ async function cvBloqueHistoria(ctx, p, opciones, W, yStart, medirSolo){
   const CX = W / 2;
   let y = yStart;
 
+  // ── Textura de red de arco (opción E) — solo para gol, detrás de la
+  // parte superior del bloque (chip + "GOL"), se desvanece hacia abajo
+  // antes de llegar al marcador. Puro flourish, no ocupa espacio propio.
+  if(esGol && !medirSolo){
+    const netH = s(210);
+    const off = document.createElement('canvas');
+    off.width = W; off.height = netH;
+    const octx = off.getContext('2d');
+    octx.strokeStyle = 'rgba(240,192,64,0.32)';
+    octx.lineWidth = 1;
+    const step = s(24);
+    for(let x = -netH; x < W + netH; x += step){
+      octx.beginPath(); octx.moveTo(x, 0); octx.lineTo(x + netH, netH); octx.stroke();
+      octx.beginPath(); octx.moveTo(x, netH); octx.lineTo(x + netH, 0); octx.stroke();
+    }
+    const fade = octx.createLinearGradient(0, 0, 0, netH);
+    fade.addColorStop(0, 'rgba(0,0,0,0)');
+    fade.addColorStop(0.3, 'rgba(0,0,0,1)');
+    fade.addColorStop(1, 'rgba(0,0,0,0)');
+    octx.globalCompositeOperation = 'destination-in';
+    octx.fillStyle = fade;
+    octx.fillRect(0, 0, W, netH);
+    ctx.drawImage(off, 0, yStart);
+  }
+
   // ── Chip de fecha/torneo (maqueta A — estadio nocturno): aprovecha
   // el espacio que antes quedaba vacío arriba del bloque ──────────
   const chipTxt = [p.torneo || null, opciones.fecha || null].filter(Boolean).join(' · ');
@@ -12094,23 +12129,43 @@ async function cvBloqueHistoria(ctx, p, opciones, W, yStart, medirSolo){
     kickerOn = roja ? C.BLANCO : C.NEG;
     kickerTxt = `TARJETA ${tarjetaData.color.toUpperCase()}`;
   }
-  if(!medirSolo){
-    let fontSize = s(28);
-    ctx.font = `600 ${fontSize}px "Rajdhani", Arial, sans-serif`;
-    const maxW = W - s(180);
-    let tw = ctx.measureText(kickerTxt).width;
-    if(tw > maxW){ fontSize = fontSize * (maxW/tw); ctx.font = `600 ${fontSize}px "Rajdhani", Arial, sans-serif`; tw = ctx.measureText(kickerTxt).width; }
-    const barW = s(5), gap = s(12), barH = fontSize*0.82;
-    const groupW = barW + gap + tw;
-    const startX = CX - groupW/2;
-    ctx.fillStyle = kickerColor;
-    ctx.fillRect(startX, y + s(2), barW, barH);
-    ctx.fillStyle = C.BLANCO;
-    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    ctx.fillText(kickerTxt, startX + barW + gap, y + s(2) + barH/2 + s(1));
-    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  if(esGol){
+    // "GOL" gigante con resplandor (opción B elegida) — reemplaza el
+    // kicker chico solo para este evento; los demás mantienen la
+    // barra + texto de siempre.
+    if(!medirSolo){
+      ctx.save();
+      ctx.font = `${s(64)}px "Bebas Neue", Arial, sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.shadowColor = 'rgba(240,192,64,0.85)';
+      ctx.shadowBlur = s(26);
+      ctx.fillStyle = C.DORADO2;
+      ctx.fillText('GOL', CX, y + s(38));
+      ctx.shadowBlur = 0;
+      ctx.fillText('GOL', CX, y + s(38)); // segunda pasada nítida, sin blur, para que no quede todo difuminado
+      ctx.restore();
+      ctx.textBaseline = 'alphabetic';
+    }
+    y += s(76) + s(20);
+  } else {
+    if(!medirSolo){
+      let fontSize = s(28);
+      ctx.font = `600 ${fontSize}px "Rajdhani", Arial, sans-serif`;
+      const maxW = W - s(180);
+      let tw = ctx.measureText(kickerTxt).width;
+      if(tw > maxW){ fontSize = fontSize * (maxW/tw); ctx.font = `600 ${fontSize}px "Rajdhani", Arial, sans-serif`; tw = ctx.measureText(kickerTxt).width; }
+      const barW = s(5), gap = s(12), barH = fontSize*0.82;
+      const groupW = barW + gap + tw;
+      const startX = CX - groupW/2;
+      ctx.fillStyle = kickerColor;
+      ctx.fillRect(startX, y + s(2), barW, barH);
+      ctx.fillStyle = C.BLANCO;
+      ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.fillText(kickerTxt, startX + barW + gap, y + s(2) + barH/2 + s(1));
+      ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    }
+    y += s(40) + s(28);
   }
-  y += s(40) + s(28);
 
   // ── Escudos + nombres + marcador (tipográfico puro, sin recuadro:
   // un filete de color hace de base en vez de una caja completa) ──
@@ -12164,31 +12219,45 @@ async function cvBloqueHistoria(ctx, p, opciones, W, yStart, medirSolo){
   // ── Badge con fondo — único elemento con relleno sólido del bloque,
   // por eso es lo que más destaca (jugador, minuto, o resultado) ──
   const pillH = s(52);
+  const minutoTxt = (min, parte) => (min || min === 0) ? `${min}'${parte ? ' ' + parte : ''}` : '';
   let pillTxt = null, pillBg = kickerColor, pillOn = kickerOn;
   if(esGol && golData){
     const eqNom = golData.equipo === 'local' ? p.local : p.visit;
-    pillTxt = `⚽  ${eqNom.toUpperCase()} · ${golData.jugador}${golData.min ? ' · ' + golData.min + "'" : ''}`;
+    const mn = minutoTxt(golData.min, golData.parte);
+    pillTxt = `⚽  ${eqNom.toUpperCase()} · ${golData.jugador}${mn ? ' · ' + mn : ''}`;
   } else if(tipoEvento === 'tarjeta' && tarjetaData){
     const eqNom = tarjetaData.equipo === 'local' ? p.local : p.visit;
     pillTxt = `${tarjetaData.jugador} · ${eqNom.toUpperCase()}`;
   } else if(tipoEvento === 'penales' && opciones.penales){
     pillTxt = opciones.penales;
   } else {
-    pillTxt = `MIN. ${p.minuto || 0}'`;
+    pillTxt = `MIN. ${minutoTxt(p.minuto || 0, p.parte)}`;
   }
   if(!medirSolo && pillTxt){
-    let fontSize = s(28);
-    ctx.font = `600 ${fontSize}px "Rajdhani", Arial, sans-serif`;
-    const maxW = W - s(120);
-    let tw = ctx.measureText(pillTxt).width;
-    if(tw > maxW){ fontSize = fontSize * (maxW/tw); ctx.font = `600 ${fontSize}px "Rajdhani", Arial, sans-serif`; tw = ctx.measureText(pillTxt).width; }
-    const padX = s(22), pw = tw + padX*2;
-    cvRoundRect(ctx, CX - pw/2, y, pw, pillH, pillH/2);
-    ctx.fillStyle = pillBg; ctx.fill();
-    ctx.fillStyle = pillOn;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(pillTxt, CX, y + pillH/2 + s(1));
-    ctx.textBaseline = 'alphabetic';
+    if(esGol){
+      let fontSize = s(34);
+      ctx.font = `700 ${fontSize}px "Rajdhani", Arial, sans-serif`;
+      const maxW = W - s(80);
+      let tw = ctx.measureText(pillTxt).width;
+      if(tw > maxW){ fontSize = fontSize * (maxW/tw); ctx.font = `700 ${fontSize}px "Rajdhani", Arial, sans-serif`; }
+      ctx.fillStyle = C.DORADO2;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(pillTxt, CX, y + pillH/2 + s(1));
+      ctx.textBaseline = 'alphabetic';
+    } else {
+      let fontSize = s(28);
+      ctx.font = `600 ${fontSize}px "Rajdhani", Arial, sans-serif`;
+      const maxW = W - s(120);
+      let tw = ctx.measureText(pillTxt).width;
+      if(tw > maxW){ fontSize = fontSize * (maxW/tw); ctx.font = `600 ${fontSize}px "Rajdhani", Arial, sans-serif`; tw = ctx.measureText(pillTxt).width; }
+      const padX = s(22), pw = tw + padX*2;
+      cvRoundRect(ctx, CX - pw/2, y, pw, pillH, pillH/2);
+      ctx.fillStyle = pillBg; ctx.fill();
+      ctx.fillStyle = pillOn;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(pillTxt, CX, y + pillH/2 + s(1));
+      ctx.textBaseline = 'alphabetic';
+    }
   }
   y += pillH;
 
@@ -12279,6 +12348,7 @@ function hgLimpiarForm(){
   ['hg-local','hg-visit','hg-marcador','hg-minuto','hg-fecha','hg-autor','hg-penales'].forEach(id=>{
     const el = document.getElementById(id); if(el) el.value = '';
   });
+  const parte = document.getElementById('hg-parte'); if(parte) parte.value = '';
 }
 
 function hgActualizarCamposEvento(){
@@ -12305,6 +12375,7 @@ function hgLeerComun(){
     local, visit,
     resultado: marcador,
     minuto: document.getElementById('hg-minuto').value || '',
+    parte: document.getElementById('hg-parte').value || '',
     fecha: document.getElementById('hg-fecha').value.trim(),
     torneo: document.getElementById('hg-torneo').value.trim(),
   };
@@ -12314,7 +12385,7 @@ function hgGenerarImagenEvento(evento){
   const comun = hgLeerComun();
   if(!comun) return;
 
-  const p = { local: comun.local, visit: comun.visit, resultado: comun.resultado, minuto: comun.minuto, torneo: comun.torneo };
+  const p = { local: comun.local, visit: comun.visit, resultado: comun.resultado, minuto: comun.minuto, parte: comun.parte, torneo: comun.torneo };
   const opciones = { tipoEvento: evento, fecha: comun.fecha };
   if(evento === 'gol'){
     if(!comun.resultado){ alert('Completá el marcador.'); return; }
@@ -12323,6 +12394,7 @@ function hgGenerarImagenEvento(evento){
       equipo: convierte,
       jugador: document.getElementById('hg-autor').value.trim(),
       min: comun.minuto,
+      parte: comun.parte,
     };
   }
   if(evento === 'penales'){
