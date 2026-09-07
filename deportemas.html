@@ -1736,6 +1736,42 @@ table.posiciones td:nth-child(8){
   border-bottom:1px solid rgba(255,255,255,.08);
 }
 .playoff-cruces{display:flex;flex-direction:column;gap:6px;padding:0 0 4px;}
+
+/* COPA CÓRDOBA — CUADRO DE ELIMINACIÓN DIRECTA */
+.cc-bracket-scroll{overflow-x:auto;overflow-y:visible;padding:4px 4px 20px;}
+.cc-bracket-inner{position:relative;}
+.cc-col-header{
+  position:absolute;top:0;
+  font-family:'Rajdhani',sans-serif;font-weight:800;font-size:11px;
+  text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.4);
+  text-align:center;
+}
+.cc-col-header.activa{color:var(--dorado);}
+.cc-line{position:absolute;background:rgba(255,255,255,.15);}
+.cc-box{
+  position:absolute;box-sizing:border-box;
+  background:var(--negro3);border:1px solid rgba(255,255,255,.08);
+  border-radius:var(--r-sm);padding:5px 8px;font-family:'Rajdhani',sans-serif;
+  overflow:hidden;
+}
+.cc-box.cc-final{border-color:var(--dorado-border);background:rgba(201,162,39,.05);}
+.cc-box .cc-fila{
+  display:flex;align-items:center;justify-content:space-between;gap:6px;
+  font-size:12px;padding:2px 0;color:rgba(255,255,255,.85);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.cc-box .cc-fila.cc-gana{color:var(--dorado-light);font-weight:700;}
+.cc-box .cc-fila .cc-nombre{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.cc-box .cc-fila .cc-num{flex-shrink:0;font-weight:700;min-width:16px;text-align:right;}
+.cc-box .cc-div{height:1px;background:rgba(255,255,255,.07);margin:1px 0;}
+.cc-box.cc-vacio{border-style:dashed;border-color:rgba(255,255,255,.08);}
+.cc-box.cc-vacio .cc-fila{color:rgba(255,255,255,.2);justify-content:center;font-size:10px;text-transform:uppercase;letter-spacing:.5px;}
+.cc-box .cc-estado-dot{
+  position:absolute;top:5px;right:6px;width:6px;height:6px;border-radius:50%;
+}
+.cc-box .cc-estado-dot.en-juego{background:#e2453f;}
+.cc-box .cc-estado-dot.jugado{background:var(--dorado);}
+
 .cruce-card{
   background:var(--negro3);border:1px solid rgba(201,162,39,.2);
   border-radius:var(--r-md);overflow:hidden;
@@ -11782,76 +11818,95 @@ function editarCruceCC(id){
   data.copaCordoba=data.copaCordoba.filter(x=>String(x.id)!==String(id));
 }
 
-// ---- PÚBLICO ----
+// ---- PÚBLICO: cuadro geométrico con líneas de conexión ----
+// Medidas del cuadro (px)
+const CC_BH=46, CC_GAP=10, CC_SH=CC_BH+CC_GAP;   // alto de caja / separación entre cajas de una misma fase
+const CC_BW=150, CC_CG=40, CC_CP=CC_BW+CC_CG;    // ancho de caja / separación entre columnas
+const CC_HEADER_H=22;
+
+// Centro Y (relativo, sin offset de header) de cada cruce en cada fase.
+// Fase 0 (32avos): posiciones fijas equiespaciadas. Fases siguientes: promedio
+// de los centros de los 2 cruces de la fase anterior que alimentan a este cruce.
+function ccCentros(){
+  const centros=[];
+  FASES_CC.forEach((f,r)=>{
+    if(r===0){
+      centros.push(Array.from({length:f.max},(_,i)=>i*CC_SH+CC_BH/2));
+    } else {
+      const prev=centros[r-1];
+      const arr=[];
+      for(let i=0;i<f.max;i++) arr.push((prev[2*i]+prev[2*i+1])/2);
+      centros.push(arr);
+    }
+  });
+  return centros;
+}
+
+function ccBoxHTML(c,num,x,y,esFinal){
+  const cls='cc-box'+(esFinal?' cc-final':'')+(!c?' cc-vacio':'');
+  const style=`left:${x}px;top:${y}px;width:${CC_BW}px;height:${CC_BH}px`;
+  if(!c) return `<div class="${cls}" style="${style}"><div class="cc-fila">Cruce ${num}</div></div>`;
+
+  let golLocal='-', golVisit='-';
+  const partido=c.idavuelta?(c.global||''):(c.resultado||'');
+  if(partido){
+    const p=partido.split('-');
+    golLocal=p[0]!==undefined?p[0].trim():'-';
+    golVisit=p[1]!==undefined?p[1].trim():'-';
+  }
+  const ganador=(c.ganador||'').trim();
+  const localGana=ganador&&normalizar(ganador)===normalizar(c.local||'');
+  const visitGana=ganador&&normalizar(ganador)===normalizar(c.visit||'');
+  const dot=c.estado==='jugado'?'<span class="cc-estado-dot jugado"></span>':(c.estado==='en-juego'?'<span class="cc-estado-dot en-juego"></span>':'');
+
+  return `<div class="${cls}" style="${style}">
+    ${dot}
+    <div class="cc-fila${localGana?' cc-gana':''}"><span class="cc-nombre">${c.local||'–'}</span><span class="cc-num">${golLocal}</span></div>
+    <div class="cc-div"></div>
+    <div class="cc-fila${visitGana?' cc-gana':''}"><span class="cc-nombre">${c.visit||'–'}</span><span class="cc-num">${golVisit}</span></div>
+  </div>`;
+}
+
 function renderCopaCordoba(el){
   if(!el) return;
+  const centros=ccCentros();
+  const totalW=FASES_CC.length*CC_CP-CC_CG+8;
+  const totalH=CC_HEADER_H+FASES_CC[0].max*CC_SH+6;
 
-  function cruceMarcador(c){
-    if(!c.local&&!c.visit) return '';
-    const penalesTxt=(c.tienePenales&&c.penales)?` <span style="color:rgba(255,255,255,.45);font-weight:400">(Penales ${c.penales})</span>`:'';
-    if(c.idavuelta){
-      const idaRes=c.resIda||'';
-      const vueltaRes=c.resVuelta||'';
-      const global=c.global||'';
-      const ganador=c.ganador||'';
-      const idaHTML=idaRes
-        ?`<div class="cruce-partido-mini"><span class="cpm-label">Ida ${c.fechaIda?'· '+c.fechaIda:''}</span><span class="cpm-res">${idaRes}</span></div>`
-        :`<div class="cruce-partido-mini"><span class="cpm-label">Ida</span><span style="color:rgba(255,255,255,.2);font-family:'Rajdhani',sans-serif">Pendiente</span></div>`;
-      const vueltaHTML=vueltaRes
-        ?`<div class="cruce-partido-mini"><span class="cpm-label">Vuelta ${c.fechaVuelta?'· '+c.fechaVuelta:''}</span><span class="cpm-res">${vueltaRes}</span></div>`
-        :`<div class="cruce-partido-mini"><span class="cpm-label">Vuelta</span><span style="color:rgba(255,255,255,.2);font-family:'Rajdhani',sans-serif">Pendiente</span></div>`;
-      const globalBadge=global?`<span style="background:rgba(201,162,39,.15);border:1px solid var(--dorado-border);border-radius:var(--r-sm);padding:2px 8px;font-size:12px;color:var(--dorado);font-weight:700">Global: ${global}${penalesTxt}</span>`:'';
-      const ganadorBadge=ganador?`<span style="color:rgba(255,255,255,.5);font-size:11px">Clasifica: <b style="color:var(--dorado)">${ganador}</b></span>`:'';
-      return `<div class="cruce-ida-vuelta">${idaHTML}${vueltaHTML}</div>
-        ${global||ganador?`<div class="cruce-ganador" style="display:flex;gap:12px;align-items:center">${globalBadge}${ganadorBadge}</div>`:''}`;
-    } else {
-      const ganador=c.ganador||'';
-      const ganadorBadge=ganador?`<div class="cruce-ganador">Clasifica: <b>${ganador}</b>${penalesTxt}</div>`:(penalesTxt?`<div class="cruce-ganador">Definición por penales: <b style="color:var(--dorado)">${c.penales}</b></div>`:'');
-      return `${ganadorBadge}`;
+  let piezas='';
+  FASES_CC.forEach((f,r)=>{
+    const x=r*CC_CP;
+    piezas+=`<div class="cc-col-header${f.key==='final'?' activa':''}" style="left:${x}px;width:${CC_BW}px">${f.label}</div>`;
+    for(let i=0;i<f.max;i++){
+      const y=CC_HEADER_H+centros[r][i]-CC_BH/2;
+      const c=data.copaCordoba.find(cr=>cr.fase===f.key&&cr.cruce===i+1);
+      piezas+=ccBoxHTML(c,i+1,x,y,f.key==='final');
+    }
+  });
+
+  // Líneas conectoras: cada cruce de la fase r se conecta con los 2 cruces
+  // de la fase r-1 que lo alimentan (cruce 1: cruces 1 y 2 de la fase anterior, etc.)
+  for(let r=1;r<FASES_CC.length;r++){
+    const xFeederRight=(r-1)*CC_CP+CC_BW;
+    const xVert=xFeederRight+CC_CG/2;
+    const xCurrentLeft=r*CC_CP;
+    for(let i=0;i<FASES_CC[r].max;i++){
+      const y0=CC_HEADER_H+centros[r-1][2*i];
+      const y1=CC_HEADER_H+centros[r-1][2*i+1];
+      const yMid=CC_HEADER_H+centros[r][i];
+      piezas+=`<div class="cc-line" style="left:${xFeederRight}px;top:${y0}px;width:${xVert-xFeederRight}px;height:1px"></div>`;
+      piezas+=`<div class="cc-line" style="left:${xFeederRight}px;top:${y1}px;width:${xVert-xFeederRight}px;height:1px"></div>`;
+      piezas+=`<div class="cc-line" style="left:${xVert}px;top:${Math.min(y0,y1)}px;width:1px;height:${Math.abs(y1-y0)}px"></div>`;
+      piezas+=`<div class="cc-line" style="left:${xVert}px;top:${yMid}px;width:${xCurrentLeft-xVert}px;height:1px"></div>`;
     }
   }
-
-  function cruceHTML(c,num){
-    if(!c) return `<div class="cruce-card"><div class="cruce-body" style="justify-content:center"><span style="color:rgba(255,255,255,.2);font-family:'Rajdhani',sans-serif;font-size:12px;text-transform:uppercase;letter-spacing:.5px">Cruce ${num} – Sin cargar</span></div></div>`;
-    const estadoCls=c.estado||'pendiente';
-    const marcador=c.idavuelta
-      ?`<div class="cruce-marcador ${estadoCls==='jugado'?'jugado':estadoCls==='en-juego'?'en-juego':'pendiente'}">${estadoCls==='en-juego'?'EN VIVO':estadoCls==='jugado'?'FIN':'VS'}</div>`
-      :`<div class="cruce-marcador ${estadoCls==='jugado'?'jugado':estadoCls==='en-juego'?'en-juego':'pendiente'}">${c.resultado||'VS'}</div>`;
-    return `<div class="cruce-card">
-      <div class="cruce-header">
-        <span class="cruce-num">Cruce ${c.cruce}</span>
-        <span>${c.idavuelta?'Ida y Vuelta':'Partido Único'}</span>
-        <span class="estado ${estadoCls}" style="padding:2px 8px">${estadoCls==='en-juego'?'EN VIVO':estadoCls==='jugado'?'Finalizado':'Pendiente'}</span>
-      </div>
-      <div class="cruce-body">
-        <div class="cruce-equipo local">${c.local||'–'}${getEscudoHTML(c.local||'',28)}</div>
-        ${marcador}
-        <div class="cruce-equipo visit">${getEscudoHTML(c.visit||'',28)}${c.visit||'–'}</div>
-      </div>
-      ${cruceMarcador(c)}
-    </div>`;
-  }
-
-  const fasesHTML=FASES_CC.map(f=>{
-    const cruces=data.copaCordoba.filter(c=>c.fase===f.key);
-    if(!cruces.length){
-      return `<div class="playoff-etapa">
-        <div class="playoff-etapa-header"><span>${f.label}</span></div>
-        <div class="playoff-empty">Fase sin cruces cargados todavía</div>
-      </div>`;
-    }
-    const cuerpo=Array.from({length:f.max},(_,i)=>i+1)
-      .map(n=>cruceHTML(cruces.find(c=>c.cruce===n),n)).join('');
-    return `<div class="playoff-etapa">
-      <div class="playoff-etapa-header"><span>${f.label}</span></div>
-      <div class="playoff-cruces">${cuerpo}</div>
-    </div>`;
-  }).join('');
 
   el.innerHTML=`
     <div class="playoff-section">
       <div class="playoff-title"><span>🏆 Copa Córdoba – Cuadro de Eliminación Directa</span></div>
-      ${fasesHTML}
+      <div class="cc-bracket-scroll">
+        <div class="cc-bracket-inner" style="width:${totalW}px;height:${totalH}px">${piezas}</div>
+      </div>
     </div>`;
 }
 
