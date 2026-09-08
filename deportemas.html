@@ -1748,6 +1748,11 @@ table.posiciones td:nth-child(8){
 }
 .cc-col-header.activa{color:var(--dorado);}
 .cc-line{position:absolute;background:rgba(255,255,255,.15);}
+.cc-line.cc-line-punteada{background:transparent;border-left:1px dashed rgba(255,255,255,.14);width:0 !important;}
+.cc-extra-badge{
+  position:absolute;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:9px;
+  line-height:1.2;color:var(--dorado);text-align:center;padding:0 2px;
+}
 .cc-box{
   position:absolute;box-sizing:border-box;
   background:var(--negro3);border:1px solid rgba(255,255,255,.08);
@@ -4249,10 +4254,10 @@ table.posiciones td:nth-child(8){
         <div class="form-row">
           <div class="form-group"><label>Fase</label>
             <select id="cc-fase" onchange="updateAdminCCFase()">
-              <option value="treintaidosavos">32avos de Final</option>
-              <option value="dieciseisavos">16avos de Final</option>
-              <option value="octavos">8vos de Final</option>
-              <option value="cuartos">Cuartos de Final</option>
+              <option value="treintaidosavos">Primera Fase (9 partidos)</option>
+              <option value="dieciseisavos">Segunda Fase (6 partidos)</option>
+              <option value="octavos">Tercera Fase (4 partidos)</option>
+              <option value="cuartos">Cuartos de Final (4 partidos)</option>
               <option value="semifinal">Semifinales</option>
               <option value="final">Final</option>
             </select>
@@ -11703,17 +11708,23 @@ function editarCruce(id){
 
 // ============================================================
 // COPA CÓRDOBA – torneo fijo de Extra Liga, cuadro de 6 fases
+// (Cuartos → Semifinales → Final es árbol binario limpio 4→2→1;
+//  Primera → Segunda → Tercera → Cuartos suman equipos externos en
+//  cada salto, por eso llevan "extra" en vez de líneas de cruce)
 // ============================================================
 const FASES_CC=[
-  {key:'treintaidosavos', label:'32avos de Final', max:32},
-  {key:'dieciseisavos',   label:'16avos de Final',  max:16},
-  {key:'octavos',         label:'8vos de Final',    max:8},
-  {key:'cuartos',         label:'Cuartos de Final', max:4},
-  {key:'semifinal',       label:'Semifinales',      max:2},
-  {key:'final',           label:'Final',            max:1}
+  {key:'treintaidosavos', label:'Primera Fase',     max:9, extra:null},
+  {key:'dieciseisavos',   label:'Segunda Fase',      max:6, extra:'+3 Federal A'},
+  {key:'octavos',         label:'Tercera Fase',      max:4, extra:'+1 Campeón Provincial, +1 Primera Nacional'},
+  {key:'cuartos',         label:'Cuartos de Final',  max:4, extra:'+4 Liga Profesional'},
+  {key:'semifinal',       label:'Semifinales',       max:2, extra:null},
+  {key:'final',           label:'Final',             max:1, extra:null}
 ];
 function faseCCLabel(key){const f=FASES_CC.find(x=>x.key===key);return f?f.label:key;}
 function faseCCMax(key){const f=FASES_CC.find(x=>x.key===key);return f?f.max:1;}
+// Transición "limpia" (árbol binario real): la fase r toma de a 2 ganadores
+// exactos de la fase r-1, sin equipos externos sumándose en el medio.
+function ccTransicionLimpia(r){return r>0 && FASES_CC[r-1].max===FASES_CC[r].max*2;}
 
 // ---- ADMIN ----
 function updateAdminCCFase(){
@@ -11826,17 +11837,24 @@ const CC_HEADER_H=22;
 
 // Centro Y (relativo, sin offset de header) de cada cruce en cada fase.
 // Fase 0 (32avos): posiciones fijas equiespaciadas. Fases siguientes: promedio
-// de los centros de los 2 cruces de la fase anterior que alimentan a este cruce.
+// Centro Y (relativo, sin offset de header) de cada cruce en cada fase.
+// Si la transición es "limpia" (árbol binario real): centro = promedio de los
+// 2 cruces de la fase anterior que alimentan a este cruce.
+// Si NO es limpia (se suman equipos externos en el medio): la columna se
+// reparte de forma pareja y se centra dentro del alto total del cuadro.
 function ccCentros(){
   const centros=[];
+  const totalHCol=FASES_CC[0].max*CC_SH;
   FASES_CC.forEach((f,r)=>{
-    if(r===0){
-      centros.push(Array.from({length:f.max},(_,i)=>i*CC_SH+CC_BH/2));
-    } else {
+    if(ccTransicionLimpia(r)){
       const prev=centros[r-1];
       const arr=[];
       for(let i=0;i<f.max;i++) arr.push((prev[2*i]+prev[2*i+1])/2);
       centros.push(arr);
+    } else {
+      const ownH=f.max*CC_SH;
+      const offset=(totalHCol-ownH)/2;
+      centros.push(Array.from({length:f.max},(_,i)=>offset+i*CC_SH+CC_BH/2));
     }
   });
   return centros;
@@ -11884,20 +11902,30 @@ function renderCopaCordoba(el){
     }
   });
 
-  // Líneas conectoras: cada cruce de la fase r se conecta con los 2 cruces
-  // de la fase r-1 que lo alimentan (cruce 1: cruces 1 y 2 de la fase anterior, etc.)
+  // Líneas conectoras: solo en los tramos "limpios" (árbol binario real) se
+  // dibuja el cruce con codo; en los tramos donde se suman equipos externos
+  // se marca un separador con la cantidad que se incorpora.
   for(let r=1;r<FASES_CC.length;r++){
+    const f=FASES_CC[r];
     const xFeederRight=(r-1)*CC_CP+CC_BW;
     const xVert=xFeederRight+CC_CG/2;
     const xCurrentLeft=r*CC_CP;
-    for(let i=0;i<FASES_CC[r].max;i++){
-      const y0=CC_HEADER_H+centros[r-1][2*i];
-      const y1=CC_HEADER_H+centros[r-1][2*i+1];
-      const yMid=CC_HEADER_H+centros[r][i];
-      piezas+=`<div class="cc-line" style="left:${xFeederRight}px;top:${y0}px;width:${xVert-xFeederRight}px;height:1px"></div>`;
-      piezas+=`<div class="cc-line" style="left:${xFeederRight}px;top:${y1}px;width:${xVert-xFeederRight}px;height:1px"></div>`;
-      piezas+=`<div class="cc-line" style="left:${xVert}px;top:${Math.min(y0,y1)}px;width:1px;height:${Math.abs(y1-y0)}px"></div>`;
-      piezas+=`<div class="cc-line" style="left:${xVert}px;top:${yMid}px;width:${xCurrentLeft-xVert}px;height:1px"></div>`;
+    if(ccTransicionLimpia(r)){
+      for(let i=0;i<f.max;i++){
+        const y0=CC_HEADER_H+centros[r-1][2*i];
+        const y1=CC_HEADER_H+centros[r-1][2*i+1];
+        const yMid=CC_HEADER_H+centros[r][i];
+        piezas+=`<div class="cc-line" style="left:${xFeederRight}px;top:${y0}px;width:${xVert-xFeederRight}px;height:1px"></div>`;
+        piezas+=`<div class="cc-line" style="left:${xFeederRight}px;top:${y1}px;width:${xVert-xFeederRight}px;height:1px"></div>`;
+        piezas+=`<div class="cc-line" style="left:${xVert}px;top:${Math.min(y0,y1)}px;width:1px;height:${Math.abs(y1-y0)}px"></div>`;
+        piezas+=`<div class="cc-line" style="left:${xVert}px;top:${yMid}px;width:${xCurrentLeft-xVert}px;height:1px"></div>`;
+      }
+    } else {
+      piezas+=`<div class="cc-line cc-line-punteada" style="left:${xVert}px;top:${CC_HEADER_H}px;width:1px;height:${totalH-CC_HEADER_H-6}px"></div>`;
+      if(f.extra){
+        const yMid=CC_HEADER_H+(totalH-CC_HEADER_H-6)/2;
+        piezas+=`<div class="cc-extra-badge" style="left:${xFeederRight}px;top:${yMid-14}px;width:${CC_CG}px">${f.extra}</div>`;
+      }
     }
   }
 
