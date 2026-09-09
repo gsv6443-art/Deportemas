@@ -646,6 +646,7 @@
     if(fbData)      { data = fbData; if(!data.playoff) data.playoff=[];
                       if(!data.copaCordoba) data.copaCordoba=[];
                       if(!data.copaCordobaLogo) data.copaCordobaLogo='';
+                      if(!data.provincialCopas) data.provincialCopas=[];
                       // Reincorporar fotos de goleadores (guardadas en docs individuales aparte)
                       if(data.goleadores && window._golFotosCache){
                         data.goleadores.forEach(g=>{ if(window._golFotosCache[g.id]) g.foto=window._golFotosCache[g.id]; });
@@ -785,6 +786,7 @@
       if(!data.playoff) data.playoff=[];
       if(!data.copaCordoba) data.copaCordoba=[];
       if(!data.copaCordobaLogo) data.copaCordobaLogo='';
+      if(!data.provincialCopas) data.provincialCopas=[];
       // Reincorporar las fotos de goleadores (no viajan en el doc "data", están aparte)
       if(data.goleadores && window._golFotosCache){
         data.goleadores.forEach(g=>{ if(window._golFotosCache[g.id]) g.foto=window._golFotosCache[g.id]; });
@@ -1791,6 +1793,11 @@ table.posiciones td:nth-child(8){
 }
 .cc-box .cc-estado-dot.en-juego{background:#e2453f;color:#e2453f;animation:blink 1.2s infinite;}
 .cc-box .cc-estado-dot.jugado{background:var(--dorado);color:var(--dorado);}
+
+.tp-zonas-grid{display:grid;grid-template-columns:1fr 1fr;gap:.8rem;}
+@media(max-width:760px){.tp-zonas-grid{grid-template-columns:1fr;}}
+.tp-zona-plata td:first-child{border-left:3px solid var(--dorado);}
+.tp-zona-plata{background:rgba(201,162,39,.04);}
 
 .cruce-card{
   background:var(--negro3);border:1px solid rgba(201,162,39,.2);
@@ -3372,6 +3379,7 @@ table.posiciones td:nth-child(8){
       <button class="admin-tab" onclick="switchAdminTab('fotos',this)">Fotos</button>
       <button class="admin-tab" onclick="switchAdminTab('playoff',this)">Play Off</button>
       <button class="admin-tab" onclick="switchAdminTab('copacordoba',this)">🏆 Copa Córdoba</button>
+      <button class="admin-tab" onclick="switchAdminTab('provincial',this)">🥇 Torneo Provincial</button>
       <button class="admin-tab" onclick="switchAdminTab('config',this)">Config</button>
       <button class="admin-tab" onclick="switchAdminTab('estadisticas',this)">📊 Estadisticas</button>
       <button class="admin-tab" onclick="switchAdminTab('sanciones',this)">🟥 Sanciones</button>
@@ -3419,6 +3427,26 @@ table.posiciones td:nth-child(8){
             <p style="pointer-events:none;font-size:11px">Hacé clic para subir el logo</p>
           </div>
           <div class="preview-wrap" id="p-logo-extra-wrap"><img id="p-logo-extra-preview" style="max-height:80px;border-radius:8px"/><button type="button" class="btn-quitar-img" onclick="pQuitarLogoExtra()">✕ Quitar</button></div>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:12px">
+            <input type="checkbox" id="p-es-provincial" onchange="toggleProvincialFields('p')" style="width:16px;height:16px;accent-color:var(--dorado)"/>
+            <span>Es partido de Torneo Provincial (fase de grupos)</span>
+          </label>
+          <div class="form-row" id="p-provincial-datos-wrap" style="display:none;margin-top:8px">
+            <div class="form-group"><label>Categoría</label>
+              <select id="p-provincial-categoria" onchange="actualizarNombreTorneoProvincial('p')">
+                <option value="sub15">Sub 15</option>
+                <option value="sub13">Sub 13</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Zona</label>
+              <select id="p-provincial-zona" onchange="actualizarNombreTorneoProvincial('p')">
+                <option value="zona1">Zona 1</option>
+                <option value="zona2">Zona 2</option>
+                <option value="zona3">Zona 3</option>
+                <option value="zona4">Zona 4</option>
+              </select>
+            </div>
+          </div>
         </div>
         <!-- playoff flag solo primera -->
         <div id="p-playoff-wrap" class="form-group" style="display:none">
@@ -4358,6 +4386,98 @@ table.posiciones td:nth-child(8){
         <div class="admin-list" id="lista-copacordoba" style="margin-top:12px"></div>
       </div>
 
+      <!-- TORNEO PROVINCIAL (Copa Oro / Copa Plata) -->
+      <div class="admin-section" id="admin-provincial">
+        <div class="admin-title">🥇 Torneo Provincial – Copa Oro / Copa Plata</div>
+        <p style="font-family:'DM Sans',sans-serif;font-size:12px;color:rgba(255,255,255,.4);margin-bottom:14px;">La fase de grupos (4 zonas × 4 selecciones, por categoría) se carga como partidos normales en <b style="color:rgba(255,255,255,.7)">Partidos</b>, tildando "Es partido de Torneo Provincial". Acá se cargan solo los cruces de las copas de Cuartos de Final en adelante.</p>
+        <div class="form-row">
+          <div class="form-group"><label>Categoría</label>
+            <select id="tp-categoria">
+              <option value="sub15">Sub 15</option>
+              <option value="sub13">Sub 13</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Copa</label>
+            <select id="tp-copa">
+              <option value="oro">🥇 Copa Oro</option>
+              <option value="plata">🥈 Copa Plata</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Fase</label>
+            <select id="tp-fase" onchange="updateAdminTPFase()">
+              <option value="cuartos">Cuartos de Final</option>
+              <option value="semifinal">Semifinales</option>
+              <option value="final">Final</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Cruce N°</label>
+            <select id="tp-cruce"></select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Tipo de cruce</label>
+            <select id="tp-tipo" onchange="updateAdminTPTipo()">
+              <option value="unico">Partido único</option>
+              <option value="idavuelta">Ida y Vuelta</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Estado</label>
+            <select id="tp-estado">
+              <option value="pendiente">Pendiente</option>
+              <option value="en-juego">En juego</option>
+              <option value="jugado">Jugado</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Equipo Local / Mejor clasificado</label><input type="text" id="tp-local" placeholder="Nombre de la selección"/></div>
+          <div class="form-group"><label>Equipo Visitante</label><input type="text" id="tp-visit" placeholder="Nombre de la selección"/></div>
+        </div>
+        <!-- partido único -->
+        <div id="tp-unico-wrap">
+          <div class="form-row">
+            <div class="form-group"><label>Resultado (partido único)</label><input type="text" id="tp-res" placeholder="2-1"/></div>
+            <div class="form-group"><label>Ganador</label><input type="text" id="tp-ganador" placeholder="Nombre de la selección que clasifica"/></div>
+          </div>
+          <div class="form-group">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+              <input type="checkbox" id="tp-tiene-penales" onchange="togglePenalesInput('tp')" style="width:16px;height:16px;accent-color:var(--dorado)"/>
+              <span>Se definió por penales</span>
+            </label>
+            <input type="text" id="tp-penales" placeholder="Ej: 5-4" style="display:none;margin-top:8px"/>
+          </div>
+        </div>
+        <!-- ida y vuelta -->
+        <div id="tp-idavuelta-wrap" style="display:none">
+          <div class="seccion-label">Partido de Ida</div>
+          <div class="form-row">
+            <div class="form-group"><label>Resultado ida</label><input type="text" id="tp-res-ida" placeholder="1-0"/></div>
+            <div class="form-group"><label>Fecha ida</label><input type="text" id="tp-fecha-ida" placeholder="Ej: 12/07"/></div>
+          </div>
+          <div class="seccion-label">Partido de Vuelta</div>
+          <div class="form-row">
+            <div class="form-group"><label>Resultado vuelta</label><input type="text" id="tp-res-vuelta" placeholder="1-2"/></div>
+            <div class="form-group"><label>Fecha vuelta</label><input type="text" id="tp-fecha-vuelta" placeholder="Ej: 19/07"/></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Global</label><input type="text" id="tp-global" placeholder="2-2"/></div>
+            <div class="form-group"><label>Ganador</label><input type="text" id="tp-ganador-iv" placeholder="Nombre de la selección que clasifica"/></div>
+          </div>
+          <div class="form-group">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+              <input type="checkbox" id="tpiv-tiene-penales" onchange="togglePenalesInput('tpiv')" style="width:16px;height:16px;accent-color:var(--dorado)"/>
+              <span>Se definió por penales</span>
+            </label>
+            <input type="text" id="tpiv-penales" placeholder="Ej: 5-4" style="display:none;margin-top:8px"/>
+          </div>
+        </div>
+        <br/>
+        <button class="btn-primary" onclick="guardarCruceTP()">💾 Guardar Cruce</button>
+        <div class="admin-list" id="lista-provincial" style="margin-top:12px"></div>
+      </div>
+
       <!-- FOTOS -->
       <div class="admin-section" id="admin-fotos">
         <div class="admin-title">📸 Galería de Fotos</div>
@@ -4976,6 +5096,11 @@ table.posiciones td:nth-child(8){
         <div class="tabs-row" id="pos-cc-tabs" style="display:none">
           <button class="torneo-tab cc-tab-btn active" data-cc="otros" onclick="switchCCTab('otros',this)">Otros Torneos</button>
           <button class="torneo-tab cc-tab-btn" data-cc="copacordoba" onclick="switchCCTab('copacordoba',this)">🏆 Copa Córdoba</button>
+          <button class="torneo-tab cc-tab-btn" data-cc="provincial" onclick="switchCCTab('provincial',this)">🥇 Torneo Provincial</button>
+        </div>
+        <div class="tabs-row" id="pos-tp-cat-tabs" style="display:none;margin-top:-4px">
+          <button class="torneo-tab tp-cat-btn active" data-tpcat="sub15" onclick="switchTPCategoria('sub15',this)">Sub 15</button>
+          <button class="torneo-tab tp-cat-btn" data-tpcat="sub13" onclick="switchTPCategoria('sub13',this)">Sub 13</button>
         </div>
         <!-- sub-tab Primera / Reserva -->
         <div class="tabs-row" id="pos-cat-tabs">
@@ -5189,7 +5314,7 @@ function setLSSafe(key, value){
   }
 }
 
-function getData(){try{const d=JSON.parse(localStorage.getItem(DATA_KEY))||defData();if(!d.playoff)d.playoff=[];if(!d.alineaciones)d.alineaciones=[];if(!d.copaCordoba)d.copaCordoba=[];if(!d.copaCordobaLogo)d.copaCordobaLogo='';return d;}catch(e){return defData();}}
+function getData(){try{const d=JSON.parse(localStorage.getItem(DATA_KEY))||defData();if(!d.playoff)d.playoff=[];if(!d.alineaciones)d.alineaciones=[];if(!d.copaCordoba)d.copaCordoba=[];if(!d.copaCordobaLogo)d.copaCordobaLogo='';if(!d.provincialCopas)d.provincialCopas=[];return d;}catch(e){return defData();}}
 // Construye una copia de "d" sin las fotos de goleadores:
 // van en documentos individuales para no superar el límite de 1MB de Firestore.
 function dataParaFirestore(d){
@@ -5277,7 +5402,7 @@ async function saveIdentidad(i){
 function getFotos(){try{return JSON.parse(localStorage.getItem(FOTOS_KEY))||[];}catch(e){return[];}}
 function saveFotos(f){if(!setLSSafe(FOTOS_KEY,JSON.stringify(f)))return;if(window._fb)window._fb.set('fotos',f);}
 
-function defData(){return{partidos:[],posiciones:[],goleadores:[],equipos:[],torneos:[],playoff:[],copaCordoba:[],copaCordobaLogo:'',alineaciones:[]};};
+function defData(){return{partidos:[],posiciones:[],goleadores:[],equipos:[],torneos:[],playoff:[],copaCordoba:[],copaCordobaLogo:'',provincialCopas:[],alineaciones:[]};};
 
 let data=getData();
 let escudos=getEscudos();
@@ -5291,10 +5416,18 @@ let currentZona='sierra';   // fase1: sierra|llano
 let currentGrupo='campeonato'; // fase2: campeonato|repechaje
 let currentFaseRes='fase1';  // resultados segunda: fase1|fase2|fase3
 let currentFaseGol='fase1';  // goleadores segunda: fase1|fase2|fase3
-let currentCCTab='otros';    // extra liga: otros|copacordoba (Fixture/Resultados/Posiciones)
+let currentCCTab='otros';    // extra liga (posiciones): otros|copacordoba|provincial
+let currentTPCategoria='sub15'; // torneo provincial: sub15|sub13
 function switchCCTab(tab,el){
   currentCCTab=tab;
   document.querySelectorAll('.cc-tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.cc===tab));
+  const tpCatTabs=document.getElementById('pos-tp-cat-tabs');
+  if(tpCatTabs) tpCatTabs.style.display=(tab==='provincial')?'flex':'none';
+  renderSection(currentSection);
+}
+function switchTPCategoria(cat,el){
+  currentTPCategoria=cat;
+  document.querySelectorAll('.tp-cat-btn').forEach(b=>b.classList.toggle('active',b.dataset.tpcat===cat));
   renderSection(currentSection);
 }
 let _logoB64='';
@@ -5477,6 +5610,7 @@ function showSection(sec){
   // Controles específicos por sección
   if(sec==='posiciones'){
     const t=document.getElementById('pos-cc-tabs'); if(t) t.style.display='none';
+    const tpc=document.getElementById('pos-tp-cat-tabs'); if(tpc) tpc.style.display='none';
     document.getElementById('pos-torneo-tabs').style.display='flex';
     document.getElementById('pos-fase-tabs').style.display='none';
     document.getElementById('pos-zona-tabs').style.display='none';
@@ -5531,6 +5665,8 @@ function switchDivTab(div,el){
     const esExtra=div==='extraliga';
     const ccTabsPos=document.getElementById('pos-cc-tabs');
     if(ccTabsPos) ccTabsPos.style.display=esExtra?'flex':'none';
+    const tpCatTabs=document.getElementById('pos-tp-cat-tabs');
+    if(tpCatTabs) tpCatTabs.style.display=(esExtra&&currentCCTab==='provincial')?'flex':'none';
     // sub-tab Primera/Reserva: no aplica a extraliga
     const catTabs=document.getElementById('pos-cat-tabs');
     if(catTabs) catTabs.style.display=esExtra?'none':'flex';
@@ -7205,7 +7341,8 @@ function renderPosiciones(){
   // ---- TORNEOS EXTRA LIGA ----
   if(div==='extraliga'){
     if(currentCCTab==='copacordoba'){ renderCopaCordoba(el); return; }
-    el.innerHTML=`<div class="card"><div class="card-header"><span>Torneos Extra Liga</span><span class="div-badge">EXTRA LIGA</span></div><div class="empty-msg">Las posiciones de los torneos libres de Extra Liga se arman por fecha en Fixture / Resultados. Elegí "🏆 Copa Córdoba" arriba para ver su cuadro.</div></div>`;
+    if(currentCCTab==='provincial'){ renderTorneoProvincial(el); return; }
+    el.innerHTML=`<div class="card"><div class="card-header"><span>Torneos Extra Liga</span><span class="div-badge">EXTRA LIGA</span></div><div class="empty-msg">Las posiciones de los torneos libres de Extra Liga se arman por fecha en Fixture / Resultados. Elegí "🏆 Copa Córdoba" o "🥇 Torneo Provincial" arriba para ver esos cuadros.</div></div>`;
     return;
   }
 
@@ -9591,6 +9728,26 @@ function togglePenalesInput(prefix){
   if(inp) inp.style.display = (chk && chk.checked) ? '' : 'none';
 }
 
+// Muestra/oculta los campos de Categoría/Zona del Torneo Provincial y
+// autocompleta el nombre del torneo libre para que agrupe bien en Fixture/Resultados.
+function toggleProvincialFields(prefix){
+  const chk=document.getElementById(prefix+'-es-provincial');
+  const wrap=document.getElementById(prefix+'-provincial-datos-wrap');
+  if(wrap) wrap.style.display=(chk&&chk.checked)?'':'none';
+  actualizarNombreTorneoProvincial(prefix);
+}
+function actualizarNombreTorneoProvincial(prefix){
+  const chk=document.getElementById(prefix+'-es-provincial');
+  if(!chk||!chk.checked) return;
+  const catSel=document.getElementById(prefix+'-provincial-categoria');
+  const zonaSel=document.getElementById(prefix+'-provincial-zona');
+  if(!catSel||!zonaSel) return;
+  const catLabel=catSel.value==='sub15'?'Sub 15':'Sub 13';
+  const zonaLabel='Zona '+zonaSel.value.replace('zona','');
+  const inp=document.getElementById(prefix+'-torneo-extra');
+  if(inp) inp.value=`Torneo Provincial - ${catLabel} - ${zonaLabel}`;
+}
+
 function updateAdminPartidoDiv(){
   const divVal = document.getElementById('p-div').value;
   const esReserva = divVal === 'reserva';
@@ -9723,6 +9880,11 @@ function agregarPartido(){
   if(div==='extraliga'){
     d.torneoExtra=document.getElementById('p-torneo-extra').value.trim();
     d.logoExtra=_pLogoExtra||'';
+    d.esProvincial=document.getElementById('p-es-provincial').checked;
+    if(d.esProvincial){
+      d.provincialCategoria=document.getElementById('p-provincial-categoria').value;
+      d.provincialZona=document.getElementById('p-provincial-zona').value;
+    }
   }
   else if(div==='primera'){
     d.torneo=document.getElementById('p-torneo-sel').value;
@@ -9744,6 +9906,8 @@ function agregarPartido(){
   document.getElementById('p-exp-list').innerHTML='';
   document.getElementById('p-div').value='primera';
   document.getElementById('p-torneo-extra').value='';
+  document.getElementById('p-es-provincial').checked=false;
+  document.getElementById('p-provincial-datos-wrap').style.display='none';
   pQuitarLogoExtra();
   document.getElementById('p-tiene-penales').checked=false;
   document.getElementById('p-penales').value='';
@@ -10287,6 +10451,26 @@ function abrirModalEdicion(tipo,id,objOverride){
           <p style="pointer-events:none;font-size:11px">Hacé clic para subir el logo</p>
         </div>
         <div class="preview-wrap ${obj.logoExtra?'visible':''}" id="ed-logo-extra-wrap"><img id="ed-logo-extra-preview" src="${obj.logoExtra||''}" style="max-height:80px;border-radius:8px"/><button type="button" class="btn-quitar-img" onclick="edQuitarLogoExtra()">✕ Quitar</button></div>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:12px">
+          <input type="checkbox" id="ed-es-provincial" ${obj.esProvincial?'checked':''} onchange="toggleProvincialFields('ed')" style="width:16px;height:16px;accent-color:var(--dorado)"/>
+          <span>Es partido de Torneo Provincial (fase de grupos)</span>
+        </label>
+        <div class="form-row" id="ed-provincial-datos-wrap" style="display:${obj.esProvincial?'':'none'};margin-top:8px">
+          <div class="form-group"><label>Categoría</label>
+            <select id="ed-provincial-categoria" onchange="actualizarNombreTorneoProvincial('ed')">
+              <option value="sub15" ${obj.provincialCategoria==='sub15'?'selected':''}>Sub 15</option>
+              <option value="sub13" ${obj.provincialCategoria==='sub13'?'selected':''}>Sub 13</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Zona</label>
+            <select id="ed-provincial-zona" onchange="actualizarNombreTorneoProvincial('ed')">
+              <option value="zona1" ${obj.provincialZona==='zona1'?'selected':''}>Zona 1</option>
+              <option value="zona2" ${obj.provincialZona==='zona2'?'selected':''}>Zona 2</option>
+              <option value="zona3" ${obj.provincialZona==='zona3'?'selected':''}>Zona 3</option>
+              <option value="zona4" ${obj.provincialZona==='zona4'?'selected':''}>Zona 4</option>
+            </select>
+          </div>
+        </div>
       </div>
       <div class="form-group" ${esPrimera?'':'style="display:none"'} id="ed-playoff-wrap">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
@@ -10801,6 +10985,14 @@ function guardarEdicion(tipo,id){
     if(divVal==='extraliga'){
       updated.torneoExtra=val('ed-torneo-extra').trim();
       updated.logoExtra=_edLogoExtra||'';
+      const chkProv=document.getElementById('ed-es-provincial');
+      updated.esProvincial = chkProv ? chkProv.checked : false;
+      if(updated.esProvincial){
+        updated.provincialCategoria=val('ed-provincial-categoria');
+        updated.provincialZona=val('ed-provincial-zona');
+      } else {
+        delete updated.provincialCategoria; delete updated.provincialZona;
+      }
       delete updated.faseRes;delete updated.zona;delete updated.torneo;
       delete updated.esPlayoff;delete updated.tienePenales;delete updated.penales;
     } else if(divVal==='primera'){
@@ -10811,13 +11003,16 @@ function guardarEdicion(tipo,id){
       updated.tienePenales = updated.esPlayoff ? (chkPen?chkPen.checked:false) : false;
       updated.penales = updated.tienePenales ? val('ed-penales').trim() : '';
       delete updated.faseRes;delete updated.zona;delete updated.torneoExtra;delete updated.logoExtra;
+      delete updated.esProvincial;delete updated.provincialCategoria;delete updated.provincialZona;
     } else if(esReserva){
       delete updated.faseRes;delete updated.zona;delete updated.torneo;delete updated.torneoExtra;delete updated.logoExtra;
+      delete updated.esProvincial;delete updated.provincialCategoria;delete updated.provincialZona;
     } else {
       updated.faseRes=val('ed-faseRes')||'fase1';
       if(updated.faseRes==='fase1'||updated.faseRes==='fase2') updated.zona=val('ed-zona')||'';
       else delete updated.zona;
       delete updated.torneo;delete updated.torneoExtra;delete updated.logoExtra;
+      delete updated.esProvincial;delete updated.provincialCategoria;delete updated.provincialZona;
     }
     updated.esReserva=esReserva;
     updated.torneoReserva=null;
@@ -11095,7 +11290,8 @@ function recalcularTodo(){
     if(p.estado !== 'jugado') return;
     if(p.esPlayoff) return;   // playoff no suma en posiciones
     if(p.esReserva) return;   // reserva tiene su propia tabla separada
-    if(p.div === 'extraliga') return; // extra liga: formato libre por torneo, sin tabla fija
+    const esProvincial = p.div === 'extraliga' && p.esProvincial && p.provincialCategoria && p.provincialZona;
+    if(p.div === 'extraliga' && !esProvincial) return; // otros torneos extra liga: formato libre, sin tabla fija
     const res = parsearResultado(p.resultado);
     if(!res) return;
 
@@ -11105,6 +11301,7 @@ function recalcularTodo(){
     const zona      = p.zona || '';
 
     function clavePosicion(equipo){
+      if(esProvincial) return `provincial|${normalizar(equipo)}|${p.provincialCategoria}|${p.provincialZona}`;
       return esPrimera
         ? `${p.div}|${normalizar(equipo)}|${torneo}`
         : `${p.div}|${normalizar(equipo)}|${fase}|${zona}`;
@@ -11117,7 +11314,8 @@ function recalcularTodo(){
           div: p.div, equipo,
           pj:0, g:0, e:0, p:0, gf:0, gc:0, pts:0, dg:'+0'
         };
-        if(esPrimera) reg.torneo = torneo;
+        if(esProvincial){ reg.torneo='provincial'; reg.categoria=p.provincialCategoria; reg.zonaProvincial=p.provincialZona; }
+        else if(esPrimera) reg.torneo = torneo;
         else { reg.fase = fase; reg.zona = zona; }
         mapaPos[k] = reg;
       }
@@ -11144,6 +11342,7 @@ function recalcularTodo(){
     // Reusar el ID y preservar ptsDesc del registro existente
     const existente = snapshotPos.find(p => {
       if(normalizar(p.equipo) !== normalizar(reg.equipo) || p.div !== reg.div) return false;
+      if(reg.categoria) return p.categoria===reg.categoria && p.zonaProvincial===reg.zonaProvincial && (p.torneo||'')===reg.torneo;
       if(reg.torneo) return (p.torneo||'apertura') === reg.torneo;
       return p.fase === reg.fase && (p.zona||'') === (reg.zona||'');
     });
@@ -11505,6 +11704,7 @@ function switchAdminTab(tab,el){
   el.classList.add('active');
   if(tab==='playoff') renderAdminListaPlayoff();
   if(tab==='copacordoba'){ updateAdminCCFase(); updateAdminCCTipo(); renderAdminListaCopaCordoba(); ccSyncLogoPreview(); }
+  if(tab==='provincial'){ updateAdminTPFase(); updateAdminTPTipo(); renderAdminListaProvincial(); }
   if(tab==='fotos') renderAdminListaFotos();
   if(tab==='fichas'){ poblarSelectFichas(); renderAdminListaFichas(); }
   if(tab==='noticias') renderAdminListaNoticias();
@@ -11902,6 +12102,123 @@ function editarCruceCC(id){
   data.copaCordoba=data.copaCordoba.filter(x=>String(x.id)!==String(id));
 }
 
+// ============================================================
+// TORNEO PROVINCIAL – Copa Oro / Copa Plata (Cuartos → Semifinal → Final)
+// ============================================================
+const FASES_TP=[
+  {key:'cuartos',   label:'Cuartos de Final', max:4},
+  {key:'semifinal', label:'Semifinales',      max:2},
+  {key:'final',     label:'Final',            max:1}
+];
+function faseTPLabel(key){const f=FASES_TP.find(x=>x.key===key);return f?f.label:key;}
+function faseTPMax(key){const f=FASES_TP.find(x=>x.key===key);return f?f.max:1;}
+
+// ---- ADMIN ----
+function updateAdminTPFase(){
+  const fase=document.getElementById('tp-fase').value;
+  const max=faseTPMax(fase);
+  const sel=document.getElementById('tp-cruce');
+  sel.innerHTML='';
+  for(let i=1;i<=max;i++) sel.innerHTML+=`<option value="${i}">Cruce ${i}</option>`;
+}
+function updateAdminTPTipo(){
+  const idavuelta=document.getElementById('tp-tipo').value==='idavuelta';
+  document.getElementById('tp-unico-wrap').style.display=idavuelta?'none':'';
+  document.getElementById('tp-idavuelta-wrap').style.display=idavuelta?'':'none';
+}
+
+function guardarCruceTP(){
+  const categoria=document.getElementById('tp-categoria').value;
+  const copa=document.getElementById('tp-copa').value;
+  const fase=document.getElementById('tp-fase').value;
+  const cruce=+document.getElementById('tp-cruce').value;
+  const idavuelta=document.getElementById('tp-tipo').value==='idavuelta';
+  const local=document.getElementById('tp-local').value.trim();
+  const visit=document.getElementById('tp-visit').value.trim();
+  if(!local||!visit){alert('Completá las dos selecciones');return;}
+  const estado=document.getElementById('tp-estado').value;
+
+  const obj={id:String(Date.now()),categoria,copa,fase,cruce,idavuelta,local,visit,estado};
+  if(idavuelta){
+    obj.resIda=document.getElementById('tp-res-ida').value.trim();
+    obj.fechaIda=document.getElementById('tp-fecha-ida').value.trim();
+    obj.resVuelta=document.getElementById('tp-res-vuelta').value.trim();
+    obj.fechaVuelta=document.getElementById('tp-fecha-vuelta').value.trim();
+    obj.global=document.getElementById('tp-global').value.trim();
+    obj.ganador=document.getElementById('tp-ganador-iv').value.trim();
+    obj.tienePenales=document.getElementById('tpiv-tiene-penales').checked;
+    obj.penales=obj.tienePenales?document.getElementById('tpiv-penales').value.trim():'';
+  } else {
+    obj.resultado=document.getElementById('tp-res').value.trim();
+    obj.ganador=document.getElementById('tp-ganador').value.trim();
+    obj.tienePenales=document.getElementById('tp-tiene-penales').checked;
+    obj.penales=obj.tienePenales?document.getElementById('tp-penales').value.trim():'';
+  }
+  const idx=data.provincialCopas.findIndex(c=>c.categoria===categoria&&c.copa===copa&&c.fase===fase&&c.cruce===cruce);
+  if(idx>=0) data.provincialCopas[idx]={...data.provincialCopas[idx],...obj,id:data.provincialCopas[idx].id};
+  else data.provincialCopas.push(obj);
+  saveData(data);
+  renderAdminListaProvincial();
+  renderSection(currentSection);
+}
+
+function eliminarCruceTP(id){
+  pedirConfirmacion('¿Eliminar este cruce del Torneo Provincial?',function(){
+    data.provincialCopas=data.provincialCopas.filter(c=>String(c.id)!==String(id));
+    saveData(data);renderAdminListaProvincial();renderSection(currentSection);
+  });
+}
+
+function renderAdminListaProvincial(){
+  const el=document.getElementById('lista-provincial');
+  if(!el)return;
+  if(!data.provincialCopas.length){el.innerHTML='<p class="admin-empty">Sin cruces cargados</p>';return;}
+  el.innerHTML=[...data.provincialCopas].sort((a,b)=>{
+    const ord={}; FASES_TP.forEach((f,i)=>ord[f.key]=i);
+    return a.categoria.localeCompare(b.categoria)||a.copa.localeCompare(b.copa)||(ord[a.fase]||0)-(ord[b.fase]||0)||a.cruce-b.cruce;
+  }).map(c=>`<div class="admin-list-item">
+    <span><b>${c.categoria==='sub15'?'Sub 15':'Sub 13'} · ${c.copa==='oro'?'🥇 Oro':'🥈 Plata'} · ${faseTPLabel(c.fase)}</b> Cruce ${c.cruce} | ${c.local} vs ${c.visit} | <em>${c.estado}</em>${c.idavuelta?(c.global?' | Global: '+c.global:''):(c.resultado?' | '+c.resultado:'')}${c.ganador?' | Clasifica: '+c.ganador:''}${c.tienePenales&&c.penales?' | Penales: '+c.penales:''}</span>
+    <div style="display:flex;gap:5px;flex-shrink:0">
+      <button class="btn-edit" onclick="editarCruceTP('${c.id}')">✏ Editar</button>
+      <button class="btn-danger" onclick="eliminarCruceTP('${c.id}')">✕ Eliminar</button>
+    </div>
+  </div>`).join('');
+}
+
+function editarCruceTP(id){
+  const c=data.provincialCopas.find(x=>String(x.id)===String(id));
+  if(!c)return;
+  document.getElementById('tp-categoria').value=c.categoria||'sub15';
+  document.getElementById('tp-copa').value=c.copa||'oro';
+  document.getElementById('tp-fase').value=c.fase||'cuartos';
+  updateAdminTPFase();
+  document.getElementById('tp-cruce').value=c.cruce||1;
+  document.getElementById('tp-tipo').value=c.idavuelta?'idavuelta':'unico';
+  updateAdminTPTipo();
+  document.getElementById('tp-estado').value=c.estado||'pendiente';
+  document.getElementById('tp-local').value=c.local||'';
+  document.getElementById('tp-visit').value=c.visit||'';
+  if(c.idavuelta){
+    document.getElementById('tp-res-ida').value=c.resIda||'';
+    document.getElementById('tp-fecha-ida').value=c.fechaIda||'';
+    document.getElementById('tp-res-vuelta').value=c.resVuelta||'';
+    document.getElementById('tp-fecha-vuelta').value=c.fechaVuelta||'';
+    document.getElementById('tp-global').value=c.global||'';
+    document.getElementById('tp-ganador-iv').value=c.ganador||'';
+    document.getElementById('tpiv-tiene-penales').checked=!!c.tienePenales;
+    document.getElementById('tpiv-penales').value=c.penales||'';
+    togglePenalesInput('tpiv');
+  } else {
+    document.getElementById('tp-res').value=c.resultado||'';
+    document.getElementById('tp-ganador').value=c.ganador||'';
+    document.getElementById('tp-tiene-penales').checked=!!c.tienePenales;
+    document.getElementById('tp-penales').value=c.penales||'';
+    togglePenalesInput('tp');
+  }
+  // eliminar el viejo para que guardarCruceTP lo reescriba
+  data.provincialCopas=data.provincialCopas.filter(x=>String(x.id)!==String(id));
+}
+
 // ---- PÚBLICO: cuadro geométrico con líneas de conexión ----
 // Medidas del cuadro (px)
 const CC_BH=52, CC_GAP=9, CC_SH=CC_BH+CC_GAP;    // alto de caja / separación entre cajas de una misma fase
@@ -12020,15 +12337,144 @@ function renderCopaCordoba(el){
   ccAjustarEscala();
 }
 
-// Achica el cuadro con transform:scale para que entren las 6 fases sin
+// Cuadro de Copa Oro / Copa Plata (Cuartos → Semifinal → Final): árbol
+// binario limpio de punta a punta, así que la geometría es más simple que
+// la de Copa Córdoba (no hace falta separar tramos "limpios"/"con extra").
+function tpCentros(){
+  const centros=[];
+  FASES_TP.forEach((f,r)=>{
+    if(r===0){
+      centros.push(Array.from({length:f.max},(_,i)=>i*CC_SH+CC_BH/2));
+    } else {
+      const prev=centros[r-1];
+      const arr=[];
+      for(let i=0;i<f.max;i++) arr.push((prev[2*i]+prev[2*i+1])/2);
+      centros.push(arr);
+    }
+  });
+  return centros;
+}
+
+function renderCopaOroPlata(categoria, copa, el){
+  if(!el) return;
+  const centros=tpCentros();
+  const totalW=FASES_TP.length*CC_CP-CC_CG+8;
+  const totalH=CC_HEADER_H+FASES_TP[0].max*CC_SH+6;
+
+  let piezas='';
+  FASES_TP.forEach((f,r)=>{
+    const x=r*CC_CP;
+    piezas+=`<div class="cc-col-header${f.key==='final'?' activa':''}" style="left:${x}px;width:${CC_BW}px">${f.label}</div>`;
+    for(let i=0;i<f.max;i++){
+      const y=CC_HEADER_H+centros[r][i]-CC_BH/2;
+      const c=data.provincialCopas.find(cr=>cr.categoria===categoria&&cr.copa===copa&&cr.fase===f.key&&cr.cruce===i+1);
+      piezas+=ccBoxHTML(c,i+1,x,y,f.key==='final');
+    }
+  });
+  for(let r=1;r<FASES_TP.length;r++){
+    const xFeederRight=(r-1)*CC_CP+CC_BW;
+    const xVert=xFeederRight+CC_CG/2;
+    const xCurrentLeft=r*CC_CP;
+    for(let i=0;i<FASES_TP[r].max;i++){
+      const y0=CC_HEADER_H+centros[r-1][2*i];
+      const y1=CC_HEADER_H+centros[r-1][2*i+1];
+      const yMid=CC_HEADER_H+centros[r][i];
+      piezas+=`<div class="cc-line" style="left:${xFeederRight}px;top:${y0}px;width:${xVert-xFeederRight}px;height:1px"></div>`;
+      piezas+=`<div class="cc-line" style="left:${xFeederRight}px;top:${y1}px;width:${xVert-xFeederRight}px;height:1px"></div>`;
+      piezas+=`<div class="cc-line" style="left:${xVert}px;top:${Math.min(y0,y1)}px;width:1px;height:${Math.abs(y1-y0)}px"></div>`;
+      piezas+=`<div class="cc-line" style="left:${xVert}px;top:${yMid}px;width:${xCurrentLeft-xVert}px;height:1px"></div>`;
+    }
+  }
+
+  const copaLabel=copa==='oro'?'🥇 Copa Oro':'🥈 Copa Plata';
+  const catLabel=categoria==='sub15'?'Sub 15':'Sub 13';
+  const scalerId=`tp-scaler-${categoria}-${copa}`, innerId=`tp-inner-${categoria}-${copa}`;
+  el.innerHTML=`
+    <div class="playoff-section" style="margin-top:1.2rem">
+      <div class="playoff-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <span>${copaLabel} – ${catLabel}</span>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn-share" onclick="abrirShare(()=>generarImagenCopaProvincial('${categoria}','${copa}'))">${SVG_SHARE} Compartir</button>
+        </div>
+      </div>
+      <div class="cc-bracket-scroll">
+        <div class="cc-bracket-scaler" id="${scalerId}" style="position:relative;width:${totalW}px;height:${totalH}px">
+          <div class="cc-bracket-inner" id="${innerId}" style="width:${totalW}px;height:${totalH}px">${piezas}</div>
+        </div>
+      </div>
+    </div>`;
+  ccAjustarEscalaEl(scalerId, innerId);
+}
+
+// Tabla de posiciones de una zona del Torneo Provincial (reutiliza las
+// mismas clases CSS .posiciones / .pos-num / .pos-equipo que ya usa el
+// resto del sitio). 1° y 2° clasifican a Copa Oro, 3° y 4° a Copa Plata.
+function tablaProvincialHTML(titulo, pos){
+  if(!pos.length) return `<div class="card" style="margin-bottom:.8rem"><div class="card-header"><span>${titulo}</span><span class="div-badge">EXTRA LIGA</span></div><div class="empty-msg">No hay posiciones cargadas para esta zona todavía</div></div>`;
+  const rows=pos.map((p,i)=>{
+    const cls=i<2?'zona-clasificacion':(i<4?'tp-zona-plata':'');
+    return `<tr class="${cls}">
+      <td class="pos-num">${i===0?'<span class="pos-num-1">1</span>':i+1}</td>
+      <td><div class="pos-equipo">${getEscudoHTML(p.equipo,28)} ${p.equipo}</div></td>
+      <td class="pos-pts">${p.pts!=null?p.pts:0}</td>
+      <td>${p.pj||0}</td><td>${p.g||0}</td><td>${p.e||0}</td><td>${p.p||0}</td>
+      <td>${p.gf||0}</td><td>${p.gc||0}</td><td>${p.dg||'+0'}</td>
+    </tr>`;
+  }).join('');
+  return `<div class="card" style="margin-bottom:.8rem">
+    <div class="card-header"><span>${titulo}</span><span class="div-badge">EXTRA LIGA</span></div>
+    <div class="tabla-wrap"><table class="posiciones">
+      <thead><tr><th>#</th><th>Equipo</th><th>PTS</th><th>PJ</th><th>G</th><th>E</th><th>P</th><th>GF</th><th>GC</th><th>DG</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>
+    <div style="display:flex;gap:14px;padding:8px 14px;font-size:11px;color:var(--gris);font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px;flex-wrap:wrap">
+      <span style="border-left:3px solid var(--verde-clasificacion);padding-left:6px">1° y 2° → Copa Oro</span>
+      <span style="border-left:3px solid var(--dorado);padding-left:6px">3° y 4° → Copa Plata</span>
+    </div>
+  </div>`;
+}
+
+// Arma todo el sub-apartado "Torneo Provincial" dentro de Posiciones → Extra
+// Liga: las 4 tablas de zona de la categoría elegida + los cuadros de Copa
+// Oro y Copa Plata debajo.
+function renderTorneoProvincial(el){
+  if(!el) return;
+  const cat=currentTPCategoria;
+  const catLabel=cat==='sub15'?'Sub 15':'Sub 13';
+  const zonas=[
+    {key:'zona1',label:'Zona 1'},{key:'zona2',label:'Zona 2'},
+    {key:'zona3',label:'Zona 3'},{key:'zona4',label:'Zona 4'}
+  ];
+
+  const tablas=zonas.map(z=>{
+    const registros=data.posiciones.filter(p=>p.div==='extraliga'&&p.torneo==='provincial'&&p.categoria===cat&&p.zonaProvincial===z.key);
+    const partidosZona=data.partidos.filter(p=>p.div==='extraliga'&&p.esProvincial&&p.provincialCategoria===cat&&p.provincialZona===z.key);
+    const ordenados=ordenarConDesempate(registros, partidosZona);
+    return tablaProvincialHTML(z.label, ordenados);
+  }).join('');
+
+  el.innerHTML=`
+    <div class="playoff-title" style="margin-bottom:.6rem"><span>🥇🥈 Torneo Provincial – ${catLabel}</span></div>
+    <div class="tp-zonas-grid">${tablas}</div>
+    <div id="tp-oro-wrap"></div>
+    <div id="tp-plata-wrap"></div>
+  `;
+  renderCopaOroPlata(cat,'oro',document.getElementById('tp-oro-wrap'));
+  renderCopaOroPlata(cat,'plata',document.getElementById('tp-plata-wrap'));
+}
+
+// Achica el cuadro con transform:scale para que entren las fases sin
 // scroll horizontal cuando el ancho disponible es menor al necesario.
 // Nunca baja de 0.55 (por debajo de eso se vuelve ilegible); si el
 // contenedor es más angosto que eso, queda el scroll horizontal como red.
-function ccAjustarEscala(){
-  const scroll=document.querySelector('.cc-bracket-scroll');
-  const scaler=document.getElementById('cc-scaler');
-  const inner=document.getElementById('cc-inner');
-  if(!scroll||!scaler||!inner) return;
+// Genérico: recibe los IDs del "scaler" y el "inner" (puede haber varios
+// cuadros en la misma página, ej. Copa Oro + Copa Plata).
+function ccAjustarEscalaEl(scalerId, innerId){
+  const scaler=document.getElementById(scalerId);
+  const inner=document.getElementById(innerId);
+  if(!scaler||!inner) return;
+  const scroll=scaler.closest('.cc-bracket-scroll');
+  if(!scroll) return;
   const natW=inner.offsetWidth||parseInt(inner.style.width,10);
   const natH=inner.offsetHeight||parseInt(inner.style.height,10);
   const disponible=scroll.clientWidth-8;
@@ -12038,11 +12484,15 @@ function ccAjustarEscala(){
   scaler.style.width=(natW*escala)+'px';
   scaler.style.height=(natH*escala)+'px';
 }
+function ccAjustarEscala(){ ccAjustarEscalaEl('cc-scaler','cc-inner'); }
 let _ccResizeTimer=null;
 window.addEventListener('resize', function(){
   clearTimeout(_ccResizeTimer);
   _ccResizeTimer=setTimeout(function(){
-    if(document.getElementById('cc-inner')) ccAjustarEscala();
+    document.querySelectorAll('.cc-bracket-scaler').forEach(sc=>{
+      const inner=sc.querySelector('.cc-bracket-inner');
+      if(inner) ccAjustarEscalaEl(sc.id, inner.id);
+    });
   }, 150);
 });
 
@@ -15364,6 +15814,74 @@ async function generarImagenesCopaCordobaPorFase(){
     if(cv) canvases.push(cv);
   }
   return canvases.length?canvases:null;
+}
+
+// Imagen de un cuadro de Copa Oro/Plata (Cuartos → Semifinal → Final, cabe entero)
+async function generarImagenCopaProvincial(categoria, copa){
+  await document.fonts.ready;
+  const id=getIdentidad();
+  const liga=id.nombre||'DEPORTEMAS';
+  const W=CV_W, CX=W/2;
+
+  const secciones=FASES_TP.map(f=>({
+    fase:f,
+    cruces:data.provincialCopas.filter(c=>c.categoria===categoria&&c.copa===copa&&c.fase===f.key).sort((a,b)=>a.cruce-b.cruce)
+  })).filter(sec=>sec.cruces.length);
+  if(!secciones.length) return null;
+
+  const totalCruces=secciones.reduce((a,sec)=>a+sec.cruces.length,0);
+  const ROW_H=s(110), hEtapaHdr=s(38);
+  const copaLabel=copa==='oro'?'🥇 COPA ORO':'🥈 COPA PLATA';
+  const catLabel=categoria==='sub15'?'SUB 15':'SUB 13';
+  const CVH_TOTAL = s(64)+s(56)+s(16) + secciones.length*(hEtapaHdr+s(8)) + totalCruces*ROW_H + secciones.length*s(6) + s(40) + s(20);
+
+  const canvas=document.createElement('canvas');
+  canvas.width=W; canvas.height=CVH_TOTAL;
+  const ctx=canvas.getContext('2d');
+  ctx.textBaseline='alphabetic';
+  const bgGrad=ctx.createLinearGradient(0,0,0,CVH_TOTAL);
+  bgGrad.addColorStop(0,C.NEG3); bgGrad.addColorStop(1,C.NEG);
+  ctx.fillStyle=bgGrad; ctx.fillRect(0,0,W,CVH_TOTAL);
+
+  let y=await cvHeader(ctx,W,id,0);
+  ctx.fillStyle=C.DORADO;
+  ctx.font=`${s(28)}px "Bebas Neue", Arial, sans-serif`;
+  ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+  ctx.fillText(copaLabel, CX, y+s(34));
+  ctx.fillStyle='rgba(201,162,39,0.55)';
+  ctx.font=`600 ${s(14)}px "DM Sans", Arial, sans-serif`;
+  ctx.textAlign='center';
+  ctx.fillText('TORNEO PROVINCIAL · '+catLabel, CX, y+s(52));
+  y+=s(56);
+  const dg=ctx.createLinearGradient(0,0,W,0);
+  dg.addColorStop(0,'transparent'); dg.addColorStop(0.2,C.DORADO);
+  dg.addColorStop(0.8,C.DORADO); dg.addColorStop(1,'transparent');
+  ctx.fillStyle=dg; ctx.fillRect(0,y,W,1);
+  y+=s(16);
+
+  const escudoImgs=await cvPrecargarEscudosCC(secciones.flatMap(sec=>sec.cruces));
+
+  const ECSIZE=s(44);
+  for(const sec of secciones){
+    ctx.fillStyle='rgba(201,162,39,0.10)';
+    ctx.fillRect(s(24),y,W-s(48),hEtapaHdr);
+    ctx.fillStyle=C.DORADO;
+    ctx.font=`700 ${s(15)}px "Rajdhani", Arial, sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText((sec.fase.key==='final'?'🏆 ':'')+sec.fase.label.toUpperCase(), CX, y+hEtapaHdr/2);
+    ctx.textBaseline='alphabetic';
+    y+=hEtapaHdr+s(8);
+
+    for(const c of sec.cruces){
+      cvFilaCruceCC(ctx,c,CX,y,ROW_H-s(10),ECSIZE,escudoImgs,s(16),s(90),s(42),s(22));
+      y+=ROW_H;
+    }
+    y+=s(6);
+  }
+
+  cvFooter(ctx,W,CVH_TOTAL-s(40),liga);
+  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+  return canvas;
 }
 
 
