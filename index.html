@@ -647,6 +647,8 @@
                       if(!data.copaCordoba) data.copaCordoba=[];
                       if(!data.copaCordobaLogo) data.copaCordobaLogo='';
                       if(!data.provincialCopas) data.provincialCopas=[];
+                      if(!data.provincialLogo) data.provincialLogo='';
+                      if(!data.historiaPlantillas) data.historiaPlantillas=[];
                       // Reincorporar fotos de goleadores (guardadas en docs individuales aparte)
                       if(data.goleadores && window._golFotosCache){
                         data.goleadores.forEach(g=>{ if(window._golFotosCache[g.id]) g.foto=window._golFotosCache[g.id]; });
@@ -787,6 +789,8 @@
       if(!data.copaCordoba) data.copaCordoba=[];
       if(!data.copaCordobaLogo) data.copaCordobaLogo='';
       if(!data.provincialCopas) data.provincialCopas=[];
+      if(!data.provincialLogo) data.provincialLogo='';
+      if(!data.historiaPlantillas) data.historiaPlantillas=[];
       // Reincorporar las fotos de goleadores (no viajan en el doc "data", están aparte)
       if(data.goleadores && window._golFotosCache){
         data.goleadores.forEach(g=>{ if(window._golFotosCache[g.id]) g.foto=window._golFotosCache[g.id]; });
@@ -4390,6 +4394,21 @@ table.posiciones td:nth-child(8){
       <div class="admin-section" id="admin-provincial">
         <div class="admin-title">🥇 Torneo Provincial – Copa Oro / Copa Plata</div>
         <p style="font-family:'DM Sans',sans-serif;font-size:12px;color:rgba(255,255,255,.4);margin-bottom:14px;">La fase de grupos (4 zonas × 4 selecciones, por categoría) se carga como partidos normales en <b style="color:rgba(255,255,255,.7)">Partidos</b>, tildando "Es partido de Torneo Provincial". Acá se cargan solo los cruces de las copas de Cuartos de Final en adelante.</p>
+
+        <div class="form-group">
+          <label>Logo del torneo</label>
+          <div style="position:relative;display:inline-block;padding:8px 14px;border:1px dashed var(--dorado-border);border-radius:var(--r-sm);font-size:12px;color:var(--dorado);">
+            📷 Subir logo
+            <input type="file" accept="image/*" id="tp-logo-file" onchange="tpPreviewLogo(this)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%"/>
+          </div>
+          <div class="preview-wrap" id="tp-logo-wrap">
+            <img id="tp-logo-preview" style="max-height:80px;border-radius:8px"/>
+            <button type="button" class="btn-quitar-img" onclick="tpQuitarLogo()">✕ Quitar</button>
+          </div>
+          <button class="btn-primary" style="margin-top:10px" onclick="guardarLogoTP()">💾 Guardar Logo</button>
+        </div>
+        <hr style="border-color:rgba(255,255,255,.08);margin:16px 0"/>
+
         <div class="form-row">
           <div class="form-group"><label>Categoría</label>
             <select id="tp-categoria">
@@ -4870,6 +4889,16 @@ table.posiciones td:nth-child(8){
           Generá una imagen (o video, si es un gol) para subir como historia de Instagram.
         </p>
 
+        <div class="form-group" id="hg-plantilla-wrap">
+          <label>Plantilla guardada</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <select id="hg-plantilla-sel" onchange="hgCargarPlantilla()" style="flex:1">
+              <option value="">— Elegir plantilla —</option>
+            </select>
+            <button type="button" class="btn-danger" style="padding:8px 10px" onclick="hgEliminarPlantilla()" title="Eliminar plantilla seleccionada">🗑️</button>
+          </div>
+        </div>
+
         <datalist id="hg-equipos-datalist"></datalist>
 
         <div class="form-group">
@@ -4940,8 +4969,9 @@ table.posiciones td:nth-child(8){
           <input type="text" id="hg-penales" placeholder="Ej: 5-4"/>
         </div>
 
-        <div style="display:flex;gap:8px;margin-top:14px">
+        <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
           <button class="btn-primary" id="hg-generar-btn" onclick="hgGenerar()">🖼️ Generar</button>
+          <button class="btn-edit" onclick="hgGuardarPlantilla()">💾 Guardar plantilla</button>
           <button class="btn-edit" onclick="hgLimpiarForm()">Limpiar</button>
         </div>
       </div>
@@ -5314,7 +5344,7 @@ function setLSSafe(key, value){
   }
 }
 
-function getData(){try{const d=JSON.parse(localStorage.getItem(DATA_KEY))||defData();if(!d.playoff)d.playoff=[];if(!d.alineaciones)d.alineaciones=[];if(!d.copaCordoba)d.copaCordoba=[];if(!d.copaCordobaLogo)d.copaCordobaLogo='';if(!d.provincialCopas)d.provincialCopas=[];return d;}catch(e){return defData();}}
+function getData(){try{const d=JSON.parse(localStorage.getItem(DATA_KEY))||defData();if(!d.playoff)d.playoff=[];if(!d.alineaciones)d.alineaciones=[];if(!d.copaCordoba)d.copaCordoba=[];if(!d.copaCordobaLogo)d.copaCordobaLogo='';if(!d.provincialCopas)d.provincialCopas=[];if(!d.provincialLogo)d.provincialLogo='';if(!d.historiaPlantillas)d.historiaPlantillas=[];return d;}catch(e){return defData();}}
 // Construye una copia de "d" sin las fotos de goleadores:
 // van en documentos individuales para no superar el límite de 1MB de Firestore.
 function dataParaFirestore(d){
@@ -5402,7 +5432,7 @@ async function saveIdentidad(i){
 function getFotos(){try{return JSON.parse(localStorage.getItem(FOTOS_KEY))||[];}catch(e){return[];}}
 function saveFotos(f){if(!setLSSafe(FOTOS_KEY,JSON.stringify(f)))return;if(window._fb)window._fb.set('fotos',f);}
 
-function defData(){return{partidos:[],posiciones:[],goleadores:[],equipos:[],torneos:[],playoff:[],copaCordoba:[],copaCordobaLogo:'',provincialCopas:[],alineaciones:[]};};
+function defData(){return{partidos:[],posiciones:[],goleadores:[],equipos:[],torneos:[],playoff:[],copaCordoba:[],copaCordobaLogo:'',provincialCopas:[],provincialLogo:'',historiaPlantillas:[],alineaciones:[]};};
 
 let data=getData();
 let escudos=getEscudos();
@@ -11483,7 +11513,7 @@ function asegurarIds(){
 function renderAdminListas(){
   // NO llamar asegurarIds() aquí — solo se llama al abrir el panel
 
-  document.getElementById('lista-partidos').innerHTML=data.partidos.map(p=>{
+  document.getElementById('lista-partidos').innerHTML=[...data.partidos].reverse().map(p=>{
     const cronos = getCronos();
     const c = cronos[String(p.id)];
     const corriendo = c && c.corriendo;
@@ -11704,7 +11734,7 @@ function switchAdminTab(tab,el){
   el.classList.add('active');
   if(tab==='playoff') renderAdminListaPlayoff();
   if(tab==='copacordoba'){ updateAdminCCFase(); updateAdminCCTipo(); renderAdminListaCopaCordoba(); ccSyncLogoPreview(); }
-  if(tab==='provincial'){ updateAdminTPFase(); updateAdminTPTipo(); renderAdminListaProvincial(); }
+  if(tab==='provincial'){ updateAdminTPFase(); updateAdminTPTipo(); renderAdminListaProvincial(); tpSyncLogoPreview(); }
   if(tab==='fotos') renderAdminListaFotos();
   if(tab==='fichas'){ poblarSelectFichas(); renderAdminListaFichas(); }
   if(tab==='noticias') renderAdminListaNoticias();
@@ -11716,7 +11746,7 @@ function switchAdminTab(tab,el){
   if(tab==='torneos'){ renderTorneoClubesChecklist(); toActualizarVisEstado(); }
   if(tab==='notificaciones'){ actualizarContadorSubs(); }
   if(tab==='alineaciones'){ poblarSelectPartidoAlineacion(); renderAdminListaAlineaciones(); alinRenderSlots(); }
-  if(tab==='historiagol'){ hgPoblarEquipos(); hgActualizarCamposEvento(); }}
+  if(tab==='historiagol'){ hgPoblarEquipos(); hgActualizarCamposEvento(); hgPoblarPlantillas(); }}
 function cambiarPassword(){
   // La contraseña se gestiona desde Firebase Console → Authentication
   const msg=document.getElementById('conf-msg');
@@ -11995,6 +12025,35 @@ function ccQuitarLogo(){
 }
 function guardarLogoCC(){
   data.copaCordobaLogo=_ccLogoB64||'';
+  saveData(data);
+  renderSection(currentSection);
+}
+
+// ---- ADMIN: logo del Torneo Provincial ----
+let _tpLogoB64='';
+function tpSyncLogoPreview(){
+  const img=document.getElementById('tp-logo-preview');
+  const wrap=document.getElementById('tp-logo-wrap');
+  if(data.provincialLogo){ _tpLogoB64=data.provincialLogo; if(img) img.src=data.provincialLogo; if(wrap) wrap.classList.add('visible'); }
+  else { _tpLogoB64=''; if(img) img.src=''; if(wrap) wrap.classList.remove('visible'); }
+}
+function tpPreviewLogo(input){
+  const file=input.files&&input.files[0];
+  if(!file) return;
+  comprimirABase64(file, 400, 0.85, 'image/png').then(dataUrl=>{
+    _tpLogoB64=dataUrl;
+    const p=document.getElementById('tp-logo-preview'); if(p) p.src=_tpLogoB64;
+    const w=document.getElementById('tp-logo-wrap'); if(w) w.classList.add('visible');
+  });
+}
+function tpQuitarLogo(){
+  _tpLogoB64='';
+  const img=document.getElementById('tp-logo-preview'); if(img) img.src='';
+  const wrap=document.getElementById('tp-logo-wrap'); if(wrap) wrap.classList.remove('visible');
+  const input=document.getElementById('tp-logo-file'); if(input) input.value='';
+}
+function guardarLogoTP(){
+  data.provincialLogo=_tpLogoB64||'';
   saveData(data);
   renderSection(currentSection);
 }
@@ -12409,7 +12468,8 @@ function renderCopaOroPlata(categoria, copa, el){
 // Tabla de posiciones de una zona del Torneo Provincial (reutiliza las
 // mismas clases CSS .posiciones / .pos-num / .pos-equipo que ya usa el
 // resto del sitio). 1° y 2° clasifican a Copa Oro, 3° y 4° a Copa Plata.
-function tablaProvincialHTML(titulo, pos){
+function tablaProvincialHTML(titulo, pos, categoria, zonaKey){
+  const shareBtn=`<button class="btn-share" style="padding:3px 9px;font-size:10px" onclick="abrirShare(()=>generarImagenTablaProvincial('${categoria}','${zonaKey}'))" title="Compartir ${titulo}">${SVG_SHARE} Compartir</button>`;
   if(!pos.length) return `<div class="card" style="margin-bottom:.8rem"><div class="card-header"><span>${titulo}</span><span class="div-badge">EXTRA LIGA</span></div><div class="empty-msg">No hay posiciones cargadas para esta zona todavía</div></div>`;
   const rows=pos.map((p,i)=>{
     const cls=i<2?'zona-clasificacion':(i<4?'tp-zona-plata':'');
@@ -12422,7 +12482,7 @@ function tablaProvincialHTML(titulo, pos){
     </tr>`;
   }).join('');
   return `<div class="card" style="margin-bottom:.8rem">
-    <div class="card-header"><span>${titulo}</span><span class="div-badge">EXTRA LIGA</span></div>
+    <div class="card-header"><span>${titulo}</span>${shareBtn}</div>
     <div class="tabla-wrap"><table class="posiciones">
       <thead><tr><th>#</th><th>Equipo</th><th>PTS</th><th>PJ</th><th>G</th><th>E</th><th>P</th><th>GF</th><th>GC</th><th>DG</th></tr></thead>
       <tbody>${rows}</tbody>
@@ -12450,11 +12510,12 @@ function renderTorneoProvincial(el){
     const registros=data.posiciones.filter(p=>p.div==='extraliga'&&p.torneo==='provincial'&&p.categoria===cat&&p.zonaProvincial===z.key);
     const partidosZona=data.partidos.filter(p=>p.div==='extraliga'&&p.esProvincial&&p.provincialCategoria===cat&&p.provincialZona===z.key);
     const ordenados=ordenarConDesempate(registros, partidosZona);
-    return tablaProvincialHTML(z.label, ordenados);
+    return tablaProvincialHTML(z.label, ordenados, cat, z.key);
   }).join('');
 
+  const logoHTML=data.provincialLogo?`<img src="${data.provincialLogo}" alt="Torneo Provincial" style="height:26px;width:auto;max-width:70px;object-fit:contain;border-radius:4px;vertical-align:middle;margin-right:8px"/>`:'🥇🥈 ';
   el.innerHTML=`
-    <div class="playoff-title" style="margin-bottom:.6rem"><span>🥇🥈 Torneo Provincial – ${catLabel}</span></div>
+    <div class="playoff-title" style="margin-bottom:.6rem"><span>${logoHTML}Torneo Provincial – ${catLabel}</span></div>
     <div class="tp-zonas-grid">${tablas}</div>
     <div id="tp-oro-wrap"></div>
     <div id="tp-plata-wrap"></div>
@@ -13341,11 +13402,65 @@ function hgPoblarEquipos(){
   dl.innerHTML = (data.equipos||[]).map(e => `<option value="${(e.nombre||'').replace(/"/g,'&quot;')}">`).join('');
 }
 
+// ── Plantillas guardadas (Historia de Partido) ──────────────────
+const HG_CAMPOS = ['hg-evento','hg-local','hg-visit','hg-marcador','hg-minuto','hg-parte','hg-fecha','hg-torneo','hg-autor','hg-convierte','hg-penales'];
+
+function hgPoblarPlantillas(){
+  const sel = document.getElementById('hg-plantilla-sel');
+  if(!sel) return;
+  const actual = sel.value;
+  sel.innerHTML = '<option value="">— Elegir plantilla —</option>' +
+    (data.historiaPlantillas||[]).map(p=>`<option value="${p.id}">${p.nombre}</option>`).join('');
+  if(actual && (data.historiaPlantillas||[]).some(p=>String(p.id)===actual)) sel.value = actual;
+}
+
+function hgGuardarPlantilla(){
+  const nombre = window.prompt('¿Con qué nombre querés guardar esta plantilla?','');
+  if(!nombre || !nombre.trim()) return;
+  const campos = {};
+  HG_CAMPOS.forEach(id=>{
+    const el = document.getElementById(id);
+    campos[id] = el ? el.value : '';
+  });
+  const plantilla = { id: String(Date.now()), nombre: nombre.trim(), campos };
+  data.historiaPlantillas = data.historiaPlantillas || [];
+  data.historiaPlantillas.push(plantilla);
+  saveData(data);
+  hgPoblarPlantillas();
+  document.getElementById('hg-plantilla-sel').value = plantilla.id;
+}
+
+function hgCargarPlantilla(){
+  const sel = document.getElementById('hg-plantilla-sel');
+  const id = sel ? sel.value : '';
+  if(!id) return;
+  const plantilla = (data.historiaPlantillas||[]).find(p=>String(p.id)===String(id));
+  if(!plantilla) return;
+  HG_CAMPOS.forEach(fid=>{
+    const el = document.getElementById(fid);
+    if(el && plantilla.campos[fid]!==undefined) el.value = plantilla.campos[fid];
+  });
+  hgActualizarCamposEvento();
+}
+
+function hgEliminarPlantilla(){
+  const sel = document.getElementById('hg-plantilla-sel');
+  const id = sel ? sel.value : '';
+  if(!id){ alert('Elegí primero una plantilla para eliminar.'); return; }
+  const plantilla = (data.historiaPlantillas||[]).find(p=>String(p.id)===String(id));
+  pedirConfirmacion(`¿Eliminar la plantilla "${plantilla?plantilla.nombre:''}"?`, function(){
+    data.historiaPlantillas = (data.historiaPlantillas||[]).filter(p=>String(p.id)!==String(id));
+    saveData(data);
+    hgPoblarPlantillas();
+  });
+}
+
 function hgLimpiarForm(){
   ['hg-local','hg-visit','hg-marcador','hg-minuto','hg-fecha','hg-autor','hg-penales'].forEach(id=>{
     const el = document.getElementById(id); if(el) el.value = '';
   });
   const parte = document.getElementById('hg-parte'); if(parte) parte.value = '';
+  const sel = document.getElementById('hg-plantilla-sel'); if(sel) sel.value = '';
 }
 
 function hgActualizarCamposEvento(){
@@ -15844,10 +15959,19 @@ async function generarImagenCopaProvincial(categoria, copa){
   ctx.fillStyle=bgGrad; ctx.fillRect(0,0,W,CVH_TOTAL);
 
   let y=await cvHeader(ctx,W,id,0);
-  ctx.fillStyle=C.DORADO;
-  ctx.font=`${s(28)}px "Bebas Neue", Arial, sans-serif`;
-  ctx.textAlign='center'; ctx.textBaseline='alphabetic';
-  ctx.fillText(copaLabel, CX, y+s(34));
+  if(data.provincialLogo){
+    const logoSize=s(36);
+    await cvDrawLogo(ctx,data.provincialLogo,CX-s(116),y+s(8),logoSize);
+    ctx.fillStyle=C.DORADO;
+    ctx.font=`${s(26)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+    ctx.fillText(copaLabel, CX-s(70), y+s(34));
+  } else {
+    ctx.fillStyle=C.DORADO;
+    ctx.font=`${s(28)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+    ctx.fillText(copaLabel, CX, y+s(34));
+  }
   ctx.fillStyle='rgba(201,162,39,0.55)';
   ctx.font=`600 ${s(14)}px "DM Sans", Arial, sans-serif`;
   ctx.textAlign='center';
@@ -15884,6 +16008,166 @@ async function generarImagenCopaProvincial(categoria, copa){
   return canvas;
 }
 
+// Imagen de la tabla de posiciones de UNA zona del Torneo Provincial
+// (formato post 1080×1350, siempre 4 equipos).
+async function generarImagenTablaProvincial(categoria, zonaKey){
+  await document.fonts.ready;
+  const id=getIdentidad();
+  const liga=id.nombre||'DEPORTEMAS';
+  const W=CV_W, CX=W/2;
+  const zonaLabels={zona1:'Zona 1',zona2:'Zona 2',zona3:'Zona 3',zona4:'Zona 4'};
+  const catLabel=categoria==='sub15'?'SUB 15':'SUB 13';
+
+  const registros=data.posiciones.filter(p=>p.div==='extraliga'&&p.torneo==='provincial'&&p.categoria===categoria&&p.zonaProvincial===zonaKey);
+  const partidosZona=data.partidos.filter(p=>p.div==='extraliga'&&p.esProvincial&&p.provincialCategoria===categoria&&p.provincialZona===zonaKey);
+  const pos=ordenarConDesempate(registros, partidosZona);
+  if(!pos.length) return null;
+
+  const canvas=document.createElement('canvas');
+  canvas.width=W; canvas.height=CV_H;
+  const ctx=canvas.getContext('2d');
+  ctx.textBaseline='alphabetic';
+  const bgGrad=ctx.createLinearGradient(0,0,0,CV_H);
+  bgGrad.addColorStop(0,C.NEG3); bgGrad.addColorStop(1,C.NEG);
+  ctx.fillStyle=bgGrad; ctx.fillRect(0,0,W,CV_H);
+
+  let y=await cvHeader(ctx,W,id,0);
+  const tituloZona='TORNEO PROVINCIAL · '+zonaLabels[zonaKey].toUpperCase();
+  if(data.provincialLogo){
+    const logoSize=s(36);
+    await cvDrawLogo(ctx,data.provincialLogo,CX-s(150),y+s(8),logoSize);
+    ctx.fillStyle=C.DORADO;
+    ctx.font=`${s(24)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+    ctx.fillText(tituloZona, CX-s(104), y+s(34));
+  } else {
+    ctx.fillStyle=C.DORADO;
+    ctx.font=`${s(26)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+    ctx.fillText(tituloZona, CX, y+s(34));
+  }
+  ctx.fillStyle='rgba(201,162,39,0.55)';
+  ctx.font=`600 ${s(14)}px "DM Sans", Arial, sans-serif`;
+  ctx.textAlign='center';
+  ctx.fillText(catLabel, CX, y+s(52));
+  y+=s(56);
+  const dg=ctx.createLinearGradient(0,0,W,0);
+  dg.addColorStop(0,'transparent'); dg.addColorStop(0.2,C.DORADO);
+  dg.addColorStop(0.8,C.DORADO); dg.addColorStop(1,'transparent');
+  ctx.fillStyle=dg; ctx.fillRect(0,y,W,1);
+  y+=s(16);
+
+  // Columnas (mismo layout que generarImagenPosiciones)
+  const C1=s(10), C2=s(42), C3=s(82), EQMAX=s(224);
+  const HDR_H=s(32);
+  const numCols=[
+    {l:'PTS', x:C3+EQMAX+s(4),   w:s(52)},
+    {l:'PJ',  x:C3+EQMAX+s(60),  w:s(38)},
+    {l:'G',   x:C3+EQMAX+s(100), w:s(34)},
+    {l:'E',   x:C3+EQMAX+s(136), w:s(34)},
+    {l:'P',   x:C3+EQMAX+s(172), w:s(34)},
+    {l:'GF',  x:C3+EQMAX+s(208), w:s(34)},
+    {l:'GC',  x:C3+EQMAX+s(244), w:s(34)},
+    {l:'DG',  x:C3+EQMAX+s(280), w:s(44)},
+  ];
+  ctx.fillStyle='rgba(201,162,39,0.1)'; ctx.fillRect(0,y,W,HDR_H);
+  ctx.fillStyle='rgba(201,162,39,0.8)';
+  ctx.font=`700 ${s(12)}px "Rajdhani", Arial, sans-serif`;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('#', C1+s(16), y+HDR_H/2);
+  ctx.textAlign='left';
+  ctx.fillText('EQUIPO', C3, y+HDR_H/2);
+  numCols.forEach(c=>{ ctx.textAlign='center'; ctx.fillText(c.l, c.x+c.w/2, y+HDR_H/2); });
+  ctx.fillStyle='rgba(201,162,39,0.35)';
+  ctx.fillRect(0, y+HDR_H-1, W, 1);
+  ctx.textBaseline='alphabetic';
+  y+=HDR_H;
+
+  const escudoImgs={};
+  await Promise.all(pos.map(p=>new Promise(res=>{
+    const entry=escudos[p.equipo]||escudos[normalizar(p.equipo)];
+    const src=entry&&typeof entry==='object'?entry.img:entry;
+    if(!src){res();return;}
+    const img=new Image();
+    img.onload=()=>{escudoImgs[p.equipo]=img;res();}; img.onerror=()=>res(); img.src=src;
+  })));
+
+  const hFooter=s(40);
+  const hDisp=CV_H-y-hFooter-s(10);
+  const ROW_H=Math.max(s(70), Math.min(s(160), Math.floor(hDisp/pos.length)));
+  y+=Math.max(0, Math.floor((hDisp-pos.length*ROW_H)/2));
+
+  pos.forEach((p,i)=>{
+    const fy=y+ROW_H/2;
+    ctx.fillStyle = i%2===0 ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.15)';
+    ctx.fillRect(0,y,W,ROW_H);
+
+    const zc = i<2 ? C.VERDE : C.DORADO;
+    ctx.fillStyle=zc; ctx.fillRect(0,y,s(4),ROW_H);
+
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    if(i===0){
+      ctx.shadowColor='rgba(201,162,39,0.5)'; ctx.shadowBlur=s(10);
+      ctx.beginPath(); ctx.arc(C1+s(16),fy,s(16),0,Math.PI*2);
+      ctx.fillStyle=C.DORADO; ctx.fill();
+      ctx.shadowBlur=0;
+      ctx.fillStyle=C.NEG; ctx.font=`700 ${s(14)}px "Rajdhani", Arial, sans-serif`;
+      ctx.fillText('1', C1+s(16), fy);
+    } else {
+      ctx.fillStyle='rgba(255,255,255,0.45)';
+      ctx.font=`600 ${s(14)}px "Rajdhani", Arial, sans-serif`;
+      ctx.fillText(i+1, C1+s(16), fy);
+    }
+
+    const eSize=s(28), eX=C2+s(2), eY=y+(ROW_H-eSize)/2;
+    const eImg=escudoImgs[p.equipo];
+    if(eImg){
+      ctx.save(); ctx.beginPath();
+      ctx.arc(eX+eSize/2,eY+eSize/2,eSize/2,0,Math.PI*2); ctx.clip();
+      cvDrawEscudoImg(ctx,eImg,eX,eY,eSize); ctx.restore();
+    } else { cvEscudoFallback(ctx,p.equipo,eX,eY,eSize); }
+
+    ctx.fillStyle=i===0?C.BLANCO:'rgba(255,255,255,0.85)';
+    ctx.font=`${i===0?'600':'500'} ${s(15)}px "DM Sans", Arial, sans-serif`;
+    ctx.textAlign='left'; ctx.textBaseline='middle';
+    cvFillTextTrunc(ctx, p.equipo, C3, fy, EQMAX-s(4));
+
+    ctx.fillStyle=C.DORADO;
+    ctx.font=`${s(22)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.textAlign='center';
+    ctx.fillText(p.pts!=null?p.pts:0, numCols[0].x+numCols[0].w/2, fy);
+
+    ctx.fillStyle='rgba(255,255,255,0.6)';
+    ctx.font=`600 ${s(13)}px "Rajdhani", Arial, sans-serif`;
+    const dgVal=(p.gf||0)-(p.gc||0);
+    const dgStr=dgVal>0?'+'+dgVal:String(dgVal);
+    [p.pj||0,p.g||0,p.e||0,p.p||0,p.gf||0,p.gc||0,dgStr].forEach((v,ci)=>{
+      ctx.fillText(String(v), numCols[ci+1].x+numCols[ci+1].w/2, fy);
+    });
+
+    ctx.fillStyle='rgba(255,255,255,0.05)';
+    ctx.fillRect(0,y+ROW_H-1,W,1);
+    y+=ROW_H;
+  });
+
+  y+=s(8);
+  ctx.fillStyle='rgba(255,255,255,0.07)'; ctx.fillRect(s(40),y,W-s(80),1);
+  y+=s(14);
+  const leyenda=[{c:C.VERDE,l:'1° y 2° → Copa Oro'},{c:C.DORADO,l:'3° y 4° → Copa Plata'}];
+  const totalLeyW=leyenda.reduce((a,l)=>a+ctx.measureText(l.l).width+s(34),0);
+  let lx=CX-totalLeyW/2;
+  ctx.textAlign='left'; ctx.font=`600 ${s(12)}px "Rajdhani", Arial, sans-serif`;
+  leyenda.forEach(l=>{
+    ctx.fillStyle=l.c; ctx.fillRect(lx,y,s(4),s(14));
+    ctx.fillStyle='rgba(255,255,255,0.6)';
+    ctx.fillText(l.l.toUpperCase(), lx+s(10), y+s(11));
+    lx+=ctx.measureText(l.l).width+s(34);
+  });
+
+  cvFooter(ctx,W,CV_H-s(40),liga);
+  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+  return canvas;
+}
 
 
 async function abrirShareCanvas(generadorFn){
