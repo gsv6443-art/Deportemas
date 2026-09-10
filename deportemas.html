@@ -14448,34 +14448,34 @@ async function _generarImagenProximosGrupo(ids){
   const divLabel = ps[0].div==='primera'?'PRIMERA DIVISIÓN':ps[0].div==='segunda'?'SEGUNDA DIVISIÓN':(ps[0].torneoExtra||'EXTRA LIGA').toUpperCase();
   const fechaLabel = ps[0].fecha ? ps[0].fecha+'  ·  ' : '';
   ctx.fillStyle = C.DORADO;
-  ctx.font = `${s(26)}px "Bebas Neue", Arial, sans-serif`;
+  ctx.font = `${s(34)}px "Bebas Neue", Arial, sans-serif`;
   ctx.textAlign = 'center';
-  ctx.fillText('PRÓXIMOS PARTIDOS', CX, y+s(32));
+  ctx.fillText('PRÓXIMOS PARTIDOS', CX, y+s(40));
   const infoTxtPx = fechaLabel+divLabel;
-  ctx.font = `600 ${s(14)}px "DM Sans", Arial, sans-serif`;
+  ctx.font = `600 ${s(18)}px "DM Sans", Arial, sans-serif`;
   const logoImgPx = await cargarImagenAsync(logoParaPartido(ps[0]));
   if(logoImgPx){
-    const logoH = s(22);
+    const logoH = s(28);
     const logoW = logoH * (logoImgPx.naturalWidth/logoImgPx.naturalHeight || 1);
     const textW = ctx.measureText(infoTxtPx).width;
     const totalW = textW + logoW + s(8);
     const startX = CX - totalW/2;
-    ctx.drawImage(logoImgPx, startX, y+s(50)-logoH+s(4), logoW, logoH);
+    ctx.drawImage(logoImgPx, startX, y+s(64)-logoH+s(4), logoW, logoH);
     ctx.fillStyle = 'rgba(201,162,39,0.55)';
     ctx.textAlign = 'left';
-    ctx.fillText(infoTxtPx, startX + logoW + s(8), y+s(50));
+    ctx.fillText(infoTxtPx, startX + logoW + s(8), y+s(64));
     ctx.textAlign = 'center';
   } else {
     ctx.fillStyle = 'rgba(201,162,39,0.55)';
-    ctx.fillText(infoTxtPx, CX, y+s(50));
+    ctx.fillText(infoTxtPx, CX, y+s(64));
   }
 
   // Divisor
   const dg1=ctx.createLinearGradient(0,0,W,0);
   dg1.addColorStop(0,'transparent'); dg1.addColorStop(0.2,C.DORADO);
   dg1.addColorStop(0.8,C.DORADO); dg1.addColorStop(1,'transparent');
-  ctx.fillStyle=dg1; ctx.fillRect(0,y+s(58),W,1);
-  y += s(60);
+  ctx.fillStyle=dg1; ctx.fillRect(0,y+s(76),W,1);
+  y += s(78);
 
   // Precargar escudos
   const escudoImgs={};
@@ -14502,9 +14502,9 @@ async function _generarImagenProximosGrupo(ids){
   const tieneAlgunDia  = ps.some(p=>!!p.dia);
   const tieneAlgunHora = ps.some(p=>!!p.hora);
   const tieneAlgunArb  = ps.some(p=>(p.arbitros||[]).length>0);
-  const infoHmax = (tieneAlgunDia?s(26):0) + (tieneAlgunHora?s(34):0);
-  const arbHmax  = tieneAlgunArb ? s(42) : 0;
-  const gapNombre = s(28); // espacio reservado para el nombre del club bajo el escudo
+  const infoHmax = (tieneAlgunDia?s(32):0) + (tieneAlgunHora?s(34):0);
+  const arbHmax  = tieneAlgunArb ? s(46) : 0;
+  const gapNombre = s(34); // espacio reservado para el nombre del club bajo el escudo
   const maxBloqueH = ROW_H - infoHmax - arbHmax;
   const ECSIZE = Math.max(s(46), Math.min(s(80), maxBloqueH - gapNombre));
 
@@ -14527,11 +14527,11 @@ async function _generarImagenProximosGrupo(ids){
     const tieneHora = !!p.hora;
     const tieneDia  = !!p.dia;
     const tieneArb  = (p.arbitros||[]).length > 0;
-    const diaBlockH  = s(26);
+    const diaBlockH  = s(32);
     const horaBlockH = s(34);
     const infoH     = (tieneDia ? diaBlockH : 0) + (tieneHora ? horaBlockH : 0);
-    const arbH      = tieneArb ? s(42) : 0;
-    const bloqueH   = ECSIZE + s(28); // escudo + nombre
+    const arbH      = tieneArb ? s(46) : 0;
+    const bloqueH   = ECSIZE + s(34); // escudo + nombre
     const totalH    = infoH + bloqueH + arbH;
     const offsetY   = Math.max(0, Math.floor((ROW_H - totalH) / 2));
 
@@ -14540,10 +14540,10 @@ async function _generarImagenProximosGrupo(ids){
     if(tieneDia || tieneHora){
       let blockY = cy;
       if(tieneDia){
-        ctx.fillStyle='rgba(255,255,255,0.5)';
-        ctx.font=`600 ${s(17)}px "DM Sans", Arial, sans-serif`;
+        ctx.fillStyle='#ffffff';
+        ctx.font=`600 ${s(21)}px "DM Sans", Arial, sans-serif`;
         ctx.textAlign='center'; ctx.textBaseline='alphabetic';
-        ctx.fillText(p.dia, CX, blockY+s(18));
+        ctx.fillText(p.dia, CX, blockY+s(22));
         blockY += diaBlockH;
       }
       if(tieneHora){
@@ -14568,9 +14568,9 @@ async function _generarImagenProximosGrupo(ids){
 
     // Nombre local
     ctx.fillStyle=C.BLANCO;
-    ctx.font=`${s(20)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.font=`${s(25)}px "Bebas Neue", Arial, sans-serif`;
     ctx.textAlign='center'; ctx.textBaseline='top';
-    cvFillTextTrunc(ctx,p.local.toUpperCase(),escLX+ECSIZE/2,escLY+ECSIZE+s(5),s(280));
+    cvFillTextTrunc(ctx,p.local.toUpperCase(),escLX+ECSIZE/2,escLY+ECSIZE+s(6),s(280));
 
     // VS badge (centro)
     const vsW=s(72), vsH=s(36);
@@ -14593,20 +14593,20 @@ async function _generarImagenProximosGrupo(ids){
 
     // Nombre visitante
     ctx.fillStyle=C.BLANCO;
-    ctx.font=`${s(20)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.font=`${s(25)}px "Bebas Neue", Arial, sans-serif`;
     ctx.textAlign='center'; ctx.textBaseline='top';
-    cvFillTextTrunc(ctx,p.visit.toUpperCase(),escVX+ECSIZE/2,escVY+ECSIZE+s(5),s(280));
+    cvFillTextTrunc(ctx,p.visit.toUpperCase(),escVX+ECSIZE/2,escVY+ECSIZE+s(6),s(280));
 
     cy += bloqueH;
 
     // Árbitros
     if(tieneArb){
-      cy += s(8);
-      ctx.fillStyle='rgba(255,255,255,0.75)';
-      ctx.font=`600 ${s(17)}px "DM Sans", Arial, sans-serif`;
+      cy += s(10);
+      ctx.fillStyle='#ffffff';
+      ctx.font=`600 ${s(20)}px "DM Sans", Arial, sans-serif`;
       ctx.textAlign='center'; ctx.textBaseline='alphabetic';
       const arbTxt = (p.arbitros||[]).map(a=>a.nombre||a).join('  ·  ');
-      cvFillTextTrunc(ctx,'🧑‍⚖️ '+arbTxt, CX, cy+s(16), W-s(80));
+      cvFillTextTrunc(ctx,'🧑‍⚖️ '+arbTxt, CX, cy+s(19), W-s(80));
     }
 
     ctx.textBaseline='alphabetic';
