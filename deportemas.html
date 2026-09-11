@@ -14502,9 +14502,9 @@ async function _generarImagenProximosGrupo(ids){
   const tieneAlgunDia  = ps.some(p=>!!p.dia);
   const tieneAlgunHora = ps.some(p=>!!p.hora);
   const tieneAlgunArb  = ps.some(p=>(p.arbitros||[]).length>0);
-  const infoHmax = (tieneAlgunDia?s(32):0) + (tieneAlgunHora?s(34):0);
-  const arbHmax  = tieneAlgunArb ? s(46) : 0;
-  const gapNombre = s(34); // espacio reservado para el nombre del club bajo el escudo
+  const infoHmax = (tieneAlgunDia?s(23):0) + (tieneAlgunHora?s(34):0);
+  const arbHmax  = tieneAlgunArb ? s(28) : 0;
+  const gapNombre = s(32); // espacio reservado para el nombre del club bajo el escudo
   const maxBloqueH = ROW_H - infoHmax - arbHmax;
   const ECSIZE = Math.max(s(46), Math.min(s(80), maxBloqueH - gapNombre));
 
@@ -14527,11 +14527,11 @@ async function _generarImagenProximosGrupo(ids){
     const tieneHora = !!p.hora;
     const tieneDia  = !!p.dia;
     const tieneArb  = (p.arbitros||[]).length > 0;
-    const diaBlockH  = s(32);
+    const diaBlockH  = s(23);
     const horaBlockH = s(34);
     const infoH     = (tieneDia ? diaBlockH : 0) + (tieneHora ? horaBlockH : 0);
-    const arbH      = tieneArb ? s(46) : 0;
-    const bloqueH   = ECSIZE + s(34); // escudo + nombre
+    const arbH      = tieneArb ? s(28) : 0;
+    const bloqueH   = ECSIZE + s(32); // escudo + nombre
     const totalH    = infoH + bloqueH + arbH;
     const offsetY   = Math.max(0, Math.floor((ROW_H - totalH) / 2));
 
@@ -14543,7 +14543,7 @@ async function _generarImagenProximosGrupo(ids){
         ctx.fillStyle='#ffffff';
         ctx.font=`600 ${s(21)}px "DM Sans", Arial, sans-serif`;
         ctx.textAlign='center'; ctx.textBaseline='alphabetic';
-        ctx.fillText(p.dia, CX, blockY+s(22));
+        ctx.fillText(p.dia, CX, blockY+s(17));
         blockY += diaBlockH;
       }
       if(tieneHora){
@@ -14601,12 +14601,12 @@ async function _generarImagenProximosGrupo(ids){
 
     // Árbitros
     if(tieneArb){
-      cy += s(10);
+      cy += s(4);
       ctx.fillStyle='#ffffff';
       ctx.font=`600 ${s(20)}px "DM Sans", Arial, sans-serif`;
       ctx.textAlign='center'; ctx.textBaseline='alphabetic';
       const arbTxt = (p.arbitros||[]).map(a=>a.nombre||a).join('  ·  ');
-      cvFillTextTrunc(ctx,'🧑‍⚖️ '+arbTxt, CX, cy+s(19), W-s(80));
+      cvFillTextTrunc(ctx,'🧑‍⚖️ '+arbTxt, CX, cy+s(15), W-s(80));
     }
 
     ctx.textBaseline='alphabetic';
