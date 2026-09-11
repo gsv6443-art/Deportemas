@@ -14408,18 +14408,37 @@ async function _dibujarGolBarras(ctx,gs,subtitulo,id,liga,W,CX){
 // Genera la(s) imagen(es) de "Próximos Partidos". Si hay más de 4 partidos,
 // devuelve un ARRAY con 2 canvas (imagen 1: los primeros 4, imagen 2: el resto).
 // Si hay 4 o menos, devuelve un único canvas (comportamiento anterior).
-async function generarImagenProximos(ids){
-  if(ids.length > 4){
-    const grupo1 = ids.slice(0,4);
-    const grupo2 = ids.slice(4);
-    const canvases = [];
-    const c1 = await _generarImagenProximosGrupo(grupo1);
-    if(c1) canvases.push(c1);
-    const c2 = await _generarImagenProximosGrupo(grupo2);
-    if(c2) canvases.push(c2);
-    return canvases.length ? canvases : null;
+// Reparte los partidos en grupos de a lo sumo 4, lo más parejos posible
+// entre sí (9 partidos → 3 grupos de 3, no 4+4+1), ya que cada imagen
+// nunca debe mostrar más de 4 partidos.
+function _repartirEnGruposParejos(ids, maxPorGrupo){
+  const total = ids.length;
+  if(total <= maxPorGrupo) return [ids];
+  const numGrupos = Math.ceil(total / maxPorGrupo);
+  const base = Math.floor(total / numGrupos);
+  let resto = total % numGrupos;
+  const grupos = [];
+  let idx = 0;
+  for(let g=0; g<numGrupos; g++){
+    const size = base + (resto > 0 ? 1 : 0);
+    if(resto > 0) resto--;
+    grupos.push(ids.slice(idx, idx + size));
+    idx += size;
   }
-  return await _generarImagenProximosGrupo(ids);
+  return grupos;
+}
+
+async function generarImagenProximos(ids){
+  const grupos = _repartirEnGruposParejos(ids, 4);
+  if(grupos.length === 1){
+    return await _generarImagenProximosGrupo(grupos[0]);
+  }
+  const canvases = [];
+  for(const grupo of grupos){
+    const c = await _generarImagenProximosGrupo(grupo);
+    if(c) canvases.push(c);
+  }
+  return canvases.length ? canvases : null;
 }
 
 async function _generarImagenProximosGrupo(ids){
@@ -14432,15 +14451,38 @@ async function _generarImagenProximosGrupo(ids){
   const W  = CV_W;
   const CX = W / 2;
 
+  // Tamaño de escudo fijo y grande (igual en todas las imágenes, tengan o no
+  // día/hora/árbitro): antes se recalculaba según cuántos partidos entraban
+  // en una altura de lienzo fija, y con árbitro visible el escudo se veía
+  // notablemente más chico que en un grupo sin árbitros. Ahora el alto del
+  // lienzo se adapta al contenido real de cada partido en vez de al revés.
+  const ECSIZE     = s(80);
+  const GAP_NOMBRE = s(32); // espacio reservado para el nombre del club bajo el escudo
+  const BLOQUE_H   = ECSIZE + GAP_NOMBRE;
+  const DIA_H      = s(23);
+  const HORA_H     = s(34);
+  const ARB_H      = s(28);
+  const HEADER_H   = s(64);
+  const TITLE_H    = s(78);
+  const FOOTER_H   = s(40);
+
+  const rowHeights = ps.map(p=>{
+    const infoH = (p.dia?DIA_H:0) + (p.hora?HORA_H:0);
+    const arbH  = (p.arbitros||[]).length>0 ? ARB_H : 0;
+    return infoH + BLOQUE_H + arbH;
+  });
+  const totalRowsH = rowHeights.reduce((a,b)=>a+b,0);
+  const H = Math.round(HEADER_H + TITLE_H + totalRowsH + FOOTER_H);
+
   const canvas = document.createElement('canvas');
-  canvas.width = W; canvas.height = CV_H;
+  canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
   ctx.textBaseline = 'alphabetic';
 
   // Fondo gradiente
-  const bgGrad = ctx.createLinearGradient(0,0,0,CV_H);
+  const bgGrad = ctx.createLinearGradient(0,0,0,H);
   bgGrad.addColorStop(0,C.NEG3); bgGrad.addColorStop(1,C.NEG);
-  ctx.fillStyle = bgGrad; ctx.fillRect(0,0,W,CV_H);
+  ctx.fillStyle = bgGrad; ctx.fillRect(0,0,W,H);
 
   let y = await cvHeader(ctx,W,id,0);
 
@@ -14490,25 +14532,8 @@ async function _generarImagenProximosGrupo(ids){
     img.src=src;
   })));
 
-  // Espacio disponible dividido entre partidos
-  const disponible = CV_H - y - s(40);
-  const ROW_H = Math.floor(disponible / ps.length);
-
-  // Tamaño de escudo adaptado al espacio real de cada fila: si hay muchos
-  // partidos y/o se muestran día+hora+árbitro, el bloque completo puede no
-  // entrar en ROW_H con un escudo de tamaño fijo, y el texto del árbitro
-  // termina superpuesto con el día del partido siguiente. Por eso el
-  // tamaño del escudo se recalcula en función de lo que realmente sobra.
-  const tieneAlgunDia  = ps.some(p=>!!p.dia);
-  const tieneAlgunHora = ps.some(p=>!!p.hora);
-  const tieneAlgunArb  = ps.some(p=>(p.arbitros||[]).length>0);
-  const infoHmax = (tieneAlgunDia?s(23):0) + (tieneAlgunHora?s(34):0);
-  const arbHmax  = tieneAlgunArb ? s(28) : 0;
-  const gapNombre = s(32); // espacio reservado para el nombre del club bajo el escudo
-  const maxBloqueH = ROW_H - infoHmax - arbHmax;
-  const ECSIZE = Math.max(s(46), Math.min(s(80), maxBloqueH - gapNombre));
-
   ps.forEach((p,i)=>{
+    const ROW_H = rowHeights[i];
     const fy = y + ROW_H/2;
 
     // Fondo alterno
@@ -14613,7 +14638,7 @@ async function _generarImagenProximosGrupo(ids){
     y+=ROW_H;
   });
 
-  cvFooter(ctx,W,CV_H-s(40),liga);
+  cvFooter(ctx,W,H-s(40),liga);
   ctx.textAlign='left'; ctx.textBaseline='alphabetic';
   return canvas;
 }
