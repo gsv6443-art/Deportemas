@@ -14456,29 +14456,40 @@ async function _generarImagenProximosGrupo(ids){
   // en una altura de lienzo fija, y con árbitro visible el escudo se veía
   // notablemente más chico que en un grupo sin árbitros. Ahora el alto del
   // lienzo se adapta al contenido real de cada partido en vez de al revés.
-  const ECSIZE     = s(80);
-  const GAP_NOMBRE = s(32); // espacio reservado para el nombre del club bajo el escudo
-  const BLOQUE_H   = ECSIZE + GAP_NOMBRE;
-  const DIA_H      = s(23);
-  const HORA_H     = s(34);
-  const ARB_H      = s(28);
-  const HEADER_H   = s(64);
-  const TITLE_H    = s(78);
-  const FOOTER_H   = s(40);
+  let ECSIZE        = s(80);
+  const ECSIZE_MIN  = s(60); // piso: no achicar el escudo más allá de esto
+  const GAP_NOMBRE  = s(32); // espacio reservado para el nombre del club bajo el escudo
+  const DIA_H       = s(23);
+  const HORA_H      = s(34);
+  const ARB_H       = s(28);
+  const HEADER_H    = s(64);
+  const TITLE_H     = s(78);
+  const FOOTER_H    = s(40);
 
-  const rowHeights = ps.map(p=>{
+  const infoArbH = ps.map(p=>{
     const infoH = (p.dia?DIA_H:0) + (p.hora?HORA_H:0);
     const arbH  = (p.arbitros||[]).length>0 ? ARB_H : 0;
-    return infoH + BLOQUE_H + arbH;
+    return infoH + arbH;
   });
+  const sumInfoArbH = infoArbH.reduce((a,b)=>a+b,0);
+
+  // El formato estándar del feed es 1080x1350 y ahora es un límite duro:
+  // con pocos partidos sobra espacio y se reparte entre las filas (se ven
+  // más "airadas"). Si el contenido no entra a tamaño normal de escudo
+  // (por ejemplo 4 partidos con día+hora+árbitro), primero se achica el
+  // escudo hasta ECSIZE_MIN — nunca queda demasiado chico — y solo si ni
+  // así entra, como último recurso, el lienzo crece más alto que 1350.
+  const disponibleFijo  = CV_H - HEADER_H - TITLE_H - FOOTER_H;
+  const totalRowsHBase  = sumInfoArbH + ps.length*(ECSIZE+GAP_NOMBRE);
+  if(totalRowsHBase > disponibleFijo){
+    const ecsizeNecesario = (disponibleFijo - sumInfoArbH - ps.length*GAP_NOMBRE) / ps.length;
+    ECSIZE = Math.max(ECSIZE_MIN, Math.min(ECSIZE, ecsizeNecesario));
+  }
+
+  const BLOQUE_H   = ECSIZE + GAP_NOMBRE;
+  const rowHeights = ps.map((p,i)=> infoArbH[i] + BLOQUE_H);
   const totalRowsH = rowHeights.reduce((a,b)=>a+b,0);
 
-  // El formato estándar del feed es 1080x1350. Con pocos partidos alcanza
-  // y de sobra, así que se reparte el espacio libre entre las filas (se ven
-  // más "airadas", como antes). Solo si el contenido no entra (por ejemplo
-  // 4 partidos con día+hora+árbitro) el lienzo crece más alto que 1350 en
-  // vez de achicar los escudos.
-  const disponibleFijo = CV_H - HEADER_H - TITLE_H - FOOTER_H;
   let H, rowHeightsFinal;
   if(totalRowsH <= disponibleFijo){
     H = CV_H;
