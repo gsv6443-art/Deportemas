@@ -14472,7 +14472,22 @@ async function _generarImagenProximosGrupo(ids){
     return infoH + BLOQUE_H + arbH;
   });
   const totalRowsH = rowHeights.reduce((a,b)=>a+b,0);
-  const H = Math.round(HEADER_H + TITLE_H + totalRowsH + FOOTER_H);
+
+  // El formato estándar del feed es 1080x1350. Con pocos partidos alcanza
+  // y de sobra, así que se reparte el espacio libre entre las filas (se ven
+  // más "airadas", como antes). Solo si el contenido no entra (por ejemplo
+  // 4 partidos con día+hora+árbitro) el lienzo crece más alto que 1350 en
+  // vez de achicar los escudos.
+  const disponibleFijo = CV_H - HEADER_H - TITLE_H - FOOTER_H;
+  let H, rowHeightsFinal;
+  if(totalRowsH <= disponibleFijo){
+    H = CV_H;
+    const extraPorFila = (disponibleFijo - totalRowsH) / ps.length;
+    rowHeightsFinal = rowHeights.map(h => h + extraPorFila);
+  } else {
+    H = Math.round(HEADER_H + TITLE_H + totalRowsH + FOOTER_H);
+    rowHeightsFinal = rowHeights;
+  }
 
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
@@ -14533,7 +14548,7 @@ async function _generarImagenProximosGrupo(ids){
   })));
 
   ps.forEach((p,i)=>{
-    const ROW_H = rowHeights[i];
+    const ROW_H = rowHeightsFinal[i];
     const fy = y + ROW_H/2;
 
     // Fondo alterno
