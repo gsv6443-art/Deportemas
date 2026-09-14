@@ -7078,6 +7078,15 @@ function partidoHTML(p,mostrarDetalle){
     ? `<span style="font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;padding:2px 8px;border-radius:10px;background:rgba(201,162,39,0.15);color:var(--dorado);margin-left:6px">RESERVA</span>`
     : '';
 
+  // Botón compartir individual para partidos próximos (pendientes). No
+  // reemplaza al botón "Compartir" del header de la card, que sigue
+  // generando la imagen agrupada de hasta 4 partidos.
+  const shareBtnProximoHTML = p.estado==='pendiente' && !p.esReserva
+    ? `<div class="share-card-row"><button class="btn-share" onclick="abrirShare(()=>generarImagenProximoIndividual('${String(p.id)}'))">
+        ${SVG_SHARE} Compartir
+      </button></div>`
+    : '';
+
   return `<div class="card-partido-wrap" data-estado="${p.estado}">
     ${diaHTML}
     <div class="partido">
@@ -7089,6 +7098,7 @@ function partidoHTML(p,mostrarDetalle){
     </div>
     ${tieneDetalle?renderEventos(p):''}
     ${shareBtnHTML}
+    ${shareBtnProximoHTML}
   </div>`;
 }
 
@@ -7434,7 +7444,7 @@ function renderPosiciones(){
         : '';
       return `<tr class="${cls}">
         <td class="pos-num">${i===0?'<span class="pos-num-1">1</span>':i+1}</td>
-        <td><div class="pos-equipo">${getEscudoHTML(p.equipo,28)} ${p.equipo}${condicionBadgeHTML('primera',p.condicion)}</div></td>
+        <td><div class="pos-equipo">${getEscudoHTML(p.equipo,28)} ${p.equipo}${condicionBadgeHTML('primera',p.condicion,'general')}</div></td>
         <td class="pos-pts">${p.pts!=null?p.pts:0}${descBadge}</td>
         <td>${p.pj}</td><td>${p.g}</td><td>${p.e}</td><td>${p.p}</td>
         <td>${p.gf}</td><td>${p.gc}</td><td>${p.dg}</td>
@@ -7487,7 +7497,7 @@ function renderPosiciones(){
       : '';
     return `<tr class="${cls}">
       <td class="pos-num">${i===0?'<span class="pos-num-1">1</span>':i+1}</td>
-      <td><div class="pos-equipo">${getEscudoHTML(p.equipo,28)} ${p.equipo}${condicionBadgeHTML(div,p.condicion)}</div></td>
+      <td><div class="pos-equipo">${getEscudoHTML(p.equipo,28)} ${p.equipo}${condicionBadgeHTML(div,p.condicion,'torneo')}</div></td>
       <td class="pos-pts">${p.pts!=null?p.pts:0}${descBadge}</td>
       <td>${p.pj}</td><td>${p.g}</td><td>${p.e}</td><td>${p.p}</td>
       <td>${p.gf||0}</td><td>${p.gc||0}</td><td>${p.dg||'+0'}</td>
@@ -9996,24 +10006,38 @@ function agregarPosicion(){
 // CONDICIÓN DE TABLA (Clasificado / Descendido / Reválida / Campeón)
 // Etiqueta manual por equipo+torneo/fase que se muestra como insignia
 // en las tablas de posiciones públicas y en la imagen para compartir.
+//
+// En Primera División "Clasificado" solo se muestra en las tablas por
+// torneo (Apertura/Clausura); "Descendido" y "Reválida" solo se muestran
+// en la Tabla General (suma de ambos torneos). El campo se puede cargar
+// desde cualquiera de los dos registros (Apertura o Clausura) del equipo,
+// la insignia elige dónde mostrarse según ese contexto.
 // ============================================================
 const CONDICIONES_POS = {
   primera: [
-    {v:'clasificado', l:'Clasificado', color:'#27ae60', icon:'✔'},
-    {v:'descendido',  l:'Descendido',  color:'#e74c3c', icon:'▼'},
-    {v:'revalida',    l:'Reválida',    color:'#e67e22', icon:'⟲'}
+    {v:'clasificado', l:'Clasificado', color:'#27ae60', icon:'⬆️'},
+    {v:'descendido',  l:'Descendido',  color:'#e74c3c', icon:'⬇️'},
+    {v:'revalida',    l:'Reválida',    color:'#e67e22', icon:'🔁'}
   ],
   segunda: [
     {v:'campeon',     l:'Campeón',     color:'#c9a227', icon:'🏆'},
-    {v:'clasificado', l:'Clasificado', color:'#27ae60', icon:'✔'}
+    {v:'clasificado', l:'Clasificado', color:'#27ae60', icon:'⬆️'}
   ]
 };
 function condicionInfo(div,condicion){
   if(!condicion) return null;
   return (CONDICIONES_POS[div]||[]).find(o=>o.v===condicion)||null;
 }
-function condicionBadgeHTML(div,condicion){
-  const c=condicionInfo(div,condicion);
+// contexto: 'torneo' (Apertura/Clausura) | 'general' (Tabla General) — solo aplica a Primera
+function condicionParaContexto(div,condicion,contexto){
+  if(div==='primera'){
+    if(contexto==='torneo')  return condicion==='clasificado' ? condicion : '';
+    if(contexto==='general') return (condicion==='descendido'||condicion==='revalida') ? condicion : '';
+  }
+  return condicion||'';
+}
+function condicionBadgeHTML(div,condicion,contexto){
+  const c=condicionInfo(div,condicionParaContexto(div,condicion,contexto));
   if(!c) return '';
   return `<span class="cond-badge" style="--cond-color:${c.color}" title="${c.l}">${c.icon}</span>`;
 }
@@ -11428,6 +11452,8 @@ function recalcularTodo(){
     });
     if(existente){
       reg.id = existente.id;
+      // Preservar la condición manual (Clasificado/Descendido/Reválida/Campeón)
+      if(existente.condicion) reg.condicion = existente.condicion;
       // Preservar penalización de puntos por tribunal disciplinario
       if(existente.ptsDesc && existente.ptsDesc > 0){
         reg.ptsDesc = existente.ptsDesc;
@@ -13788,7 +13814,7 @@ async function generarImagenPosiciones(){
     ctx.fillStyle=i===0?C.BLANCO:'rgba(255,255,255,0.85)';
     ctx.font=`${i===0?'600':'500'} ${s(15)}px "DM Sans", Arial, sans-serif`;
     ctx.textAlign='left'; ctx.textBaseline='middle';
-    const condIcon=condicionInfo(div,p.condicion);
+    const condIcon=condicionInfo(div,condicionParaContexto(div,p.condicion, div==='primera'?(torneo==='general'?'general':'torneo'):null));
     const condIconW=condIcon?s(20):0;
     cvFillTextTrunc(ctx, p.equipo, C3, fy, EQMAX-s(4)-condIconW);
     if(condIcon){
@@ -14727,6 +14753,141 @@ async function _generarImagenProximosGrupo(ids){
     ctx.textBaseline='alphabetic';
     y+=ROW_H;
   });
+
+  cvFooter(ctx,W,H-s(40),liga);
+  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+  return canvas;
+}
+
+// Imagen de "Próximos partidos" para UN SOLO partido — diseño E (corte
+// diagonal broadcast): escudos grandes arriba, la hora dentro de un bloque
+// dorado cortado en diagonal, nombres de equipo abajo. Mantiene el mismo
+// header/título/footer que la imagen agrupada; solo cambia la presentación
+// del partido en sí. Se usa desde el botón "Compartir" de cada partido
+// individual — no reemplaza a generarImagenProximos (grupo de hasta 4).
+async function generarImagenProximoIndividual(id){
+  await document.fonts.ready;
+  const idL  = getIdentidad();
+  const liga = idL.nombre || 'DEPORTEMAS';
+  const p    = data.partidos.find(x=>String(x.id)===String(id));
+  if(!p) return null;
+
+  const W = CV_W, H = CV_H, CX = W/2;
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.textBaseline = 'alphabetic';
+
+  ctx.fillStyle = C.NEG;
+  ctx.fillRect(0,0,W,H);
+
+  let y = await cvHeader(ctx,W,idL,0);
+
+  // Título de sección (mismo bloque que la imagen agrupada)
+  const divLabel   = p.div==='primera'?'PRIMERA DIVISIÓN':p.div==='segunda'?'SEGUNDA DIVISIÓN':(p.torneoExtra||'EXTRA LIGA').toUpperCase();
+  const fechaLabel = p.dia ? p.dia.toUpperCase()+'  ·  ' : (p.fecha ? p.fecha+'  ·  ' : '');
+  ctx.fillStyle = C.DORADO;
+  ctx.font = `${s(32)}px "Bebas Neue", Arial, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.fillText('PRÓXIMOS PARTIDOS', CX, y+s(44));
+  ctx.fillStyle = 'rgba(245,245,245,0.45)';
+  ctx.font = `600 ${s(15)}px "DM Sans", Arial, sans-serif`;
+  ctx.fillText(fechaLabel+divLabel, CX, y+s(68));
+
+  // Divisor
+  const dg1=ctx.createLinearGradient(0,0,W,0);
+  dg1.addColorStop(0,'transparent'); dg1.addColorStop(0.2,C.DORADO);
+  dg1.addColorStop(0.8,C.DORADO); dg1.addColorStop(1,'transparent');
+  ctx.fillStyle=dg1; ctx.fillRect(0,y+s(84),W,1);
+  y += s(96);
+
+  // Precargar escudos
+  const escudoImgs = {};
+  await Promise.all([p.local,p.visit].map(nombre=>new Promise(res=>{
+    const entry = escudos[nombre]||escudos[normalizar(nombre)];
+    const src = entry && typeof entry==='object' ? entry.img : entry;
+    if(!src){ res(); return; }
+    const img = new Image();
+    img.onload = ()=>{ escudoImgs[nombre]=img; res(); };
+    img.onerror = ()=>res();
+    img.src = src;
+  })));
+
+  // Cuerpo — diseño E: escudos / bloque diagonal con la hora / nombres / árbitro,
+  // centrado verticalmente en todo el espacio disponible del cuerpo.
+  const ES      = s(130);
+  const ESC_GAP = s(90);
+  const diagH   = s(58);
+  const namesH  = s(30);
+  const tieneArb = (p.arbitros||[]).length > 0;
+  const arbH    = tieneArb ? s(26) : 0;
+  const gap1 = s(40), gap2 = s(30), gap3 = s(22);
+
+  const bodyTop    = y;
+  const bodyBottom = H - s(40);
+  const bodyH      = bodyBottom - bodyTop;
+  const totalH     = ES + gap1 + diagH + gap2 + namesH + (tieneArb ? gap3+arbH : 0);
+  const offsetY    = Math.max(0, (bodyH - totalH)/2);
+  let cy = bodyTop + offsetY;
+
+  // Escudos
+  const escLX = CX - ESC_GAP/2 - ES;
+  const escVX = CX + ESC_GAP/2;
+  const escY  = cy;
+  [[p.local,escLX],[p.visit,escVX]].forEach(([nombre,ex])=>{
+    const img = escudoImgs[nombre];
+    if(img){
+      ctx.save(); ctx.beginPath();
+      ctx.arc(ex+ES/2,escY+ES/2,ES/2,0,Math.PI*2); ctx.clip();
+      cvDrawEscudoImg(ctx,img,ex,escY,ES); ctx.restore();
+      ctx.strokeStyle='rgba(245,245,245,0.25)'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.arc(ex+ES/2,escY+ES/2,ES/2,0,Math.PI*2); ctx.stroke();
+    } else { cvEscudoFallback(ctx,nombre,ex,escY,ES); }
+  });
+  cy += ES + gap1;
+
+  // Bloque diagonal dorado con la hora (estilo zócalo de TV deportiva)
+  if(p.hora){
+    const txt = p.hora+' HS';
+    ctx.font = `${s(34)}px "Bebas Neue", Arial, sans-serif`;
+    const txtW  = ctx.measureText(txt).width;
+    const padX  = s(34);
+    const skew  = s(16);
+    const blockW = txtW + padX*2;
+    const bx = CX - blockW/2, by = cy;
+    ctx.beginPath();
+    ctx.moveTo(bx+skew, by);
+    ctx.lineTo(bx+blockW, by);
+    ctx.lineTo(bx+blockW-skew, by+diagH);
+    ctx.lineTo(bx, by+diagH);
+    ctx.closePath();
+    ctx.fillStyle = C.DORADO;
+    ctx.fill();
+    ctx.fillStyle = C.NEG;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(txt, CX, by+diagH/2+s(2));
+    ctx.textBaseline='alphabetic';
+  }
+  cy += diagH + gap2;
+
+  // Nombres de equipo
+  ctx.font = `${s(24)}px "Bebas Neue", Arial, sans-serif`;
+  ctx.fillStyle = C.BLANCO;
+  const nameGap = s(70);
+  ctx.textAlign='right';
+  cvFillTextTrunc(ctx, p.local.toUpperCase(), CX-nameGap/2, cy+s(20), s(300));
+  ctx.textAlign='left';
+  cvFillTextTrunc(ctx, p.visit.toUpperCase(), CX+nameGap/2, cy+s(20), s(300));
+  ctx.textAlign='center';
+  cy += namesH + gap3;
+
+  // Árbitro
+  if(tieneArb){
+    ctx.font = `600 ${s(16)}px "DM Sans", Arial, sans-serif`;
+    ctx.fillStyle = 'rgba(245,245,245,0.45)';
+    const arbTxt = (p.arbitros||[]).map(a=>a.nombre||a).join('  ·  ');
+    cvFillTextTrunc(ctx, arbTxt.toUpperCase(), CX, cy+s(14), W-s(120));
+  }
 
   cvFooter(ctx,W,H-s(40),liga);
   ctx.textAlign='left'; ctx.textBaseline='alphabetic';
