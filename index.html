@@ -1610,6 +1610,16 @@ table.posiciones td:nth-child(8){
   font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;
 }
 
+/* ── Insignia de condición (Clasificado/Descendido/Reválida/Campeón) ── */
+.cond-badge{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:20px;height:20px;border-radius:50%;flex-shrink:0;
+  font-size:11px;line-height:1;
+  color:var(--cond-color,var(--dorado));
+  background:rgba(255,255,255,.06);
+  border:1px solid var(--cond-color,var(--dorado));
+}
+
 /* ── PTS — Bebas Neue, protagonista ── */
 .pos-pts{
   font-family:'Bebas Neue',sans-serif;font-size:18px;
@@ -2240,6 +2250,9 @@ table.posiciones td:nth-child(8){
 .btn-danger:hover{background:rgba(192,57,43,.35);border-color:#e74c3c;}
 .btn-edit{background:rgba(201,162,39,.12);color:var(--dorado);border:1px solid rgba(201,162,39,.35);border-radius:var(--r-sm);padding:5px 11px;font-size:11px;font-weight:700;cursor:pointer;transition:all .16s;font-family:'Rajdhani',sans-serif;white-space:nowrap;}
 .btn-edit:hover{background:rgba(201,162,39,.28);}
+.btn-cond{background:rgba(255,255,255,.04);color:var(--cond-color);border:1px solid var(--cond-color);border-radius:var(--r-sm);padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;transition:all .16s;font-family:'Rajdhani',sans-serif;white-space:nowrap;opacity:.55;}
+.btn-cond:hover{opacity:.85;}
+.btn-cond.activo{background:var(--cond-color);color:#080808;opacity:1;}
 .admin-empty{font-size:11px;color:rgba(255,255,255,.25);margin-top:10px;font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px;}
 .admin-list{margin-top:14px;}
 .admin-list-item{display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--negro3);border:1px solid rgba(255,255,255,.05);border-radius:var(--r-md);margin-bottom:6px;font-size:12px;font-family:'Rajdhani',sans-serif;transition:border-color .14s;}
@@ -7388,7 +7401,7 @@ function renderPosiciones(){
     const map={};
     data.posiciones.filter(p=>p.div==='primera').forEach(p=>{
       const k=normalizar(p.equipo);
-      if(!map[k]){map[k]={equipo:p.equipo,pts:0,pj:0,g:0,e:0,p:0,gf:0,gc:0,ptsDesc:0,ptsDescMotivo:''};}
+      if(!map[k]){map[k]={equipo:p.equipo,pts:0,pj:0,g:0,e:0,p:0,gf:0,gc:0,ptsDesc:0,ptsDescMotivo:'',condicion:''};}
       map[k].pts   +=Number(p.pts)||0;
       map[k].pj    +=Number(p.pj)||0;
       map[k].g     +=Number(p.g)||0;
@@ -7398,6 +7411,7 @@ function renderPosiciones(){
       map[k].gc    +=Number(p.gc)||0;
       map[k].ptsDesc+=Number(p.ptsDesc)||0;
       if(p.ptsDescMotivo) map[k].ptsDescMotivo=p.ptsDescMotivo;
+      if(p.condicion) map[k].condicion=p.condicion;
     });
     const gen = ordenarConDesempate(
       completarConEquiposSinPartidos(
@@ -7420,7 +7434,7 @@ function renderPosiciones(){
         : '';
       return `<tr class="${cls}">
         <td class="pos-num">${i===0?'<span class="pos-num-1">1</span>':i+1}</td>
-        <td><div class="pos-equipo">${getEscudoHTML(p.equipo,28)} ${p.equipo}</div></td>
+        <td><div class="pos-equipo">${getEscudoHTML(p.equipo,28)} ${p.equipo}${condicionBadgeHTML('primera',p.condicion)}</div></td>
         <td class="pos-pts">${p.pts!=null?p.pts:0}${descBadge}</td>
         <td>${p.pj}</td><td>${p.g}</td><td>${p.e}</td><td>${p.p}</td>
         <td>${p.gf}</td><td>${p.gc}</td><td>${p.dg}</td>
@@ -7473,7 +7487,7 @@ function renderPosiciones(){
       : '';
     return `<tr class="${cls}">
       <td class="pos-num">${i===0?'<span class="pos-num-1">1</span>':i+1}</td>
-      <td><div class="pos-equipo">${getEscudoHTML(p.equipo,28)} ${p.equipo}</div></td>
+      <td><div class="pos-equipo">${getEscudoHTML(p.equipo,28)} ${p.equipo}${condicionBadgeHTML(div,p.condicion)}</div></td>
       <td class="pos-pts">${p.pts!=null?p.pts:0}${descBadge}</td>
       <td>${p.pj}</td><td>${p.g}</td><td>${p.e}</td><td>${p.p}</td>
       <td>${p.gf||0}</td><td>${p.gc||0}</td><td>${p.dg||'+0'}</td>
@@ -7765,7 +7779,7 @@ function tablaHTML(titulo,pos,clasifican,leyendaExtra,clasificanLabel){
       : '';
     return `<tr class="${cls}">
       <td class="pos-num">${i===0?'<span class="pos-num-1">1</span>':i+1}</td>
-      <td><div class="pos-equipo">${getEscudoHTML(p.equipo,28)} ${p.equipo}</div></td>
+      <td><div class="pos-equipo">${getEscudoHTML(p.equipo,28)} ${p.equipo}${condicionBadgeHTML('segunda',p.condicion)}</div></td>
       <td class="pos-pts">${p.pts!=null?p.pts:0}${descBadge}</td>
       <td>${p.pj}</td><td>${p.g}</td><td>${p.e}</td><td>${p.p}</td>
       <td>${p.gf||0}</td><td>${p.gc||0}</td><td>${p.dg||'+0'}</td>
@@ -9971,9 +9985,45 @@ function agregarPosicion(){
   const nuevo={id:idExistente,div,equipo:eq,pj:+document.getElementById('t-pj').value,pts:+document.getElementById('t-pts').value,g:+document.getElementById('t-g').value,e:+document.getElementById('t-e').value,p:+document.getElementById('t-p').value,gf:+document.getElementById('t-gf').value,gc:+document.getElementById('t-gc').value,dg:document.getElementById('t-dg').value};
   if(div==='primera') nuevo.torneo=torneo;
   else { nuevo.fase=fase; nuevo.zona=zona; }
+  // conservar la condición (Clasificado/Descendido/Reválida/Campeón) si ya estaba asignada
+  if(idx>=0) nuevo.condicion=data.posiciones[idx].condicion||'';
 
   if(idx>=0)data.posiciones[idx]=nuevo;else data.posiciones.push(nuevo);
   saveData(data);renderAdminListas();renderSection(currentSection);
+}
+
+// ============================================================
+// CONDICIÓN DE TABLA (Clasificado / Descendido / Reválida / Campeón)
+// Etiqueta manual por equipo+torneo/fase que se muestra como insignia
+// en las tablas de posiciones públicas y en la imagen para compartir.
+// ============================================================
+const CONDICIONES_POS = {
+  primera: [
+    {v:'clasificado', l:'Clasificado', color:'#27ae60', icon:'✔'},
+    {v:'descendido',  l:'Descendido',  color:'#e74c3c', icon:'▼'},
+    {v:'revalida',    l:'Reválida',    color:'#e67e22', icon:'⟲'}
+  ],
+  segunda: [
+    {v:'campeon',     l:'Campeón',     color:'#c9a227', icon:'🏆'},
+    {v:'clasificado', l:'Clasificado', color:'#27ae60', icon:'✔'}
+  ]
+};
+function condicionInfo(div,condicion){
+  if(!condicion) return null;
+  return (CONDICIONES_POS[div]||[]).find(o=>o.v===condicion)||null;
+}
+function condicionBadgeHTML(div,condicion){
+  const c=condicionInfo(div,condicion);
+  if(!c) return '';
+  return `<span class="cond-badge" style="--cond-color:${c.color}" title="${c.l}">${c.icon}</span>`;
+}
+function toggleCondicionPosicion(id,valor){
+  const p=data.posiciones.find(x=>String(x.id)===String(id));
+  if(!p) return;
+  p.condicion=(p.condicion===valor)?'':valor;
+  saveData(data);
+  renderAdminListas();
+  renderSection(currentSection);
 }
 
 function updateAdminGolDiv(){
@@ -11548,9 +11598,14 @@ function renderAdminListas(){
       const zL={'sierra':'Zona Sierra','llano':'Zona Llano','campeonato':'Campeonato','repechaje':'Repechaje'}[p.zona]||p.zona||'';
       etiqueta=`<b>${fL}${zL?' – '+zL:''}</b>`;
     }
-    return `<div class="admin-list-item">
+    const condOpts=CONDICIONES_POS[p.div]||[];
+    const condBtns=condOpts.map(c=>{
+      const activo=p.condicion===c.v;
+      return `<button type="button" class="btn-cond${activo?' activo':''}" style="--cond-color:${c.color}" onclick="toggleCondicionPosicion('${p.id}','${c.v}')" title="${activo?'Quitar '+c.l:'Marcar como '+c.l}">${c.icon} ${c.l}</button>`;
+    }).join('');
+    return `<div class="admin-list-item" style="flex-wrap:wrap">
       <span>${etiqueta} | <b>${p.div==='primera'?'1ª':p.div==='segunda'?'2ª':'Extra Liga'}</b> | ${p.equipo} | PJ:${p.pj} G:${p.g} E:${p.e} P:${p.p} GF:${p.gf||0} GC:${p.gc||0} PTS:${p.pts}</span>
-      ${btnAcciones('posiciones',p.id)}
+      <div style="display:flex;gap:5px;flex-wrap:wrap">${condBtns}${btnAcciones('posiciones',p.id)}</div>
     </div>`;
   }).join('')||'<p class="admin-empty">Sin posiciones cargadas</p>';
 
@@ -13562,8 +13617,9 @@ async function generarImagenPosiciones(){
     const map={};
     data.posiciones.filter(p=>p.div==='primera').forEach(p=>{
       const k=normalizar(p.equipo);
-      if(!map[k])map[k]={equipo:p.equipo,pts:0,pj:0,g:0,e:0,p:0,gf:0,gc:0};
+      if(!map[k])map[k]={equipo:p.equipo,pts:0,pj:0,g:0,e:0,p:0,gf:0,gc:0,condicion:''};
       ['pts','pj','g','e','p','gf','gc'].forEach(f=>map[k][f]+=Number(p[f])||0);
+      if(p.condicion) map[k].condicion=p.condicion;
     });
     pos = ordenarConDesempate(
       completarConEquiposSinPartidos(
@@ -13732,7 +13788,15 @@ async function generarImagenPosiciones(){
     ctx.fillStyle=i===0?C.BLANCO:'rgba(255,255,255,0.85)';
     ctx.font=`${i===0?'600':'500'} ${s(15)}px "DM Sans", Arial, sans-serif`;
     ctx.textAlign='left'; ctx.textBaseline='middle';
-    cvFillTextTrunc(ctx, p.equipo, C3, fy, EQMAX-s(4));
+    const condIcon=condicionInfo(div,p.condicion);
+    const condIconW=condIcon?s(20):0;
+    cvFillTextTrunc(ctx, p.equipo, C3, fy, EQMAX-s(4)-condIconW);
+    if(condIcon){
+      ctx.font=`${s(13)}px "DM Sans", Arial, sans-serif`;
+      ctx.fillStyle=condIcon.color;
+      ctx.textAlign='left';
+      ctx.fillText(condIcon.icon, C3+EQMAX-s(4)-condIconW+s(4), fy);
+    }
 
     // PTS — Bebas Neue grande
     ctx.fillStyle=C.DORADO;
