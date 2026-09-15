@@ -14856,107 +14856,91 @@ async function generarImagenProximoIndividual(id){
     img.src = src;
   })));
 
-  // Cuerpo — diseño E adaptado a "M": cada equipo es una fila con su escudo
-  // y su nombre en línea (no apilados), con la hora en un bloque diagonal
-  // entre ambas filas. Todo centrado verticalmente en el espacio disponible.
-  const ES      = s(108);
-  const rowGap  = s(16);   // separación escudo-nombre dentro de la fila
-  const diagH   = s(58);
+  // Cuerpo — diseño A ("Clásico ampliado"): la hora como elemento hero arriba,
+  // escudos con un chip "VS" al medio, nombres de equipo centrados debajo de
+  // cada escudo, y el árbitro en una placa chica. Centrado verticalmente en
+  // todo el espacio disponible del cuerpo.
+  const ES      = s(130);
+  const ESC_GAP = s(70);
+  const horaFontPx = s(58);
   const tieneArb = (p.arbitros||[]).length > 0;
-  const arbH    = tieneArb ? s(26) : 0;
-  const gap1 = s(34), gap2 = s(34), gap3 = s(26);
-  const nameFontPx = s(30);
-
-  ctx.font = `${nameFontPx}px "Bebas Neue", Arial, sans-serif`;
-  const localTxt = p.local.toUpperCase();
-  const visitTxt = p.visit.toUpperCase();
-  const maxNameW = s(340);
-  let localTxtC = localTxt, visitTxtC = visitTxt;
-  while(ctx.measureText(localTxtC).width > maxNameW && localTxtC.length>1) localTxtC = localTxtC.slice(0,-1);
-  if(localTxtC!==localTxt) localTxtC = localTxtC.slice(0,-1)+'…';
-  while(ctx.measureText(visitTxtC).width > maxNameW && visitTxtC.length>1) visitTxtC = visitTxtC.slice(0,-1);
-  if(visitTxtC!==visitTxt) visitTxtC = visitTxtC.slice(0,-1)+'…';
-  const localTxtW = ctx.measureText(localTxtC).width;
-  const visitTxtW = ctx.measureText(visitTxtC).width;
+  const namesH  = s(30);
+  const gapA = s(30), gapB = s(20), gapC = s(28);
 
   const bodyTop    = y;
   const bodyBottom = H - s(40);
   const bodyH      = bodyBottom - bodyTop;
-  const totalH     = ES + gap1 + diagH + gap2 + ES + (tieneArb ? gap3+arbH : 0);
+  const horaH      = horaFontPx;
+  const arbBoxH    = tieneArb ? s(34) : 0;
+  const totalH     = (p.hora ? horaH+gapA : 0) + ES + gapB + namesH + (tieneArb ? gapC+arbBoxH : 0);
   const offsetY    = Math.max(0, (bodyH - totalH)/2);
   let cy = bodyTop + offsetY;
 
-  // Fila del local: escudo a la izquierda, nombre a la derecha
-  {
-    const totalW = ES + rowGap + localTxtW;
-    const startX = CX - totalW/2;
-    const img = escudoImgs[p.local];
-    if(img){
-      ctx.save(); ctx.beginPath();
-      ctx.arc(startX+ES/2,cy+ES/2,ES/2,0,Math.PI*2); ctx.clip();
-      cvDrawEscudoImg(ctx,img,startX,cy,ES); ctx.restore();
-      ctx.strokeStyle='rgba(245,245,245,0.25)'; ctx.lineWidth=2;
-      ctx.beginPath(); ctx.arc(startX+ES/2,cy+ES/2,ES/2,0,Math.PI*2); ctx.stroke();
-    } else { cvEscudoFallback(ctx,p.local,startX,cy,ES); }
-    ctx.font = `${nameFontPx}px "Bebas Neue", Arial, sans-serif`;
-    ctx.fillStyle = C.BLANCO;
-    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    ctx.fillText(localTxtC, startX+ES+rowGap, cy+ES/2+s(2));
-  }
-  cy += ES + gap1;
-
-  // Bloque diagonal dorado con la hora (estilo zócalo de TV deportiva)
+  // Hora — elemento hero
   if(p.hora){
-    const txt = p.hora+' HS';
-    ctx.font = `${s(34)}px "Bebas Neue", Arial, sans-serif`;
-    const txtW  = ctx.measureText(txt).width;
-    const padX  = s(34);
-    const skew  = s(16);
-    const blockW = txtW + padX*2;
-    const bx = CX - blockW/2, by = cy;
-    ctx.beginPath();
-    ctx.moveTo(bx+skew, by);
-    ctx.lineTo(bx+blockW, by);
-    ctx.lineTo(bx+blockW-skew, by+diagH);
-    ctx.lineTo(bx, by+diagH);
-    ctx.closePath();
     ctx.fillStyle = C.DORADO;
-    ctx.fill();
-    ctx.fillStyle = C.NEG;
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(txt, CX, by+diagH/2+s(2));
+    ctx.font = `${horaFontPx}px "Bebas Neue", Arial, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    ctx.fillText(p.hora+' HS', CX, cy+horaH*0.78);
+    cy += horaH + gapA;
   }
-  cy += diagH + gap2;
 
-  // Fila del visitante: nombre a la izquierda, escudo a la derecha (espejo)
-  {
-    const totalW = ES + rowGap + visitTxtW;
-    const startX = CX - totalW/2;
-    ctx.font = `${nameFontPx}px "Bebas Neue", Arial, sans-serif`;
-    ctx.fillStyle = C.BLANCO;
-    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    ctx.fillText(visitTxtC, startX, cy+ES/2+s(2));
-    const escX = startX + visitTxtW + rowGap;
-    const img = escudoImgs[p.visit];
+  // Escudos + chip "VS" en el medio
+  const escLX = CX - ESC_GAP/2 - ES;
+  const escVX = CX + ESC_GAP/2;
+  const escY  = cy;
+  [[p.local,escLX],[p.visit,escVX]].forEach(([nombre,ex])=>{
+    const img = escudoImgs[nombre];
     if(img){
       ctx.save(); ctx.beginPath();
-      ctx.arc(escX+ES/2,cy+ES/2,ES/2,0,Math.PI*2); ctx.clip();
-      cvDrawEscudoImg(ctx,img,escX,cy,ES); ctx.restore();
+      ctx.arc(ex+ES/2,escY+ES/2,ES/2,0,Math.PI*2); ctx.clip();
+      cvDrawEscudoImg(ctx,img,ex,escY,ES); ctx.restore();
       ctx.strokeStyle='rgba(245,245,245,0.25)'; ctx.lineWidth=2;
-      ctx.beginPath(); ctx.arc(escX+ES/2,cy+ES/2,ES/2,0,Math.PI*2); ctx.stroke();
-    } else { cvEscudoFallback(ctx,p.visit,escX,cy,ES); }
+      ctx.beginPath(); ctx.arc(ex+ES/2,escY+ES/2,ES/2,0,Math.PI*2); ctx.stroke();
+    } else { cvEscudoFallback(ctx,nombre,ex,escY,ES); }
+  });
+  const vsW = s(46), vsH = s(30);
+  ctx.fillStyle = 'rgba(245,245,245,0.10)';
+  cvRoundRect(ctx, CX-vsW/2, escY+ES/2-vsH/2, vsW, vsH, s(6));
+  ctx.fill();
+  ctx.font = `${s(18)}px "Bebas Neue", Arial, sans-serif`;
+  ctx.fillStyle = C.DORADO;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('VS', CX, escY+ES/2+s(1));
+  ctx.textBaseline='alphabetic';
+
+  cy += ES + gapB;
+
+  // Nombres de equipo — centrados bajo cada escudo
+  ctx.font = `${s(26)}px "Bebas Neue", Arial, sans-serif`;
+  ctx.fillStyle = C.BLANCO;
+  ctx.textAlign = 'center';
+  const nameMaxW = ES + s(70);
+  cvFillTextTruncCenter(ctx, p.local.toUpperCase(), escLX+ES/2, cy+s(22), nameMaxW);
+  cvFillTextTruncCenter(ctx, p.visit.toUpperCase(), escVX+ES/2, cy+s(22), nameMaxW);
+  cy += namesH + gapC;
+
+  // Árbitro — placa chica
+  if(tieneArb){
+    const arbTxtRaw = 'Árbitro: '+(p.arbitros||[]).map(a=>a.nombre||a).join(' · ');
+    ctx.font = `600 ${s(15)}px "DM Sans", Arial, sans-serif`;
+    let arbTxtC = arbTxtRaw;
+    const maxArbW = W - s(160);
+    while(ctx.measureText(arbTxtC).width > maxArbW && arbTxtC.length>1) arbTxtC = arbTxtC.slice(0,-1);
+    if(arbTxtC !== arbTxtRaw) arbTxtC = arbTxtC.slice(0,-1)+'…';
+    const arbTxtW = ctx.measureText(arbTxtC).width;
+    const padX = s(16);
+    const boxW = arbTxtW + padX*2;
+    ctx.fillStyle = 'rgba(245,245,245,0.06)';
+    cvRoundRect(ctx, CX-boxW/2, cy, boxW, arbBoxH, arbBoxH/2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(245,245,245,0.75)';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(arbTxtC, CX, cy+arbBoxH/2+s(1));
+    ctx.textBaseline='alphabetic';
   }
-  cy += ES + gap3;
 
   ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-
-  // Árbitro
-  if(tieneArb){
-    ctx.font = `600 ${s(16)}px "DM Sans", Arial, sans-serif`;
-    ctx.fillStyle = 'rgba(245,245,245,0.45)';
-    const arbTxt = (p.arbitros||[]).map(a=>a.nombre||a).join('  ·  ');
-    cvFillTextTrunc(ctx, arbTxt.toUpperCase(), CX, cy+s(14), W-s(120));
-  }
 
   cvFooter(ctx,W,H-s(40),liga);
   ctx.textAlign='left'; ctx.textBaseline='alphabetic';
