@@ -14856,37 +14856,53 @@ async function generarImagenProximoIndividual(id){
     img.src = src;
   })));
 
-  // Cuerpo — diseño E: escudos / bloque diagonal con la hora / nombres / árbitro,
-  // centrado verticalmente en todo el espacio disponible del cuerpo.
-  const ES      = s(130);
-  const ESC_GAP = s(90);
+  // Cuerpo — diseño E adaptado a "M": cada equipo es una fila con su escudo
+  // y su nombre en línea (no apilados), con la hora en un bloque diagonal
+  // entre ambas filas. Todo centrado verticalmente en el espacio disponible.
+  const ES      = s(108);
+  const rowGap  = s(16);   // separación escudo-nombre dentro de la fila
   const diagH   = s(58);
-  const namesH  = s(30);
   const tieneArb = (p.arbitros||[]).length > 0;
   const arbH    = tieneArb ? s(26) : 0;
-  const gap1 = s(40), gap2 = s(30), gap3 = s(22);
+  const gap1 = s(34), gap2 = s(34), gap3 = s(26);
+  const nameFontPx = s(30);
+
+  ctx.font = `${nameFontPx}px "Bebas Neue", Arial, sans-serif`;
+  const localTxt = p.local.toUpperCase();
+  const visitTxt = p.visit.toUpperCase();
+  const maxNameW = s(340);
+  let localTxtC = localTxt, visitTxtC = visitTxt;
+  while(ctx.measureText(localTxtC).width > maxNameW && localTxtC.length>1) localTxtC = localTxtC.slice(0,-1);
+  if(localTxtC!==localTxt) localTxtC = localTxtC.slice(0,-1)+'…';
+  while(ctx.measureText(visitTxtC).width > maxNameW && visitTxtC.length>1) visitTxtC = visitTxtC.slice(0,-1);
+  if(visitTxtC!==visitTxt) visitTxtC = visitTxtC.slice(0,-1)+'…';
+  const localTxtW = ctx.measureText(localTxtC).width;
+  const visitTxtW = ctx.measureText(visitTxtC).width;
 
   const bodyTop    = y;
   const bodyBottom = H - s(40);
   const bodyH      = bodyBottom - bodyTop;
-  const totalH     = ES + gap1 + diagH + gap2 + namesH + (tieneArb ? gap3+arbH : 0);
+  const totalH     = ES + gap1 + diagH + gap2 + ES + (tieneArb ? gap3+arbH : 0);
   const offsetY    = Math.max(0, (bodyH - totalH)/2);
   let cy = bodyTop + offsetY;
 
-  // Escudos
-  const escLX = CX - ESC_GAP/2 - ES;
-  const escVX = CX + ESC_GAP/2;
-  const escY  = cy;
-  [[p.local,escLX],[p.visit,escVX]].forEach(([nombre,ex])=>{
-    const img = escudoImgs[nombre];
+  // Fila del local: escudo a la izquierda, nombre a la derecha
+  {
+    const totalW = ES + rowGap + localTxtW;
+    const startX = CX - totalW/2;
+    const img = escudoImgs[p.local];
     if(img){
       ctx.save(); ctx.beginPath();
-      ctx.arc(ex+ES/2,escY+ES/2,ES/2,0,Math.PI*2); ctx.clip();
-      cvDrawEscudoImg(ctx,img,ex,escY,ES); ctx.restore();
+      ctx.arc(startX+ES/2,cy+ES/2,ES/2,0,Math.PI*2); ctx.clip();
+      cvDrawEscudoImg(ctx,img,startX,cy,ES); ctx.restore();
       ctx.strokeStyle='rgba(245,245,245,0.25)'; ctx.lineWidth=2;
-      ctx.beginPath(); ctx.arc(ex+ES/2,escY+ES/2,ES/2,0,Math.PI*2); ctx.stroke();
-    } else { cvEscudoFallback(ctx,nombre,ex,escY,ES); }
-  });
+      ctx.beginPath(); ctx.arc(startX+ES/2,cy+ES/2,ES/2,0,Math.PI*2); ctx.stroke();
+    } else { cvEscudoFallback(ctx,p.local,startX,cy,ES); }
+    ctx.font = `${nameFontPx}px "Bebas Neue", Arial, sans-serif`;
+    ctx.fillStyle = C.BLANCO;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText(localTxtC, startX+ES+rowGap, cy+ES/2+s(2));
+  }
   cy += ES + gap1;
 
   // Bloque diagonal dorado con la hora (estilo zócalo de TV deportiva)
@@ -14909,18 +14925,30 @@ async function generarImagenProximoIndividual(id){
     ctx.fillStyle = C.NEG;
     ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillText(txt, CX, by+diagH/2+s(2));
-    ctx.textBaseline='alphabetic';
   }
   cy += diagH + gap2;
 
-  // Nombres de equipo — centrados bajo cada escudo
-  ctx.font = `${s(27)}px "Bebas Neue", Arial, sans-serif`;
-  ctx.fillStyle = C.BLANCO;
-  ctx.textAlign = 'center';
-  const nameMaxW = ES + s(90);
-  cvFillTextTruncCenter(ctx, p.local.toUpperCase(), escLX+ES/2, cy+s(22), nameMaxW);
-  cvFillTextTruncCenter(ctx, p.visit.toUpperCase(), escVX+ES/2, cy+s(22), nameMaxW);
-  cy += namesH + gap3;
+  // Fila del visitante: nombre a la izquierda, escudo a la derecha (espejo)
+  {
+    const totalW = ES + rowGap + visitTxtW;
+    const startX = CX - totalW/2;
+    ctx.font = `${nameFontPx}px "Bebas Neue", Arial, sans-serif`;
+    ctx.fillStyle = C.BLANCO;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText(visitTxtC, startX, cy+ES/2+s(2));
+    const escX = startX + visitTxtW + rowGap;
+    const img = escudoImgs[p.visit];
+    if(img){
+      ctx.save(); ctx.beginPath();
+      ctx.arc(escX+ES/2,cy+ES/2,ES/2,0,Math.PI*2); ctx.clip();
+      cvDrawEscudoImg(ctx,img,escX,cy,ES); ctx.restore();
+      ctx.strokeStyle='rgba(245,245,245,0.25)'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.arc(escX+ES/2,cy+ES/2,ES/2,0,Math.PI*2); ctx.stroke();
+    } else { cvEscudoFallback(ctx,p.visit,escX,cy,ES); }
+  }
+  cy += ES + gap3;
+
+  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
 
   // Árbitro
   if(tieneArb){
