@@ -14781,7 +14781,45 @@ async function generarImagenProximoIndividual(id){
   ctx.fillStyle = C.NEG;
   ctx.fillRect(0,0,W,H);
 
+  // Textura de fondo — líneas de cancha muy tenues, mismo tratamiento que
+  // las imágenes de Historia, para dar cohesión visual entre piezas.
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, H*0.5); ctx.lineTo(W, H*0.5);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(W/2, H*0.5, W*0.32, 0, Math.PI*2);
+  ctx.stroke();
+  ctx.restore();
+
+  // Franja de acento lateral — color según división/torneo, para
+  // identificar de un vistazo a qué competencia pertenece el partido.
+  const ACCENT_DIV = { primera: C.DORADO, segunda: '#c9c9c9', extraliga: '#8a94a6' };
+  const accentColor = ACCENT_DIV[p.div] || C.DORADO;
+  ctx.fillStyle = accentColor;
+  ctx.fillRect(0, 0, s(8), H);
+
   let y = await cvHeader(ctx,W,idL,0);
+
+  // Chip de estado del partido — esquina superior derecha
+  const estadoTxt   = p.estado==='jugado' ? 'FINAL' : p.estado==='en-juego' ? '● EN VIVO' : 'PROGRAMADO';
+  const estadoBg    = p.estado==='jugado' ? 'rgba(26,107,47,0.55)' : p.estado==='en-juego' ? 'rgba(192,57,43,0.55)' : 'rgba(201,162,39,0.15)';
+  const estadoColor = p.estado==='jugado' ? '#4caf74' : p.estado==='en-juego' ? '#ff5555' : C.DORADO;
+  ctx.font = `700 ${s(13)}px "Rajdhani", Arial, sans-serif`;
+  const estadoTxtW = ctx.measureText(estadoTxt).width;
+  const estadoPadX = s(12), estadoBoxH = s(26);
+  const estadoBoxW = estadoTxtW + estadoPadX*2;
+  const estadoBoxX = W - s(30) - estadoBoxW;
+  const estadoBoxY = s(19);
+  ctx.fillStyle = estadoBg;
+  cvRoundRect(ctx, estadoBoxX, estadoBoxY, estadoBoxW, estadoBoxH, estadoBoxH/2);
+  ctx.fill();
+  ctx.fillStyle = estadoColor;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(estadoTxt, estadoBoxX+estadoBoxW/2, estadoBoxY+estadoBoxH/2+s(1));
+  ctx.textBaseline = 'alphabetic';
 
   // Título de sección
   ctx.fillStyle = C.DORADO;
@@ -14789,7 +14827,7 @@ async function generarImagenProximoIndividual(id){
   ctx.textAlign = 'center';
   ctx.fillText('PRÓXIMOS PARTIDOS', CX, y+s(44));
 
-  // Chip de fecha + torneo (con el logo del torneo si existe)
+  // Chip de fecha + torneo (con el logo del torneo, más protagonista)
   const divLabel   = p.div==='primera'?'PRIMERA DIVISIÓN':p.div==='segunda'?'SEGUNDA DIVISIÓN':(p.torneoExtra||'EXTRA LIGA').toUpperCase();
   const fechaLabel = p.dia ? p.dia.toUpperCase() : (p.fecha || '');
   const logoTorneoImg = await cargarImagenAsync(logoParaPartido(p));
@@ -14802,7 +14840,7 @@ async function generarImagenProximoIndividual(id){
   ctx.font = `700 ${chipFontPx}px "DM Sans", Arial, sans-serif`;
   const divW = ctx.measureText(divLabel).width;
 
-  const chipLogoD  = logoTorneoImg ? s(34) : 0;
+  const chipLogoD  = logoTorneoImg ? s(44) : 0;
   const chipLogoGap = logoTorneoImg ? s(12) : 0;
   const chipPadX   = s(26);
   const chipH      = s(50);
@@ -14886,8 +14924,9 @@ async function generarImagenProximoIndividual(id){
     cy += horaFontPx + gapA;
   }
 
-  // Fila de equipo: escudo + nombre, alineados al margen izquierdo
-  const drawFilaEquipo = (nombre, rowY)=>{
+  // Fila de equipo: escudo + etiqueta LOCAL/VISITANTE + nombre, alineados
+  // al margen izquierdo
+  const drawFilaEquipo = (nombre, rowY, etiqueta)=>{
     const img = escudoImgs[nombre];
     if(img){
       ctx.save(); ctx.beginPath();
@@ -14897,15 +14936,20 @@ async function generarImagenProximoIndividual(id){
       ctx.beginPath(); ctx.arc(marginX+ES/2,rowY+ES/2,ES/2,0,Math.PI*2); ctx.stroke();
     } else { cvEscudoFallback(ctx,nombre,marginX,rowY,ES); }
 
-    ctx.font = `${s(44)}px "Bebas Neue", Arial, sans-serif`;
-    ctx.fillStyle = C.BLANCO;
-    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    const textX = marginX+ES+gapEscNom;
     const nameMaxW = W - marginX*2 - ES - gapEscNom;
-    cvFillTextTrunc(ctx, nombre.toUpperCase(), marginX+ES+gapEscNom, rowY+ES/2+s(2), nameMaxW);
-    ctx.textBaseline = 'alphabetic';
+
+    ctx.font = `700 ${s(13)}px "Rajdhani", Arial, sans-serif`;
+    ctx.fillStyle = 'rgba(245,245,245,0.45)';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    ctx.fillText(etiqueta, textX, rowY+ES/2-s(12));
+
+    ctx.font = `${s(40)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.fillStyle = C.BLANCO;
+    cvFillTextTrunc(ctx, nombre.toUpperCase(), textX, rowY+ES/2+s(30), nameMaxW);
   };
 
-  drawFilaEquipo(p.local, cy);
+  drawFilaEquipo(p.local, cy, 'LOCAL');
   cy += ES + gapRow1;
 
   // Línea divisora con "VS" al medio
@@ -14924,7 +14968,7 @@ async function generarImagenProximoIndividual(id){
   ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
   cy += dividerH + gapRow2;
 
-  drawFilaEquipo(p.visit, cy);
+  drawFilaEquipo(p.visit, cy, 'VISITANTE');
   cy += ES + gapC;
 
   // Árbitro — placa chica
@@ -14951,6 +14995,12 @@ async function generarImagenProximoIndividual(id){
 
   cvFooter(ctx,W,H-s(40),liga);
   ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+
+  // Marco fino tipo "credencial" — cierre premium alrededor de toda la pieza
+  ctx.strokeStyle = 'rgba(201,162,39,0.35)';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(1, 1, W-2, H-2);
+
   return canvas;
 }
 
