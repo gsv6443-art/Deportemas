@@ -14107,48 +14107,55 @@ async function generarImagenPromocionalSplit(p){
   ctx.stroke();
   ctx.restore();
 
-  // ── Marca DEPORTEMAS + torneo, arriba del panel derecho ───────────
+  // ── Barra superior fusionada: logo DEPORTEMAS | logo del torneo ───
+  //    (una sola fila, como en la versión de fondo completo, para que
+  //    la identidad no quede aislada arriba del todo) ────────────────
   const idLogo   = await cargarImagenAsync(id.logo);
   const compLogo = await cargarImagenAsync(p.competicionLogo);
-  const logoSize = 42;
-  let y = 56;
+  const logoSize = 46;
+  const topY = 56;
 
   ctx.textBaseline = 'middle';
   if(idLogo){
     ctx.save();
-    ctx.beginPath(); ctx.arc(panelX0+logoSize/2, y+logoSize/2, logoSize/2, 0, Math.PI*2); ctx.clip();
-    cvDrawEscudoImg(ctx, idLogo, panelX0, y, logoSize);
+    ctx.beginPath(); ctx.arc(panelX0+logoSize/2, topY+logoSize/2, logoSize/2, 0, Math.PI*2); ctx.clip();
+    cvDrawEscudoImg(ctx, idLogo, panelX0, topY, logoSize);
     ctx.restore();
   } else {
-    cvRoundRect(ctx, panelX0, y, logoSize, logoSize, 8);
+    cvRoundRect(ctx, panelX0, topY, logoSize, logoSize, 8);
     ctx.fillStyle = C.DORADO; ctx.fill();
   }
   ctx.fillStyle = C.BLANCO;
   ctx.font = `22px "Bebas Neue", Arial, sans-serif`;
   ctx.textAlign = 'left';
-  ctx.fillText(liga.toUpperCase(), panelX0 + logoSize + 12, y + logoSize/2);
-  y += logoSize + 30;
+  ctx.fillText(liga.toUpperCase(), panelX0 + logoSize + 12, topY + logoSize/2);
 
   if(compLogo || p.torneoNombre){
-    const cSize = 30;
+    const cSize = 34;
+    const cx2 = panelX1 - cSize;
     if(compLogo){
       ctx.save();
-      ctx.beginPath(); ctx.arc(panelX0+cSize/2, y+cSize/2, cSize/2, 0, Math.PI*2); ctx.clip();
-      cvDrawEscudoImg(ctx, compLogo, panelX0, y, cSize);
+      ctx.beginPath(); ctx.arc(cx2+cSize/2, topY+cSize/2, cSize/2, 0, Math.PI*2); ctx.clip();
+      cvDrawEscudoImg(ctx, compLogo, cx2, topY, cSize);
       ctx.restore();
     }
     if(p.torneoNombre){
-      ctx.font = `600 15px "Rajdhani", Arial, sans-serif`;
+      ctx.font = `600 14px "Rajdhani", Arial, sans-serif`;
       ctx.fillStyle = 'rgba(255,255,255,0.65)';
-      ctx.textAlign = 'left';
-      cvFillTextTrunc(ctx, p.torneoNombre.toUpperCase(), panelX0 + (compLogo?cSize+10:0), y+cSize/2, panelW - (compLogo?cSize+10:0));
+      ctx.textAlign = 'right';
+      cvFillTextTrunc(ctx, p.torneoNombre.toUpperCase(), cx2 - (compLogo?12:0), topY + cSize/2, panelW*0.48);
     }
-    y += cSize + 26;
   }
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-  const yTopEnd = y;
 
-  // ── Medimos el resto del contenido para centrarlo en el espacio libre ──
+  const yTopEnd = topY + logoSize + 24;
+  ctx.strokeStyle = 'rgba(255,255,255,.12)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(panelX0, yTopEnd); ctx.lineTo(panelX1, yTopEnd); ctx.stroke();
+
+  // ── Medimos el resto del contenido: arranca pegado a la barra
+  //    superior (sin gran hueco) y lo que sobra queda como aire
+  //    antes del pie, igual que en la versión de fondo completo ────
   function ajustarFuenteSplit(text, sizeMax, sizeMin, maxW){
     let size = sizeMax;
     while(size > sizeMin){
@@ -14161,24 +14168,23 @@ async function generarImagenPromocionalSplit(p){
   const maxNameW = panelW - 20;
   const nomL = p.local.toUpperCase();
   const nomV = p.visit.toUpperCase();
-  const sizeL = ajustarFuenteSplit(nomL, 66, 34, maxNameW);
-  const sizeV = ajustarFuenteSplit(nomV, 66, 34, maxNameW);
+  const sizeL = ajustarFuenteSplit(nomL, 90, 44, maxNameW);
+  const sizeV = ajustarFuenteSplit(nomV, 90, 44, maxNameW);
 
-  const etiquetaH = p.etiqueta ? 44 : 14;
-  const heroH     = (sizeL*1.05+8) + (28*1.2+8) + (sizeV*1.05+40);
-  const diaH      = p.dia ? (32*1.1+10) : 0;
-  const subH      = p.fechaHora ? (18*1.2+34) : 20;
-  const escSize   = 84;
-  const escH      = escSize + 20;
-  const contenidoH = etiquetaH + heroH + diaH + subH + escH;
+  const etiquetaH = p.etiqueta ? 48 : 16;
+  const heroH     = (sizeL*1.04+12) + (34*1.15+12) + (sizeV*1.04+50);
+  const diaH      = p.dia ? (42*1.05+16) : 0;
+  const subH      = p.fechaHora ? (22*1.15+38) : 24;
+  const escSize   = 112;
+  const contenidoH = etiquetaH + heroH + diaH + subH + escSize;
 
-  const gapTrasTop = 30;
-  const disponible = footerTop - (yTopEnd + gapTrasTop);
-  y = yTopEnd + gapTrasTop + Math.max(0, (disponible - contenidoH) / 2);
+  const gapTrasTop = 46;
+  const disponible = footerTop - 40 - (yTopEnd + gapTrasTop);
+  let y = yTopEnd + gapTrasTop + Math.max(0, (disponible - contenidoH) * 0.15);
 
   // ── Etiqueta / fase ────────────────────────────────────────────
   if(p.etiqueta){
-    ctx.font = `700 18px "Rajdhani", Arial, sans-serif`;
+    ctx.font = `700 20px "Rajdhani", Arial, sans-serif`;
     ctx.fillStyle = 'rgba(255,255,255,0.8)';
     ctx.textAlign = 'center';
     if('letterSpacing' in ctx) ctx.letterSpacing = '3px';
@@ -14194,38 +14200,38 @@ async function generarImagenPromocionalSplit(p){
 
   ctx.font = `800 ${sizeL}px "Bebas Neue", Arial, sans-serif`;
   ctx.fillStyle = C.BLANCO;
-  ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 2;
+  ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 12; ctx.shadowOffsetY = 3;
   ctx.fillText(nomL, panelCX, y);
   ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
-  y += sizeL*1.05 + 8;
+  y += sizeL*1.04 + 12;
 
-  ctx.font = `700 28px "Bebas Neue", Arial, sans-serif`;
+  ctx.font = `700 34px "Bebas Neue", Arial, sans-serif`;
   ctx.fillStyle = C.DORADO;
-  ctx.shadowColor = 'rgba(201,162,39,.5)'; ctx.shadowBlur = 12;
+  ctx.shadowColor = 'rgba(201,162,39,.5)'; ctx.shadowBlur = 14;
   ctx.fillText('VS.', panelCX, y);
   ctx.shadowBlur = 0;
-  y += 28*1.2 + 8;
+  y += 34*1.15 + 12;
 
   ctx.font = `800 ${sizeV}px "Bebas Neue", Arial, sans-serif`;
   ctx.fillStyle = C.BLANCO;
-  ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 2;
+  ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 12; ctx.shadowOffsetY = 3;
   ctx.fillText(nomV, panelCX, y);
   ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
-  y += sizeV*1.05 + 40;
+  y += sizeV*1.04 + 50;
 
   ctx.textBaseline = 'alphabetic';
 
   // ── Día + hora ─────────────────────────────────────────────────
   if(p.dia){
-    ctx.font = `700 32px "Bebas Neue", Arial, sans-serif`;
+    ctx.font = `700 42px "Bebas Neue", Arial, sans-serif`;
     ctx.fillStyle = C.DORADO;
-    ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 1;
+    ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 2;
     cvFillTextTrunc(ctx, p.dia.toUpperCase(), panelCX, y, panelW - 20);
     ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
     y += diaH;
   }
   if(p.fechaHora){
-    ctx.font = `700 18px "Bebas Neue", Arial, sans-serif`;
+    ctx.font = `700 22px "Bebas Neue", Arial, sans-serif`;
     ctx.fillStyle = 'rgba(255,255,255,0.85)';
     ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 1;
     cvFillTextTrunc(ctx, p.fechaHora.toUpperCase(), panelCX, y, panelW - 20);
@@ -14236,12 +14242,12 @@ async function generarImagenPromocionalSplit(p){
   }
 
   // ── Escudos de ambos equipos ──────────────────────────────────────
-  const escGap = 26;
+  const escGap = 30;
   const escY   = y;
   const escLX  = panelCX - escGap/2 - escSize;
   const escRX  = panelCX + escGap/2;
   ctx.save();
-  ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 12; ctx.shadowOffsetY = 3;
+  ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 14; ctx.shadowOffsetY = 3;
   await cvDrawEscudoCompleto(ctx, p.local, escLX, escY, escSize);
   await cvDrawEscudoCompleto(ctx, p.visit, escRX, escY, escSize);
   ctx.restore();
