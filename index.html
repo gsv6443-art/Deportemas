@@ -3402,6 +3402,7 @@ table.posiciones td:nth-child(8){
       <button class="admin-tab" onclick="switchAdminTab('sanciones',this)">🟥 Sanciones</button>
       <button class="admin-tab" onclick="switchAdminTab('alineaciones',this)">🧩 Alineaciones</button>
       <button class="admin-tab" onclick="switchAdminTab('historiagol',this)">🎬 Historia</button>
+      <button class="admin-tab" onclick="switchAdminTab('promo',this)">📣 Promoción</button>
       <button class="admin-tab" onclick="switchAdminTab('notificaciones',this)">🔔 Notificaciones</button>
     </div>
     <div class="admin-body">
@@ -4986,6 +4987,54 @@ table.posiciones td:nth-child(8){
           <button class="btn-primary" id="hg-generar-btn" onclick="hgGenerar()">🖼️ Generar</button>
           <button class="btn-edit" onclick="hgGuardarPlantilla()">💾 Guardar plantilla</button>
           <button class="btn-edit" onclick="hgLimpiarForm()">Limpiar</button>
+        </div>
+      </div>
+
+      <div class="admin-section" id="admin-promo">
+        <div class="admin-title">📣 Promoción de Partido</div>
+        <p style="font-size:11px;color:var(--gris);margin-bottom:14px;font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px">
+          Generá una imagen tipo afiche (1080×1350) para anunciar un partido en redes, con estilo estadio nocturno / Dorado Clásico.
+        </p>
+
+        <div class="form-group">
+          <label>Partido guardado (opcional, autocompleta los datos)</label>
+          <select id="promo-partido-sel" onchange="promoCargarPartido()">
+            <option value="">— Cargar datos manualmente —</option>
+          </select>
+        </div>
+
+        <datalist id="promo-equipos-datalist"></datalist>
+
+        <div class="form-row">
+          <div class="form-group"><label>Equipo Local</label>
+            <input type="text" id="promo-local" list="promo-equipos-datalist" placeholder="Nombre exacto del equipo"/>
+          </div>
+          <div class="form-group"><label>Equipo Visitante</label>
+            <input type="text" id="promo-visit" list="promo-equipos-datalist" placeholder="Nombre exacto del equipo"/>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group"><label>Etiqueta / Fase</label>
+            <input type="text" id="promo-etiqueta" placeholder="Ej: FASE LIGA, SEMIFINAL, FECHA 12"/>
+          </div>
+          <div class="form-group"><label>Torneo / Competición</label>
+            <input type="text" id="promo-torneo" placeholder="Ej: Liga Regional Riotercerense"/>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group"><label>Día</label>
+            <input type="text" id="promo-dia" placeholder="Ej: MIÉRCOLES"/>
+          </div>
+          <div class="form-group"><label>Fecha y hora</label>
+            <input type="text" id="promo-fechahora" placeholder="Ej: 21:00 hs · Estadio Municipal"/>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+          <button class="btn-primary" onclick="promoGenerar()">🖼️ Generar</button>
+          <button class="btn-edit" onclick="promoLimpiarForm()">Limpiar</button>
         </div>
       </div>
 
@@ -11817,7 +11866,8 @@ function switchAdminTab(tab,el){
   if(tab==='torneos'){ renderTorneoClubesChecklist(); toActualizarVisEstado(); }
   if(tab==='notificaciones'){ actualizarContadorSubs(); }
   if(tab==='alineaciones'){ poblarSelectPartidoAlineacion(); renderAdminListaAlineaciones(); alinRenderSlots(); }
-  if(tab==='historiagol'){ hgPoblarEquipos(); hgActualizarCamposEvento(); hgPoblarPlantillas(); }}
+  if(tab==='historiagol'){ hgPoblarEquipos(); hgActualizarCamposEvento(); hgPoblarPlantillas(); }
+  if(tab==='promo'){ promoPoblarEquipos(); promoPoblarPartidos(); }}
 function cambiarPassword(){
   // La contraseña se gestiona desde Firebase Console → Authentication
   const msg=document.getElementById('conf-msg');
@@ -13595,6 +13645,230 @@ function hgGenerarImagenEvento(evento){
   }
 
   abrirShare(() => generarImagenHistoriaPartido(p, opciones));
+}
+
+
+// ── Promoción de Partido — formulario del panel de admin ────────
+
+function promoPoblarEquipos(){
+  const dl = document.getElementById('promo-equipos-datalist');
+  if(!dl) return;
+  dl.innerHTML = (data.equipos||[]).map(e => `<option value="${(e.nombre||'').replace(/"/g,'&quot;')}">`).join('');
+}
+
+function promoPoblarPartidos(){
+  const sel = document.getElementById('promo-partido-sel');
+  if(!sel || !data.partidos) return;
+  const actual = sel.value;
+  const partidos = [...data.partidos].sort((a,b)=>String(b.fecha||'').localeCompare(String(a.fecha||'')));
+  sel.innerHTML = '<option value="">— Cargar datos manualmente —</option>' +
+    partidos.map(p=>`<option value="${p.id}">${p.local} vs ${p.visit} — ${p.fecha||''}</option>`).join('');
+  if(actual && partidos.some(p=>String(p.id)===actual)) sel.value = actual;
+}
+
+function promoCargarPartido(){
+  const sel = document.getElementById('promo-partido-sel');
+  const id = sel ? sel.value : '';
+  if(!id) return;
+  const p = (data.partidos||[]).find(x=>String(x.id)===String(id));
+  if(!p) return;
+  document.getElementById('promo-local').value = p.local || '';
+  document.getElementById('promo-visit').value = p.visit || '';
+  const divLabel = p.div==='primera' ? '1ª División' : p.div==='segunda' ? '2ª División' : (p.torneoExtra || 'Extra Liga');
+  const tornLabel = (p.div!=='extraliga' && p.torneo) ? ' · '+torneoLabel(p.torneo) : '';
+  document.getElementById('promo-torneo').value = divLabel + tornLabel;
+  document.getElementById('promo-dia').value = (p.dia || '').toUpperCase();
+  document.getElementById('promo-fechahora').value = [p.fecha, p.hora ? p.hora+' hs' : ''].filter(Boolean).join(' · ');
+}
+
+function promoLimpiarForm(){
+  ['promo-local','promo-visit','promo-etiqueta','promo-torneo','promo-dia','promo-fechahora'].forEach(id=>{
+    const el = document.getElementById(id); if(el) el.value = '';
+  });
+  const sel = document.getElementById('promo-partido-sel'); if(sel) sel.value = '';
+}
+
+function promoGenerar(){
+  const local = document.getElementById('promo-local').value.trim();
+  const visit = document.getElementById('promo-visit').value.trim();
+  if(!local || !visit){
+    alert('Completá al menos equipo local y visitante.');
+    return;
+  }
+  const p = {
+    local, visit,
+    etiqueta:  document.getElementById('promo-etiqueta').value.trim(),
+    torneoNombre: document.getElementById('promo-torneo').value.trim(),
+    dia:       document.getElementById('promo-dia').value.trim(),
+    fechaHora: document.getElementById('promo-fechahora').value.trim(),
+  };
+  abrirShare(() => generarImagenPromocional(p));
+}
+
+/* ══════════════════════════════════════════════════════════════
+   PROMOCIÓN DE PARTIDO — imagen tipo "afiche" para redes (1080×1350)
+   Estética estadio nocturno / Dorado Clásico: pensada para anunciar
+   un partido destacado unos días antes de jugarse.
+   ══════════════════════════════════════════════════════════════ */
+async function generarImagenPromocional(p){
+  await document.fonts.ready;
+  const id   = getIdentidad();
+  const liga = id.nombre || 'DEPORTEMAS';
+  const W = CV_W, H = CV_H, CX = W/2;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.textBaseline = 'alphabetic';
+
+  // ── Fondo: negro/dorado dramático tipo "noche de partido" ────────
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, C.NEG4);
+  bg.addColorStop(0.55, C.NEG3);
+  bg.addColorStop(1, C.NEG);
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+  const glow = ctx.createRadialGradient(CX, H*0.4, 0, CX, H*0.4, W*0.8);
+  glow.addColorStop(0, 'rgba(201,162,39,0.16)');
+  glow.addColorStop(1, 'transparent');
+  ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
+
+  // Textura de cancha muy tenue (misma idea que en Historia)
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0, H*0.42); ctx.lineTo(W, H*0.42); ctx.stroke();
+  ctx.beginPath(); ctx.arc(CX, H*0.42, W*0.34, 0, Math.PI*2); ctx.stroke();
+  ctx.restore();
+
+  // ── Medimos el contenido primero para centrarlo verticalmente ────
+  const barH        = 72;
+  const gapTrasBarra = 56;
+  const topInicio    = 50;
+  const yTrasBarra   = topInicio + barH + gapTrasBarra;
+
+  const etiquetaH = p.etiqueta ? 84 : 20;
+  const ESZ       = 300;
+  const heroH     = ESZ + 60 + 50; // escudos + gap + nombres
+  const diaH      = 170;
+  const subH      = p.fechaHora ? 50 : 0;
+  const gaps      = 40 + 40 + (p.fechaHora ? 20 : 0);
+  const contenidoH = etiquetaH + heroH + diaH + subH + gaps;
+
+  const footH = s(40);
+  const disponible = (H - footH) - yTrasBarra;
+  let y = yTrasBarra + Math.max(0, (disponible - contenidoH) / 2);
+
+  // ── Barra superior: escudo/logo DEPORTEMAS | nombre del torneo ───
+  const logoSize = 58;
+  const idLogo = await cargarImagenAsync(id.logo);
+  const lx = 60;
+  ctx.textBaseline = 'middle';
+  if(idLogo){
+    ctx.save();
+    ctx.beginPath(); ctx.arc(lx+logoSize/2, topInicio+logoSize/2, logoSize/2, 0, Math.PI*2); ctx.clip();
+    cvDrawEscudoImg(ctx, idLogo, lx, topInicio, logoSize);
+    ctx.restore();
+  } else {
+    cvRoundRect(ctx, lx, topInicio, logoSize, logoSize, 10);
+    ctx.fillStyle = C.DORADO; ctx.fill();
+    ctx.fillStyle = C.NEG; ctx.font = `bold 20px Arial, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(liga.substr(0,2).toUpperCase(), lx+logoSize/2, topInicio+logoSize/2);
+  }
+  ctx.fillStyle = C.BLANCO;
+  ctx.font = `28px "Bebas Neue", Arial, sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.fillText(liga.toUpperCase(), lx + logoSize + 16, topInicio + logoSize/2);
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(CX, topInicio); ctx.lineTo(CX, topInicio+logoSize); ctx.stroke();
+
+  if(p.torneoNombre){
+    ctx.font = `600 18px "Rajdhani", Arial, sans-serif`;
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.textAlign = 'right';
+    cvFillTextTrunc(ctx, p.torneoNombre.toUpperCase(), W - 60, topInicio + logoSize/2, W/2 - 110);
+  }
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+
+  // ── Etiqueta / fase ────────────────────────────────────────────
+  if(p.etiqueta){
+    ctx.font = `700 22px "Rajdhani", Arial, sans-serif`;
+    const txt = p.etiqueta.toUpperCase();
+    const tW = ctx.measureText(txt).width + 44;
+    cvRoundRect(ctx, CX - tW/2, y, tW, 38, 19);
+    ctx.strokeStyle = 'rgba(201,162,39,0.6)'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = C.DORADO;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(txt, CX, y + 19);
+    ctx.textBaseline = 'alphabetic';
+    y += etiquetaH;
+  } else {
+    y += etiquetaH;
+  }
+
+  // ── Duelo: escudos + VS. + nombres de equipo ────────────────────
+  const escY  = y;
+  const escLX = 70;
+  const escRX = W - 70 - ESZ;
+
+  await cvDrawEscudoCompleto(ctx, p.local, escLX, escY, ESZ);
+  await cvDrawEscudoCompleto(ctx, p.visit, escRX, escY, ESZ);
+
+  ctx.font = `800 70px "Bebas Neue", Arial, sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.shadowColor = 'rgba(201,162,39,0.5)';
+  ctx.shadowBlur  = 26;
+  ctx.fillStyle   = C.DORADO;
+  ctx.fillText('VS.', CX, escY + ESZ/2);
+  ctx.shadowBlur  = 0;
+  ctx.textBaseline = 'alphabetic';
+
+  const nameY = escY + ESZ + 56;
+  ctx.font = `44px "Bebas Neue", Arial, sans-serif`;
+  ctx.fillStyle = C.BLANCO;
+  ctx.textAlign = 'center';
+  cvFillTextTrunc(ctx, p.local.toUpperCase(), escLX + ESZ/2, nameY, ESZ + 60);
+  cvFillTextTrunc(ctx, p.visit.toUpperCase(), escRX + ESZ/2, nameY, ESZ + 60);
+
+  y = nameY + 50 + 40;
+
+  // ── Divisor dorado ───────────────────────────────────────────────
+  const divGrad = ctx.createLinearGradient(0, y, W, y);
+  divGrad.addColorStop(0, 'transparent');
+  divGrad.addColorStop(0.25, C.DORADO);
+  divGrad.addColorStop(0.75, C.DORADO);
+  divGrad.addColorStop(1, 'transparent');
+  ctx.fillStyle = divGrad;
+  ctx.fillRect(0, y, W, 2);
+  y += 40;
+
+  // ── Día (protagonista, como el "MIÉRCOLES" de un afiche de TV) ───
+  if(p.dia){
+    ctx.font = `170px "Bebas Neue", Arial, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    ctx.shadowColor = 'rgba(201,162,39,0.35)';
+    ctx.shadowBlur  = 20;
+    ctx.fillStyle   = C.BLANCO;
+    cvFillTextTrunc(ctx, p.dia.toUpperCase(), CX, y + 130, W - 100);
+    ctx.shadowBlur  = 0;
+  }
+  y += diaH;
+
+  // ── Fecha / hora / sede ──────────────────────────────────────────
+  if(p.fechaHora){
+    y += 20;
+    ctx.font = `600 24px "DM Sans", Arial, sans-serif`;
+    ctx.fillStyle = 'rgba(201,162,39,0.75)';
+    ctx.textAlign = 'center';
+    cvFillTextTrunc(ctx, p.fechaHora, CX, y, W - 100);
+  }
+
+  cvFooter(ctx, W, CV_H - footH, liga);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  return canvas;
 }
 
 async function generarImagenPosiciones(){
