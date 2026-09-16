@@ -13748,12 +13748,14 @@ async function generarImagenPromocional(p){
   const yTrasBarra   = topInicio + barH + gapTrasBarra;
 
   const etiquetaH = p.etiqueta ? 84 : 20;
-  const ESZ       = 300;
-  const heroH     = ESZ + 60 + 50; // escudos + gap + nombres
-  const diaH      = 170;
-  const subH      = p.fechaHora ? 50 : 0;
-  const gaps      = 40 + 40 + (p.fechaHora ? 20 : 0);
-  const contenidoH = etiquetaH + heroH + diaH + subH + gaps;
+  const ESZ       = 76;   // escudo chico y de apoyo — el protagonismo es del nombre del equipo
+  const filaH     = 96;   // alto de cada fila equipo (escudo + nombre)
+  const heroH     = filaH * 2 + 56; // dos filas + línea divisoria con "VS" al medio
+  const gapTrasHero = 44;
+  const diaH      = p.dia ? 46 : 0;
+  const subH      = p.fechaHora ? 34 : 0;
+  const gapDiaSub = (p.dia && p.fechaHora) ? 10 : 0;
+  const contenidoH = etiquetaH + heroH + gapTrasHero + diaH + subH + gapDiaSub;
 
   const footH = s(40);
   const disponible = (H - footH) - yTrasBarra;
@@ -13809,61 +13811,76 @@ async function generarImagenPromocional(p){
     y += etiquetaH;
   }
 
-  // ── Duelo: escudos + VS. + nombres de equipo ────────────────────
-  const escY  = y;
-  const escLX = 70;
-  const escRX = W - 70 - ESZ;
+  // ── Duelo: fila LOCAL (escudo·nombre) / línea "VS" / fila VISITANTE
+  //    (nombre·escudo, en espejo) — el nombre del equipo es lo grande
+  //    y protagonista, el escudo acompaña chico al lado ──────────────
+  function medirTrunc(text, maxW){
+    let t = text;
+    while(ctx.measureText(t).width > maxW && t.length > 1) t = t.slice(0,-1);
+    if(t !== text) t = t.slice(0,-1) + '…';
+    return { text: t, width: ctx.measureText(t).width };
+  }
 
-  await cvDrawEscudoCompleto(ctx, p.local, escLX, escY, ESZ);
-  await cvDrawEscudoCompleto(ctx, p.visit, escRX, escY, ESZ);
+  const nameFont = `800 62px "Bebas Neue", Arial, sans-serif`;
+  const maxNameW = W - 260;
+  const fila1Y   = y;
+  const lineaY   = fila1Y + filaH + 28;
+  const fila2Y   = lineaY + 28;
 
-  ctx.font = `800 70px "Bebas Neue", Arial, sans-serif`;
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.shadowColor = 'rgba(201,162,39,0.5)';
-  ctx.shadowBlur  = 26;
-  ctx.fillStyle   = C.DORADO;
-  ctx.fillText('VS.', CX, escY + ESZ/2);
-  ctx.shadowBlur  = 0;
-  ctx.textBaseline = 'alphabetic';
-
-  const nameY = escY + ESZ + 56;
-  ctx.font = `44px "Bebas Neue", Arial, sans-serif`;
+  // Fila Local: escudo a la izquierda, nombre grande a la derecha
+  ctx.font = nameFont;
+  const nomL = medirTrunc(p.local.toUpperCase(), maxNameW);
+  const anchoFila1 = ESZ + 22 + nomL.width;
+  const xFila1 = CX - anchoFila1/2;
+  await cvDrawEscudoCompleto(ctx, p.local, xFila1, fila1Y + (filaH-ESZ)/2, ESZ);
   ctx.fillStyle = C.BLANCO;
-  ctx.textAlign = 'center';
-  cvFillTextTrunc(ctx, p.local.toUpperCase(), escLX + ESZ/2, nameY, ESZ + 60);
-  cvFillTextTrunc(ctx, p.visit.toUpperCase(), escRX + ESZ/2, nameY, ESZ + 60);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText(nomL.text, xFila1 + ESZ + 22, fila1Y + filaH/2);
 
-  y = nameY + 50 + 40;
-
-  // ── Divisor dorado ───────────────────────────────────────────────
-  const divGrad = ctx.createLinearGradient(0, y, W, y);
+  // Línea divisoria dorada con badge "VS" centrado
+  const divGrad = ctx.createLinearGradient(0, lineaY, W, lineaY);
   divGrad.addColorStop(0, 'transparent');
-  divGrad.addColorStop(0.25, C.DORADO);
-  divGrad.addColorStop(0.75, C.DORADO);
+  divGrad.addColorStop(0.35, 'rgba(201,162,39,0.55)');
+  divGrad.addColorStop(0.65, 'rgba(201,162,39,0.55)');
   divGrad.addColorStop(1, 'transparent');
   ctx.fillStyle = divGrad;
-  ctx.fillRect(0, y, W, 2);
-  y += 40;
+  ctx.fillRect(0, lineaY, W, 1.5);
 
-  // ── Día (protagonista, como el "MIÉRCOLES" de un afiche de TV) ───
+  ctx.font = `700 24px "Rajdhani", Arial, sans-serif`;
+  const vsW = ctx.measureText('VS').width + 30;
+  cvRoundRect(ctx, CX - vsW/2, lineaY - 17, vsW, 34, 17);
+  ctx.fillStyle = C.NEG3; ctx.fill();
+  ctx.strokeStyle = 'rgba(201,162,39,0.7)'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.fillStyle = C.DORADO;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('VS', CX, lineaY + 1);
+
+  // Fila Visitante: nombre grande a la izquierda, escudo a la derecha (espejo)
+  ctx.font = nameFont;
+  const nomV = medirTrunc(p.visit.toUpperCase(), maxNameW);
+  const anchoFila2 = nomV.width + 22 + ESZ;
+  const xFila2 = CX - anchoFila2/2;
+  ctx.fillStyle = C.BLANCO;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText(nomV.text, xFila2, fila2Y + filaH/2);
+  await cvDrawEscudoCompleto(ctx, p.visit, xFila2 + nomV.width + 22, fila2Y + (filaH-ESZ)/2, ESZ);
+
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  y = fila2Y + filaH + gapTrasHero;
+
+  // ── Día / fecha·hora·sede — información de apoyo, discreta ───────
   if(p.dia){
-    ctx.font = `170px "Bebas Neue", Arial, sans-serif`;
+    ctx.font = `700 34px "Rajdhani", Arial, sans-serif`;
+    ctx.fillStyle = C.DORADO;
     ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-    ctx.shadowColor = 'rgba(201,162,39,0.35)';
-    ctx.shadowBlur  = 20;
-    ctx.fillStyle   = C.BLANCO;
-    cvFillTextTrunc(ctx, p.dia.toUpperCase(), CX, y + 130, W - 100);
-    ctx.shadowBlur  = 0;
+    cvFillTextTrunc(ctx, p.dia.toUpperCase(), CX, y + 30, W - 140);
+    y += diaH + gapDiaSub;
   }
-  y += diaH;
-
-  // ── Fecha / hora / sede ──────────────────────────────────────────
   if(p.fechaHora){
-    y += 20;
-    ctx.font = `600 24px "DM Sans", Arial, sans-serif`;
-    ctx.fillStyle = 'rgba(201,162,39,0.75)';
+    ctx.font = `500 22px "DM Sans", Arial, sans-serif`;
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
     ctx.textAlign = 'center';
-    cvFillTextTrunc(ctx, p.fechaHora, CX, y, W - 100);
+    cvFillTextTrunc(ctx, p.fechaHora, CX, y + 22, W - 140);
   }
 
   cvFooter(ctx, W, CV_H - footH, liga);
