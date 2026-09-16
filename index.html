@@ -14140,10 +14140,10 @@ async function generarImagenPromocionalSplit(p){
       ctx.restore();
     }
     if(p.torneoNombre){
-      ctx.font = `600 14px "Rajdhani", Arial, sans-serif`;
-      ctx.fillStyle = 'rgba(255,255,255,0.65)';
+      ctx.font = `700 18px "Rajdhani", Arial, sans-serif`;
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
       ctx.textAlign = 'right';
-      cvFillTextTrunc(ctx, p.torneoNombre.toUpperCase(), cx2 - (compLogo?12:0), topY + cSize/2, panelW*0.48);
+      cvFillTextTrunc(ctx, p.torneoNombre.toUpperCase(), cx2 - (compLogo?14:0), topY + cSize/2, panelW*0.48);
     }
   }
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
@@ -14175,12 +14175,13 @@ async function generarImagenPromocionalSplit(p){
   const heroH     = (sizeL*1.04+12) + (34*1.15+12) + (sizeV*1.04+50);
   const diaH      = p.dia ? (42*1.05+16) : 0;
   const subH      = p.fechaHora ? (22*1.15+38) : 24;
-  const escSize   = 112;
-  const contenidoH = etiquetaH + heroH + diaH + subH + escSize;
+  const escSize   = 160;
+  const escBlockH = escSize + 34 + 40; // escudo + nombre debajo + línea de cierre
+  const contenidoH = etiquetaH + heroH + diaH + subH + escBlockH;
 
   const gapTrasTop = 46;
   const disponible = footerTop - 40 - (yTopEnd + gapTrasTop);
-  let y = yTopEnd + gapTrasTop + Math.max(0, (disponible - contenidoH) * 0.15);
+  let y = yTopEnd + gapTrasTop + Math.max(0, (disponible - contenidoH) * 0.32);
 
   // ── Etiqueta / fase ────────────────────────────────────────────
   if(p.etiqueta){
@@ -14241,16 +14242,33 @@ async function generarImagenPromocionalSplit(p){
     y += subH;
   }
 
-  // ── Escudos de ambos equipos ──────────────────────────────────────
-  const escGap = 30;
+  // ── Escudos de ambos equipos, con su nombre debajo ────────────────
+  const escGap = 34;
   const escY   = y;
   const escLX  = panelCX - escGap/2 - escSize;
   const escRX  = panelCX + escGap/2;
   ctx.save();
-  ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 14; ctx.shadowOffsetY = 3;
+  ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 16; ctx.shadowOffsetY = 4;
   await cvDrawEscudoCompleto(ctx, p.local, escLX, escY, escSize);
   await cvDrawEscudoCompleto(ctx, p.visit, escRX, escY, escSize);
   ctx.restore();
+
+  ctx.font = `700 19px "Rajdhani", Arial, sans-serif`;
+  ctx.fillStyle = 'rgba(255,255,255,0.8)';
+  ctx.textAlign = 'center';
+  ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 6; ctx.shadowOffsetY = 1;
+  cvFillTextTrunc(ctx, nomL, escLX + escSize/2, escY + escSize + 26, escSize + 30);
+  cvFillTextTrunc(ctx, nomV, escRX + escSize/2, escY + escSize + 26, escSize + 30);
+  ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+
+  // Línea dorada de cierre, para que el bloque no quede "flotando"
+  const cierreY = escY + escSize + 56;
+  const cierreGrad = ctx.createLinearGradient(panelX0, cierreY, panelX1, cierreY);
+  cierreGrad.addColorStop(0, 'transparent');
+  cierreGrad.addColorStop(0.5, 'rgba(201,162,39,0.5)');
+  cierreGrad.addColorStop(1, 'transparent');
+  ctx.fillStyle = cierreGrad;
+  ctx.fillRect(panelX0, cierreY, panelW, 2);
 
   cvFooter(ctx, W, footerTop, liga);
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
