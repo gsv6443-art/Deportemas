@@ -5024,6 +5024,18 @@ table.posiciones td:nth-child(8){
         </div>
         <input type="hidden" id="promo-competicion-logo" value=""/>
 
+        <div class="form-group">
+          <label>Logo del torneo (opcional)</label>
+          <input type="file" accept="image/*" id="promo-torneo-logo-file" onchange="promoPreviewLogoTorneo(this)"/>
+          <p style="font-size:10px;color:var(--gris);margin-top:4px;font-family:'Rajdhani',sans-serif">
+            Si elegís un partido guardado de Primera/Segunda/Extra Liga, este logo se completa solo; si no, subilo acá.
+          </p>
+          <div class="preview-wrap" id="promo-torneo-logo-wrap">
+            <img id="promo-torneo-logo-preview" src="" alt=""/>
+            <button type="button" class="btn-quitar-img" onclick="promoQuitarLogoTorneo()">✕ Quitar</button>
+          </div>
+        </div>
+
         <div class="form-row">
           <div class="form-group"><label>Día</label>
             <input type="text" id="promo-dia" placeholder="Ej: MIÉRCOLES"/>
@@ -13690,9 +13702,30 @@ function promoCargarPartido(){
   const divLabel = p.div==='primera' ? '1ª División' : p.div==='segunda' ? '2ª División' : (p.torneoExtra || 'Extra Liga');
   const tornLabel = (p.div!=='extraliga' && p.torneo) ? ' · '+torneoLabel(p.torneo) : '';
   document.getElementById('promo-torneo').value = divLabel + tornLabel;
-  document.getElementById('promo-competicion-logo').value = logoParaPartido(p) || '';
+  const compLogo = logoParaPartido(p) || '';
+  document.getElementById('promo-competicion-logo').value = compLogo;
+  const lp = document.getElementById('promo-torneo-logo-preview'), lw = document.getElementById('promo-torneo-logo-wrap');
+  if(compLogo){ if(lp) lp.src = compLogo; if(lw) lw.classList.add('visible'); }
+  else { if(lp) lp.src = ''; if(lw) lw.classList.remove('visible'); }
   document.getElementById('promo-dia').value = (p.dia || '').toUpperCase();
   document.getElementById('promo-fechahora').value = [p.fecha, p.hora ? p.hora+' hs' : ''].filter(Boolean).join(' · ');
+}
+
+// Logo del torneo/competición — se autocompleta al elegir un partido
+// guardado (Primera/Segunda/Extra Liga), o se sube a mano acá
+function promoPreviewLogoTorneo(input){
+  const file = input.files[0]; if(!file) return;
+  comprimirABase64(file, 300, 0.85).then(dataUrl=>{
+    document.getElementById('promo-competicion-logo').value = dataUrl;
+    const p = document.getElementById('promo-torneo-logo-preview'); if(p) p.src = dataUrl;
+    const w = document.getElementById('promo-torneo-logo-wrap'); if(w) w.classList.add('visible');
+  });
+}
+function promoQuitarLogoTorneo(){
+  document.getElementById('promo-competicion-logo').value = '';
+  const p = document.getElementById('promo-torneo-logo-preview'); if(p) p.src = '';
+  const w = document.getElementById('promo-torneo-logo-wrap'); if(w) w.classList.remove('visible');
+  const f = document.getElementById('promo-torneo-logo-file'); if(f) f.value = '';
 }
 
 function promoLimpiarForm(){
@@ -13701,6 +13734,7 @@ function promoLimpiarForm(){
   });
   const sel = document.getElementById('promo-partido-sel'); if(sel) sel.value = '';
   promoQuitarFoto();
+  promoQuitarLogoTorneo();
 }
 
 // Foto de fondo de la imagen de Promoción (misma lógica que la foto de gol/campeón)
@@ -13805,7 +13839,8 @@ async function generarImagenPromocional(p){
   } else {
     // ── Foto de fondo a pantalla completa (mismo tratamiento que en
     // goleadores/campeón/gol): cubre todo el alto, con un degradé
-    // oscuro creciente hacia abajo para que el texto se lea bien ────
+    // oscuro parejo (sin claros en el medio) para que el texto se
+    // lea bien sin importar cuán clara sea la foto original ────────
     await new Promise(res=>{
       const img = new Image();
       img.onload = () => {
@@ -13813,12 +13848,21 @@ async function generarImagenPromocional(p){
         const scale = Math.max(W/iw, H/ih);
         const dw = iw*scale, dh = ih*scale;
         ctx.drawImage(img, (W-dw)/2, (H-dh)/2, dw, dh);
+
+        // Oscurecido general parejo (de arriba a abajo, sin puntos claros)
         const g2 = ctx.createLinearGradient(0, 0, 0, H);
-        g2.addColorStop(0,    'rgba(8,8,8,.55)');
-        g2.addColorStop(0.32, 'rgba(8,8,8,.45)');
-        g2.addColorStop(0.68, 'rgba(8,8,8,.82)');
+        g2.addColorStop(0,    'rgba(8,8,8,.68)');
+        g2.addColorStop(0.35, 'rgba(8,8,8,.72)');
+        g2.addColorStop(0.65, 'rgba(8,8,8,.82)');
         g2.addColorStop(1,    'rgba(8,8,8,.96)');
         ctx.fillStyle = g2; ctx.fillRect(0, 0, W, H);
+
+        // Refuerzo extra centrado sobre la franja donde va el título
+        // (nombres + VS), para garantizar contraste ahí puntualmente
+        const scrim = ctx.createRadialGradient(CX, H*0.34, H*0.05, CX, H*0.34, W*0.75);
+        scrim.addColorStop(0, 'rgba(0,0,0,.38)');
+        scrim.addColorStop(1, 'transparent');
+        ctx.fillStyle = scrim; ctx.fillRect(0, 0, W, H);
         res();
       };
       img.onerror = () => res();
@@ -13849,7 +13893,9 @@ async function generarImagenPromocional(p){
   ctx.fillStyle = C.BLANCO;
   ctx.font = `30px "Bebas Neue", Arial, sans-serif`;
   ctx.textAlign = 'left';
+  ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 1;
   ctx.fillText(liga.toUpperCase(), lx + logoSize + 16, topInicio + logoSize/2);
+  ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
 
   ctx.strokeStyle = 'rgba(255,255,255,0.18)';
   ctx.lineWidth = 1;
@@ -13865,7 +13911,9 @@ async function generarImagenPromocional(p){
     ctx.font = `600 18px "Rajdhani", Arial, sans-serif`;
     ctx.fillStyle = 'rgba(255,255,255,0.7)';
     ctx.textAlign = 'right';
+    ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 1;
     cvFillTextTrunc(ctx, p.torneoNombre.toUpperCase(), W - 60, topInicio + logoSize/2, W/2 - 110);
+    ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
   }
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
 
@@ -13876,9 +13924,11 @@ async function generarImagenPromocional(p){
     ctx.font = `700 22px "Rajdhani", Arial, sans-serif`;
     ctx.fillStyle = 'rgba(255,255,255,0.85)';
     ctx.textAlign = 'center';
+    ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 1;
     if('letterSpacing' in ctx) ctx.letterSpacing = '5px';
     cvFillTextTrunc(ctx, p.etiqueta.toUpperCase(), CX + 3, y, W - 140);
     if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+    ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
     y += 60;
   } else {
     y += 20;
@@ -13904,23 +13954,23 @@ async function generarImagenPromocional(p){
   const sizeL = ajustarFuente(nomL, 104, 54, maxNameW);
   ctx.font = `800 ${sizeL}px "Bebas Neue", Arial, sans-serif`;
   ctx.fillStyle = C.BLANCO;
-  ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = 16; ctx.shadowOffsetY = 3;
+  ctx.shadowColor = 'rgba(0,0,0,0.7)'; ctx.shadowBlur = 22; ctx.shadowOffsetY = 4;
   ctx.fillText(nomL, CX, y);
   ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
   y += sizeL * 1.02 + 14;
 
   ctx.font = `700 46px "Bebas Neue", Arial, sans-serif`;
   ctx.fillStyle = C.DORADO;
-  ctx.shadowColor = 'rgba(201,162,39,0.55)'; ctx.shadowBlur = 20;
+  ctx.shadowColor = 'rgba(0,0,0,0.7)'; ctx.shadowBlur = 18; ctx.shadowOffsetY = 3;
   ctx.fillText('VS.', CX, y);
-  ctx.shadowBlur = 0;
+  ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
   y += 46 * 1.15 + 14;
 
   const nomV = p.visit.toUpperCase();
   const sizeV = ajustarFuente(nomV, 104, 54, maxNameW);
   ctx.font = `800 ${sizeV}px "Bebas Neue", Arial, sans-serif`;
   ctx.fillStyle = C.BLANCO;
-  ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = 16; ctx.shadowOffsetY = 3;
+  ctx.shadowColor = 'rgba(0,0,0,0.7)'; ctx.shadowBlur = 22; ctx.shadowOffsetY = 4;
   ctx.fillText(nomV, CX, y);
   ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
   y += sizeV * 1.02 + 54;
@@ -13931,14 +13981,32 @@ async function generarImagenPromocional(p){
   if(p.dia){
     ctx.font = `700 54px "Bebas Neue", Arial, sans-serif`;
     ctx.fillStyle = C.DORADO;
+    ctx.shadowColor = 'rgba(0,0,0,0.65)'; ctx.shadowBlur = 14; ctx.shadowOffsetY = 2;
     cvFillTextTrunc(ctx, p.dia.toUpperCase(), CX, y, W - 140);
+    ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
     y += 54 * 1.05 + 16;
   }
   if(p.fechaHora){
     ctx.font = `700 30px "Bebas Neue", Arial, sans-serif`;
     ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.shadowColor = 'rgba(0,0,0,0.65)'; ctx.shadowBlur = 12; ctx.shadowOffsetY = 2;
     cvFillTextTrunc(ctx, p.fechaHora.toUpperCase(), CX, y, W - 140);
+    ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+    y += 30 * 1.1 + 46;
+  } else {
+    y += 30;
   }
+
+  // ── Escudos de ambos equipos, debajo de la hora ───────────────────
+  const escSize = 130, escGap = 70;
+  const escY  = y;
+  const escLX = CX - escGap/2 - escSize;
+  const escRX = CX + escGap/2;
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.55)'; ctx.shadowBlur = 18; ctx.shadowOffsetY = 4;
+  await cvDrawEscudoCompleto(ctx, p.local, escLX, escY, escSize);
+  await cvDrawEscudoCompleto(ctx, p.visit, escRX, escY, escSize);
+  ctx.restore();
 
   cvFooter(ctx, W, CV_H - s(40), liga);
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
