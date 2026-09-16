@@ -5046,10 +5046,18 @@ table.posiciones td:nth-child(8){
         </div>
 
         <div class="form-group">
+          <label>Diseño</label>
+          <select id="promo-estilo">
+            <option value="completo">Foto de fondo completa</option>
+            <option value="split">Foto a la izquierda (como en Alineaciones)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
           <label>Foto de fondo (opcional)</label>
           <input type="file" accept="image/*" id="promo-foto-file" onchange="promoPreviewFoto(this)"/>
           <p style="font-size:10px;color:var(--gris);margin-top:4px;font-family:'Rajdhani',sans-serif">
-            Se usa igual que en la foto de goleadores/campeón: ocupa toda la imagen con un degradé oscuro encima para que el texto se siga leyendo bien.
+            Se usa igual que en la foto de goleadores/campeón: ocupa toda la imagen (o el panel izquierdo, según el diseño elegido) con un degradé oscuro encima para que el texto se siga leyendo bien.
           </p>
           <div class="preview-wrap" id="promo-foto-wrap">
             <img id="promo-foto-preview" src="" alt="" style="max-height:140px;object-fit:cover;object-position:top"/>
@@ -13770,7 +13778,8 @@ function promoGenerar(){
     dia:       document.getElementById('promo-dia').value.trim(),
     fechaHora: document.getElementById('promo-fechahora').value.trim(),
   };
-  abrirShare(() => generarImagenPromocional(p));
+  const estilo = document.getElementById('promo-estilo').value;
+  abrirShare(() => estilo==='split' ? generarImagenPromocionalSplit(p) : generarImagenPromocional(p));
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -14009,6 +14018,235 @@ async function generarImagenPromocional(p){
   ctx.restore();
 
   cvFooter(ctx, W, CV_H - s(40), liga);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  return canvas;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   PROMOCIÓN DE PARTIDO — variante "split": foto a la izquierda con
+   corte diagonal (mismo recurso visual que ya usás en Alineaciones)
+   y toda la información del partido en un panel derecho con fondo
+   normal, sin rayos ni efectos — mockup a pedido de Gustavo.
+   ══════════════════════════════════════════════════════════════ */
+async function generarImagenPromocionalSplit(p){
+  await document.fonts.ready;
+  const id   = getIdentidad();
+  const liga = id.nombre || 'DEPORTEMAS';
+  const W = CV_W, H = CV_H;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.textBaseline = 'alphabetic';
+
+  const colW      = 430;   // ancho del panel de foto
+  const cutInset  = 55;    // cierre del corte diagonal hacia la izquierda en la base
+  const pad       = 46;
+  const panelX0   = colW + pad;
+  const panelX1   = W - pad;
+  const panelW    = panelX1 - panelX0;
+  const panelCX   = panelX0 + panelW/2;
+  const footH     = s(40);
+  const footerTop = H - footH;
+
+  // ── Fondo del panel derecho: normal, sin rayos ni texturas ────────
+  const bgR = ctx.createLinearGradient(0, 0, 0, H);
+  bgR.addColorStop(0, C.NEG3);
+  bgR.addColorStop(1, C.NEG);
+  ctx.fillStyle = bgR; ctx.fillRect(0, 0, W, H);
+
+  // ── Panel de foto con corte diagonal a la izquierda (idem Alineaciones) ──
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(colW, 0);
+  ctx.lineTo(colW - cutInset, H);
+  ctx.lineTo(0, H);
+  ctx.closePath();
+  ctx.clip();
+
+  const fotoGrad = ctx.createLinearGradient(0, 0, 0, H);
+  fotoGrad.addColorStop(0, '#3a3a40'); fotoGrad.addColorStop(1, '#151518');
+  ctx.fillStyle = fotoGrad;
+  ctx.fillRect(0, 0, colW, H);
+
+  if(p.foto){
+    await new Promise(res=>{
+      const img = new Image();
+      img.onload = () => {
+        const iw = img.naturalWidth || img.width || 1, ih = img.naturalHeight || img.height || 1;
+        const scale = Math.max(colW/iw, H/ih);
+        const dw = iw*scale, dh = ih*scale;
+        ctx.drawImage(img, (colW-dw)/2, (H-dh)/2, dw, dh);
+        res();
+      };
+      img.onerror = () => res();
+      img.src = p.foto;
+    });
+    // leve oscurecido cerca del corte para que la costura dorada resalte
+    const shade = ctx.createLinearGradient(colW-cutInset-80, 0, colW, 0);
+    shade.addColorStop(0, 'transparent'); shade.addColorStop(1, 'rgba(0,0,0,.35)');
+    ctx.fillStyle = shade; ctx.fillRect(0, 0, colW, H);
+  } else {
+    ctx.fillStyle = 'rgba(255,255,255,.13)';
+    ctx.font = `140px "Rajdhani", Arial, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText('⚽', colW*0.42, H*0.55);
+  }
+  ctx.restore();
+
+  // Costura dorada con resplandor sobre el corte diagonal
+  ctx.save();
+  ctx.shadowColor = 'rgba(233,201,106,.85)';
+  ctx.shadowBlur = 10;
+  ctx.strokeStyle = 'rgba(233,201,106,.8)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(colW, 0);
+  ctx.lineTo(colW-cutInset, H);
+  ctx.stroke();
+  ctx.restore();
+
+  // ── Marca DEPORTEMAS + torneo, arriba del panel derecho ───────────
+  const idLogo   = await cargarImagenAsync(id.logo);
+  const compLogo = await cargarImagenAsync(p.competicionLogo);
+  const logoSize = 42;
+  let y = 56;
+
+  ctx.textBaseline = 'middle';
+  if(idLogo){
+    ctx.save();
+    ctx.beginPath(); ctx.arc(panelX0+logoSize/2, y+logoSize/2, logoSize/2, 0, Math.PI*2); ctx.clip();
+    cvDrawEscudoImg(ctx, idLogo, panelX0, y, logoSize);
+    ctx.restore();
+  } else {
+    cvRoundRect(ctx, panelX0, y, logoSize, logoSize, 8);
+    ctx.fillStyle = C.DORADO; ctx.fill();
+  }
+  ctx.fillStyle = C.BLANCO;
+  ctx.font = `22px "Bebas Neue", Arial, sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.fillText(liga.toUpperCase(), panelX0 + logoSize + 12, y + logoSize/2);
+  y += logoSize + 30;
+
+  if(compLogo || p.torneoNombre){
+    const cSize = 30;
+    if(compLogo){
+      ctx.save();
+      ctx.beginPath(); ctx.arc(panelX0+cSize/2, y+cSize/2, cSize/2, 0, Math.PI*2); ctx.clip();
+      cvDrawEscudoImg(ctx, compLogo, panelX0, y, cSize);
+      ctx.restore();
+    }
+    if(p.torneoNombre){
+      ctx.font = `600 15px "Rajdhani", Arial, sans-serif`;
+      ctx.fillStyle = 'rgba(255,255,255,0.65)';
+      ctx.textAlign = 'left';
+      cvFillTextTrunc(ctx, p.torneoNombre.toUpperCase(), panelX0 + (compLogo?cSize+10:0), y+cSize/2, panelW - (compLogo?cSize+10:0));
+    }
+    y += cSize + 26;
+  }
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  const yTopEnd = y;
+
+  // ── Medimos el resto del contenido para centrarlo en el espacio libre ──
+  function ajustarFuenteSplit(text, sizeMax, sizeMin, maxW){
+    let size = sizeMax;
+    while(size > sizeMin){
+      ctx.font = `800 ${size}px "Bebas Neue", Arial, sans-serif`;
+      if(ctx.measureText(text).width <= maxW) break;
+      size -= 2;
+    }
+    return size;
+  }
+  const maxNameW = panelW - 20;
+  const nomL = p.local.toUpperCase();
+  const nomV = p.visit.toUpperCase();
+  const sizeL = ajustarFuenteSplit(nomL, 66, 34, maxNameW);
+  const sizeV = ajustarFuenteSplit(nomV, 66, 34, maxNameW);
+
+  const etiquetaH = p.etiqueta ? 44 : 14;
+  const heroH     = (sizeL*1.05+8) + (28*1.2+8) + (sizeV*1.05+40);
+  const diaH      = p.dia ? (32*1.1+10) : 0;
+  const subH      = p.fechaHora ? (18*1.2+34) : 20;
+  const escSize   = 84;
+  const escH      = escSize + 20;
+  const contenidoH = etiquetaH + heroH + diaH + subH + escH;
+
+  const gapTrasTop = 30;
+  const disponible = footerTop - (yTopEnd + gapTrasTop);
+  y = yTopEnd + gapTrasTop + Math.max(0, (disponible - contenidoH) / 2);
+
+  // ── Etiqueta / fase ────────────────────────────────────────────
+  if(p.etiqueta){
+    ctx.font = `700 18px "Rajdhani", Arial, sans-serif`;
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.textAlign = 'center';
+    if('letterSpacing' in ctx) ctx.letterSpacing = '3px';
+    cvFillTextTrunc(ctx, p.etiqueta.toUpperCase(), panelCX + 2, y, panelW - 20);
+    if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+    y += etiquetaH;
+  } else {
+    y += etiquetaH;
+  }
+
+  // ── Título apilado: LOCAL / VS. / VISITANTE ───────────────────────
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+
+  ctx.font = `800 ${sizeL}px "Bebas Neue", Arial, sans-serif`;
+  ctx.fillStyle = C.BLANCO;
+  ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 2;
+  ctx.fillText(nomL, panelCX, y);
+  ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+  y += sizeL*1.05 + 8;
+
+  ctx.font = `700 28px "Bebas Neue", Arial, sans-serif`;
+  ctx.fillStyle = C.DORADO;
+  ctx.shadowColor = 'rgba(201,162,39,.5)'; ctx.shadowBlur = 12;
+  ctx.fillText('VS.', panelCX, y);
+  ctx.shadowBlur = 0;
+  y += 28*1.2 + 8;
+
+  ctx.font = `800 ${sizeV}px "Bebas Neue", Arial, sans-serif`;
+  ctx.fillStyle = C.BLANCO;
+  ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 2;
+  ctx.fillText(nomV, panelCX, y);
+  ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+  y += sizeV*1.05 + 40;
+
+  ctx.textBaseline = 'alphabetic';
+
+  // ── Día + hora ─────────────────────────────────────────────────
+  if(p.dia){
+    ctx.font = `700 32px "Bebas Neue", Arial, sans-serif`;
+    ctx.fillStyle = C.DORADO;
+    ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 1;
+    cvFillTextTrunc(ctx, p.dia.toUpperCase(), panelCX, y, panelW - 20);
+    ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+    y += diaH;
+  }
+  if(p.fechaHora){
+    ctx.font = `700 18px "Bebas Neue", Arial, sans-serif`;
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 1;
+    cvFillTextTrunc(ctx, p.fechaHora.toUpperCase(), panelCX, y, panelW - 20);
+    ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+    y += subH;
+  } else {
+    y += subH;
+  }
+
+  // ── Escudos de ambos equipos ──────────────────────────────────────
+  const escGap = 26;
+  const escY   = y;
+  const escLX  = panelCX - escGap/2 - escSize;
+  const escRX  = panelCX + escGap/2;
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 12; ctx.shadowOffsetY = 3;
+  await cvDrawEscudoCompleto(ctx, p.local, escLX, escY, escSize);
+  await cvDrawEscudoCompleto(ctx, p.visit, escRX, escY, escSize);
+  ctx.restore();
+
+  cvFooter(ctx, W, footerTop, liga);
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   return canvas;
 }
