@@ -5022,6 +5022,7 @@ table.posiciones td:nth-child(8){
             <input type="text" id="promo-torneo" placeholder="Ej: Liga Regional Riotercerense"/>
           </div>
         </div>
+        <input type="hidden" id="promo-competicion-logo" value=""/>
 
         <div class="form-row">
           <div class="form-group"><label>Día</label>
@@ -13677,12 +13678,13 @@ function promoCargarPartido(){
   const divLabel = p.div==='primera' ? '1ª División' : p.div==='segunda' ? '2ª División' : (p.torneoExtra || 'Extra Liga');
   const tornLabel = (p.div!=='extraliga' && p.torneo) ? ' · '+torneoLabel(p.torneo) : '';
   document.getElementById('promo-torneo').value = divLabel + tornLabel;
+  document.getElementById('promo-competicion-logo').value = logoParaPartido(p) || '';
   document.getElementById('promo-dia').value = (p.dia || '').toUpperCase();
   document.getElementById('promo-fechahora').value = [p.fecha, p.hora ? p.hora+' hs' : ''].filter(Boolean).join(' · ');
 }
 
 function promoLimpiarForm(){
-  ['promo-local','promo-visit','promo-etiqueta','promo-torneo','promo-dia','promo-fechahora'].forEach(id=>{
+  ['promo-local','promo-visit','promo-etiqueta','promo-torneo','promo-competicion-logo','promo-dia','promo-fechahora'].forEach(id=>{
     const el = document.getElementById(id); if(el) el.value = '';
   });
   const sel = document.getElementById('promo-partido-sel'); if(sel) sel.value = '';
@@ -13699,6 +13701,7 @@ function promoGenerar(){
     local, visit,
     etiqueta:  document.getElementById('promo-etiqueta').value.trim(),
     torneoNombre: document.getElementById('promo-torneo').value.trim(),
+    competicionLogo: document.getElementById('promo-competicion-logo').value || '',
     dia:       document.getElementById('promo-dia').value.trim(),
     fechaHora: document.getElementById('promo-fechahora').value.trim(),
   };
@@ -13721,19 +13724,39 @@ async function generarImagenPromocional(p){
   const ctx = canvas.getContext('2d');
   ctx.textBaseline = 'alphabetic';
 
-  // ── Fondo: negro/dorado dramático tipo "noche de partido" ────────
+  // ── Fondo dramático tipo "noche de transmisión" ──────────────────
   const bg = ctx.createLinearGradient(0, 0, 0, H);
   bg.addColorStop(0, C.NEG4);
   bg.addColorStop(0.55, C.NEG3);
   bg.addColorStop(1, C.NEG);
   ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
 
+  // Abanico de haces de luz dorados desde un foco arriba del centro,
+  // como reflectores de estadio — la idea del fondo con rayos del afiche
+  // de referencia, resuelta en clave Dorado Clásico en vez de azul.
+  ctx.save();
+  ctx.translate(CX, -H*0.12);
+  const nRayos = 7, spread = Math.PI*0.85, largo = H*1.35;
+  for(let i=0;i<nRayos;i++){
+    const ang = -spread/2 + (spread/(nRayos-1))*i;
+    ctx.save();
+    ctx.rotate(ang);
+    const rg = ctx.createLinearGradient(0,0,0,largo);
+    rg.addColorStop(0, i%2===0 ? 'rgba(240,192,64,0.10)' : 'rgba(240,192,64,0.04)');
+    rg.addColorStop(1, 'transparent');
+    ctx.fillStyle = rg;
+    ctx.beginPath();
+    ctx.moveTo(0,0); ctx.lineTo(-46,largo); ctx.lineTo(46,largo);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+  ctx.restore();
+
+  // Resplandor central + textura de cancha muy tenue (identidad ya usada en Historia)
   const glow = ctx.createRadialGradient(CX, H*0.4, 0, CX, H*0.4, W*0.8);
-  glow.addColorStop(0, 'rgba(201,162,39,0.16)');
+  glow.addColorStop(0, 'rgba(201,162,39,0.14)');
   glow.addColorStop(1, 'transparent');
   ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
-
-  // Textura de cancha muy tenue (misma idea que en Historia)
   ctx.save();
   ctx.strokeStyle = 'rgba(255,255,255,0.05)';
   ctx.lineWidth = 2;
@@ -13741,30 +13764,19 @@ async function generarImagenPromocional(p){
   ctx.beginPath(); ctx.arc(CX, H*0.42, W*0.34, 0, Math.PI*2); ctx.stroke();
   ctx.restore();
 
-  // ── Medimos el contenido primero para centrarlo verticalmente ────
-  const barH        = 72;
-  const gapTrasBarra = 56;
-  const topInicio    = 50;
-  const yTrasBarra   = topInicio + barH + gapTrasBarra;
+  // Viñeta sutil en los bordes para que el centro respire (como el afiche)
+  const vig = ctx.createRadialGradient(CX, H*0.45, H*0.35, CX, H*0.45, H*0.75);
+  vig.addColorStop(0, 'transparent');
+  vig.addColorStop(1, 'rgba(0,0,0,0.35)');
+  ctx.fillStyle = vig; ctx.fillRect(0, 0, W, H);
 
-  const etiquetaH = p.etiqueta ? 84 : 20;
-  const ESZ       = 76;   // escudo chico y de apoyo — el protagonismo es del nombre del equipo
-  const filaH     = 96;   // alto de cada fila equipo (escudo + nombre)
-  const heroH     = filaH * 2 + 56; // dos filas + línea divisoria con "VS" al medio
-  const gapTrasHero = 44;
-  const diaH      = p.dia ? 46 : 0;
-  const subH      = p.fechaHora ? 34 : 0;
-  const gapDiaSub = (p.dia && p.fechaHora) ? 10 : 0;
-  const contenidoH = etiquetaH + heroH + gapTrasHero + diaH + subH + gapDiaSub;
-
-  const footH = s(40);
-  const disponible = (H - footH) - yTrasBarra;
-  let y = yTrasBarra + Math.max(0, (disponible - contenidoH) / 2);
-
-  // ── Barra superior: escudo/logo DEPORTEMAS | nombre del torneo ───
-  const logoSize = 58;
-  const idLogo = await cargarImagenAsync(id.logo);
+  // ── Barra superior: logo DEPORTEMAS | logo de la competición ─────
+  const topInicio = 56;
+  const logoSize  = 62;
+  const idLogo    = await cargarImagenAsync(id.logo);
+  const compLogo  = await cargarImagenAsync(p.competicionLogo);
   const lx = 60;
+
   ctx.textBaseline = 'middle';
   if(idLogo){
     ctx.save();
@@ -13774,20 +13786,26 @@ async function generarImagenPromocional(p){
   } else {
     cvRoundRect(ctx, lx, topInicio, logoSize, logoSize, 10);
     ctx.fillStyle = C.DORADO; ctx.fill();
-    ctx.fillStyle = C.NEG; ctx.font = `bold 20px Arial, sans-serif`;
+    ctx.fillStyle = C.NEG; ctx.font = `bold 22px Arial, sans-serif`;
     ctx.textAlign = 'center';
     ctx.fillText(liga.substr(0,2).toUpperCase(), lx+logoSize/2, topInicio+logoSize/2);
   }
   ctx.fillStyle = C.BLANCO;
-  ctx.font = `28px "Bebas Neue", Arial, sans-serif`;
+  ctx.font = `30px "Bebas Neue", Arial, sans-serif`;
   ctx.textAlign = 'left';
   ctx.fillText(liga.toUpperCase(), lx + logoSize + 16, topInicio + logoSize/2);
 
-  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.strokeStyle = 'rgba(255,255,255,0.18)';
   ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(CX, topInicio); ctx.lineTo(CX, topInicio+logoSize); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(CX, topInicio+6); ctx.lineTo(CX, topInicio+logoSize-6); ctx.stroke();
 
-  if(p.torneoNombre){
+  const rx = W - 60 - logoSize;
+  if(compLogo){
+    ctx.save();
+    ctx.beginPath(); ctx.arc(rx+logoSize/2, topInicio+logoSize/2, logoSize/2, 0, Math.PI*2); ctx.clip();
+    cvDrawEscudoImg(ctx, compLogo, rx, topInicio, logoSize);
+    ctx.restore();
+  } else if(p.torneoNombre){
     ctx.font = `600 18px "Rajdhani", Arial, sans-serif`;
     ctx.fillStyle = 'rgba(255,255,255,0.7)';
     ctx.textAlign = 'right';
@@ -13795,95 +13813,78 @@ async function generarImagenPromocional(p){
   }
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
 
-  // ── Etiqueta / fase ────────────────────────────────────────────
+  let y = topInicio + logoSize + 60;
+
+  // ── Etiqueta / fase — texto chico, sin caja, con tracking amplio ──
   if(p.etiqueta){
     ctx.font = `700 22px "Rajdhani", Arial, sans-serif`;
-    const txt = p.etiqueta.toUpperCase();
-    const tW = ctx.measureText(txt).width + 44;
-    cvRoundRect(ctx, CX - tW/2, y, tW, 38, 19);
-    ctx.strokeStyle = 'rgba(201,162,39,0.6)'; ctx.lineWidth = 1.5; ctx.stroke();
-    ctx.fillStyle = C.DORADO;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(txt, CX, y + 19);
-    ctx.textBaseline = 'alphabetic';
-    y += etiquetaH;
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.textAlign = 'center';
+    if('letterSpacing' in ctx) ctx.letterSpacing = '5px';
+    cvFillTextTrunc(ctx, p.etiqueta.toUpperCase(), CX + 3, y, W - 140);
+    if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+    y += 60;
   } else {
-    y += etiquetaH;
+    y += 20;
   }
 
-  // ── Duelo: fila LOCAL (escudo·nombre) / línea "VS" / fila VISITANTE
-  //    (nombre·escudo, en espejo) — el nombre del equipo es lo grande
-  //    y protagonista, el escudo acompaña chico al lado ──────────────
-  function medirTrunc(text, maxW){
-    let t = text;
-    while(ctx.measureText(t).width > maxW && t.length > 1) t = t.slice(0,-1);
-    if(t !== text) t = t.slice(0,-1) + '…';
-    return { text: t, width: ctx.measureText(t).width };
+  // ── Título apilado: LOCAL / VS. / VISITANTE — sin escudos, todo    ─
+  //    tipografía, igual que el afiche de referencia una vez sacadas
+  //    las fotos de jugadores ─────────────────────────────────────
+  function ajustarFuente(text, sizeMax, sizeMin, maxW){
+    let size = sizeMax;
+    while(size > sizeMin){
+      ctx.font = `800 ${size}px "Bebas Neue", Arial, sans-serif`;
+      if(ctx.measureText(text).width <= maxW) break;
+      size -= 2;
+    }
+    return size;
   }
 
-  const nameFont = `800 62px "Bebas Neue", Arial, sans-serif`;
-  const maxNameW = W - 260;
-  const fila1Y   = y;
-  const lineaY   = fila1Y + filaH + 28;
-  const fila2Y   = lineaY + 28;
+  const maxNameW = W - 140;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
 
-  // Fila Local: escudo a la izquierda, nombre grande a la derecha
-  ctx.font = nameFont;
-  const nomL = medirTrunc(p.local.toUpperCase(), maxNameW);
-  const anchoFila1 = ESZ + 22 + nomL.width;
-  const xFila1 = CX - anchoFila1/2;
-  await cvDrawEscudoCompleto(ctx, p.local, xFila1, fila1Y + (filaH-ESZ)/2, ESZ);
+  const nomL = p.local.toUpperCase();
+  const sizeL = ajustarFuente(nomL, 104, 54, maxNameW);
+  ctx.font = `800 ${sizeL}px "Bebas Neue", Arial, sans-serif`;
   ctx.fillStyle = C.BLANCO;
-  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-  ctx.fillText(nomL.text, xFila1 + ESZ + 22, fila1Y + filaH/2);
+  ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = 16; ctx.shadowOffsetY = 3;
+  ctx.fillText(nomL, CX, y);
+  ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+  y += sizeL * 1.02 + 14;
 
-  // Línea divisoria dorada con badge "VS" centrado
-  const divGrad = ctx.createLinearGradient(0, lineaY, W, lineaY);
-  divGrad.addColorStop(0, 'transparent');
-  divGrad.addColorStop(0.35, 'rgba(201,162,39,0.55)');
-  divGrad.addColorStop(0.65, 'rgba(201,162,39,0.55)');
-  divGrad.addColorStop(1, 'transparent');
-  ctx.fillStyle = divGrad;
-  ctx.fillRect(0, lineaY, W, 1.5);
-
-  ctx.font = `700 24px "Rajdhani", Arial, sans-serif`;
-  const vsW = ctx.measureText('VS').width + 30;
-  cvRoundRect(ctx, CX - vsW/2, lineaY - 17, vsW, 34, 17);
-  ctx.fillStyle = C.NEG3; ctx.fill();
-  ctx.strokeStyle = 'rgba(201,162,39,0.7)'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.font = `700 46px "Bebas Neue", Arial, sans-serif`;
   ctx.fillStyle = C.DORADO;
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText('VS', CX, lineaY + 1);
+  ctx.shadowColor = 'rgba(201,162,39,0.55)'; ctx.shadowBlur = 20;
+  ctx.fillText('VS.', CX, y);
+  ctx.shadowBlur = 0;
+  y += 46 * 1.15 + 14;
 
-  // Fila Visitante: nombre grande a la izquierda, escudo a la derecha (espejo)
-  ctx.font = nameFont;
-  const nomV = medirTrunc(p.visit.toUpperCase(), maxNameW);
-  const anchoFila2 = nomV.width + 22 + ESZ;
-  const xFila2 = CX - anchoFila2/2;
+  const nomV = p.visit.toUpperCase();
+  const sizeV = ajustarFuente(nomV, 104, 54, maxNameW);
+  ctx.font = `800 ${sizeV}px "Bebas Neue", Arial, sans-serif`;
   ctx.fillStyle = C.BLANCO;
-  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-  ctx.fillText(nomV.text, xFila2, fila2Y + filaH/2);
-  await cvDrawEscudoCompleto(ctx, p.visit, xFila2 + nomV.width + 22, fila2Y + (filaH-ESZ)/2, ESZ);
+  ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = 16; ctx.shadowOffsetY = 3;
+  ctx.fillText(nomV, CX, y);
+  ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+  y += sizeV * 1.02 + 54;
 
-  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-  y = fila2Y + filaH + gapTrasHero;
+  ctx.textBaseline = 'alphabetic';
 
-  // ── Día / fecha·hora·sede — información de apoyo, discreta ───────
+  // ── Día — protagonista secundario en dorado, como en el afiche ───
   if(p.dia){
-    ctx.font = `700 34px "Rajdhani", Arial, sans-serif`;
+    ctx.font = `700 54px "Bebas Neue", Arial, sans-serif`;
     ctx.fillStyle = C.DORADO;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-    cvFillTextTrunc(ctx, p.dia.toUpperCase(), CX, y + 30, W - 140);
-    y += diaH + gapDiaSub;
+    cvFillTextTrunc(ctx, p.dia.toUpperCase(), CX, y, W - 140);
+    y += 54 * 1.05 + 16;
   }
   if(p.fechaHora){
     ctx.font = `500 22px "DM Sans", Arial, sans-serif`;
     ctx.fillStyle = 'rgba(255,255,255,0.6)';
-    ctx.textAlign = 'center';
-    cvFillTextTrunc(ctx, p.fechaHora, CX, y + 22, W - 140);
+    cvFillTextTrunc(ctx, p.fechaHora, CX, y, W - 140);
   }
 
-  cvFooter(ctx, W, CV_H - footH, liga);
+  cvFooter(ctx, W, CV_H - s(40), liga);
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   return canvas;
 }
