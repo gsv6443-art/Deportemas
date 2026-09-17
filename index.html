@@ -16572,41 +16572,86 @@ async function cvPrecargarEscudosCC(cruces){
   return escudoImgs;
 }
 
-// Dibuja una fila de cruce (local · marcador · visitante) centrada en fy
-function cvFilaCruceCC(ctx, c, CX, y, ROW, ECSIZE, escudoImgs, fontNombre, mW, mH, fontMarc){
+// Dibuja una fila de cruce (local · marcador · visitante) centrada en fy.
+// El ancho del marcador (mW) se calcula ACÁ, antes de ubicar los escudos,
+// así el hueco entre ellos siempre es mayor que el marcador — nunca se
+// superponen, sea cual sea el largo del resultado (ej. "10 - 8").
+function cvFilaCruceCC(ctx, c, CX, y, ROW, ECSIZE, escudoImgs, fontNombre, mH, fontMarc, mostrarEstadoKicker){
   const fy=y+ROW/2;
-  cvRoundRect(ctx,s(24),y,CX*2-s(48),ROW,s(10));
-  ctx.fillStyle='rgba(255,255,255,0.03)'; ctx.fill();
-  ctx.lineWidth=1; ctx.strokeStyle='rgba(201,162,39,0.18)'; ctx.stroke();
+  const PAD=s(10);
+
+  // En filas bajas (ej. Primera Fase con 9 cruces) TODO el bloque (escudos,
+  // marcador y tipografía) se achica en la misma proporción — así el conjunto
+  // sigue centrado y guarda siempre aire arriba/abajo, sin que ningún
+  // elemento quede más grande que el hueco disponible.
+  const ROW_REF=s(92);
+  const rowScale=Math.max(0.6, Math.min(1, ROW/ROW_REF));
+  ECSIZE=Math.round(ECSIZE*rowScale);
+  mH=Math.round(mH*rowScale);
+  fontNombre=Math.round(fontNombre*rowScale);
+  fontMarc=Math.round(fontMarc*rowScale);
+  const fontCap=Math.max(s(9), Math.round(s(11)*rowScale));
+  const fontKick=Math.max(s(8), Math.round(s(10)*rowScale));
+
+  const marcTxt=c.idavuelta?(c.global||'VS'):(c.resultado||'VS');
+  const estadoCls=c.estado||'pendiente';
+  ctx.font=`700 ${fontMarc}px "Bebas Neue", Arial, sans-serif`;
+  const mW=Math.max(s(58)*rowScale, ctx.measureText(marcTxt).width + s(26));
+
+  // hueco entre escudos = mW + 2*PAD → el marcador jamás puede tocarlos
+  const escLX=CX-mW/2-PAD-ECSIZE, escLY=y+(ROW-ECSIZE)/2;
+  const escVX=CX+mW/2+PAD, escVY=escLY;
+
+  cvRoundRect(ctx,s(18),y,CX*2-s(36),ROW,s(14));
+  const cardGrad=ctx.createLinearGradient(0,y,0,y+ROW);
+  cardGrad.addColorStop(0,'rgba(255,255,255,0.05)');
+  cardGrad.addColorStop(1,'rgba(255,255,255,0.015)');
+  ctx.fillStyle=cardGrad; ctx.fill();
+  ctx.lineWidth=1; ctx.strokeStyle='rgba(201,162,39,0.20)'; ctx.stroke();
 
   const esGanL=c.ganador&&normalizar(c.ganador)===normalizar(c.local||'');
   const esGanV=c.ganador&&normalizar(c.ganador)===normalizar(c.visit||'');
 
   const eImgL=escudoImgs[c.local||''];
-  const escLX=CX-s(40)-ECSIZE, escLY=y+(ROW-ECSIZE)/2;
   if(eImgL){ ctx.save(); ctx.beginPath(); ctx.arc(escLX+ECSIZE/2,escLY+ECSIZE/2,ECSIZE/2,0,Math.PI*2); ctx.clip(); cvDrawEscudoImg(ctx,eImgL,escLX,escLY,ECSIZE); ctx.restore(); }
   else if(c.local){ cvEscudoFallback(ctx,c.local,escLX,escLY,ECSIZE); }
-  ctx.fillStyle=esGanL?C.DORADO:C.BLANCO;
+  if(esGanL){ ctx.beginPath(); ctx.arc(escLX+ECSIZE/2,escLY+ECSIZE/2,ECSIZE/2+s(1.5),0,Math.PI*2); ctx.lineWidth=s(2.5); ctx.strokeStyle=C.DORADO2; ctx.stroke(); }
+  ctx.fillStyle=esGanL?C.DORADO2:C.BLANCO;
   ctx.font=`${fontNombre}px "Bebas Neue", Arial, sans-serif`;
   ctx.textAlign='right'; ctx.textBaseline='middle';
-  cvFillTextTrunc(ctx,(c.local||'–').toUpperCase(), escLX-s(10), fy, escLX-s(36));
+  cvFillTextTrunc(ctx,(c.local||'–').toUpperCase(), escLX-s(12), fy, escLX-s(38));
 
   const eImgV=escudoImgs[c.visit||''];
-  const escVX=CX+s(40), escVY=y+(ROW-ECSIZE)/2;
   if(eImgV){ ctx.save(); ctx.beginPath(); ctx.arc(escVX+ECSIZE/2,escVY+ECSIZE/2,ECSIZE/2,0,Math.PI*2); ctx.clip(); cvDrawEscudoImg(ctx,eImgV,escVX,escVY,ECSIZE); ctx.restore(); }
   else if(c.visit){ cvEscudoFallback(ctx,c.visit,escVX,escVY,ECSIZE); }
-  ctx.fillStyle=esGanV?C.DORADO:C.BLANCO;
+  if(esGanV){ ctx.beginPath(); ctx.arc(escVX+ECSIZE/2,escVY+ECSIZE/2,ECSIZE/2+s(1.5),0,Math.PI*2); ctx.lineWidth=s(2.5); ctx.strokeStyle=C.DORADO2; ctx.stroke(); }
+  ctx.fillStyle=esGanV?C.DORADO2:C.BLANCO;
   ctx.font=`${fontNombre}px "Bebas Neue", Arial, sans-serif`;
   ctx.textAlign='left'; ctx.textBaseline='middle';
-  cvFillTextTrunc(ctx,(c.visit||'–').toUpperCase(), escVX+ECSIZE+s(10), fy, CX*2-escVX-ECSIZE-s(36));
+  cvFillTextTrunc(ctx,(c.visit||'–').toUpperCase(), escVX+ECSIZE+s(12), fy, CX*2-escVX-ECSIZE-s(38));
 
-  const marcTxt=c.idavuelta?(c.global||'VS'):(c.resultado||'VS');
-  const estadoCls=c.estado||'pendiente';
-  cvRoundRect(ctx,CX-mW/2,fy-mH/2,mW,mH,s(8));
+  // Despeje vertical: el mayor entre escudo y marcador (para que el kicker y
+  // el "✓ CLASIFICA" libren AMBOS, no solo el marcador)
+  const clearance=Math.max(mH,ECSIZE)/2;
+
+  if(mostrarEstadoKicker && (c.idavuelta || estadoCls==='en-juego')){
+    // Anclado al tope de LA FILA (nunca a la fila anterior), aunque la fila sea baja
+    const kickerY=Math.max(y+s(9), fy-clearance-s(10));
+    ctx.fillStyle='rgba(255,255,255,0.4)';
+    ctx.font=`600 ${fontKick}px "Rajdhani", Arial, sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+    ctx.fillText(estadoCls==='en-juego'?'EN VIVO':'IDA Y VUELTA', CX, kickerY);
+  }
+
+  cvRoundRect(ctx,CX-mW/2,fy-mH/2,mW,mH,s(10));
   if(estadoCls==='jugado'){
+    ctx.save();
+    ctx.shadowColor='rgba(240,192,64,0.55)'; ctx.shadowBlur=s(16);
     const mg=ctx.createLinearGradient(CX-mW/2,0,CX+mW/2,0);
     mg.addColorStop(0,C.DORADO); mg.addColorStop(1,C.DORADO2);
-    ctx.fillStyle=mg; ctx.fill(); ctx.fillStyle=C.NEG;
+    ctx.fillStyle=mg; ctx.fill();
+    ctx.restore();
+    ctx.fillStyle=C.NEG;
   } else if(estadoCls==='en-juego'){
     ctx.fillStyle='rgba(192,57,43,0.75)'; ctx.fill(); ctx.fillStyle='#ffffff';
   } else {
@@ -16621,15 +16666,21 @@ function cvFilaCruceCC(ctx, c, CX, y, ROW, ECSIZE, escudoImgs, fontNombre, mW, m
 
   if(c.ganador){
     const penalesSuf=(c.tienePenales&&c.penales)?'  (PEN. '+c.penales+')':'';
+    // Anclado al pie de LA FILA (nunca invade la fila siguiente), aunque la fila sea baja
+    const capY=Math.min(y+ROW-s(6), fy+clearance+s(12));
+    // El ancho del texto se limita al hueco entre escudos, para que un
+    // ganador con nombre largo jamás se meta por debajo de los escudos
+    const capMaxW=Math.min(CX*2-s(58), (escVX-(escLX+ECSIZE))+s(52));
     ctx.fillStyle='rgba(201,162,39,0.6)';
-    ctx.font=`600 ${s(11)}px "DM Sans", Arial, sans-serif`;
-    ctx.textAlign='center';
-    ctx.fillText('✓ CLASIFICA '+c.ganador.toUpperCase()+penalesSuf, CX, fy+mH/2+s(15));
+    ctx.font=`600 ${fontCap}px "DM Sans", Arial, sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+    cvFillTextTrunc(ctx,'✓ CLASIFICA '+c.ganador.toUpperCase()+penalesSuf, CX, capY, capMaxW);
   } else if(c.tienePenales && c.penales){
+    const capY=Math.min(y+ROW-s(6), fy+clearance+s(12));
     ctx.fillStyle='rgba(255,255,255,0.45)';
-    ctx.font=`600 ${s(11)}px "DM Sans", Arial, sans-serif`;
+    ctx.font=`600 ${fontCap}px "DM Sans", Arial, sans-serif`;
     ctx.textAlign='center';
-    ctx.fillText('PENALES: '+c.penales, CX, fy+mH/2+s(15));
+    ctx.fillText('PENALES: '+c.penales, CX, capY);
   }
 }
 
@@ -16663,13 +16714,7 @@ async function generarImagenFaseCopaCordoba(faseKey){
 
   const ECSIZE=s(48);
   for(const c of cruces){
-    cvFilaCruceCC(ctx,c,CX,y,ROW_H-s(10),ECSIZE,escudoImgs,s(17),s(96),s(46),s(24));
-    if(c.idavuelta || c.estado==='en-juego'){
-      ctx.fillStyle='rgba(255,255,255,0.4)';
-      ctx.font=`600 ${s(10)}px "Rajdhani", Arial, sans-serif`;
-      ctx.textAlign='center';
-      ctx.fillText(c.estado==='en-juego'?'EN VIVO':'IDA Y VUELTA', CX, y+(ROW_H-s(10))/2-s(23)-s(6));
-    }
+    cvFilaCruceCC(ctx,c,CX,y,ROW_H-s(10),ECSIZE,escudoImgs,s(17),s(46),s(24),true);
     y+=ROW_H;
   }
 
@@ -16718,7 +16763,7 @@ async function generarImagenCopaCordobaCompleto(){
     y+=hEtapaHdr+s(8);
 
     for(const c of sec.cruces){
-      cvFilaCruceCC(ctx,c,CX,y,ROW_H-s(10),ECSIZE,escudoImgs,s(15),s(84),s(38),s(20));
+      cvFilaCruceCC(ctx,c,CX,y,ROW_H-s(10),ECSIZE,escudoImgs,s(15),s(38),s(20));
       y+=ROW_H;
     }
     y+=s(6);
