@@ -16685,6 +16685,223 @@ function cvFilaCruceCC(ctx, c, CX, y, ROW, ECSIZE, escudoImgs, fontNombre, mH, f
 }
 
 // Imagen de UNA fase de Copa Córdoba (formato post 1080×1350)
+// Tarjeta compacta de cruce para la grilla de 2 columnas (imagen por fase,
+// todas las fases salvo la Final). Local arriba / visitante abajo, marcador
+// a la derecha ocupando toda la altura de la tarjeta.
+function cvTarjetaGridCC(ctx, c, x, y, w, h, escudoImgs, mostrarEstadoKicker){
+  const estadoCls=c.estado||'pendiente';
+  const marcTxt=c.idavuelta?(c.global||'VS'):(c.resultado||'VS');
+
+  cvRoundRect(ctx,x,y,w,h,s(12));
+  const grad=ctx.createLinearGradient(0,y,0,y+h);
+  grad.addColorStop(0,'rgba(255,255,255,0.05)'); grad.addColorStop(1,'rgba(255,255,255,0.015)');
+  ctx.fillStyle=grad; ctx.fill();
+  ctx.lineWidth=1; ctx.strokeStyle='rgba(201,162,39,0.2)'; ctx.stroke();
+
+  ctx.font=`700 ${s(15)}px "Bebas Neue", Arial, sans-serif`;
+  const mW=Math.max(s(46), ctx.measureText(marcTxt).width+s(18));
+  const mH=Math.min(s(32), Math.round(h*0.30));
+  const padX=s(12);
+  const rightW=Math.max(mW+s(22), w*0.30);
+  const leftW=w-rightW-padX;
+
+  const ES=Math.max(s(16), Math.min(s(30), h*0.26));
+  const rowLocalY=y+h*0.30, rowVisitY=y+h*0.72;
+  const esGanL=c.ganador&&normalizar(c.ganador)===normalizar(c.local||'');
+  const esGanV=c.ganador&&normalizar(c.ganador)===normalizar(c.visit||'');
+
+  const eImgL=escudoImgs[c.local||''];
+  if(eImgL){ ctx.save(); ctx.beginPath(); ctx.arc(x+padX+ES/2, rowLocalY, ES/2,0,Math.PI*2); ctx.clip(); cvDrawEscudoImg(ctx,eImgL,x+padX,rowLocalY-ES/2,ES); ctx.restore(); }
+  else if(c.local){ cvEscudoFallback(ctx,c.local,x+padX,rowLocalY-ES/2,ES); }
+  if(esGanL){ ctx.beginPath(); ctx.arc(x+padX+ES/2,rowLocalY,ES/2+s(1.5),0,Math.PI*2); ctx.lineWidth=s(2); ctx.strokeStyle=C.DORADO2; ctx.stroke(); }
+  ctx.fillStyle=esGanL?C.DORADO2:C.BLANCO;
+  ctx.font=`600 ${s(12)}px "Bebas Neue", Arial, sans-serif`;
+  ctx.textAlign='left'; ctx.textBaseline='middle';
+  cvFillTextTrunc(ctx,(c.local||'–').toUpperCase(), x+padX+ES+s(8), rowLocalY, leftW-ES-s(6));
+
+  const eImgV=escudoImgs[c.visit||''];
+  if(eImgV){ ctx.save(); ctx.beginPath(); ctx.arc(x+padX+ES/2, rowVisitY, ES/2,0,Math.PI*2); ctx.clip(); cvDrawEscudoImg(ctx,eImgV,x+padX,rowVisitY-ES/2,ES); ctx.restore(); }
+  else if(c.visit){ cvEscudoFallback(ctx,c.visit,x+padX,rowVisitY-ES/2,ES); }
+  if(esGanV){ ctx.beginPath(); ctx.arc(x+padX+ES/2,rowVisitY,ES/2+s(1.5),0,Math.PI*2); ctx.lineWidth=s(2); ctx.strokeStyle=C.DORADO2; ctx.stroke(); }
+  ctx.fillStyle=esGanV?C.DORADO2:C.BLANCO;
+  ctx.font=`600 ${s(12)}px "Bebas Neue", Arial, sans-serif`;
+  ctx.textAlign='left'; ctx.textBaseline='middle';
+  cvFillTextTrunc(ctx,(c.visit||'–').toUpperCase(), x+padX+ES+s(8), rowVisitY, leftW-ES-s(6));
+
+  ctx.strokeStyle='rgba(255,255,255,0.08)'; ctx.beginPath();
+  ctx.moveTo(x+padX,y+h/2); ctx.lineTo(x+w-padX,y+h/2); ctx.stroke();
+
+  const my=y+h/2;
+  const mx=x+w-padX-mW;
+  cvRoundRect(ctx,mx,my-mH/2,mW,mH,s(7));
+  if(estadoCls==='jugado'){
+    ctx.save(); ctx.shadowColor='rgba(240,192,64,0.5)'; ctx.shadowBlur=s(9);
+    const mg=ctx.createLinearGradient(mx,0,mx+mW,0);
+    mg.addColorStop(0,C.DORADO); mg.addColorStop(1,C.DORADO2);
+    ctx.fillStyle=mg; ctx.fill(); ctx.restore();
+    ctx.fillStyle=C.NEG;
+  } else if(estadoCls==='en-juego'){
+    ctx.fillStyle='rgba(192,57,43,0.75)'; ctx.fill(); ctx.fillStyle='#ffffff';
+  } else {
+    ctx.fillStyle='rgba(255,255,255,0.06)'; ctx.fill();
+    ctx.strokeStyle='rgba(201,162,39,0.3)'; ctx.stroke();
+    ctx.fillStyle=C.DORADO;
+  }
+  ctx.font=`700 ${Math.min(s(15),Math.round(mH*0.58))}px "Bebas Neue", Arial, sans-serif`;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(marcTxt, mx+mW/2, my+1);
+  ctx.textBaseline='alphabetic';
+
+  // Kicker/leyenda: SIEMPRE en la columna derecha del marcador (nunca se
+  // cruza con los escudos, que viven en la columna izquierda)
+  const rcCX=x+leftW+padX+rightW/2, rcMaxW=rightW-s(8);
+  if(mostrarEstadoKicker && (c.idavuelta || estadoCls==='en-juego')){
+    const kY=Math.max(y+s(11), my-mH/2-s(7));
+    ctx.fillStyle='rgba(255,255,255,0.42)';
+    ctx.font=`600 ${s(8)}px "Rajdhani", Arial, sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+    cvFillTextTrunc(ctx, estadoCls==='en-juego'?'EN VIVO':'IDA Y VUELTA', rcCX, kY, rcMaxW);
+  }
+  if(c.ganador){
+    const penalesSuf=(c.tienePenales&&c.penales)?' (P.'+c.penales+')':'';
+    const capY=Math.min(y+h-s(8), my+mH/2+s(13));
+    ctx.fillStyle='rgba(201,162,39,0.7)';
+    ctx.font=`600 ${s(8)}px "DM Sans", Arial, sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+    cvFillTextTrunc(ctx,'✓ '+c.ganador.toUpperCase()+penalesSuf, rcCX, capY, rcMaxW);
+  } else if(c.tienePenales && c.penales){
+    const capY=Math.min(y+h-s(8), my+mH/2+s(13));
+    ctx.fillStyle='rgba(255,255,255,0.4)';
+    ctx.font=`600 ${s(8)}px "DM Sans", Arial, sans-serif`;
+    ctx.textAlign='center';
+    cvFillTextTrunc(ctx,'PEN. '+c.penales, rcCX, capY, rcMaxW);
+  }
+}
+
+// Imagen "ticket de partido" — usada solo para la Final (siempre 1 cruce)
+async function generarImagenTicketFinalCC(c, escudoImgs, id, liga){
+  const W=CV_W, CX=W/2, H=CV_H;
+  const canvas=document.createElement('canvas');
+  canvas.width=W; canvas.height=H;
+  const ctx=canvas.getContext('2d');
+  ctx.textBaseline='alphabetic';
+  const bgGrad=ctx.createLinearGradient(0,0,0,H);
+  bgGrad.addColorStop(0,C.NEG3); bgGrad.addColorStop(1,C.NEG);
+  ctx.fillStyle=bgGrad; ctx.fillRect(0,0,W,H);
+
+  let y=await cvTituloCopaCordoba(ctx,W,id,'FINAL');
+
+  const estadoCls=c.estado||'pendiente';
+  const esIdaVuelta=!!c.idavuelta;
+  const marcTxt=esIdaVuelta?(c.global||'VS'):(c.resultado||'VS');
+  const esGanL=c.ganador&&normalizar(c.ganador)===normalizar(c.local||'');
+  const esGanV=c.ganador&&normalizar(c.ganador)===normalizar(c.visit||'');
+
+  const ticketX=s(29), ticketW=W-s(58), ticketH=Math.min(s(440), H-y-s(80));
+  const ticketY=y+Math.max(s(10), (H-s(70)-y-ticketH)/2);
+  ctx.save();
+  cvRoundRect(ctx,ticketX,ticketY,ticketW,ticketH,s(16));
+  ctx.clip();
+  const tg=ctx.createLinearGradient(0,ticketY,0,ticketY+ticketH);
+  tg.addColorStop(0,'#1c1c22'); tg.addColorStop(1,'#0a0a0c');
+  ctx.fillStyle=tg; ctx.fillRect(ticketX,ticketY,ticketW,ticketH);
+  ctx.globalAlpha=0.045; ctx.strokeStyle=C.DORADO;
+  for(let i=-ticketH;i<ticketW;i+=17){ ctx.beginPath(); ctx.moveTo(ticketX+i,ticketY); ctx.lineTo(ticketX+i+ticketH,ticketY+ticketH); ctx.stroke(); }
+  ctx.globalAlpha=1;
+  ctx.restore();
+  ctx.lineWidth=1; ctx.strokeStyle='rgba(201,162,39,0.4)';
+  cvRoundRect(ctx,ticketX,ticketY,ticketW,ticketH,s(16)); ctx.stroke();
+
+  if(estadoCls==='en-juego'){
+    ctx.fillStyle='#e2453f'; ctx.font=`700 ${s(11)}px "Rajdhani", Arial, sans-serif`;
+    ctx.textAlign='center'; ctx.fillText('● EN VIVO', CX, ticketY+s(28));
+  } else if(esIdaVuelta){
+    ctx.fillStyle='rgba(255,255,255,0.4)'; ctx.font=`700 ${s(10)}px "Rajdhani", Arial, sans-serif`;
+    ctx.textAlign='center'; ctx.fillText('IDA Y VUELTA', CX, ticketY+s(26));
+  }
+
+  const ES=s(120);
+  const escY=ticketY+s(42);
+  const escLX=CX-s(130)-ES/2, escVX=CX+s(130)-ES/2;
+  const eImgL=escudoImgs[c.local||''];
+  if(eImgL){ ctx.save(); ctx.beginPath(); ctx.arc(escLX+ES/2,escY+ES/2,ES/2,0,Math.PI*2); ctx.clip(); cvDrawEscudoImg(ctx,eImgL,escLX,escY,ES); ctx.restore(); }
+  else { cvEscudoFallback(ctx,c.local,escLX,escY,ES); }
+  if(esGanL){ ctx.beginPath(); ctx.arc(escLX+ES/2,escY+ES/2,ES/2+s(2.5),0,Math.PI*2); ctx.lineWidth=s(3); ctx.strokeStyle=C.DORADO2; ctx.stroke(); }
+
+  const eImgV=escudoImgs[c.visit||''];
+  if(eImgV){ ctx.save(); ctx.beginPath(); ctx.arc(escVX+ES/2,escY+ES/2,ES/2,0,Math.PI*2); ctx.clip(); cvDrawEscudoImg(ctx,eImgV,escVX,escY,ES); ctx.restore(); }
+  else { cvEscudoFallback(ctx,c.visit,escVX,escY,ES); }
+  if(esGanV){ ctx.beginPath(); ctx.arc(escVX+ES/2,escY+ES/2,ES/2+s(2.5),0,Math.PI*2); ctx.lineWidth=s(3); ctx.strokeStyle=C.DORADO2; ctx.stroke(); }
+
+  ctx.font=`700 ${s(15)}px "Bebas Neue", Arial, sans-serif`;
+  ctx.textAlign='center';
+  ctx.fillStyle=esGanL?C.DORADO2:C.BLANCO;
+  cvFillTextTrunc(ctx,(c.local||'').toUpperCase(), escLX+ES/2, escY+ES+s(22), s(150));
+  ctx.fillStyle=esGanV?C.DORADO2:C.BLANCO;
+  cvFillTextTrunc(ctx,(c.visit||'').toUpperCase(), escVX+ES/2, escY+ES+s(22), s(150));
+
+  ctx.save();
+  if(estadoCls!=='pendiente'){ ctx.shadowColor='rgba(240,192,64,0.55)'; ctx.shadowBlur=s(16); }
+  ctx.fillStyle = estadoCls==='pendiente' ? C.DORADO2 : (estadoCls==='en-juego' ? '#ff6b63' : C.DORADO2);
+  ctx.font=`700 ${s(30)}px "Bebas Neue", Arial, sans-serif`;
+  ctx.fillText(marcTxt, CX, escY+ES/2+s(10));
+  ctx.restore();
+
+  const perfY=escY+ES+s(52);
+  ctx.setLineDash([s(4),s(6)]);
+  ctx.strokeStyle='rgba(255,255,255,0.25)'; ctx.lineWidth=1.2;
+  ctx.beginPath(); ctx.moveTo(ticketX+s(14),perfY); ctx.lineTo(ticketX+ticketW-s(14),perfY); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.save(); ctx.globalCompositeOperation='destination-out';
+  ctx.beginPath(); ctx.arc(ticketX,perfY,s(9),0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(ticketX+ticketW,perfY,s(9),0,Math.PI*2); ctx.fill();
+  ctx.restore();
+
+  const infoY=perfY+s(34);
+  const colW2=(ticketW-s(56))/2;
+  ctx.textAlign='left';
+  if(esIdaVuelta){
+    const idaTxt=(c.fechaIda?c.fechaIda+' · ':'')+(c.resIda||'A definir');
+    const vueltaTxt=(c.fechaVuelta?c.fechaVuelta+' · ':'')+(c.resVuelta||'A definir');
+    [['IDA',idaTxt],['VUELTA',vueltaTxt]].forEach((col,i)=>{
+      const x=ticketX+s(28)+i*colW2;
+      ctx.fillStyle='rgba(201,162,39,0.6)'; ctx.font=`700 ${s(10)}px Arial, sans-serif`;
+      ctx.fillText(col[0], x, infoY);
+      ctx.fillStyle=C.BLANCO; ctx.font=`600 ${s(13)}px Arial, sans-serif`;
+      cvFillTextTrunc(ctx, col[1], x, infoY+s(20), colW2-s(16));
+    });
+  } else {
+    const estadoTxt = estadoCls==='jugado'?'Jugado':(estadoCls==='en-juego'?'En juego':'A definir');
+    [['TIPO DE CRUCE','Partido único'],['ESTADO',estadoTxt]].forEach((col,i)=>{
+      const x=ticketX+s(28)+i*colW2;
+      ctx.fillStyle='rgba(201,162,39,0.6)'; ctx.font=`700 ${s(10)}px Arial, sans-serif`;
+      ctx.fillText(col[0], x, infoY);
+      ctx.fillStyle=C.BLANCO; ctx.font=`600 ${s(13)}px Arial, sans-serif`;
+      cvFillTextTrunc(ctx, col[1], x, infoY+s(20), colW2-s(16));
+    });
+  }
+
+  if(c.ganador){
+    const penalesSuf=(c.tienePenales&&c.penales)?'  (PEN. '+c.penales+')':'';
+    ctx.fillStyle=C.DORADO2; ctx.font=`700 ${s(12)}px Arial, sans-serif`;
+    ctx.textAlign='center';
+    cvFillTextTrunc(ctx,'✓ CAMPEÓN: '+c.ganador.toUpperCase()+penalesSuf, CX, ticketY+ticketH-s(38), ticketW-s(56));
+  }
+
+  let bx=ticketX+s(28);
+  ctx.fillStyle='rgba(255,255,255,0.45)';
+  const bcY=ticketY+ticketH-s(22);
+  while(bx < ticketX+ticketW-s(28)){
+    const bw=1+Math.round(Math.random()*3);
+    ctx.fillRect(bx,bcY,bw,s(13));
+    bx+=bw+3+Math.round(Math.random()*4);
+  }
+
+  cvFooter(ctx,W,H-s(40),liga);
+  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+  return canvas;
+}
+
 async function generarImagenFaseCopaCordoba(faseKey){
   await document.fonts.ready;
   const id=getIdentidad();
@@ -16694,6 +16911,13 @@ async function generarImagenFaseCopaCordoba(faseKey){
   if(!fase) return null;
   const cruces=data.copaCordoba.filter(c=>c.fase===faseKey).sort((a,b)=>a.cruce-b.cruce);
   if(!cruces.length) return null;
+  const escudoImgs=await cvPrecargarEscudosCC(cruces);
+
+  // La Final (siempre 1 cruce) usa el formato "ticket de partido" destacado;
+  // el resto de las fases usa la grilla compacta de 2 columnas
+  if(faseKey==='final'){
+    return generarImagenTicketFinalCC(cruces[0], escudoImgs, id, liga);
+  }
 
   const canvas=document.createElement('canvas');
   canvas.width=W; canvas.height=CV_H;
@@ -16704,26 +16928,78 @@ async function generarImagenFaseCopaCordoba(faseKey){
   ctx.fillStyle=bgGrad; ctx.fillRect(0,0,W,CV_H);
 
   let y=await cvTituloCopaCordoba(ctx,W,id,fase.label.toUpperCase()+(fase.extra?' · '+fase.extra:''));
-  const escudoImgs=await cvPrecargarEscudosCC(cruces);
 
+  const marginX=s(24), gapCol=s(14), gapRow=s(14);
+  const colW=(W-marginX*2-gapCol)/2;
   const hFooter=s(40);
   const hDisp=CV_H-y-hFooter-s(10);
-  const ROW_H=Math.max(s(78), Math.min(s(150), Math.floor(hDisp/cruces.length)));
-  const hContenido=cruces.length*ROW_H;
+  const filas=Math.ceil(cruces.length/2);
+  const rowH=Math.max(s(84), Math.min(s(150), Math.floor((hDisp-(filas-1)*gapRow)/filas)));
+  const hContenido=filas*rowH+(filas-1)*gapRow;
   y+=Math.max(0, Math.floor((hDisp-hContenido)/2));
 
-  const ECSIZE=s(48);
-  for(const c of cruces){
-    cvFilaCruceCC(ctx,c,CX,y,ROW_H-s(10),ECSIZE,escudoImgs,s(17),s(46),s(24),true);
-    y+=ROW_H;
-  }
+  cruces.forEach((c,i)=>{
+    const col=i%2, fila=Math.floor(i/2);
+    const x=marginX+col*(colW+gapCol);
+    const cy=y+fila*(rowH+gapRow);
+    cvTarjetaGridCC(ctx,c,x,cy,colW,rowH,escudoImgs,true);
+  });
 
   cvFooter(ctx,W,CV_H-s(40),liga);
   ctx.textAlign='left'; ctx.textBaseline='alphabetic';
   return canvas;
 }
 
-// Imagen del cuadro COMPLETO (alto variable, todas las fases con cruces cargados)
+// Tarjeta mini de cruce para una columna del cuadro de llaves. No repite
+// "clasifica" (ya lo muestra la línea conectora hacia la siguiente fase);
+// el ganador se distingue con nombre dorado + anillo en el escudo.
+function cvMiniCruceCC(ctx, c, x, y, w, h, escudoImgs){
+  cvRoundRect(ctx,x,y,w,h,7);
+  ctx.fillStyle='rgba(255,255,255,0.045)'; ctx.fill();
+  ctx.lineWidth=1; ctx.strokeStyle='rgba(201,162,39,0.22)'; ctx.stroke();
+
+  const estadoCls=c.estado||'pendiente';
+  const marcTxt=c.idavuelta?(c.global||''):(c.resultado||'');
+  const rowH=h/2;
+  const ES=Math.max(14, Math.min(22, rowH*0.6));
+  const resW=marcTxt?34:26;
+
+  [c.local, c.visit].forEach((nombre,i)=>{
+    const ry=y+i*rowH;
+    const esGan=c.ganador && normalizar(c.ganador)===normalizar(nombre||'');
+    const eImg=escudoImgs[nombre||''];
+    if(eImg){ ctx.save(); ctx.beginPath(); ctx.arc(x+7+ES/2, ry+rowH/2, ES/2,0,Math.PI*2); ctx.clip(); cvDrawEscudoImg(ctx,eImg,x+7,ry+rowH/2-ES/2,ES); ctx.restore(); }
+    else if(nombre){ cvEscudoFallback(ctx,nombre,x+7,ry+rowH/2-ES/2,ES); }
+    if(esGan){ ctx.beginPath(); ctx.arc(x+7+ES/2,ry+rowH/2,ES/2+1.3,0,Math.PI*2); ctx.lineWidth=1.3; ctx.strokeStyle=C.DORADO2; ctx.stroke(); }
+
+    ctx.fillStyle=esGan?C.DORADO2:C.BLANCO;
+    ctx.font=`600 ${Math.round(w*0.052)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.textAlign='left'; ctx.textBaseline='middle';
+    cvFillTextTrunc(ctx,(nombre||'–').toUpperCase(), x+7+ES+6, ry+rowH/2, w-ES-resW-18);
+
+    if(i===0){ ctx.strokeStyle='rgba(255,255,255,0.08)'; ctx.beginPath(); ctx.moveTo(x+5,y+rowH); ctx.lineTo(x+w-5,y+rowH); ctx.stroke(); }
+  });
+
+  ctx.textAlign='right'; ctx.textBaseline='middle';
+  ctx.font=`700 ${Math.round(w*0.058)}px "Bebas Neue", Arial, sans-serif`;
+  if(estadoCls!=='pendiente' && marcTxt){
+    ctx.fillStyle = estadoCls==='en-juego' ? '#ff6b63' : (c.ganador?C.DORADO2:'rgba(255,255,255,0.65)');
+    cvFillTextTrunc(ctx, marcTxt, x+w-7, y+h/2, resW);
+  } else {
+    ctx.fillStyle='rgba(255,255,255,0.3)';
+    ctx.font=`600 ${Math.round(w*0.05)}px Arial, sans-serif`;
+    ctx.fillText('VS', x+w-7, y+h/2);
+  }
+  ctx.textBaseline='alphabetic';
+}
+
+// Imagen del cuadro COMPLETO como "cuadro de llaves": una columna por fase,
+// conectada con líneas hacia la fase siguiente. Las líneas solo se dibujan
+// entre fases consecutivas donde la cantidad de cruces refleja una
+// eliminación directa "limpia" (la siguiente fase tiene la mitad); en las
+// fases iniciales de Copa Córdoba puede haber clubes que ingresan
+// directamente en fases avanzadas, así que esas columnas se muestran sin
+// líneas en vez de inventar una conexión que no existe en los datos.
 async function generarImagenCopaCordobaCompleto(){
   await document.fonts.ready;
   const id=getIdentidad();
@@ -16735,10 +17011,21 @@ async function generarImagenCopaCordobaCompleto(){
     cruces:data.copaCordoba.filter(c=>c.fase===f.key).sort((a,b)=>a.cruce-b.cruce)
   })).filter(sec=>sec.cruces.length);
   if(!secciones.length) return null;
+  const escudoImgs=await cvPrecargarEscudosCC(secciones.flatMap(sec=>sec.cruces));
 
-  const totalCruces=secciones.reduce((a,sec)=>a+sec.cruces.length,0);
-  const ROW_H=s(96), hEtapaHdr=s(38);
-  const CVH_TOTAL = s(64)+s(56)+s(16) + secciones.length*(hEtapaHdr+s(8)) + totalCruces*ROW_H + secciones.length*s(6) + s(40) + s(20);
+  const nCols=secciones.length;
+  const margin=28, gapCol = nCols<=3 ? 34 : (nCols<=4 ? 26 : (nCols<=5 ? 20 : 15));
+  const colW=Math.min(260, (W-margin*2-gapCol*(nCols-1))/nCols);
+  const totalColsW=colW*nCols+gapCol*(nCols-1);
+  const startX=(W-totalColsW)/2;
+
+  const miniGap=14;
+  const maxCruces=Math.max(...secciones.map(sec=>sec.cruces.length));
+  const miniH=Math.max(50, Math.min(80, colW*0.34));
+  const trackH=maxCruces*miniH+(maxCruces-1)*miniGap;
+
+  const hHeader=s(64)+s(56)+s(16), hColLabels=34, hFooter=s(60);
+  const CVH_TOTAL=Math.round(hHeader+hColLabels+trackH+hFooter);
 
   const canvas=document.createElement('canvas');
   canvas.width=W; canvas.height=CVH_TOTAL;
@@ -16749,25 +17036,49 @@ async function generarImagenCopaCordobaCompleto(){
   ctx.fillStyle=bgGrad; ctx.fillRect(0,0,W,CVH_TOTAL);
 
   let y=await cvTituloCopaCordoba(ctx,W,id,'CUADRO DE ELIMINACIÓN DIRECTA');
-  const escudoImgs=await cvPrecargarEscudosCC(secciones.flatMap(sec=>sec.cruces));
 
-  const ECSIZE=s(40);
-  for(const sec of secciones){
-    ctx.fillStyle='rgba(201,162,39,0.10)';
-    ctx.fillRect(s(24),y,W-s(48),hEtapaHdr);
-    ctx.fillStyle=C.DORADO;
-    ctx.font=`700 ${s(15)}px "Rajdhani", Arial, sans-serif`;
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText((sec.fase.key==='final'?'🏆 ':'')+sec.fase.label.toUpperCase(), CX, y+hEtapaHdr/2);
-    ctx.textBaseline='alphabetic';
-    y+=hEtapaHdr+s(8);
+  ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+  secciones.forEach((sec,i)=>{
+    const cx=startX+i*(colW+gapCol)+colW/2;
+    ctx.fillStyle='rgba(255,255,255,0.42)';
+    ctx.font=`700 ${s(9)}px "Rajdhani", Arial, sans-serif`;
+    cvFillTextTrunc(ctx, (sec.fase.key==='final'?'🏆 ':'')+sec.fase.label.toUpperCase(), cx, y+13, colW-6);
+  });
+  y+=hColLabels;
+  const yTrackTop=y, yTrackBottom=y+trackH;
 
-    for(const c of sec.cruces){
-      cvFilaCruceCC(ctx,c,CX,y,ROW_H-s(10),ECSIZE,escudoImgs,s(15),s(38),s(20));
-      y+=ROW_H;
+  let prevCenters=null, prevCount=null;
+  secciones.forEach((sec,i)=>{
+    const n=sec.cruces.length;
+    const x=startX+i*(colW+gapCol);
+    const puedeAparear = prevCenters && n===Math.ceil(prevCount/2);
+    let centers=[];
+    if(puedeAparear){
+      for(let k=0;k<n;k++){
+        const p1=prevCenters[2*k];
+        const p2=(prevCenters[2*k+1]!==undefined)?prevCenters[2*k+1]:p1;
+        centers.push((p1+p2)/2);
+      }
+    } else {
+      const step=trackH/n;
+      for(let k=0;k<n;k++) centers.push(yTrackTop+step*k+step/2);
     }
-    y+=s(6);
-  }
+
+    sec.cruces.forEach((c,k)=>{
+      const cy=centers[k]-miniH/2;
+      cvMiniCruceCC(ctx,c,x,cy,colW,miniH,escudoImgs);
+      if(puedeAparear){
+        const p1=prevCenters[2*k];
+        const p2=(prevCenters[2*k+1]!==undefined)?prevCenters[2*k+1]:p1;
+        const xPrevEnd=x-gapCol;
+        const xMid=x-gapCol/2;
+        ctx.strokeStyle='rgba(201,162,39,0.4)'; ctx.lineWidth=1.3;
+        ctx.beginPath(); ctx.moveTo(xPrevEnd,p1); ctx.lineTo(xMid,p1); ctx.lineTo(xMid,p2); ctx.lineTo(xMid,centers[k]); ctx.lineTo(x,centers[k]); ctx.stroke();
+      }
+    });
+
+    prevCenters=centers; prevCount=n;
+  });
 
   cvFooter(ctx,W,CVH_TOTAL-s(40),liga);
   ctx.textAlign='left'; ctx.textBaseline='alphabetic';
