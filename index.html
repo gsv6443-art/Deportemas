@@ -16690,22 +16690,26 @@ function cvFilaCruceCC(ctx, c, CX, y, ROW, ECSIZE, escudoImgs, fontNombre, mH, f
 // a la derecha ocupando toda la altura de la tarjeta.
 function cvTarjetaGridCC(ctx, c, x, y, w, h, escudoImgs, mostrarEstadoKicker){
   const estadoCls=c.estado||'pendiente';
-  const marcTxt=c.idavuelta?(c.global||'VS'):(c.resultado||'VS');
 
-  cvRoundRect(ctx,x,y,w,h,s(12));
+  cvRoundRect(ctx,x,y,w,h,14);
   const grad=ctx.createLinearGradient(0,y,0,y+h);
   grad.addColorStop(0,'rgba(255,255,255,0.05)'); grad.addColorStop(1,'rgba(255,255,255,0.015)');
   ctx.fillStyle=grad; ctx.fill();
   ctx.lineWidth=1; ctx.strokeStyle='rgba(201,162,39,0.2)'; ctx.stroke();
 
-  ctx.font=`700 ${s(15)}px "Bebas Neue", Arial, sans-serif`;
-  const mW=Math.max(s(46), ctx.measureText(marcTxt).width+s(18));
-  const mH=Math.min(s(32), Math.round(h*0.30));
-  const padX=s(12);
-  const rightW=Math.max(mW+s(22), w*0.30);
+  // El tamaño de escudos y tipografía escala con el alto real de la
+  // tarjeta (más aire cuando hay pocos cruces por fase → más grande y
+  // legible; nunca baja de un mínimo legible aunque haya muchos cruces).
+  const ES=Math.max(24, Math.min(66, h*0.34));
+  const fName=Math.max(14, Math.min(25, h*0.115));
+  const fScoreLose=fName;
+  const fScoreWin=Math.max(fName, Math.min(34, fName*1.35));
+  const fSmall=Math.max(10, Math.min(14, h*0.062));
+
+  const padX=16;
+  const rightW=Math.max(90, w*0.22);
   const leftW=w-rightW-padX;
 
-  const ES=Math.max(s(16), Math.min(s(30), h*0.26));
   const rowLocalY=y+h*0.30, rowVisitY=y+h*0.72;
   const esGanL=c.ganador&&normalizar(c.ganador)===normalizar(c.local||'');
   const esGanV=c.ganador&&normalizar(c.ganador)===normalizar(c.visit||'');
@@ -16713,66 +16717,70 @@ function cvTarjetaGridCC(ctx, c, x, y, w, h, escudoImgs, mostrarEstadoKicker){
   const eImgL=escudoImgs[c.local||''];
   if(eImgL){ ctx.save(); ctx.beginPath(); ctx.arc(x+padX+ES/2, rowLocalY, ES/2,0,Math.PI*2); ctx.clip(); cvDrawEscudoImg(ctx,eImgL,x+padX,rowLocalY-ES/2,ES); ctx.restore(); }
   else if(c.local){ cvEscudoFallback(ctx,c.local,x+padX,rowLocalY-ES/2,ES); }
-  if(esGanL){ ctx.beginPath(); ctx.arc(x+padX+ES/2,rowLocalY,ES/2+s(1.5),0,Math.PI*2); ctx.lineWidth=s(2); ctx.strokeStyle=C.DORADO2; ctx.stroke(); }
+  if(esGanL){ ctx.beginPath(); ctx.arc(x+padX+ES/2,rowLocalY,ES/2+2,0,Math.PI*2); ctx.lineWidth=2.2; ctx.strokeStyle=C.DORADO2; ctx.stroke(); }
   ctx.fillStyle=esGanL?C.DORADO2:C.BLANCO;
-  ctx.font=`600 ${s(12)}px "Bebas Neue", Arial, sans-serif`;
+  ctx.font=`600 ${fName}px "Bebas Neue", Arial, sans-serif`;
   ctx.textAlign='left'; ctx.textBaseline='middle';
-  cvFillTextTrunc(ctx,(c.local||'–').toUpperCase(), x+padX+ES+s(8), rowLocalY, leftW-ES-s(6));
+  cvFillTextTrunc(ctx,(c.local||'–').toUpperCase(), x+padX+ES+10, rowLocalY, leftW-ES-8);
 
   const eImgV=escudoImgs[c.visit||''];
   if(eImgV){ ctx.save(); ctx.beginPath(); ctx.arc(x+padX+ES/2, rowVisitY, ES/2,0,Math.PI*2); ctx.clip(); cvDrawEscudoImg(ctx,eImgV,x+padX,rowVisitY-ES/2,ES); ctx.restore(); }
   else if(c.visit){ cvEscudoFallback(ctx,c.visit,x+padX,rowVisitY-ES/2,ES); }
-  if(esGanV){ ctx.beginPath(); ctx.arc(x+padX+ES/2,rowVisitY,ES/2+s(1.5),0,Math.PI*2); ctx.lineWidth=s(2); ctx.strokeStyle=C.DORADO2; ctx.stroke(); }
+  if(esGanV){ ctx.beginPath(); ctx.arc(x+padX+ES/2,rowVisitY,ES/2+2,0,Math.PI*2); ctx.lineWidth=2.2; ctx.strokeStyle=C.DORADO2; ctx.stroke(); }
   ctx.fillStyle=esGanV?C.DORADO2:C.BLANCO;
-  ctx.font=`600 ${s(12)}px "Bebas Neue", Arial, sans-serif`;
+  ctx.font=`600 ${fName}px "Bebas Neue", Arial, sans-serif`;
   ctx.textAlign='left'; ctx.textBaseline='middle';
-  cvFillTextTrunc(ctx,(c.visit||'–').toUpperCase(), x+padX+ES+s(8), rowVisitY, leftW-ES-s(6));
+  cvFillTextTrunc(ctx,(c.visit||'–').toUpperCase(), x+padX+ES+10, rowVisitY, leftW-ES-8);
 
   ctx.strokeStyle='rgba(255,255,255,0.08)'; ctx.beginPath();
   ctx.moveTo(x+padX,y+h/2); ctx.lineTo(x+w-padX,y+h/2); ctx.stroke();
 
-  const my=y+h/2;
-  const mx=x+w-padX-mW;
-  cvRoundRect(ctx,mx,my-mH/2,mW,mH,s(7));
-  if(estadoCls==='jugado'){
-    ctx.save(); ctx.shadowColor='rgba(240,192,64,0.5)'; ctx.shadowBlur=s(9);
-    const mg=ctx.createLinearGradient(mx,0,mx+mW,0);
-    mg.addColorStop(0,C.DORADO); mg.addColorStop(1,C.DORADO2);
-    ctx.fillStyle=mg; ctx.fill(); ctx.restore();
-    ctx.fillStyle=C.NEG;
-  } else if(estadoCls==='en-juego'){
-    ctx.fillStyle='rgba(192,57,43,0.75)'; ctx.fill(); ctx.fillStyle='#ffffff';
+  // Marcador: sin bloque central — el resultado de cada equipo va pegado
+  // a su propia fila (más grande y dorado el del ganador); "VS" chico y
+  // centrado sobre la línea divisoria cuando el cruce está pendiente.
+  const scoreX=x+w-padX;
+  if(estadoCls==='pendiente'){
+    ctx.fillStyle='rgba(255,255,255,0.3)';
+    ctx.font=`600 ${Math.max(13,Math.min(18,h*0.08))}px Arial, sans-serif`;
+    ctx.textAlign='right'; ctx.textBaseline='middle';
+    ctx.fillText('VS', scoreX, y+h/2);
+    ctx.textBaseline='alphabetic';
   } else {
-    ctx.fillStyle='rgba(255,255,255,0.06)'; ctx.fill();
-    ctx.strokeStyle='rgba(201,162,39,0.3)'; ctx.stroke();
-    ctx.fillStyle=C.DORADO;
+    const marcTxt=c.idavuelta?(c.global||''):(c.resultado||'');
+    const partes=marcTxt.split('-').map(p=>p.trim());
+    const enVivo=estadoCls==='en-juego';
+    ctx.textAlign='right'; ctx.textBaseline='middle';
+    ctx.font=`700 ${enVivo?fScoreLose:(esGanL?fScoreWin:fScoreLose)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.fillStyle = enVivo ? '#ff6b63' : (esGanL?C.DORADO2:'rgba(255,255,255,0.55)');
+    cvFillTextTrunc(ctx, partes[0]||'-', scoreX, rowLocalY, rightW-14);
+    ctx.font=`700 ${enVivo?fScoreLose:(esGanV?fScoreWin:fScoreLose)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.fillStyle = enVivo ? '#ff6b63' : (esGanV?C.DORADO2:'rgba(255,255,255,0.55)');
+    cvFillTextTrunc(ctx, partes[1]||'-', scoreX, rowVisitY, rightW-14);
+    ctx.textBaseline='alphabetic';
   }
-  ctx.font=`700 ${Math.min(s(15),Math.round(mH*0.58))}px "Bebas Neue", Arial, sans-serif`;
-  ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText(marcTxt, mx+mW/2, my+1);
-  ctx.textBaseline='alphabetic';
 
-  // Kicker/leyenda: SIEMPRE en la columna derecha del marcador (nunca se
-  // cruza con los escudos, que viven en la columna izquierda)
-  const rcCX=x+leftW+padX+rightW/2, rcMaxW=rightW-s(8);
+  // Kicker/leyenda: SIEMPRE en la columna derecha (nunca se cruza con los
+  // escudos, que viven en la columna izquierda); despeje calculado contra
+  // el borde real del escudo de cada fila, no contra un marcador fijo
+  const rcCX=x+leftW+padX+rightW/2, rcMaxW=rightW-10;
   if(mostrarEstadoKicker && (c.idavuelta || estadoCls==='en-juego')){
-    const kY=Math.max(y+s(11), my-mH/2-s(7));
+    const kY=Math.max(y+13, rowLocalY-ES/2-8);
     ctx.fillStyle='rgba(255,255,255,0.42)';
-    ctx.font=`600 ${s(8)}px "Rajdhani", Arial, sans-serif`;
+    ctx.font=`600 ${fSmall}px "Rajdhani", Arial, sans-serif`;
     ctx.textAlign='center'; ctx.textBaseline='alphabetic';
     cvFillTextTrunc(ctx, estadoCls==='en-juego'?'EN VIVO':'IDA Y VUELTA', rcCX, kY, rcMaxW);
   }
   if(c.ganador){
     const penalesSuf=(c.tienePenales&&c.penales)?' (P.'+c.penales+')':'';
-    const capY=Math.min(y+h-s(8), my+mH/2+s(13));
+    const capY=Math.min(y+h-9, rowVisitY+ES/2+16);
     ctx.fillStyle='rgba(201,162,39,0.7)';
-    ctx.font=`600 ${s(8)}px "DM Sans", Arial, sans-serif`;
+    ctx.font=`600 ${fSmall}px "DM Sans", Arial, sans-serif`;
     ctx.textAlign='center'; ctx.textBaseline='alphabetic';
     cvFillTextTrunc(ctx,'✓ '+c.ganador.toUpperCase()+penalesSuf, rcCX, capY, rcMaxW);
   } else if(c.tienePenales && c.penales){
-    const capY=Math.min(y+h-s(8), my+mH/2+s(13));
+    const capY=Math.min(y+h-9, rowVisitY+ES/2+16);
     ctx.fillStyle='rgba(255,255,255,0.4)';
-    ctx.font=`600 ${s(8)}px "DM Sans", Arial, sans-serif`;
+    ctx.font=`600 ${fSmall}px "DM Sans", Arial, sans-serif`;
     ctx.textAlign='center';
     cvFillTextTrunc(ctx,'PEN. '+c.penales, rcCX, capY, rcMaxW);
   }
@@ -16954,41 +16962,48 @@ async function generarImagenFaseCopaCordoba(faseKey){
 // "clasifica" (ya lo muestra la línea conectora hacia la siguiente fase);
 // el ganador se distingue con nombre dorado + anillo en el escudo.
 function cvMiniCruceCC(ctx, c, x, y, w, h, escudoImgs){
-  cvRoundRect(ctx,x,y,w,h,7);
+  cvRoundRect(ctx,x,y,w,h,9);
   ctx.fillStyle='rgba(255,255,255,0.045)'; ctx.fill();
   ctx.lineWidth=1; ctx.strokeStyle='rgba(201,162,39,0.22)'; ctx.stroke();
 
   const estadoCls=c.estado||'pendiente';
   const marcTxt=c.idavuelta?(c.global||''):(c.resultado||'');
+  const partes=marcTxt?marcTxt.split('-').map(p=>p.trim()):null;
+  const enVivo=estadoCls==='en-juego';
   const rowH=h/2;
-  const ES=Math.max(14, Math.min(22, rowH*0.6));
-  const resW=marcTxt?34:26;
+  const ES=Math.min(30, rowH*0.62);
+  const resW=36;
 
   [c.local, c.visit].forEach((nombre,i)=>{
     const ry=y+i*rowH;
     const esGan=c.ganador && normalizar(c.ganador)===normalizar(nombre||'');
     const eImg=escudoImgs[nombre||''];
-    if(eImg){ ctx.save(); ctx.beginPath(); ctx.arc(x+7+ES/2, ry+rowH/2, ES/2,0,Math.PI*2); ctx.clip(); cvDrawEscudoImg(ctx,eImg,x+7,ry+rowH/2-ES/2,ES); ctx.restore(); }
-    else if(nombre){ cvEscudoFallback(ctx,nombre,x+7,ry+rowH/2-ES/2,ES); }
-    if(esGan){ ctx.beginPath(); ctx.arc(x+7+ES/2,ry+rowH/2,ES/2+1.3,0,Math.PI*2); ctx.lineWidth=1.3; ctx.strokeStyle=C.DORADO2; ctx.stroke(); }
+    if(eImg){ ctx.save(); ctx.beginPath(); ctx.arc(x+9+ES/2, ry+rowH/2, ES/2,0,Math.PI*2); ctx.clip(); cvDrawEscudoImg(ctx,eImg,x+9,ry+rowH/2-ES/2,ES); ctx.restore(); }
+    else if(nombre){ cvEscudoFallback(ctx,nombre,x+9,ry+rowH/2-ES/2,ES); }
+    if(esGan){ ctx.beginPath(); ctx.arc(x+9+ES/2,ry+rowH/2,ES/2+1.6,0,Math.PI*2); ctx.lineWidth=1.6; ctx.strokeStyle=C.DORADO2; ctx.stroke(); }
 
     ctx.fillStyle=esGan?C.DORADO2:C.BLANCO;
-    ctx.font=`600 ${Math.round(w*0.052)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.font=`600 13px "Bebas Neue", Arial, sans-serif`;
     ctx.textAlign='left'; ctx.textBaseline='middle';
-    cvFillTextTrunc(ctx,(nombre||'–').toUpperCase(), x+7+ES+6, ry+rowH/2, w-ES-resW-18);
+    cvFillTextTrunc(ctx,(nombre||'–').toUpperCase(), x+9+ES+8, ry+rowH/2, w-ES-resW-26);
 
-    if(i===0){ ctx.strokeStyle='rgba(255,255,255,0.08)'; ctx.beginPath(); ctx.moveTo(x+5,y+rowH); ctx.lineTo(x+w-5,y+rowH); ctx.stroke(); }
+    // Marcador sin bloque central: el resultado de cada equipo va pegado
+    // a su propia fila (más grande y dorado si es el ganador)
+    if(partes){
+      ctx.textAlign='right'; ctx.textBaseline='middle';
+      ctx.font=`700 ${enVivo?14:(esGan?18:14)}px "Bebas Neue", Arial, sans-serif`;
+      ctx.fillStyle = enVivo ? '#ff6b63' : (esGan?C.DORADO2:'rgba(255,255,255,0.6)');
+      cvFillTextTrunc(ctx, partes[i]||'-', x+w-9, ry+rowH/2, resW);
+    }
+
+    if(i===0){ ctx.strokeStyle='rgba(255,255,255,0.08)'; ctx.beginPath(); ctx.moveTo(x+6,y+rowH); ctx.lineTo(x+w-6,y+rowH); ctx.stroke(); }
   });
 
-  ctx.textAlign='right'; ctx.textBaseline='middle';
-  ctx.font=`700 ${Math.round(w*0.058)}px "Bebas Neue", Arial, sans-serif`;
-  if(estadoCls!=='pendiente' && marcTxt){
-    ctx.fillStyle = estadoCls==='en-juego' ? '#ff6b63' : (c.ganador?C.DORADO2:'rgba(255,255,255,0.65)');
-    cvFillTextTrunc(ctx, marcTxt, x+w-7, y+h/2, resW);
-  } else {
+  if(!partes){
     ctx.fillStyle='rgba(255,255,255,0.3)';
-    ctx.font=`600 ${Math.round(w*0.05)}px Arial, sans-serif`;
-    ctx.fillText('VS', x+w-7, y+h/2);
+    ctx.font=`600 11px Arial, sans-serif`;
+    ctx.textAlign='right'; ctx.textBaseline='middle';
+    ctx.fillText('VS', x+w-9, y+h/2);
   }
   ctx.textBaseline='alphabetic';
 }
@@ -17000,11 +17015,14 @@ function cvMiniCruceCC(ctx, c, x, y, w, h, escudoImgs){
 // fases iniciales de Copa Córdoba puede haber clubes que ingresan
 // directamente en fases avanzadas, así que esas columnas se muestran sin
 // líneas en vez de inventar una conexión que no existe en los datos.
+// El ancho y alto de la tarjeta de cada cruce son FIJOS (no dependen de
+// cuántas fases haya) para que el texto sea siempre legible; si hay muchas
+// fases con cruces cargados, la imagen crece a lo ancho en vez de achicar
+// el contenido — nunca al revés.
 async function generarImagenCopaCordobaCompleto(){
   await document.fonts.ready;
   const id=getIdentidad();
   const liga=id.nombre||'DEPORTEMAS';
-  const W=CV_W, CX=W/2;
 
   const secciones=FASES_CC.map(f=>({
     fase:f,
@@ -17014,17 +17032,16 @@ async function generarImagenCopaCordobaCompleto(){
   const escudoImgs=await cvPrecargarEscudosCC(secciones.flatMap(sec=>sec.cruces));
 
   const nCols=secciones.length;
-  const margin=28, gapCol = nCols<=3 ? 34 : (nCols<=4 ? 26 : (nCols<=5 ? 20 : 15));
-  const colW=Math.min(260, (W-margin*2-gapCol*(nCols-1))/nCols);
+  const margin=28, gapCol=30, colW=230;
   const totalColsW=colW*nCols+gapCol*(nCols-1);
+  const W=Math.max(CV_W, Math.round(totalColsW+margin*2));
   const startX=(W-totalColsW)/2;
 
-  const miniGap=14;
+  const miniGap=16, miniH=78;
   const maxCruces=Math.max(...secciones.map(sec=>sec.cruces.length));
-  const miniH=Math.max(50, Math.min(80, colW*0.34));
   const trackH=maxCruces*miniH+(maxCruces-1)*miniGap;
 
-  const hHeader=s(64)+s(56)+s(16), hColLabels=34, hFooter=s(60);
+  const hHeader=s(64)+s(56)+s(16), hColLabels=36, hFooter=s(60);
   const CVH_TOTAL=Math.round(hHeader+hColLabels+trackH+hFooter);
 
   const canvas=document.createElement('canvas');
@@ -17040,12 +17057,12 @@ async function generarImagenCopaCordobaCompleto(){
   ctx.textAlign='center'; ctx.textBaseline='alphabetic';
   secciones.forEach((sec,i)=>{
     const cx=startX+i*(colW+gapCol)+colW/2;
-    ctx.fillStyle='rgba(255,255,255,0.42)';
-    ctx.font=`700 ${s(9)}px "Rajdhani", Arial, sans-serif`;
-    cvFillTextTrunc(ctx, (sec.fase.key==='final'?'🏆 ':'')+sec.fase.label.toUpperCase(), cx, y+13, colW-6);
+    ctx.fillStyle='rgba(255,255,255,0.45)';
+    ctx.font=`700 12px "Rajdhani", Arial, sans-serif`;
+    cvFillTextTrunc(ctx, (sec.fase.key==='final'?'🏆 ':'')+sec.fase.label.toUpperCase(), cx, y+14, colW-6);
   });
   y+=hColLabels;
-  const yTrackTop=y, yTrackBottom=y+trackH;
+  const yTrackTop=y;
 
   let prevCenters=null, prevCount=null;
   secciones.forEach((sec,i)=>{
