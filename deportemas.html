@@ -5045,6 +5045,18 @@ table.posiciones td:nth-child(8){
           </div>
         </div>
 
+        <div class="form-row">
+          <div class="form-group"><label>Historial entre ambos (opcional)</label>
+            <input type="text" id="promo-h2h" placeholder="Ej: ÚLTIMOS 5 CLÁSICOS: 2V TALLERES · 1E · 2V BELGRANO FC"/>
+          </div>
+          <div class="form-group"><label>Sede (opcional)</label>
+            <input type="text" id="promo-sede" placeholder="Ej: Cancha Municipal, Río Tercero"/>
+          </div>
+        </div>
+        <p style="font-size:10px;color:var(--gris);margin-top:-8px;margin-bottom:14px;font-family:'Rajdhani',sans-serif">
+          Estas dos líneas se muestran debajo de los escudos, una arriba de la otra, solo si las completás — si dejás alguna vacía, no se dibuja.
+        </p>
+
         <div class="form-group">
           <label>Diseño</label>
           <select id="promo-estilo">
@@ -13737,7 +13749,7 @@ function promoQuitarLogoTorneo(){
 }
 
 function promoLimpiarForm(){
-  ['promo-local','promo-visit','promo-etiqueta','promo-torneo','promo-competicion-logo','promo-dia','promo-fechahora'].forEach(id=>{
+  ['promo-local','promo-visit','promo-etiqueta','promo-torneo','promo-competicion-logo','promo-dia','promo-fechahora','promo-h2h','promo-sede'].forEach(id=>{
     const el = document.getElementById(id); if(el) el.value = '';
   });
   const sel = document.getElementById('promo-partido-sel'); if(sel) sel.value = '';
@@ -13777,6 +13789,8 @@ function promoGenerar(){
     foto: _promoFoto || '',
     dia:       document.getElementById('promo-dia').value.trim(),
     fechaHora: document.getElementById('promo-fechahora').value.trim(),
+    historial: document.getElementById('promo-h2h').value.trim(),
+    sede:      document.getElementById('promo-sede').value.trim(),
   };
   const estilo = document.getElementById('promo-estilo').value;
   abrirShare(() => estilo==='split' ? generarImagenPromocionalSplit(p) : generarImagenPromocional(p));
@@ -14029,17 +14043,23 @@ async function generarImagenPromocional(p){
   await cvDrawEscudoCompleto(ctx, p.visit, escRX, escY, escSize);
   ctx.restore();
 
-  // ── CTA de notificaciones, entre los escudos y el pie ────────────
-  const ctaY = escY + escSize + 46;
+  // ── Historial directo + sede, mismo criterio que en la variante split ──
   const footerTopFull = CV_H - s(40);
-  if(ctaY < footerTopFull - 24){
-    ctx.font = `700 22px "Rajdhani", Arial, sans-serif`;
+  let extraY = escY + escSize + 50;
+  const extraLineas = [
+    p.historial ? p.historial.toUpperCase() : null,
+    p.sede ? ('📍 ' + p.sede.toUpperCase()) : null
+  ].filter(Boolean);
+  extraLineas.forEach(txt=>{
+    if(extraY > footerTopFull - 22) return;
+    ctx.font = `700 20px "Rajdhani", Arial, sans-serif`;
     ctx.fillStyle = 'rgba(255,255,255,0.72)';
     ctx.textAlign = 'center';
-    if('letterSpacing' in ctx) ctx.letterSpacing = '1px';
-    cvFillTextTrunc(ctx, '🔔 ACTIVÁ LAS NOTIFICACIONES Y NO TE LO PIERDAS', CX, ctaY, W - 140);
+    if('letterSpacing' in ctx) ctx.letterSpacing = '0.5px';
+    cvFillTextTrunc(ctx, txt, CX, extraY, W - 140);
     if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
-  }
+    extraY += 34;
+  });
 
   cvFooter(ctx, W, footerTopFull, liga);
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
@@ -14310,17 +14330,23 @@ async function generarImagenPromocionalSplit(p){
   ctx.fillStyle = cierreGrad;
   ctx.fillRect(panelX0, cierreY, panelW, 2);
 
-  // ── CTA de notificaciones: convierte el aire muerto entre el cierre
-  //    dorado y el pie en una acción concreta para quien ve la pieza ──
-  const ctaY = cierreY + 40;
-  if(ctaY < footerTop - 24){
-    ctx.font = `700 20px "Rajdhani", Arial, sans-serif`;
+  // ── Historial directo + sede: cargados a mano en el formulario;
+  //    ocupan el aire bajo el cierre dorado solo si se completaron ────
+  let extraY = cierreY + 36;
+  const extraLineas = [
+    p.historial ? p.historial.toUpperCase() : null,
+    p.sede ? ('📍 ' + p.sede.toUpperCase()) : null
+  ].filter(Boolean);
+  extraLineas.forEach(txt=>{
+    if(extraY > footerTop - 22) return;
+    ctx.font = `700 18px "Rajdhani", Arial, sans-serif`;
     ctx.fillStyle = 'rgba(255,255,255,0.72)';
     ctx.textAlign = 'center';
-    if('letterSpacing' in ctx) ctx.letterSpacing = '1px';
-    cvFillTextTrunc(ctx, '🔔 ACTIVÁ LAS NOTIFICACIONES Y NO TE LO PIERDAS', panelCX, ctaY, panelW - 20);
+    if('letterSpacing' in ctx) ctx.letterSpacing = '0.5px';
+    cvFillTextTrunc(ctx, txt, panelCX, extraY, panelW - 20);
     if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
-  }
+    extraY += 30;
+  });
 
   cvFooter(ctx, W, footerTop, liga);
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
