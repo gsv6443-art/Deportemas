@@ -17019,40 +17019,36 @@ function cvMiniCruceCC(ctx, c, x, y, w, h, escudoImgs){
 // cuántas fases haya) para que el texto sea siempre legible; si hay muchas
 // fases con cruces cargados, la imagen crece a lo ancho en vez de achicar
 // el contenido — nunca al revés.
-async function generarImagenCopaCordobaCompleto(){
-  await document.fonts.ready;
-  const id=getIdentidad();
-  const liga=id.nombre||'DEPORTEMAS';
-
-  const secciones=FASES_CC.map(f=>({
-    fase:f,
-    cruces:data.copaCordoba.filter(c=>c.fase===f.key).sort((a,b)=>a.cruce-b.cruce)
-  })).filter(sec=>sec.cruces.length);
-  if(!secciones.length) return null;
+// Dibuja UN cuadro de llaves (columna por fase) para el subconjunto de
+// fases recibido, siempre en el formato fijo 1080x1350 del resto de las
+// imágenes de Copa Córdoba (nunca se ensancha).
+async function cvRenderBracketCC(secciones, id, liga){
+  const W=CV_W, H=CV_H;
   const escudoImgs=await cvPrecargarEscudosCC(secciones.flatMap(sec=>sec.cruces));
 
   const nCols=secciones.length;
-  const margin=28, gapCol=30, colW=230;
+  const margin=28, gapCol=30;
+  const colW=Math.min(230, Math.floor((W-margin*2-gapCol*(nCols-1))/nCols));
   const totalColsW=colW*nCols+gapCol*(nCols-1);
-  const W=Math.max(CV_W, Math.round(totalColsW+margin*2));
   const startX=(W-totalColsW)/2;
 
   const miniGap=16, miniH=78;
   const maxCruces=Math.max(...secciones.map(sec=>sec.cruces.length));
   const trackH=maxCruces*miniH+(maxCruces-1)*miniGap;
 
-  const hHeader=s(64)+s(56)+s(16), hColLabels=36, hFooter=s(60);
-  const CVH_TOTAL=Math.round(hHeader+hColLabels+trackH+hFooter);
-
   const canvas=document.createElement('canvas');
-  canvas.width=W; canvas.height=CVH_TOTAL;
+  canvas.width=W; canvas.height=H;
   const ctx=canvas.getContext('2d');
   ctx.textBaseline='alphabetic';
-  const bgGrad=ctx.createLinearGradient(0,0,0,CVH_TOTAL);
+  const bgGrad=ctx.createLinearGradient(0,0,0,H);
   bgGrad.addColorStop(0,C.NEG3); bgGrad.addColorStop(1,C.NEG);
-  ctx.fillStyle=bgGrad; ctx.fillRect(0,0,W,CVH_TOTAL);
+  ctx.fillStyle=bgGrad; ctx.fillRect(0,0,W,H);
 
   let y=await cvTituloCopaCordoba(ctx,W,id,'CUADRO DE ELIMINACIÓN DIRECTA');
+
+  const hColLabels=36, hFooter=s(40);
+  const hDisp=H-y-hColLabels-hFooter-s(10);
+  const offsetV=Math.max(0, Math.floor((hDisp-trackH)/2));
 
   ctx.textAlign='center'; ctx.textBaseline='alphabetic';
   secciones.forEach((sec,i)=>{
@@ -17061,7 +17057,7 @@ async function generarImagenCopaCordobaCompleto(){
     ctx.font=`700 12px "Rajdhani", Arial, sans-serif`;
     cvFillTextTrunc(ctx, (sec.fase.key==='final'?'🏆 ':'')+sec.fase.label.toUpperCase(), cx, y+14, colW-6);
   });
-  y+=hColLabels;
+  y+=hColLabels+offsetV;
   const yTrackTop=y;
 
   let prevCenters=null, prevCount=null;
@@ -17097,9 +17093,32 @@ async function generarImagenCopaCordobaCompleto(){
     prevCenters=centers; prevCount=n;
   });
 
-  cvFooter(ctx,W,CVH_TOTAL-s(40),liga);
+  cvFooter(ctx,W,H-s(40),liga);
   ctx.textAlign='left'; ctx.textBaseline='alphabetic';
   return canvas;
+}
+
+// Cuadro completo, partido en DOS imágenes (Primera+Segunda fase / el
+// resto) para que el formato se mantenga siempre 1080x1350 — el modal de
+// compartir ya soporta navegar entre varias imágenes (mismo mecanismo que
+// "Por fase"), así que alcanza con devolver un array.
+async function generarImagenCopaCordobaCompleto(){
+  await document.fonts.ready;
+  const id=getIdentidad();
+  const liga=id.nombre||'DEPORTEMAS';
+
+  const secciones=FASES_CC.map(f=>({
+    fase:f,
+    cruces:data.copaCordoba.filter(c=>c.fase===f.key).sort((a,b)=>a.cruce-b.cruce)
+  })).filter(sec=>sec.cruces.length);
+  if(!secciones.length) return null;
+
+  const grupo1=secciones.slice(0,2);
+  const grupo2=secciones.slice(2);
+
+  const imgs=[await cvRenderBracketCC(grupo1, id, liga)];
+  if(grupo2.length) imgs.push(await cvRenderBracketCC(grupo2, id, liga));
+  return imgs;
 }
 
 // Array de imágenes, una por cada fase que tenga cruces cargados
