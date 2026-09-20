@@ -5046,15 +5046,26 @@ table.posiciones td:nth-child(8){
         </div>
 
         <div class="form-row">
-          <div class="form-group"><label>Historial entre ambos (opcional)</label>
-            <input type="text" id="promo-h2h" placeholder="Ej: ÚLTIMOS 5 CLÁSICOS: 2V TALLERES · 1E · 2V BELGRANO FC"/>
+          <div class="form-group"><label>Título del historial (opcional)</label>
+            <input type="text" id="promo-h2h-titulo" placeholder="Ej: ÚLTIMOS 5 PARTIDOS"/>
           </div>
           <div class="form-group"><label>Sede (opcional)</label>
             <input type="text" id="promo-sede" placeholder="Ej: Cancha Municipal, Río Tercero"/>
           </div>
         </div>
+        <div class="form-row-3">
+          <div class="form-group"><label>Victorias Local</label>
+            <input type="number" min="0" id="promo-h2h-local" placeholder="0"/>
+          </div>
+          <div class="form-group"><label>Empates</label>
+            <input type="number" min="0" id="promo-h2h-empate" placeholder="0"/>
+          </div>
+          <div class="form-group"><label>Victorias Visitante</label>
+            <input type="number" min="0" id="promo-h2h-visit" placeholder="0"/>
+          </div>
+        </div>
         <p style="font-size:10px;color:var(--gris);margin-top:-8px;margin-bottom:14px;font-family:'Rajdhani',sans-serif">
-          Estas dos líneas se muestran debajo de los escudos, una arriba de la otra, solo si las completás — si dejás alguna vacía, no se dibuja.
+          El historial se dibuja como bloque de estadísticas (título + los 3 números) debajo de los escudos, solo si cargás al menos un número. La sede aparece debajo, más grande. Si dejás todo vacío, no se dibuja nada ahí.
         </p>
 
         <div class="form-group">
@@ -13749,7 +13760,7 @@ function promoQuitarLogoTorneo(){
 }
 
 function promoLimpiarForm(){
-  ['promo-local','promo-visit','promo-etiqueta','promo-torneo','promo-competicion-logo','promo-dia','promo-fechahora','promo-h2h','promo-sede'].forEach(id=>{
+  ['promo-local','promo-visit','promo-etiqueta','promo-torneo','promo-competicion-logo','promo-dia','promo-fechahora','promo-h2h-titulo','promo-h2h-local','promo-h2h-empate','promo-h2h-visit','promo-sede'].forEach(id=>{
     const el = document.getElementById(id); if(el) el.value = '';
   });
   const sel = document.getElementById('promo-partido-sel'); if(sel) sel.value = '';
@@ -13789,11 +13800,67 @@ function promoGenerar(){
     foto: _promoFoto || '',
     dia:       document.getElementById('promo-dia').value.trim(),
     fechaHora: document.getElementById('promo-fechahora').value.trim(),
-    historial: document.getElementById('promo-h2h').value.trim(),
+    h2hTitulo: document.getElementById('promo-h2h-titulo').value.trim(),
+    h2hLocal:  document.getElementById('promo-h2h-local').value.trim(),
+    h2hEmpate: document.getElementById('promo-h2h-empate').value.trim(),
+    h2hVisit:  document.getElementById('promo-h2h-visit').value.trim(),
     sede:      document.getElementById('promo-sede').value.trim(),
   };
   const estilo = document.getElementById('promo-estilo').value;
   abrirShare(() => estilo==='split' ? generarImagenPromocionalSplit(p) : generarImagenPromocional(p));
+}
+
+// ── Dibuja el bloque "Historial entre ambos" (título + 3 columnas:
+//    Victoria Local / Empate / Victoria Visitante, con el número
+//    debajo de cada etiqueta) y, debajo, la sede en tamaño grande.
+//    Cada pieza se omite si no se cargó el dato correspondiente.
+//    Devuelve el Y donde terminó de dibujar. ─────────────────────────
+function _promoDrawHistorialSede(ctx, p, cx, width, startY, limiteY){
+  let y = startY;
+  const tieneH2H = p.h2hLocal !== '' || p.h2hEmpate !== '' || p.h2hVisit !== '';
+
+  if(tieneH2H && y < limiteY - 90){
+    const titulo = (p.h2hTitulo || 'ÚLTIMOS PARTIDOS').toUpperCase();
+    ctx.font = `700 20px "Rajdhani", Arial, sans-serif`;
+    ctx.fillStyle = 'rgba(255,255,255,0.78)';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    if('letterSpacing' in ctx) ctx.letterSpacing = '2px';
+    cvFillTextTrunc(ctx, titulo, cx, y, width);
+    if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+    y += 38;
+
+    const cols = [
+      { l: 'VICTORIA LOCAL',     n: p.h2hLocal  || '0' },
+      { l: 'EMPATE',             n: p.h2hEmpate || '0' },
+      { l: 'VICTORIA VISITANTE', n: p.h2hVisit  || '0' },
+    ];
+    const colW = width / 3;
+    cols.forEach((c,i)=>{
+      const colCX = cx - width/2 + colW*i + colW/2;
+      ctx.font = `600 13px "Rajdhani", Arial, sans-serif`;
+      ctx.fillStyle = 'rgba(255,255,255,0.68)';
+      ctx.textAlign = 'center';
+      if('letterSpacing' in ctx) ctx.letterSpacing = '0.5px';
+      cvFillTextTrunc(ctx, c.l, colCX, y, colW - 6);
+      if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+      ctx.font = `800 44px "Bebas Neue", Arial, sans-serif`;
+      ctx.fillStyle = C.DORADO;
+      ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 2;
+      ctx.fillText(String(c.n), colCX, y + 46);
+      ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+    });
+    y += 68;
+  }
+
+  if(p.sede && y < limiteY - 30){
+    ctx.font = `700 26px "Rajdhani", Arial, sans-serif`;
+    ctx.fillStyle = 'rgba(255,255,255,0.82)';
+    ctx.textAlign = 'center';
+    cvFillTextTrunc(ctx, '📍 ' + p.sede.toUpperCase(), cx, y + 20, width);
+    y += 44;
+  }
+
+  return y;
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -14043,23 +14110,9 @@ async function generarImagenPromocional(p){
   await cvDrawEscudoCompleto(ctx, p.visit, escRX, escY, escSize);
   ctx.restore();
 
-  // ── Historial directo + sede, mismo criterio que en la variante split ──
+  // ── Historial directo + sede, mismo bloque que en la variante split ──
   const footerTopFull = CV_H - s(40);
-  let extraY = escY + escSize + 50;
-  const extraLineas = [
-    p.historial ? p.historial.toUpperCase() : null,
-    p.sede ? ('📍 ' + p.sede.toUpperCase()) : null
-  ].filter(Boolean);
-  extraLineas.forEach(txt=>{
-    if(extraY > footerTopFull - 22) return;
-    ctx.font = `700 20px "Rajdhani", Arial, sans-serif`;
-    ctx.fillStyle = 'rgba(255,255,255,0.72)';
-    ctx.textAlign = 'center';
-    if('letterSpacing' in ctx) ctx.letterSpacing = '0.5px';
-    cvFillTextTrunc(ctx, txt, CX, extraY, W - 140);
-    if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
-    extraY += 34;
-  });
+  _promoDrawHistorialSede(ctx, p, CX, W - 140, escY + escSize + 44, footerTopFull);
 
   cvFooter(ctx, W, footerTopFull, liga);
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
@@ -14330,23 +14383,7 @@ async function generarImagenPromocionalSplit(p){
   ctx.fillStyle = cierreGrad;
   ctx.fillRect(panelX0, cierreY, panelW, 2);
 
-  // ── Historial directo + sede: cargados a mano en el formulario;
-  //    ocupan el aire bajo el cierre dorado solo si se completaron ────
-  let extraY = cierreY + 36;
-  const extraLineas = [
-    p.historial ? p.historial.toUpperCase() : null,
-    p.sede ? ('📍 ' + p.sede.toUpperCase()) : null
-  ].filter(Boolean);
-  extraLineas.forEach(txt=>{
-    if(extraY > footerTop - 22) return;
-    ctx.font = `700 18px "Rajdhani", Arial, sans-serif`;
-    ctx.fillStyle = 'rgba(255,255,255,0.72)';
-    ctx.textAlign = 'center';
-    if('letterSpacing' in ctx) ctx.letterSpacing = '0.5px';
-    cvFillTextTrunc(ctx, txt, panelCX, extraY, panelW - 20);
-    if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
-    extraY += 30;
-  });
+  _promoDrawHistorialSede(ctx, p, panelCX, panelW - 20, cierreY + 32, footerTop);
 
   cvFooter(ctx, W, footerTop, liga);
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
