@@ -14011,13 +14011,37 @@ async function generarImagenPromocional(p){
   const escY  = y;
   const escLX = CX - escGap/2 - escSize;
   const escRX = CX + escGap/2;
+
+  // Resplandor dorado detrás de cada escudo (mismo recurso que en la
+  // variante split, para que ambos estilos se vean consistentes)
+  [escLX, escRX].forEach(ex=>{
+    const gx = ex + escSize/2, gy = escY + escSize/2;
+    const glowEsc = ctx.createRadialGradient(gx, gy, escSize*0.12, gx, gy, escSize*0.72);
+    glowEsc.addColorStop(0, 'rgba(201,162,39,0.38)');
+    glowEsc.addColorStop(1, 'transparent');
+    ctx.fillStyle = glowEsc;
+    ctx.beginPath(); ctx.arc(gx, gy, escSize*0.72, 0, Math.PI*2); ctx.fill();
+  });
+
   ctx.save();
   ctx.shadowColor = 'rgba(0,0,0,0.55)'; ctx.shadowBlur = 18; ctx.shadowOffsetY = 4;
   await cvDrawEscudoCompleto(ctx, p.local, escLX, escY, escSize);
   await cvDrawEscudoCompleto(ctx, p.visit, escRX, escY, escSize);
   ctx.restore();
 
-  cvFooter(ctx, W, CV_H - s(40), liga);
+  // ── CTA de notificaciones, entre los escudos y el pie ────────────
+  const ctaY = escY + escSize + 46;
+  const footerTopFull = CV_H - s(40);
+  if(ctaY < footerTopFull - 24){
+    ctx.font = `700 22px "Rajdhani", Arial, sans-serif`;
+    ctx.fillStyle = 'rgba(255,255,255,0.72)';
+    ctx.textAlign = 'center';
+    if('letterSpacing' in ctx) ctx.letterSpacing = '1px';
+    cvFillTextTrunc(ctx, '🔔 ACTIVÁ LAS NOTIFICACIONES Y NO TE LO PIERDAS', CX, ctaY, W - 140);
+    if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+  }
+
+  cvFooter(ctx, W, footerTopFull, liga);
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   return canvas;
 }
@@ -14181,7 +14205,11 @@ async function generarImagenPromocionalSplit(p){
 
   const gapTrasTop = 46;
   const disponible = footerTop - 40 - (yTopEnd + gapTrasTop);
-  let y = yTopEnd + gapTrasTop + Math.max(0, (disponible - contenidoH) * 0.32);
+  // Antes repartía el aire sobrante 32% arriba / 68% abajo del bloque,
+  // lo que dejaba un vacío grande entre los escudos y el pie. Bajamos
+  // la proporción de arriba para que sobre menos aire suelto abajo
+  // (ese resto ahora lo ocupa el CTA de notificaciones).
+  let y = yTopEnd + gapTrasTop + Math.max(0, (disponible - contenidoH) * 0.2);
 
   // ── Etiqueta / fase ────────────────────────────────────────────
   if(p.etiqueta){
@@ -14247,6 +14275,18 @@ async function generarImagenPromocionalSplit(p){
   const escY   = y;
   const escLX  = panelCX - escGap/2 - escSize;
   const escRX  = panelCX + escGap/2;
+
+  // Resplandor dorado detrás de cada escudo: sin esto quedaban "flotando"
+  // sueltos contra el fondo oscuro, sin conexión con el resto de la pieza.
+  [escLX, escRX].forEach(ex=>{
+    const gx = ex + escSize/2, gy = escY + escSize/2;
+    const glowEsc = ctx.createRadialGradient(gx, gy, escSize*0.12, gx, gy, escSize*0.72);
+    glowEsc.addColorStop(0, 'rgba(201,162,39,0.38)');
+    glowEsc.addColorStop(1, 'transparent');
+    ctx.fillStyle = glowEsc;
+    ctx.beginPath(); ctx.arc(gx, gy, escSize*0.72, 0, Math.PI*2); ctx.fill();
+  });
+
   ctx.save();
   ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 16; ctx.shadowOffsetY = 4;
   await cvDrawEscudoCompleto(ctx, p.local, escLX, escY, escSize);
@@ -14269,6 +14309,18 @@ async function generarImagenPromocionalSplit(p){
   cierreGrad.addColorStop(1, 'transparent');
   ctx.fillStyle = cierreGrad;
   ctx.fillRect(panelX0, cierreY, panelW, 2);
+
+  // ── CTA de notificaciones: convierte el aire muerto entre el cierre
+  //    dorado y el pie en una acción concreta para quien ve la pieza ──
+  const ctaY = cierreY + 40;
+  if(ctaY < footerTop - 24){
+    ctx.font = `700 20px "Rajdhani", Arial, sans-serif`;
+    ctx.fillStyle = 'rgba(255,255,255,0.72)';
+    ctx.textAlign = 'center';
+    if('letterSpacing' in ctx) ctx.letterSpacing = '1px';
+    cvFillTextTrunc(ctx, '🔔 ACTIVÁ LAS NOTIFICACIONES Y NO TE LO PIERDAS', panelCX, ctaY, panelW - 20);
+    if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+  }
 
   cvFooter(ctx, W, footerTop, liga);
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
