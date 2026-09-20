@@ -13818,16 +13818,17 @@ function promoGenerar(){
 function _promoDrawHistorialSede(ctx, p, cx, width, startY, limiteY){
   let y = startY;
   const tieneH2H = p.h2hLocal !== '' || p.h2hEmpate !== '' || p.h2hVisit !== '';
+  let despuesH2H = y;
 
-  if(tieneH2H && y < limiteY - 90){
+  if(tieneH2H && y < limiteY - 120){
     const titulo = (p.h2hTitulo || 'ÚLTIMOS PARTIDOS').toUpperCase();
-    ctx.font = `700 20px "Rajdhani", Arial, sans-serif`;
-    ctx.fillStyle = 'rgba(255,255,255,0.78)';
+    ctx.font = `700 26px "Rajdhani", Arial, sans-serif`;
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
     ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-    if('letterSpacing' in ctx) ctx.letterSpacing = '2px';
+    if('letterSpacing' in ctx) ctx.letterSpacing = '3px';
     cvFillTextTrunc(ctx, titulo, cx, y, width);
     if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
-    y += 38;
+    y += 48;
 
     const cols = [
       { l: 'VICTORIA LOCAL',     n: p.h2hLocal  || '0' },
@@ -13837,27 +13838,44 @@ function _promoDrawHistorialSede(ctx, p, cx, width, startY, limiteY){
     const colW = width / 3;
     cols.forEach((c,i)=>{
       const colCX = cx - width/2 + colW*i + colW/2;
-      ctx.font = `600 13px "Rajdhani", Arial, sans-serif`;
-      ctx.fillStyle = 'rgba(255,255,255,0.68)';
+      ctx.font = `700 16px "Rajdhani", Arial, sans-serif`;
+      ctx.fillStyle = 'rgba(255,255,255,0.72)';
       ctx.textAlign = 'center';
       if('letterSpacing' in ctx) ctx.letterSpacing = '0.5px';
-      cvFillTextTrunc(ctx, c.l, colCX, y, colW - 6);
+      cvFillTextTrunc(ctx, c.l, colCX, y, colW - 4);
       if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
-      ctx.font = `800 44px "Bebas Neue", Arial, sans-serif`;
+      let numSize = 66;
+      const numTxt = String(c.n);
+      while(numSize > 34){
+        ctx.font = `800 ${numSize}px "Bebas Neue", Arial, sans-serif`;
+        if(ctx.measureText(numTxt).width <= colW - 10) break;
+        numSize -= 4;
+      }
       ctx.fillStyle = C.DORADO;
-      ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 2;
-      ctx.fillText(String(c.n), colCX, y + 46);
+      ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 12; ctx.shadowOffsetY = 2;
+      ctx.fillText(numTxt, colCX, y + 66);
       ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
     });
-    y += 68;
+    y += 92;
+    despuesH2H = y;
   }
 
-  if(p.sede && y < limiteY - 30){
-    ctx.font = `700 26px "Rajdhani", Arial, sans-serif`;
-    ctx.fillStyle = 'rgba(255,255,255,0.82)';
-    ctx.textAlign = 'center';
-    cvFillTextTrunc(ctx, '📍 ' + p.sede.toUpperCase(), cx, y + 20, width);
-    y += 44;
+  if(p.sede){
+    // Empujamos la sede hacia el espacio libre que queda antes del pie,
+    // en vez de pegarla justo debajo del historial, para aprovechar el
+    // aire que sobra ahí abajo.
+    const sedeFontSize = 26;
+    const margenFooter  = 34;
+    const yMinimo  = despuesH2H + 26;
+    const yDeseado = limiteY - margenFooter - sedeFontSize;
+    const sedeY = Math.max(yMinimo, yDeseado);
+    if(sedeY < limiteY - 10){
+      ctx.font = `700 ${sedeFontSize}px "Rajdhani", Arial, sans-serif`;
+      ctx.fillStyle = 'rgba(255,255,255,0.82)';
+      ctx.textAlign = 'center';
+      cvFillTextTrunc(ctx, '📍 ' + p.sede.toUpperCase(), cx, sedeY, width);
+      y = sedeY + sedeFontSize;
+    }
   }
 
   return y;
