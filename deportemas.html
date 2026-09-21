@@ -12939,12 +12939,12 @@ async function cvFuente(size, weight='700'){
 }
 
 // Dibuja texto con truncado automático si no entra
-function cvFillTextTrunc(ctx, text, x, y, maxW){
-  if(!maxW){ ctx.fillText(text,x,y); return; }
+function cvFillTextTrunc(ctx, text, x, y, maxW, stroke){
+  if(!maxW){ if(stroke) ctx.strokeText(text,x,y); else ctx.fillText(text,x,y); return; }
   let t = text;
   while(ctx.measureText(t).width > maxW && t.length > 1) t = t.slice(0,-1);
   if(t !== text) t = t.slice(0,-1)+'…';
-  ctx.fillText(t, x, y);
+  if(stroke) ctx.strokeText(t, x, y); else ctx.fillText(t, x, y);
 }
 
 // Dibuja escudo en canvas con fallback a círculo con iniciales
@@ -17126,15 +17126,29 @@ function cvMiniCruceCC(ctx, c, x, y, w, h, escudoImgs){
     ctx.fillStyle=esGan?C.DORADO2:C.BLANCO;
     ctx.font=`600 ${fName}px "Bebas Neue", Arial, sans-serif`;
     ctx.textAlign='left'; ctx.textBaseline='middle';
-    cvFillTextTrunc(ctx,(nombre||'–').toUpperCase(), x+padL+ES+Math.max(6,padL*0.6), ry+rowH/2, w-ES-resW-padL*2-8);
+    // Contorno oscuro detrás del nombre: sin esto, el blanco/dorado se
+    // difumina contra el fondo semitransparente de la tarjeta al comprimir
+    // la imagen (WhatsApp, redes), sobre todo con una tipografía angosta
+    // como Bebas Neue. El contorno fija el borde de cada letra y mejora
+    // muchísimo la lectura a tamaño chico.
+    const nombreTxt=(nombre||'–').toUpperCase();
+    const nombreX=x+padL+ES+Math.max(6,padL*0.6), nombreMaxW=w-ES-resW-padL*2-8;
+    ctx.strokeStyle='rgba(0,0,0,0.55)'; ctx.lineWidth=Math.max(1.5,fName*0.09);
+    ctx.lineJoin='round';
+    cvFillTextTrunc(ctx,nombreTxt, nombreX, ry+rowH/2, nombreMaxW, true);
+    cvFillTextTrunc(ctx,nombreTxt, nombreX, ry+rowH/2, nombreMaxW);
 
     // Marcador sin bloque central: el resultado de cada equipo va pegado
     // a su propia fila (más grande y dorado si es el ganador)
     if(partes){
       ctx.textAlign='right'; ctx.textBaseline='middle';
-      ctx.font=`700 ${enVivo?fScoreLose:(esGan?fScoreWin:fScoreLose)}px "Bebas Neue", Arial, sans-serif`;
+      const fScore=enVivo?fScoreLose:(esGan?fScoreWin:fScoreLose);
+      ctx.font=`700 ${fScore}px "Bebas Neue", Arial, sans-serif`;
       ctx.fillStyle = enVivo ? '#ff6b63' : (esGan?C.DORADO2:'rgba(255,255,255,0.6)');
-      cvFillTextTrunc(ctx, partes[i]||'-', x+w-padL, ry+rowH/2, resW);
+      const scoreTxt=partes[i]||'-', scoreX=x+w-padL;
+      ctx.strokeStyle='rgba(0,0,0,0.55)'; ctx.lineWidth=Math.max(1.5,fScore*0.09); ctx.lineJoin='round';
+      cvFillTextTrunc(ctx, scoreTxt, scoreX, ry+rowH/2, resW, true);
+      cvFillTextTrunc(ctx, scoreTxt, scoreX, ry+rowH/2, resW);
     }
 
     if(i===0){ ctx.strokeStyle='rgba(255,255,255,0.08)'; ctx.beginPath(); ctx.moveTo(x+padL*0.6,y+rowH); ctx.lineTo(x+w-padL*0.6,y+rowH); ctx.stroke(); }
@@ -17266,7 +17280,7 @@ async function generarImagenCopaCordobaCompleto(){
   // el texto y los escudos de cvMiniCruceCC quedan demasiado chicos para
   // leerse. En vez de apretarlos todos en una columna, esa fase se reparte
   // en varias imágenes de a MAX_CRUCES_COL cruces cada una.
-  const MAX_CRUCES_COL=6;
+  const MAX_CRUCES_COL=4;
   const seccionesExpandidas=[];
   secciones.forEach(sec=>{
     if(sec.cruces.length<=MAX_CRUCES_COL){ seccionesExpandidas.push(sec); return; }
