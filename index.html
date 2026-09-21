@@ -17108,11 +17108,11 @@ function cvMiniCruceCC(ctx, c, x, y, w, h, escudoImgs){
   const enVivo=estadoCls==='en-juego';
   const rowH=h/2;
 
-  const ES=Math.max(20, Math.min(92, h*0.30));
-  const fName=Math.max(12, Math.min(32, h*0.105));
-  const fScoreLose=Math.max(12, Math.min(30, h*0.095));
+  const ES=Math.max(30, Math.min(92, h*0.32));
+  const fName=Math.max(17, Math.min(32, h*0.14));
+  const fScoreLose=Math.max(16, Math.min(30, h*0.125));
   const fScoreWin=Math.max(fScoreLose, Math.min(35, fScoreLose*1.3));
-  const resW=Math.max(34, fScoreWin*1.7);
+  const resW=Math.max(38, fScoreWin*1.7);
   const padL=Math.max(7, Math.min(16, w*0.03));
 
   [c.local, c.visit].forEach((nombre,i)=>{
@@ -17198,7 +17198,8 @@ async function cvRenderBracketCC(secciones, id, liga){
     const cx=startX+i*(colW+gapCol)+colW/2;
     ctx.fillStyle='rgba(255,255,255,0.45)';
     ctx.font=`700 ${Math.max(12,Math.min(16,colW*0.055))}px "Rajdhani", Arial, sans-serif`;
-    cvFillTextTrunc(ctx, (sec.fase.key==='final'?'🏆 ':'')+sec.fase.label.toUpperCase(), cx, y+16, colW-6);
+    const sufijoPag=sec.pagina?` (${sec.pagina.actual}/${sec.pagina.total})`:'';
+    cvFillTextTrunc(ctx, (sec.fase.key==='final'?'🏆 ':'')+sec.fase.label.toUpperCase()+sufijoPag, cx, y+16, colW-6);
   });
   y+=hColLabels+offsetV;
   const yTrackTop=y;
@@ -17241,10 +17242,12 @@ async function cvRenderBracketCC(secciones, id, liga){
   return canvas;
 }
 
-// Cuadro completo, partido en varias imágenes de a DOS fases cada una
-// (Primera+Segunda / Tercera+Cuartos / Semifinal+Final, etc.) para que el
-// formato se mantenga siempre 1080x1350 y las tarjetas de cada grupo
-// puedan agrandarse todo lo posible. El modal de compartir ya soporta
+// Cuadro completo, partido en varias imágenes (normalmente de a DOS fases
+// cada una: Primera+Segunda / Tercera+Cuartos / Semifinal+Final, etc.) para
+// que el formato se mantenga siempre 1080x1350 y las tarjetas de cada grupo
+// puedan agrandarse todo lo posible. Si una fase sola tiene muchos cruces
+// (ver MAX_CRUCES_COL más abajo), se reparte en varias imágenes propias en
+// vez de forzar tarjetas ilegibles. El modal de compartir ya soporta
 // navegar entre varias imágenes (mismo mecanismo que "Por fase"), así que
 // alcanza con devolver un array.
 async function generarImagenCopaCordobaCompleto(){
@@ -17258,8 +17261,31 @@ async function generarImagenCopaCordobaCompleto(){
   })).filter(sec=>sec.cruces.length);
   if(!secciones.length) return null;
 
+  // Tope de cruces por columna: si una fase tiene más que esto (típico de
+  // la Primera Fase de Copa Córdoba, con varios equipos entrando por bye),
+  // el texto y los escudos de cvMiniCruceCC quedan demasiado chicos para
+  // leerse. En vez de apretarlos todos en una columna, esa fase se reparte
+  // en varias imágenes de a MAX_CRUCES_COL cruces cada una.
+  const MAX_CRUCES_COL=6;
+  const seccionesExpandidas=[];
+  secciones.forEach(sec=>{
+    if(sec.cruces.length<=MAX_CRUCES_COL){ seccionesExpandidas.push(sec); return; }
+    const partes=[];
+    for(let k=0;k<sec.cruces.length;k+=MAX_CRUCES_COL) partes.push(sec.cruces.slice(k,k+MAX_CRUCES_COL));
+    partes.forEach((cruces,idx)=>seccionesExpandidas.push({fase:sec.fase, cruces, pagina:{actual:idx+1,total:partes.length}}));
+  });
+
+  // Agrupa de a DOS columnas por imagen para aprovechar el ancho, salvo
+  // que alguna de las dos ya venga partida por el tope de arriba: esa
+  // ocupa la imagen ella sola para no volver a apretar el tamaño de las
+  // tarjetas que recién se agrandó.
   const grupos=[];
-  for(let i=0;i<secciones.length;i+=2) grupos.push(secciones.slice(i,i+2));
+  let i=0;
+  while(i<seccionesExpandidas.length){
+    const actual=seccionesExpandidas[i], siguiente=seccionesExpandidas[i+1];
+    if(actual.pagina || (siguiente && siguiente.pagina)){ grupos.push([actual]); i+=1; }
+    else { grupos.push(siguiente?[actual,siguiente]:[actual]); i+=2; }
+  }
 
   const imgs=[];
   for(const g of grupos) imgs.push(await cvRenderBracketCC(g, id, liga));
