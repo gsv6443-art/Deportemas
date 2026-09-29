@@ -4997,6 +4997,15 @@ table.posiciones td:nth-child(8){
         </p>
 
         <div class="form-group">
+          <label>Tipo de imagen</label>
+          <select id="promo-modo" onchange="promoCambiarModo()">
+            <option value="uno">Un partido</option>
+            <option value="dos">Dos partidos destacados (con título)</option>
+          </select>
+        </div>
+
+        <div id="promo-uno-wrap">
+        <div class="form-group">
           <label>Partido guardado (opcional, autocompleta los datos)</label>
           <select id="promo-partido-sel" onchange="promoCargarPartido()">
             <option value="">— Cargar datos manualmente —</option>
@@ -5074,6 +5083,63 @@ table.posiciones td:nth-child(8){
             <option value="completo">Foto de fondo completa</option>
             <option value="split">Foto a la izquierda (como en Alineaciones)</option>
           </select>
+        </div>
+
+        </div><!-- /promo-uno-wrap -->
+
+        <div id="promo-dos-wrap" style="display:none">
+          <div class="form-group">
+            <label>Título</label>
+            <input type="text" id="promo2-titulo" placeholder="Ej: PARTIDOS DESTACADOS"/>
+            <p style="font-size:10px;color:var(--gris);margin-top:4px;font-family:'Rajdhani',sans-serif">
+              Se parte solo en dos líneas: la primera en blanco y la segunda en dorado. Si lo dejás vacío se usa "PARTIDOS DESTACADOS".
+            </p>
+          </div>
+
+          <div class="admin-title" style="font-size:14px;margin:14px 0 8px">Partido 01</div>
+          <div class="form-group"><label>Partido guardado (opcional, autocompleta los datos)</label>
+            <select id="promo2-a-sel" onchange="promoCargarPartido2('a')"><option value="">— Cargar datos manualmente —</option></select>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Equipo Local</label>
+              <input type="text" id="promo2-a-local" list="promo-equipos-datalist" placeholder="Nombre exacto del equipo"/>
+            </div>
+            <div class="form-group"><label>Equipo Visitante</label>
+              <input type="text" id="promo2-a-visit" list="promo-equipos-datalist" placeholder="Nombre exacto del equipo"/>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Día</label>
+              <input type="text" id="promo2-a-dia" placeholder="Ej: SÁBADO"/>
+            </div>
+            <div class="form-group"><label>Hora</label>
+              <input type="text" id="promo2-a-hora" placeholder="Ej: 21:00 HS"/>
+            </div>
+          </div>
+
+          <div class="admin-title" style="font-size:14px;margin:14px 0 8px">Partido 02</div>
+          <div class="form-group"><label>Partido guardado (opcional, autocompleta los datos)</label>
+            <select id="promo2-b-sel" onchange="promoCargarPartido2('b')"><option value="">— Cargar datos manualmente —</option></select>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Equipo Local</label>
+              <input type="text" id="promo2-b-local" list="promo-equipos-datalist" placeholder="Nombre exacto del equipo"/>
+            </div>
+            <div class="form-group"><label>Equipo Visitante</label>
+              <input type="text" id="promo2-b-visit" list="promo-equipos-datalist" placeholder="Nombre exacto del equipo"/>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Día</label>
+              <input type="text" id="promo2-b-dia" placeholder="Ej: DOMINGO"/>
+            </div>
+            <div class="form-group"><label>Hora</label>
+              <input type="text" id="promo2-b-hora" placeholder="Ej: 17:00 HS"/>
+            </div>
+          </div>
+          <p style="font-size:10px;color:var(--gris);margin-top:-4px;margin-bottom:14px;font-family:'Rajdhani',sans-serif">
+            Este diseño siempre lleva la foto (opcional) a la izquierda con corte diagonal. Los escudos salen solos de los equipos cargados.
+          </p>
         </div>
 
         <div class="form-group">
@@ -12939,12 +13005,12 @@ async function cvFuente(size, weight='700'){
 }
 
 // Dibuja texto con truncado automático si no entra
-function cvFillTextTrunc(ctx, text, x, y, maxW, stroke){
-  if(!maxW){ if(stroke) ctx.strokeText(text,x,y); else ctx.fillText(text,x,y); return; }
+function cvFillTextTrunc(ctx, text, x, y, maxW){
+  if(!maxW){ ctx.fillText(text,x,y); return; }
   let t = text;
   while(ctx.measureText(t).width > maxW && t.length > 1) t = t.slice(0,-1);
   if(t !== text) t = t.slice(0,-1)+'…';
-  if(stroke) ctx.strokeText(t, x, y); else ctx.fillText(t, x, y);
+  ctx.fillText(t, x, y);
 }
 
 // Dibuja escudo en canvas con fallback a círculo con iniciales
@@ -13712,7 +13778,20 @@ function promoPoblarEquipos(){
   dl.innerHTML = (data.equipos||[]).map(e => `<option value="${(e.nombre||'').replace(/"/g,'&quot;')}">`).join('');
 }
 
+function _promoPoblarSelects2(){
+  const partidos = [...(data.partidos||[])].sort((a,b)=>String(b.fecha||'').localeCompare(String(a.fecha||'')));
+  ['a','b'].forEach(k=>{
+    const sel = document.getElementById('promo2-'+k+'-sel');
+    if(!sel) return;
+    const actual = sel.value;
+    sel.innerHTML = '<option value="">— Cargar datos manualmente —</option>' +
+      partidos.map(p=>`<option value="${p.id}">${p.local} vs ${p.visit} — ${p.fecha||''}</option>`).join('');
+    if(actual && partidos.some(p=>String(p.id)===actual)) sel.value = actual;
+  });
+}
+
 function promoPoblarPartidos(){
+  _promoPoblarSelects2();
   const sel = document.getElementById('promo-partido-sel');
   if(!sel || !data.partidos) return;
   const actual = sel.value;
@@ -13742,6 +13821,25 @@ function promoCargarPartido(){
   document.getElementById('promo-fechahora').value = [p.fecha, p.hora ? p.hora+' hs' : ''].filter(Boolean).join(' · ');
 }
 
+function promoCambiarModo(){
+  const dos = document.getElementById('promo-modo').value === 'dos';
+  const u = document.getElementById('promo-uno-wrap'), d = document.getElementById('promo-dos-wrap');
+  if(u) u.style.display = dos ? 'none' : '';
+  if(d) d.style.display = dos ? '' : 'none';
+}
+
+function promoCargarPartido2(k){
+  const sel = document.getElementById('promo2-'+k+'-sel');
+  const id = sel ? sel.value : '';
+  if(!id) return;
+  const p = (data.partidos||[]).find(x=>String(x.id)===String(id));
+  if(!p) return;
+  document.getElementById('promo2-'+k+'-local').value = p.local || '';
+  document.getElementById('promo2-'+k+'-visit').value = p.visit || '';
+  document.getElementById('promo2-'+k+'-dia').value = (p.dia || p.fecha || '').toUpperCase();
+  document.getElementById('promo2-'+k+'-hora').value = p.hora ? (p.hora+' hs').toUpperCase() : '';
+}
+
 // Logo del torneo/competición — se autocompleta al elegir un partido
 // guardado (Primera/Segunda/Extra Liga), o se sube a mano acá
 function promoPreviewLogoTorneo(input){
@@ -13764,6 +13862,10 @@ function promoLimpiarForm(){
     const el = document.getElementById(id); if(el) el.value = '';
   });
   const sel = document.getElementById('promo-partido-sel'); if(sel) sel.value = '';
+  ['promo2-titulo','promo2-a-sel','promo2-a-local','promo2-a-visit','promo2-a-dia','promo2-a-hora',
+   'promo2-b-sel','promo2-b-local','promo2-b-visit','promo2-b-dia','promo2-b-hora'].forEach(id=>{
+    const el = document.getElementById(id); if(el) el.value = '';
+  });
   promoQuitarFoto();
   promoQuitarLogoTorneo();
 }
@@ -13785,7 +13887,27 @@ function promoQuitarFoto(){
   const f = document.getElementById('promo-foto-file'); if(f) f.value = '';
 }
 
+function promoGenerarDos(){
+  const val = id => (document.getElementById(id)||{value:''}).value.trim();
+  const partidos = ['a','b'].map(k=>({
+    local: val('promo2-'+k+'-local'),
+    visit: val('promo2-'+k+'-visit'),
+    dia:   val('promo2-'+k+'-dia'),
+    hora:  val('promo2-'+k+'-hora'),
+  }));
+  if(partidos.some(x=>!x.local || !x.visit)){
+    alert('Completá equipo local y visitante de los dos partidos.');
+    return;
+  }
+  const p = { titulo: val('promo2-titulo'), partidos, foto: _promoFoto || '' };
+  abrirShare(() => generarImagenPromocionalDos(p));
+}
+
 function promoGenerar(){
+  if(document.getElementById('promo-modo') && document.getElementById('promo-modo').value === 'dos'){
+    promoGenerarDos();
+    return;
+  }
   const local = document.getElementById('promo-local').value.trim();
   const visit = document.getElementById('promo-visit').value.trim();
   if(!local || !visit){
@@ -14133,6 +14255,214 @@ async function generarImagenPromocional(p){
   _promoDrawHistorialSede(ctx, p, CX, W - 140, escY + escSize + 44, footerTopFull);
 
   cvFooter(ctx, W, footerTopFull, liga);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  return canvas;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   PROMOCIÓN — "Dos partidos destacados" (1080×1350)
+   Foto opcional a la izquierda con corte diagonal (idem variante split)
+   y, en el panel derecho, título editable + cartelera numerada 01/02
+   con escudo + nombre de cada equipo y día/hora debajo.
+   ══════════════════════════════════════════════════════════════ */
+async function generarImagenPromocionalDos(p){
+  await document.fonts.ready;
+  const id   = getIdentidad();
+  const liga = id.nombre || 'DEPORTEMAS';
+  const W = CV_W, H = CV_H;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.textBaseline = 'alphabetic';
+
+  const colW      = 400;   // ancho (arriba) del panel de foto
+  const cutInset  = 52;    // cuánto se cierra el corte diagonal en la base
+  const panelX0   = colW + 34;
+  const panelX1   = W - 46;
+  const panelW    = panelX1 - panelX0;
+  const footH     = s(40);
+  const footerTop = H - footH;
+
+  // ── Fondo del panel derecho ───────────────────────────────────────
+  const bgR = ctx.createLinearGradient(0, 0, 0, H);
+  bgR.addColorStop(0, C.NEG3);
+  bgR.addColorStop(1, C.NEG);
+  ctx.fillStyle = bgR; ctx.fillRect(0, 0, W, H);
+
+  // ── Panel de foto con corte diagonal ──────────────────────────────
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(0, 0); ctx.lineTo(colW, 0); ctx.lineTo(colW - cutInset, H); ctx.lineTo(0, H);
+  ctx.closePath(); ctx.clip();
+
+  const fotoGrad = ctx.createLinearGradient(0, 0, 0, H);
+  fotoGrad.addColorStop(0, '#3a3a40'); fotoGrad.addColorStop(1, '#151518');
+  ctx.fillStyle = fotoGrad; ctx.fillRect(0, 0, colW, H);
+
+  if(p.foto){
+    await new Promise(res=>{
+      const img = new Image();
+      img.onload = () => {
+        const iw = img.naturalWidth || img.width || 1, ih = img.naturalHeight || img.height || 1;
+        const scale = Math.max(colW/iw, H/ih);
+        const dw = iw*scale, dh = ih*scale;
+        ctx.drawImage(img, (colW-dw)/2, (H-dh)/2, dw, dh);
+        res();
+      };
+      img.onerror = () => res();
+      img.src = p.foto;
+    });
+    const shade = ctx.createLinearGradient(colW-cutInset-80, 0, colW, 0);
+    shade.addColorStop(0, 'transparent'); shade.addColorStop(1, 'rgba(0,0,0,.35)');
+    ctx.fillStyle = shade; ctx.fillRect(0, 0, colW, H);
+  } else {
+    ctx.fillStyle = 'rgba(255,255,255,.13)';
+    ctx.font = `140px "Rajdhani", Arial, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText('⚽', colW*0.42, H*0.55);
+  }
+  ctx.restore();
+
+  // Costura dorada sobre el corte diagonal
+  ctx.save();
+  ctx.shadowColor = 'rgba(233,201,106,.85)'; ctx.shadowBlur = 10;
+  ctx.strokeStyle = 'rgba(233,201,106,.8)'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(colW, 0); ctx.lineTo(colW-cutInset, H); ctx.stroke();
+  ctx.restore();
+
+  // ── Barra superior: logo DEPORTEMAS + nombre ──────────────────────
+  const idLogo   = await cargarImagenAsync(id.logo);
+  const logoSize = 46, topY = 56;
+  ctx.textBaseline = 'middle';
+  if(idLogo){
+    ctx.save();
+    ctx.beginPath(); ctx.arc(panelX0+logoSize/2, topY+logoSize/2, logoSize/2, 0, Math.PI*2); ctx.clip();
+    cvDrawEscudoImg(ctx, idLogo, panelX0, topY, logoSize);
+    ctx.restore();
+  } else {
+    cvRoundRect(ctx, panelX0, topY, logoSize, logoSize, 8);
+    ctx.fillStyle = C.DORADO; ctx.fill();
+  }
+  ctx.fillStyle = C.BLANCO;
+  ctx.font = `24px "Bebas Neue", Arial, sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.fillText(liga.toUpperCase(), panelX0 + logoSize + 14, topY + logoSize/2);
+  ctx.textBaseline = 'alphabetic';
+
+  // ── Título: se parte en 2 líneas (blanco / dorado) ────────────────
+  const tituloTxt = ((p.titulo||'').trim() || 'PARTIDOS DESTACADOS').toUpperCase().replace(/\s+/g,' ');
+  const words = tituloTxt.split(' ');
+  const fontTit = sz => `800 ${sz}px "Bebas Neue", Arial, sans-serif`;
+  const medir = (t, sz) => { ctx.font = fontTit(sz); return ctx.measureText(t).width; };
+  let lineas = [tituloTxt];
+  if(words.length > 1){
+    let mejor = null;
+    for(let k=1; k<words.length; k++){
+      const l1 = words.slice(0,k).join(' '), l2 = words.slice(k).join(' ');
+      const peor = Math.max(medir(l1,100), medir(l2,100));
+      if(!mejor || peor < mejor.peor) mejor = { l1, l2, peor };
+    }
+    lineas = [mejor.l1, mejor.l2];
+  }
+  const barW = 8, barGap = 22;
+  const maxTitW = panelW - barW - barGap;
+  let titSize = 104;
+  while(titSize > 40 && Math.max(...lineas.map(l=>medir(l, titSize))) > maxTitW) titSize -= 2;
+
+  const titTop  = topY + logoSize + 64;
+  const capH    = titSize * 0.7;
+  const lineH   = titSize * 1.04;
+  const titBase0 = titTop + capH;
+  const titEnd  = titBase0 + (lineas.length-1)*lineH;
+
+  ctx.fillStyle = C.DORADO;
+  ctx.fillRect(panelX0, titTop, barW, titEnd - titTop);
+
+  ctx.textAlign = 'left';
+  lineas.forEach((l,i)=>{
+    ctx.font = fontTit(titSize);
+    ctx.fillStyle = (lineas.length > 1 && i === lineas.length-1) ? C.DORADO : C.BLANCO;
+    ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 12; ctx.shadowOffsetY = 3;
+    cvFillTextTrunc(ctx, l, panelX0 + barW + barGap, titBase0 + i*lineH, maxTitW);
+    ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+  });
+
+  // ── Cartelera numerada ────────────────────────────────────────────
+  const zonaTop = titEnd + 64;
+  const zonaBot = footerTop - 36;
+  const blockH  = (zonaBot - zonaTop) / 2;
+
+  // Medidas base y escala para que entren aunque el título ocupe mucho
+  const rowH0 = 112, timeH0 = 58, gapRT0 = 18;
+  const contenidoH0 = rowH0*2 + gapRT0 + timeH0;
+  const esc = Math.min(1, (blockH - 40) / contenidoH0);
+  const rowH = rowH0*esc, crest = 88*esc, numSize = 132*esc;
+
+  ctx.font = `800 ${numSize}px "Bebas Neue", Arial, sans-serif`;
+  const numW = ctx.measureText('00').width;
+  const crestX = panelX0 + numW + 26;
+  const nameX  = crestX + crest + 18;
+  const nameMaxW = panelX1 - nameX;
+
+  // Tamaño de nombre único (el mínimo que necesiten los 4 equipos)
+  const nombres = p.partidos.flatMap(m => [m.local.toUpperCase(), m.visit.toUpperCase()]);
+  let nameSize = Math.round(58*esc);
+  const minName = 28;
+  while(nameSize > minName){
+    ctx.font = `800 ${nameSize}px "Bebas Neue", Arial, sans-serif`;
+    if(Math.max(...nombres.map(n=>ctx.measureText(n).width)) <= nameMaxW) break;
+    nameSize -= 2;
+  }
+
+  for(let i=0; i<2; i++){
+    const m = p.partidos[i];
+    const bTop = zonaTop + i*blockH;
+    const cuando = [m.dia, m.hora].filter(Boolean).join(' · ').toUpperCase();
+    const contH = rowH*2 + (cuando ? gapRT0*esc + timeH0*esc : 0);
+    const y0 = bTop + (blockH - contH)/2;
+
+    // Número contorneado 01 / 02, centrado entre las dos filas
+    const numCY = y0 + rowH;
+    ctx.font = `800 ${numSize}px "Bebas Neue", Arial, sans-serif`;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    ctx.strokeStyle = C.DORADO; ctx.lineWidth = 3; ctx.lineJoin = 'round';
+    ctx.strokeText(i===0 ? '01' : '02', panelX0, numCY + numSize*0.7/2);
+
+    // Filas: escudo + nombre
+    const filas = [m.local.toUpperCase(), m.visit.toUpperCase()];
+    for(let r=0; r<2; r++){
+      const ry = y0 + r*rowH + (rowH - crest)/2;
+      ctx.save();
+      ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 16; ctx.shadowOffsetY = 4;
+      await cvDrawEscudoCompleto(ctx, r===0 ? m.local : m.visit, crestX, ry, crest);
+      ctx.restore();
+
+      ctx.font = `800 ${nameSize}px "Bebas Neue", Arial, sans-serif`;
+      ctx.fillStyle = C.BLANCO; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 2;
+      cvFillTextTrunc(ctx, filas[r], nameX, ry + crest/2, nameMaxW);
+      ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+      ctx.textBaseline = 'alphabetic';
+    }
+
+    // Día · hora
+    if(cuando){
+      ctx.font = `700 ${Math.round(34*esc)}px "Bebas Neue", Arial, sans-serif`;
+      ctx.fillStyle = C.DORADO; ctx.textAlign = 'left';
+      if('letterSpacing' in ctx) ctx.letterSpacing = '4px';
+      cvFillTextTrunc(ctx, cuando, panelX0, y0 + rowH*2 + gapRT0*esc + timeH0*esc*0.7, panelW);
+      if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+    }
+
+    // Separador entre los dos partidos
+    if(i === 0){
+      ctx.fillStyle = 'rgba(255,255,255,.16)';
+      ctx.fillRect(panelX0, bTop + blockH - 1, panelW, 2);
+    }
+  }
+
+  cvFooter(ctx, W, footerTop, liga);
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   return canvas;
 }
@@ -17108,11 +17438,11 @@ function cvMiniCruceCC(ctx, c, x, y, w, h, escudoImgs){
   const enVivo=estadoCls==='en-juego';
   const rowH=h/2;
 
-  const ES=Math.max(30, Math.min(92, h*0.32));
-  const fName=Math.max(17, Math.min(32, h*0.14));
-  const fScoreLose=Math.max(16, Math.min(30, h*0.125));
+  const ES=Math.max(20, Math.min(92, h*0.30));
+  const fName=Math.max(12, Math.min(32, h*0.105));
+  const fScoreLose=Math.max(12, Math.min(30, h*0.095));
   const fScoreWin=Math.max(fScoreLose, Math.min(35, fScoreLose*1.3));
-  const resW=Math.max(38, fScoreWin*1.7);
+  const resW=Math.max(34, fScoreWin*1.7);
   const padL=Math.max(7, Math.min(16, w*0.03));
 
   [c.local, c.visit].forEach((nombre,i)=>{
@@ -17126,29 +17456,15 @@ function cvMiniCruceCC(ctx, c, x, y, w, h, escudoImgs){
     ctx.fillStyle=esGan?C.DORADO2:C.BLANCO;
     ctx.font=`600 ${fName}px "Bebas Neue", Arial, sans-serif`;
     ctx.textAlign='left'; ctx.textBaseline='middle';
-    // Contorno oscuro detrás del nombre: sin esto, el blanco/dorado se
-    // difumina contra el fondo semitransparente de la tarjeta al comprimir
-    // la imagen (WhatsApp, redes), sobre todo con una tipografía angosta
-    // como Bebas Neue. El contorno fija el borde de cada letra y mejora
-    // muchísimo la lectura a tamaño chico.
-    const nombreTxt=(nombre||'–').toUpperCase();
-    const nombreX=x+padL+ES+Math.max(6,padL*0.6), nombreMaxW=w-ES-resW-padL*2-8;
-    ctx.strokeStyle='rgba(0,0,0,0.55)'; ctx.lineWidth=Math.max(1.5,fName*0.09);
-    ctx.lineJoin='round';
-    cvFillTextTrunc(ctx,nombreTxt, nombreX, ry+rowH/2, nombreMaxW, true);
-    cvFillTextTrunc(ctx,nombreTxt, nombreX, ry+rowH/2, nombreMaxW);
+    cvFillTextTrunc(ctx,(nombre||'–').toUpperCase(), x+padL+ES+Math.max(6,padL*0.6), ry+rowH/2, w-ES-resW-padL*2-8);
 
     // Marcador sin bloque central: el resultado de cada equipo va pegado
     // a su propia fila (más grande y dorado si es el ganador)
     if(partes){
       ctx.textAlign='right'; ctx.textBaseline='middle';
-      const fScore=enVivo?fScoreLose:(esGan?fScoreWin:fScoreLose);
-      ctx.font=`700 ${fScore}px "Bebas Neue", Arial, sans-serif`;
+      ctx.font=`700 ${enVivo?fScoreLose:(esGan?fScoreWin:fScoreLose)}px "Bebas Neue", Arial, sans-serif`;
       ctx.fillStyle = enVivo ? '#ff6b63' : (esGan?C.DORADO2:'rgba(255,255,255,0.6)');
-      const scoreTxt=partes[i]||'-', scoreX=x+w-padL;
-      ctx.strokeStyle='rgba(0,0,0,0.55)'; ctx.lineWidth=Math.max(1.5,fScore*0.09); ctx.lineJoin='round';
-      cvFillTextTrunc(ctx, scoreTxt, scoreX, ry+rowH/2, resW, true);
-      cvFillTextTrunc(ctx, scoreTxt, scoreX, ry+rowH/2, resW);
+      cvFillTextTrunc(ctx, partes[i]||'-', x+w-padL, ry+rowH/2, resW);
     }
 
     if(i===0){ ctx.strokeStyle='rgba(255,255,255,0.08)'; ctx.beginPath(); ctx.moveTo(x+padL*0.6,y+rowH); ctx.lineTo(x+w-padL*0.6,y+rowH); ctx.stroke(); }
@@ -17212,8 +17528,7 @@ async function cvRenderBracketCC(secciones, id, liga){
     const cx=startX+i*(colW+gapCol)+colW/2;
     ctx.fillStyle='rgba(255,255,255,0.45)';
     ctx.font=`700 ${Math.max(12,Math.min(16,colW*0.055))}px "Rajdhani", Arial, sans-serif`;
-    const sufijoPag=sec.pagina?` (${sec.pagina.actual}/${sec.pagina.total})`:'';
-    cvFillTextTrunc(ctx, (sec.fase.key==='final'?'🏆 ':'')+sec.fase.label.toUpperCase()+sufijoPag, cx, y+16, colW-6);
+    cvFillTextTrunc(ctx, (sec.fase.key==='final'?'🏆 ':'')+sec.fase.label.toUpperCase(), cx, y+16, colW-6);
   });
   y+=hColLabels+offsetV;
   const yTrackTop=y;
@@ -17256,12 +17571,10 @@ async function cvRenderBracketCC(secciones, id, liga){
   return canvas;
 }
 
-// Cuadro completo, partido en varias imágenes (normalmente de a DOS fases
-// cada una: Primera+Segunda / Tercera+Cuartos / Semifinal+Final, etc.) para
-// que el formato se mantenga siempre 1080x1350 y las tarjetas de cada grupo
-// puedan agrandarse todo lo posible. Si una fase sola tiene muchos cruces
-// (ver MAX_CRUCES_COL más abajo), se reparte en varias imágenes propias en
-// vez de forzar tarjetas ilegibles. El modal de compartir ya soporta
+// Cuadro completo, partido en varias imágenes de a DOS fases cada una
+// (Primera+Segunda / Tercera+Cuartos / Semifinal+Final, etc.) para que el
+// formato se mantenga siempre 1080x1350 y las tarjetas de cada grupo
+// puedan agrandarse todo lo posible. El modal de compartir ya soporta
 // navegar entre varias imágenes (mismo mecanismo que "Por fase"), así que
 // alcanza con devolver un array.
 async function generarImagenCopaCordobaCompleto(){
@@ -17275,31 +17588,8 @@ async function generarImagenCopaCordobaCompleto(){
   })).filter(sec=>sec.cruces.length);
   if(!secciones.length) return null;
 
-  // Tope de cruces por columna: si una fase tiene más que esto (típico de
-  // la Primera Fase de Copa Córdoba, con varios equipos entrando por bye),
-  // el texto y los escudos de cvMiniCruceCC quedan demasiado chicos para
-  // leerse. En vez de apretarlos todos en una columna, esa fase se reparte
-  // en varias imágenes de a MAX_CRUCES_COL cruces cada una.
-  const MAX_CRUCES_COL=4;
-  const seccionesExpandidas=[];
-  secciones.forEach(sec=>{
-    if(sec.cruces.length<=MAX_CRUCES_COL){ seccionesExpandidas.push(sec); return; }
-    const partes=[];
-    for(let k=0;k<sec.cruces.length;k+=MAX_CRUCES_COL) partes.push(sec.cruces.slice(k,k+MAX_CRUCES_COL));
-    partes.forEach((cruces,idx)=>seccionesExpandidas.push({fase:sec.fase, cruces, pagina:{actual:idx+1,total:partes.length}}));
-  });
-
-  // Agrupa de a DOS columnas por imagen para aprovechar el ancho, salvo
-  // que alguna de las dos ya venga partida por el tope de arriba: esa
-  // ocupa la imagen ella sola para no volver a apretar el tamaño de las
-  // tarjetas que recién se agrandó.
   const grupos=[];
-  let i=0;
-  while(i<seccionesExpandidas.length){
-    const actual=seccionesExpandidas[i], siguiente=seccionesExpandidas[i+1];
-    if(actual.pagina || (siguiente && siguiente.pagina)){ grupos.push([actual]); i+=1; }
-    else { grupos.push(siguiente?[actual,siguiente]:[actual]); i+=2; }
-  }
+  for(let i=0;i<secciones.length;i+=2) grupos.push(secciones.slice(i,i+2));
 
   const imgs=[];
   for(const g of grupos) imgs.push(await cvRenderBracketCC(g, id, liga));
