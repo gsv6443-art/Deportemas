@@ -5000,7 +5000,7 @@ table.posiciones td:nth-child(8){
           <label>Tipo de imagen</label>
           <select id="promo-modo" onchange="promoCambiarModo()">
             <option value="uno">Un partido</option>
-            <option value="dos">Dos partidos destacados (con título)</option>
+            <option value="tabla">Partido con título y tabla de posiciones (top 4)</option>
           </select>
         </div>
 
@@ -5087,58 +5087,51 @@ table.posiciones td:nth-child(8){
 
         </div><!-- /promo-uno-wrap -->
 
-        <div id="promo-dos-wrap" style="display:none">
+        <div id="promo-tabla-wrap" style="display:none">
           <div class="form-group">
             <label>Título</label>
-            <input type="text" id="promo2-titulo" placeholder="Ej: PARTIDOS DESTACADOS"/>
+            <input type="text" id="promo3-titulo" placeholder="Ej: PARTIDO DE LA FECHA"/>
             <p style="font-size:10px;color:var(--gris);margin-top:4px;font-family:'Rajdhani',sans-serif">
-              Se parte solo en dos líneas: la primera en blanco y la segunda en dorado. Si lo dejás vacío se usa "PARTIDOS DESTACADOS".
+              Se parte solo en dos líneas: la primera en blanco y la segunda en dorado. Si lo dejás vacío se usa "PARTIDO DESTACADO".
             </p>
           </div>
 
-          <div class="admin-title" style="font-size:14px;margin:14px 0 8px">Partido 01</div>
           <div class="form-group"><label>Partido guardado (opcional, autocompleta los datos)</label>
-            <select id="promo2-a-sel" onchange="promoCargarPartido2('a')"><option value="">— Cargar datos manualmente —</option></select>
+            <select id="promo3-sel" onchange="promoCargarPartido3()"><option value="">— Cargar datos manualmente —</option></select>
           </div>
           <div class="form-row">
             <div class="form-group"><label>Equipo Local</label>
-              <input type="text" id="promo2-a-local" list="promo-equipos-datalist" placeholder="Nombre exacto del equipo"/>
+              <input type="text" id="promo3-local" list="promo-equipos-datalist" placeholder="Nombre exacto del equipo"/>
             </div>
             <div class="form-group"><label>Equipo Visitante</label>
-              <input type="text" id="promo2-a-visit" list="promo-equipos-datalist" placeholder="Nombre exacto del equipo"/>
+              <input type="text" id="promo3-visit" list="promo-equipos-datalist" placeholder="Nombre exacto del equipo"/>
             </div>
           </div>
           <div class="form-row">
             <div class="form-group"><label>Día</label>
-              <input type="text" id="promo2-a-dia" placeholder="Ej: SÁBADO"/>
+              <input type="text" id="promo3-dia" placeholder="Ej: SÁBADO"/>
             </div>
             <div class="form-group"><label>Hora</label>
-              <input type="text" id="promo2-a-hora" placeholder="Ej: 21:00 HS"/>
+              <input type="text" id="promo3-hora" placeholder="Ej: 21:00 HS"/>
             </div>
+          </div>
+          <div class="form-group"><label>Etiqueta (opcional)</label>
+            <input type="text" id="promo3-etiqueta" placeholder="Ej: FECHA 12 · 1ª DIVISIÓN"/>
           </div>
 
-          <div class="admin-title" style="font-size:14px;margin:14px 0 8px">Partido 02</div>
-          <div class="form-group"><label>Partido guardado (opcional, autocompleta los datos)</label>
-            <select id="promo2-b-sel" onchange="promoCargarPartido2('b')"><option value="">— Cargar datos manualmente —</option></select>
-          </div>
           <div class="form-row">
-            <div class="form-group"><label>Equipo Local</label>
-              <input type="text" id="promo2-b-local" list="promo-equipos-datalist" placeholder="Nombre exacto del equipo"/>
+            <div class="form-group"><label>Tabla de posiciones (top 4)</label>
+              <select id="promo3-tabla"></select>
             </div>
-            <div class="form-group"><label>Equipo Visitante</label>
-              <input type="text" id="promo2-b-visit" list="promo-equipos-datalist" placeholder="Nombre exacto del equipo"/>
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group"><label>Día</label>
-              <input type="text" id="promo2-b-dia" placeholder="Ej: DOMINGO"/>
-            </div>
-            <div class="form-group"><label>Hora</label>
-              <input type="text" id="promo2-b-hora" placeholder="Ej: 17:00 HS"/>
+            <div class="form-group"><label>Ubicación de la foto</label>
+              <select id="promo3-lado">
+                <option value="izq">Foto a la izquierda</option>
+                <option value="der">Foto a la derecha</option>
+              </select>
             </div>
           </div>
           <p style="font-size:10px;color:var(--gris);margin-top:-4px;margin-bottom:14px;font-family:'Rajdhani',sans-serif">
-            Este diseño siempre lleva la foto (opcional) a la izquierda con corte diagonal. Los escudos salen solos de los equipos cargados.
+            Muestra el partido con su título y, debajo, los primeros 4 puestos de la tabla elegida. Si elegís un partido guardado, la tabla se selecciona sola según su división y torneo. La foto es opcional y tiene corte diagonal.
           </p>
         </div>
 
@@ -5146,7 +5139,7 @@ table.posiciones td:nth-child(8){
           <label>Foto de fondo (opcional)</label>
           <input type="file" accept="image/*" id="promo-foto-file" onchange="promoPreviewFoto(this)"/>
           <p style="font-size:10px;color:var(--gris);margin-top:4px;font-family:'Rajdhani',sans-serif">
-            Se usa igual que en la foto de goleadores/campeón: ocupa toda la imagen (o el panel izquierdo, según el diseño elegido) con un degradé oscuro encima para que el texto se siga leyendo bien.
+            Se usa igual que en la foto de goleadores/campeón: ocupa toda la imagen (o un panel lateral, según el diseño elegido) con un degradé oscuro encima para que el texto se siga leyendo bien.
           </p>
           <div class="preview-wrap" id="promo-foto-wrap">
             <img id="promo-foto-preview" src="" alt="" style="max-height:140px;object-fit:cover;object-position:top"/>
@@ -13778,20 +13771,39 @@ function promoPoblarEquipos(){
   dl.innerHTML = (data.equipos||[]).map(e => `<option value="${(e.nombre||'').replace(/"/g,'&quot;')}">`).join('');
 }
 
-function _promoPoblarSelects2(){
+function _promoTablasOpciones(){
+  const ops = [
+    ['primera|general', 'Primera · Tabla General'],
+    ['primera|apertura', 'Primera · ' + torneoLabel('apertura')],
+    ['primera|clausura', 'Primera · ' + torneoLabel('clausura')],
+    ['segunda|fase1|sierra', 'Segunda · 1ª Fase · Zona Sierra'],
+    ['segunda|fase1|llano', 'Segunda · 1ª Fase · Zona Llano'],
+    ['segunda|fase2|campeonato', 'Segunda · 2ª Fase · Campeonato'],
+    ['segunda|fase2|repechaje', 'Segunda · 2ª Fase · Repechaje'],
+    ['segunda|fase3', 'Segunda · 3ª Fase'],
+  ];
+  return ops;
+}
+
+function _promoPoblarSelects3(){
   const partidos = [...(data.partidos||[])].sort((a,b)=>String(b.fecha||'').localeCompare(String(a.fecha||'')));
-  ['a','b'].forEach(k=>{
-    const sel = document.getElementById('promo2-'+k+'-sel');
-    if(!sel) return;
+  const sel = document.getElementById('promo3-sel');
+  if(sel){
     const actual = sel.value;
     sel.innerHTML = '<option value="">— Cargar datos manualmente —</option>' +
       partidos.map(p=>`<option value="${p.id}">${p.local} vs ${p.visit} — ${p.fecha||''}</option>`).join('');
     if(actual && partidos.some(p=>String(p.id)===actual)) sel.value = actual;
-  });
+  }
+  const tabla = document.getElementById('promo3-tabla');
+  if(tabla){
+    const actual = tabla.value;
+    tabla.innerHTML = _promoTablasOpciones().map(o=>`<option value="${o[0]}">${o[1]}</option>`).join('');
+    if(actual && _promoTablasOpciones().some(o=>o[0]===actual)) tabla.value = actual;
+  }
 }
 
 function promoPoblarPartidos(){
-  _promoPoblarSelects2();
+  _promoPoblarSelects3();
   const sel = document.getElementById('promo-partido-sel');
   if(!sel || !data.partidos) return;
   const actual = sel.value;
@@ -13822,22 +13834,38 @@ function promoCargarPartido(){
 }
 
 function promoCambiarModo(){
-  const dos = document.getElementById('promo-modo').value === 'dos';
-  const u = document.getElementById('promo-uno-wrap'), d = document.getElementById('promo-dos-wrap');
-  if(u) u.style.display = dos ? 'none' : '';
-  if(d) d.style.display = dos ? '' : 'none';
+  const tabla = document.getElementById('promo-modo').value === 'tabla';
+  const u = document.getElementById('promo-uno-wrap'), t = document.getElementById('promo-tabla-wrap');
+  if(u) u.style.display = tabla ? 'none' : '';
+  if(t) t.style.display = tabla ? '' : 'none';
 }
 
-function promoCargarPartido2(k){
-  const sel = document.getElementById('promo2-'+k+'-sel');
+function promoCargarPartido3(){
+  const sel = document.getElementById('promo3-sel');
   const id = sel ? sel.value : '';
   if(!id) return;
   const p = (data.partidos||[]).find(x=>String(x.id)===String(id));
   if(!p) return;
-  document.getElementById('promo2-'+k+'-local').value = p.local || '';
-  document.getElementById('promo2-'+k+'-visit').value = p.visit || '';
-  document.getElementById('promo2-'+k+'-dia').value = (p.dia || p.fecha || '').toUpperCase();
-  document.getElementById('promo2-'+k+'-hora').value = p.hora ? (p.hora+' hs').toUpperCase() : '';
+  document.getElementById('promo3-local').value = p.local || '';
+  document.getElementById('promo3-visit').value = p.visit || '';
+  document.getElementById('promo3-dia').value = (p.dia || p.fecha || '').toUpperCase();
+  document.getElementById('promo3-hora').value = p.hora ? (p.hora+' hs').toUpperCase() : '';
+  const divLabel = p.div==='primera' ? '1ª División' : p.div==='segunda' ? '2ª División' : (p.torneoExtra || 'Extra Liga');
+  const tornLabel = (p.div!=='extraliga' && p.torneo) ? ' · '+torneoLabel(p.torneo) : '';
+  document.getElementById('promo3-etiqueta').value = (divLabel + tornLabel).toUpperCase();
+
+  // Selecciona sola la tabla que corresponde al partido (Primera / Segunda)
+  let clave = '';
+  if(p.div==='primera'){
+    clave = 'primera|' + (p.torneo || 'apertura');
+  } else if(p.div==='segunda'){
+    const fase = p.faseRes || p.fase || 'fase1';
+    if(fase==='fase1')      clave = 'segunda|fase1|' + (p.zona || 'sierra');
+    else if(fase==='fase2') clave = 'segunda|fase2|' + (p.zona || 'campeonato');
+    else                    clave = 'segunda|' + fase;
+  }
+  const tabla = document.getElementById('promo3-tabla');
+  if(tabla && clave && _promoTablasOpciones().some(o=>o[0]===clave)) tabla.value = clave;
 }
 
 // Logo del torneo/competición — se autocompleta al elegir un partido
@@ -13862,10 +13890,11 @@ function promoLimpiarForm(){
     const el = document.getElementById(id); if(el) el.value = '';
   });
   const sel = document.getElementById('promo-partido-sel'); if(sel) sel.value = '';
-  ['promo2-titulo','promo2-a-sel','promo2-a-local','promo2-a-visit','promo2-a-dia','promo2-a-hora',
-   'promo2-b-sel','promo2-b-local','promo2-b-visit','promo2-b-dia','promo2-b-hora'].forEach(id=>{
+  ['promo3-titulo','promo3-sel','promo3-local','promo3-visit','promo3-dia','promo3-hora','promo3-etiqueta'].forEach(id=>{
     const el = document.getElementById(id); if(el) el.value = '';
   });
+  const t3 = document.getElementById('promo3-tabla'); if(t3 && t3.options.length) t3.selectedIndex = 0;
+  const l3 = document.getElementById('promo3-lado'); if(l3) l3.value = 'izq';
   promoQuitarFoto();
   promoQuitarLogoTorneo();
 }
@@ -13887,25 +13916,85 @@ function promoQuitarFoto(){
   const f = document.getElementById('promo-foto-file'); if(f) f.value = '';
 }
 
-function promoGenerarDos(){
+// Devuelve { pos: [...ordenada...], subtitulo } de la tabla elegida en el formulario
+function _promoPosiciones3(clave){
+  const [div, a, b] = String(clave||'').split('|');
+  let pos = [], subtitulo = '';
+  if(div==='segunda'){
+    const fase = a, zona = b || null;
+    const registros = (data.posiciones||[]).filter(p=>{
+      if(p.div!=='segunda' || p.fase!==fase) return false;
+      if(zona) return (p.zona||'')===zona;
+      return true;
+    });
+    const partsSeg = (data.partidos||[]).filter(p=>{
+      if(p.div!=='segunda' || p.estado!=='jugado') return false;
+      const faseP = p.faseRes || p.fase || 'fase1';
+      if(zona) return faseP===fase && (p.zona||'')===zona;
+      return faseP===fase;
+    });
+    pos = ordenarConDesempate([...registros], partsSeg);
+    const faseLabel = {'fase1':'1ª Fase','fase2':'2ª Fase','fase3':'3ª Fase'}[fase] || fase;
+    let zonaLabel = '';
+    if(fase==='fase1')      zonaLabel = zona==='sierra' ? ' · Zona Sierra' : ' · Zona Llano';
+    else if(fase==='fase2') zonaLabel = zona==='campeonato' ? ' · Campeonato' : ' · Repechaje';
+    subtitulo = faseLabel + zonaLabel + ' · Segunda División';
+  } else if(a==='general'){
+    const map = {};
+    (data.posiciones||[]).filter(p=>p.div==='primera').forEach(p=>{
+      const k = normalizar(p.equipo);
+      if(!map[k]) map[k] = {equipo:p.equipo, pts:0, pj:0, g:0, e:0, p:0, gf:0, gc:0, condicion:''};
+      ['pts','pj','g','e','p','gf','gc'].forEach(f=>map[k][f] += Number(p[f])||0);
+    });
+    pos = ordenarConDesempate(
+      completarConEquiposSinPartidos(Object.values(map), 'primera'),
+      (data.partidos||[]).filter(p=>p.div==='primera')
+    );
+    subtitulo = 'Tabla General · Primera División';
+  } else {
+    const torneo = a || 'apertura';
+    const partsTorneo = (data.partidos||[]).filter(p=>p.div==='primera' && (p.torneo||'apertura')===torneo && p.estado==='jugado');
+    pos = ordenarConDesempate(
+      completarConEquiposSinPartidos(
+        [...(data.posiciones||[]).filter(p=>p.div==='primera' && (p.torneo||'apertura')===torneo)],
+        'primera'
+      ),
+      partsTorneo
+    );
+    subtitulo = torneoLabel(torneo) + ' · Primera División';
+  }
+  return { pos, subtitulo };
+}
+
+function promoGenerarTabla(){
   const val = id => (document.getElementById(id)||{value:''}).value.trim();
-  const partidos = ['a','b'].map(k=>({
-    local: val('promo2-'+k+'-local'),
-    visit: val('promo2-'+k+'-visit'),
-    dia:   val('promo2-'+k+'-dia'),
-    hora:  val('promo2-'+k+'-hora'),
-  }));
-  if(partidos.some(x=>!x.local || !x.visit)){
-    alert('Completá equipo local y visitante de los dos partidos.');
+  const local = val('promo3-local'), visit = val('promo3-visit');
+  if(!local || !visit){
+    alert('Completá equipo local y visitante.');
     return;
   }
-  const p = { titulo: val('promo2-titulo'), partidos, foto: _promoFoto || '' };
-  abrirShare(() => generarImagenPromocionalDos(p));
+  const t = _promoPosiciones3(val('promo3-tabla'));
+  if(!t.pos.length){
+    alert('No hay posiciones cargadas para la tabla elegida.');
+    return;
+  }
+  const p = {
+    titulo: val('promo3-titulo'),
+    local, visit,
+    dia: val('promo3-dia'),
+    hora: val('promo3-hora'),
+    etiqueta: val('promo3-etiqueta'),
+    lado: val('promo3-lado') === 'der' ? 'der' : 'izq',
+    foto: _promoFoto || '',
+    pos: t.pos.slice(0, 4),
+    subtitulo: t.subtitulo,
+  };
+  abrirShare(() => generarImagenPromocionalTabla(p));
 }
 
 function promoGenerar(){
-  if(document.getElementById('promo-modo') && document.getElementById('promo-modo').value === 'dos'){
-    promoGenerarDos();
+  if(document.getElementById('promo-modo') && document.getElementById('promo-modo').value === 'tabla'){
+    promoGenerarTabla();
     return;
   }
   const local = document.getElementById('promo-local').value.trim();
@@ -14260,16 +14349,19 @@ async function generarImagenPromocional(p){
 }
 
 /* ══════════════════════════════════════════════════════════════
-   PROMOCIÓN — "Dos partidos destacados" (1080×1350)
-   Foto opcional a la izquierda con corte diagonal (idem variante split)
-   y, en el panel derecho, título editable + cartelera numerada 01/02
-   con escudo + nombre de cada equipo y día/hora debajo.
+   PROMOCIÓN — "Partido + tabla de posiciones" (1080×1350)
+   Foto opcional con corte diagonal, a la izquierda o a la derecha
+   según p.lado ('izq' | 'der'). En el panel de texto: título
+   editable (blanco / dorado), el partido con los dos escudos y,
+   debajo, los primeros 4 puestos de la tabla elegida.
    ══════════════════════════════════════════════════════════════ */
-async function generarImagenPromocionalDos(p){
+async function generarImagenPromocionalTabla(p){
   await document.fonts.ready;
   const id   = getIdentidad();
   const liga = id.nombre || 'DEPORTEMAS';
   const W = CV_W, H = CV_H;
+  const derecha = p.lado === 'der';
+  const fx = x => derecha ? W - x : x;   // espeja las coordenadas del lado de la foto
 
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
@@ -14278,27 +14370,30 @@ async function generarImagenPromocionalDos(p){
 
   const colW      = 400;   // ancho (arriba) del panel de foto
   const cutInset  = 52;    // cuánto se cierra el corte diagonal en la base
-  const panelX0   = colW + 34;
-  const panelX1   = W - 46;
+  const gapFoto   = 34, margen = 46;
+  const panelX0   = derecha ? margen : colW + gapFoto;
+  const panelX1   = derecha ? W - colW - gapFoto : W - margen;
   const panelW    = panelX1 - panelX0;
+  const panelCX   = (panelX0 + panelX1) / 2;
   const footH     = s(40);
   const footerTop = H - footH;
+  const photoX0   = derecha ? W - colW : 0;
 
-  // ── Fondo del panel derecho ───────────────────────────────────────
-  const bgR = ctx.createLinearGradient(0, 0, 0, H);
-  bgR.addColorStop(0, C.NEG3);
-  bgR.addColorStop(1, C.NEG);
-  ctx.fillStyle = bgR; ctx.fillRect(0, 0, W, H);
+  // ── Fondo ─────────────────────────────────────────────────────────
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, C.NEG3);
+  bg.addColorStop(1, C.NEG);
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
 
   // ── Panel de foto con corte diagonal ──────────────────────────────
   ctx.save();
   ctx.beginPath();
-  ctx.moveTo(0, 0); ctx.lineTo(colW, 0); ctx.lineTo(colW - cutInset, H); ctx.lineTo(0, H);
+  ctx.moveTo(fx(0), 0); ctx.lineTo(fx(colW), 0); ctx.lineTo(fx(colW - cutInset), H); ctx.lineTo(fx(0), H);
   ctx.closePath(); ctx.clip();
 
   const fotoGrad = ctx.createLinearGradient(0, 0, 0, H);
   fotoGrad.addColorStop(0, '#3a3a40'); fotoGrad.addColorStop(1, '#151518');
-  ctx.fillStyle = fotoGrad; ctx.fillRect(0, 0, colW, H);
+  ctx.fillStyle = fotoGrad; ctx.fillRect(photoX0, 0, colW, H);
 
   if(p.foto){
     await new Promise(res=>{
@@ -14307,20 +14402,20 @@ async function generarImagenPromocionalDos(p){
         const iw = img.naturalWidth || img.width || 1, ih = img.naturalHeight || img.height || 1;
         const scale = Math.max(colW/iw, H/ih);
         const dw = iw*scale, dh = ih*scale;
-        ctx.drawImage(img, (colW-dw)/2, (H-dh)/2, dw, dh);
+        ctx.drawImage(img, photoX0 + (colW-dw)/2, (H-dh)/2, dw, dh);
         res();
       };
       img.onerror = () => res();
       img.src = p.foto;
     });
-    const shade = ctx.createLinearGradient(colW-cutInset-80, 0, colW, 0);
+    const shade = ctx.createLinearGradient(fx(colW - cutInset - 80), 0, fx(colW), 0);
     shade.addColorStop(0, 'transparent'); shade.addColorStop(1, 'rgba(0,0,0,.35)');
-    ctx.fillStyle = shade; ctx.fillRect(0, 0, colW, H);
+    ctx.fillStyle = shade; ctx.fillRect(photoX0, 0, colW, H);
   } else {
     ctx.fillStyle = 'rgba(255,255,255,.13)';
     ctx.font = `140px "Rajdhani", Arial, sans-serif`;
     ctx.textAlign = 'center';
-    ctx.fillText('⚽', colW*0.42, H*0.55);
+    ctx.fillText('⚽', fx(colW*0.42), H*0.55);
   }
   ctx.restore();
 
@@ -14328,10 +14423,10 @@ async function generarImagenPromocionalDos(p){
   ctx.save();
   ctx.shadowColor = 'rgba(233,201,106,.85)'; ctx.shadowBlur = 10;
   ctx.strokeStyle = 'rgba(233,201,106,.8)'; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(colW, 0); ctx.lineTo(colW-cutInset, H); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(fx(colW), 0); ctx.lineTo(fx(colW - cutInset), H); ctx.stroke();
   ctx.restore();
 
-  // ── Barra superior: logo DEPORTEMAS + nombre ──────────────────────
+  // ── Barra superior: logo + nombre de la liga ──────────────────────
   const idLogo   = await cargarImagenAsync(id.logo);
   const logoSize = 46, topY = 56;
   ctx.textBaseline = 'middle';
@@ -14347,11 +14442,11 @@ async function generarImagenPromocionalDos(p){
   ctx.fillStyle = C.BLANCO;
   ctx.font = `24px "Bebas Neue", Arial, sans-serif`;
   ctx.textAlign = 'left';
-  ctx.fillText(liga.toUpperCase(), panelX0 + logoSize + 14, topY + logoSize/2);
+  cvFillTextTrunc(ctx, liga.toUpperCase(), panelX0 + logoSize + 14, topY + logoSize/2, panelW - logoSize - 14);
   ctx.textBaseline = 'alphabetic';
 
   // ── Título: se parte en 2 líneas (blanco / dorado) ────────────────
-  const tituloTxt = ((p.titulo||'').trim() || 'PARTIDOS DESTACADOS').toUpperCase().replace(/\s+/g,' ');
+  const tituloTxt = ((p.titulo||'').trim() || 'PARTIDO DESTACADO').toUpperCase().replace(/\s+/g,' ');
   const words = tituloTxt.split(' ');
   const fontTit = sz => `800 ${sz}px "Bebas Neue", Arial, sans-serif`;
   const medir = (t, sz) => { ctx.font = fontTit(sz); return ctx.measureText(t).width; };
@@ -14367,14 +14462,14 @@ async function generarImagenPromocionalDos(p){
   }
   const barW = 8, barGap = 22;
   const maxTitW = panelW - barW - barGap;
-  let titSize = 104;
+  let titSize = 96;
   while(titSize > 40 && Math.max(...lineas.map(l=>medir(l, titSize))) > maxTitW) titSize -= 2;
 
-  const titTop  = topY + logoSize + 64;
-  const capH    = titSize * 0.7;
-  const lineH   = titSize * 1.04;
+  const titTop   = topY + logoSize + 50;
+  const capH     = titSize * 0.7;
+  const lineH    = titSize * 1.04;
   const titBase0 = titTop + capH;
-  const titEnd  = titBase0 + (lineas.length-1)*lineH;
+  const titEnd   = titBase0 + (lineas.length-1)*lineH;
 
   ctx.fillStyle = C.DORADO;
   ctx.fillRect(panelX0, titTop, barW, titEnd - titTop);
@@ -14388,78 +14483,176 @@ async function generarImagenPromocionalDos(p){
     ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
   });
 
-  // ── Cartelera numerada ────────────────────────────────────────────
-  const zonaTop = titEnd + 64;
-  const zonaBot = footerTop - 36;
-  const blockH  = (zonaBot - zonaTop) / 2;
+  // ── Partido: escudo · VS · escudo, nombres y día/hora ─────────────
+  let y = titEnd + 46;
+  if(p.etiqueta){
+    ctx.font = `700 28px "Bebas Neue", Arial, sans-serif`;
+    ctx.fillStyle = C.DORADO; ctx.textAlign = 'left';
+    if('letterSpacing' in ctx) ctx.letterSpacing = '4px';
+    cvFillTextTrunc(ctx, p.etiqueta.toUpperCase(), panelX0, y + 20, panelW);
+    if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+    y += 44;
+  }
 
-  // Medidas base y escala para que entren aunque el título ocupe mucho
-  const rowH0 = 112, timeH0 = 58, gapRT0 = 18;
-  const contenidoH0 = rowH0*2 + gapRT0 + timeH0;
-  const esc = Math.min(1, (blockH - 40) / contenidoH0);
-  const rowH = rowH0*esc, crest = 88*esc, numSize = 132*esc;
-
-  ctx.font = `800 ${numSize}px "Bebas Neue", Arial, sans-serif`;
-  const numW = ctx.measureText('00').width;
-  const crestX = panelX0 + numW + 26;
-  const nameX  = crestX + crest + 18;
-  const nameMaxW = panelX1 - nameX;
-
-  // Tamaño de nombre único (el mínimo que necesiten los 4 equipos)
-  const nombres = p.partidos.flatMap(m => [m.local.toUpperCase(), m.visit.toUpperCase()]);
-  let nameSize = Math.round(58*esc);
-  const minName = 28;
-  while(nameSize > minName){
+  const crest   = 124;
+  const cxL = panelCX - panelW * 0.28, cxR = panelCX + panelW * 0.28;
+  const nombreMaxW = panelW * 0.42;
+  const nomL = p.local.toUpperCase(), nomV = p.visit.toUpperCase();
+  let nameSize = 38;
+  while(nameSize > 22){
     ctx.font = `800 ${nameSize}px "Bebas Neue", Arial, sans-serif`;
-    if(Math.max(...nombres.map(n=>ctx.measureText(n).width)) <= nameMaxW) break;
+    if(Math.max(ctx.measureText(nomL).width, ctx.measureText(nomV).width) <= nombreMaxW) break;
     nameSize -= 2;
   }
 
-  for(let i=0; i<2; i++){
-    const m = p.partidos[i];
-    const bTop = zonaTop + i*blockH;
-    const cuando = [m.dia, m.hora].filter(Boolean).join(' · ').toUpperCase();
-    const contH = rowH*2 + (cuando ? gapRT0*esc + timeH0*esc : 0);
-    const y0 = bTop + (blockH - contH)/2;
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 16; ctx.shadowOffsetY = 4;
+  await cvDrawEscudoCompleto(ctx, p.local, cxL - crest/2, y, crest);
+  await cvDrawEscudoCompleto(ctx, p.visit, cxR - crest/2, y, crest);
+  ctx.restore();
 
-    // Número contorneado 01 / 02, centrado entre las dos filas
-    const numCY = y0 + rowH;
-    ctx.font = `800 ${numSize}px "Bebas Neue", Arial, sans-serif`;
-    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-    ctx.strokeStyle = C.DORADO; ctx.lineWidth = 3; ctx.lineJoin = 'round';
-    ctx.strokeText(i===0 ? '01' : '02', panelX0, numCY + numSize*0.7/2);
+  // VS contorneado, centrado con los escudos
+  ctx.font = `800 70px "Bebas Neue", Arial, sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.strokeStyle = C.DORADO; ctx.lineWidth = 3; ctx.lineJoin = 'round';
+  ctx.strokeText('VS', panelCX, y + crest/2 + 70*0.7/2);
 
-    // Filas: escudo + nombre
-    const filas = [m.local.toUpperCase(), m.visit.toUpperCase()];
-    for(let r=0; r<2; r++){
-      const ry = y0 + r*rowH + (rowH - crest)/2;
-      ctx.save();
-      ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 16; ctx.shadowOffsetY = 4;
-      await cvDrawEscudoCompleto(ctx, r===0 ? m.local : m.visit, crestX, ry, crest);
-      ctx.restore();
+  // Nombres
+  const nameY = y + crest + 16 + nameSize/2;
+  ctx.font = `800 ${nameSize}px "Bebas Neue", Arial, sans-serif`;
+  ctx.fillStyle = C.BLANCO; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 2;
+  const cxTxt = (txt, cx) => {
+    const w = Math.min(ctx.measureText(txt).width, nombreMaxW);
+    // centrado manual para poder truncar sin perder la alineación
+    ctx.textAlign = 'left';
+    cvFillTextTrunc(ctx, txt, cx - w/2, nameY, nombreMaxW);
+    ctx.textAlign = 'center';
+  };
+  cxTxt(nomL, cxL); cxTxt(nomV, cxR);
+  ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+  ctx.textBaseline = 'alphabetic';
+  y = nameY + nameSize/2;
 
-      ctx.font = `800 ${nameSize}px "Bebas Neue", Arial, sans-serif`;
-      ctx.fillStyle = C.BLANCO; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-      ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 2;
-      cvFillTextTrunc(ctx, filas[r], nameX, ry + crest/2, nameMaxW);
-      ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
-      ctx.textBaseline = 'alphabetic';
-    }
+  // Día · hora
+  const cuando = [p.dia, p.hora].filter(Boolean).join(' · ').toUpperCase();
+  if(cuando){
+    ctx.font = `700 38px "Bebas Neue", Arial, sans-serif`;
+    ctx.fillStyle = C.DORADO; ctx.textAlign = 'center';
+    if('letterSpacing' in ctx) ctx.letterSpacing = '4px';
+    cvFillTextTrunc(ctx, cuando, panelCX, y + 50, panelW);
+    if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+    y += 50;
+  }
 
-    // Día · hora
-    if(cuando){
-      ctx.font = `700 ${Math.round(34*esc)}px "Bebas Neue", Arial, sans-serif`;
-      ctx.fillStyle = C.DORADO; ctx.textAlign = 'left';
-      if('letterSpacing' in ctx) ctx.letterSpacing = '4px';
-      cvFillTextTrunc(ctx, cuando, panelX0, y0 + rowH*2 + gapRT0*esc + timeH0*esc*0.7, panelW);
-      if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
-    }
+  // Separador
+  y += 36;
+  ctx.fillStyle = 'rgba(255,255,255,.16)';
+  ctx.fillRect(panelX0, y, panelW, 2);
+  y += 34;
 
-    // Separador entre los dos partidos
+  // ── Tabla de posiciones (top 4) ───────────────────────────────────
+  ctx.textAlign = 'left';
+  ctx.font = `800 50px "Bebas Neue", Arial, sans-serif`;
+  ctx.fillStyle = C.BLANCO;
+  ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 2;
+  ctx.fillText('POSICIONES', panelX0, y + 50*0.7);
+  ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+  y += 50*0.7 + 14;
+  if(p.subtitulo){
+    ctx.font = `600 22px "Rajdhani", Arial, sans-serif`;
+    ctx.fillStyle = 'rgba(201,162,39,.8)';
+    if('letterSpacing' in ctx) ctx.letterSpacing = '2px';
+    cvFillTextTrunc(ctx, p.subtitulo.toUpperCase(), panelX0, y + 18, panelW);
+    if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+    y += 34;
+  }
+  y += 10;
+
+  // Columnas
+  const xPts = panelX1 - 44, xDg = panelX1 - 122, xPj = panelX1 - 196;
+  const hdrH = 38;
+  ctx.fillStyle = 'rgba(201,162,39,.12)'; ctx.fillRect(panelX0, y, panelW, hdrH);
+  ctx.fillStyle = 'rgba(201,162,39,.85)';
+  ctx.font = `700 20px "Rajdhani", Arial, sans-serif`;
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'left';   ctx.fillText('EQUIPO', panelX0 + 62, y + hdrH/2);
+  ctx.textAlign = 'center';
+  ctx.fillText('PJ',  xPj,  y + hdrH/2);
+  ctx.fillText('DG',  xDg,  y + hdrH/2);
+  ctx.fillText('PTS', xPts, y + hdrH/2);
+  ctx.fillStyle = 'rgba(201,162,39,.4)'; ctx.fillRect(panelX0, y + hdrH - 1, panelW, 1);
+  ctx.textBaseline = 'alphabetic';
+  y += hdrH;
+
+  const zonaBot = footerTop - 36;
+  const filas   = p.pos.slice(0, 4);
+  const rowH    = Math.max(64, Math.min(108, Math.floor((zonaBot - y) / Math.max(filas.length, 1))));
+  const crestT  = Math.min(64, rowH - 20);
+  const nomX    = panelX0 + 62 + crestT + 16;
+  const nomMaxW = (xPj - 30) - nomX;
+  const nLocal  = normalizar(p.local), nVisit = normalizar(p.visit);
+
+  for(let i=0; i<filas.length; i++){
+    const f = filas[i];
+    const ry = y + i*rowH;
+    const cy = ry + rowH/2;
+    const juega = normalizar(f.equipo) === nLocal || normalizar(f.equipo) === nVisit;
+
+    ctx.fillStyle = juega ? 'rgba(201,162,39,.14)' : (i%2===0 ? 'rgba(255,255,255,.04)' : 'rgba(0,0,0,.18)');
+    ctx.fillRect(panelX0, ry, panelW, rowH);
+    if(juega){ ctx.fillStyle = C.DORADO; ctx.fillRect(panelX0, ry, 5, rowH); }
+
+    // Puesto
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     if(i === 0){
-      ctx.fillStyle = 'rgba(255,255,255,.16)';
-      ctx.fillRect(panelX0, bTop + blockH - 1, panelW, 2);
+      ctx.save();
+      ctx.shadowColor = 'rgba(201,162,39,.5)'; ctx.shadowBlur = 10;
+      ctx.beginPath(); ctx.arc(panelX0 + 30, cy, 22, 0, Math.PI*2);
+      ctx.fillStyle = C.DORADO; ctx.fill();
+      ctx.restore();
+      ctx.fillStyle = C.NEG;
+      ctx.font = `800 34px "Bebas Neue", Arial, sans-serif`;
+      ctx.fillText('1', panelX0 + 30, cy + 2);
+    } else {
+      ctx.fillStyle = 'rgba(255,255,255,.55)';
+      ctx.font = `800 38px "Bebas Neue", Arial, sans-serif`;
+      ctx.fillText(String(i+1), panelX0 + 30, cy + 2);
     }
+
+    // Escudo
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 3;
+    await cvDrawEscudoCompleto(ctx, f.equipo, panelX0 + 62, cy - crestT/2, crestT);
+    ctx.restore();
+
+    // Nombre (un solo tamaño que entre; si no entra, se trunca)
+    const nom = String(f.equipo||'').toUpperCase();
+    let nSz = 38;
+    while(nSz > 24){
+      ctx.font = `800 ${nSz}px "Bebas Neue", Arial, sans-serif`;
+      if(ctx.measureText(nom).width <= nomMaxW) break;
+      nSz -= 2;
+    }
+    ctx.font = `800 ${nSz}px "Bebas Neue", Arial, sans-serif`;
+    ctx.fillStyle = C.BLANCO; ctx.textAlign = 'left';
+    cvFillTextTrunc(ctx, nom, nomX, cy + 2, nomMaxW);
+
+    // PJ · DG · PTS
+    const dg = (Number(f.gf)||0) - (Number(f.gc)||0);
+    const dgStr = dg > 0 ? '+'+dg : String(dg);
+    ctx.textAlign = 'center';
+    ctx.font = `800 34px "Bebas Neue", Arial, sans-serif`;
+    ctx.fillStyle = 'rgba(255,255,255,.7)';
+    ctx.fillText(String(f.pj != null ? f.pj : 0), xPj, cy + 2);
+    ctx.fillText(dgStr, xDg, cy + 2);
+    ctx.fillStyle = C.DORADO;
+    ctx.font = `800 48px "Bebas Neue", Arial, sans-serif`;
+    ctx.fillText(String(f.pts != null ? f.pts : 0), xPts, cy + 2);
+
+    ctx.fillStyle = 'rgba(255,255,255,.06)';
+    ctx.fillRect(panelX0, ry + rowH - 1, panelW, 1);
+    ctx.textBaseline = 'alphabetic';
   }
 
   cvFooter(ctx, W, footerTop, liga);
