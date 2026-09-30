@@ -13086,6 +13086,39 @@ function cvCatBloque(ctx,W,y,catLabel,o){
   return CV_CAT_H;
 }
 
+
+// Igual que cvFillTextWrap pero para textos con textBaseline 'middle' (nombres al costado del
+// escudo): 1 línea queda en yMid; 2 líneas se reparten arriba y abajo de yMid.
+function cvFillTextWrapMid(ctx, text, x, yMid, maxW, lineH){
+  const m=ctx.font.match(/(\d+(?:\.\d+)?)px/);
+  const baseSize=m?parseFloat(m[1]):20;
+  const setSize=sz=>{ ctx.font=ctx.font.replace(/\d+(?:\.\d+)?px/, sz+'px'); };
+  const words=String(text).split(/\s+/).filter(Boolean);
+  const lh=lineH||Math.round(baseSize*1.05);
+  if(ctx.measureText(text).width<=maxW || words.length<2){ cvFillTextTrunc(ctx,text,x,yMid,maxW); return; }
+  for(let sz=baseSize; sz>=baseSize*0.72; sz-=1){
+    setSize(sz);
+    let best=null;
+    for(let k=1;k<words.length;k++){
+      const a=words.slice(0,k).join(' '), b=words.slice(k).join(' ');
+      const w=Math.max(ctx.measureText(a).width, ctx.measureText(b).width);
+      if(!best||w<best.w) best={a,b,w};
+    }
+    if(best && best.w<=maxW){
+      const l=Math.round(lh*sz/baseSize);
+      ctx.fillText(best.a,x,yMid-l/2);
+      ctx.fillText(best.b,x,yMid+l/2);
+      setSize(baseSize);
+      return;
+    }
+  }
+  setSize(baseSize*0.72);
+  const k=Math.ceil(words.length/2), l=Math.round(lh*0.72);
+  cvFillTextTrunc(ctx,words.slice(0,k).join(' '),x,yMid-l/2,maxW);
+  cvFillTextTrunc(ctx,words.slice(k).join(' '),x,yMid+l/2,maxW);
+  setSize(baseSize);
+}
+
 // Dibuja escudo en canvas con fallback a círculo con iniciales
 // Dibuja una imagen de escudo dentro de un cuadro size x size SIN deformarla:
 // escala manteniendo proporción original ("contain") y la centra en el cuadro.
@@ -13510,6 +13543,11 @@ async function cvBloqueHistoria(ctx, p, opciones, W, yStart, medirSolo){
   const escY = y;
   const escLX = s(80);
   const escRX = W - s(80) - ESCUDO_H;
+  // Nombres largos → 2 renglones; se reserva una línea extra (también al medir)
+  const _mctxH = document.createElement('canvas').getContext('2d');
+  _mctxH.font = `${s(36)}px "Bebas Neue", Arial, sans-serif`;
+  const maxNomH = Math.min(s(280), 2*(s(80)+ESCUDO_H/2-20));
+  const nomExtraH = (_mctxH.measureText(p.local.toUpperCase()).width>maxNomH || _mctxH.measureText(p.visit.toUpperCase()).width>maxNomH) ? s(38) : 0;
   if(!medirSolo){
     // Resplandor tipo reflector de cancha detrás del marcador
     const glowCy = escY + ESCUDO_H/2;
@@ -13547,11 +13585,11 @@ async function cvBloqueHistoria(ctx, p, opciones, W, yStart, medirSolo){
     ctx.font = `${s(36)}px "Bebas Neue", Arial, sans-serif`;
     ctx.fillStyle = C.BLANCO;
     ctx.textBaseline = 'top';
-    cvFillTextTrunc(ctx, p.local.toUpperCase(), escLX + ESCUDO_H/2, escY + ESCUDO_H + s(22), s(280));
-    cvFillTextTrunc(ctx, p.visit.toUpperCase(), escRX + ESCUDO_H/2, escY + ESCUDO_H + s(22), s(280));
+    cvFillTextWrap(ctx, p.local.toUpperCase(), escLX + ESCUDO_H/2, escY + ESCUDO_H + s(22), maxNomH, s(38));
+    cvFillTextWrap(ctx, p.visit.toUpperCase(), escRX + ESCUDO_H/2, escY + ESCUDO_H + s(22), maxNomH, s(38));
     ctx.textBaseline = 'alphabetic';
   }
-  y = escY + ESCUDO_H + s(78);
+  y = escY + ESCUDO_H + s(78) + nomExtraH;
 
   // ── Badge con fondo — único elemento con relleno sólido del bloque,
   // por eso es lo que más destaca (jugador, minuto, o resultado) ──
@@ -14996,8 +15034,8 @@ async function generarImagenPromocionalSplit(p){
   ctx.fillStyle = 'rgba(255,255,255,0.8)';
   ctx.textAlign = 'center';
   ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 6; ctx.shadowOffsetY = 1;
-  cvFillTextTrunc(ctx, nomL, escLX + escSize/2, escY + escSize + 26, escSize + 30);
-  cvFillTextTrunc(ctx, nomV, escRX + escSize/2, escY + escSize + 26, escSize + 30);
+  cvFillTextWrap(ctx, nomL, escLX + escSize/2, escY + escSize + 22, escSize + 30, 22);
+  cvFillTextWrap(ctx, nomV, escRX + escSize/2, escY + escSize + 22, escSize + 30, 22);
   ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
 
   // Línea dorada de cierre, para que el bloque no quede "flotando"
@@ -15968,10 +16006,18 @@ async function _generarImagenProximosGrupo(ids){
   const TITLE_H     = PROV ? s(56) : s(78);
   const FOOTER_H    = s(40);
 
-  const infoArbH = ps.map(p=>{
+  // Nombres largos: si no entran en 1 línea se parten en 2 renglones, así que
+  // se reserva una línea extra en esa fila (medido con el ancho mínimo posible).
+  const NOMBRE_LH  = s(27);
+  const mctx = document.createElement('canvas').getContext('2d');
+  mctx.font = `${s(25)}px "Bebas Neue", Arial, sans-serif`;
+  const maxNomW = Math.min(s(280), 2*(s(80)+ECSIZE_MIN/2-20));
+  const extraNom = ps.map(p=>(mctx.measureText(p.local.toUpperCase()).width>maxNomW || mctx.measureText(p.visit.toUpperCase()).width>maxNomW) ? NOMBRE_LH : 0);
+
+  const infoArbH = ps.map((p,i)=>{
     const infoH = (p.dia?DIA_H:0) + (p.hora?HORA_H:0);
     const arbH  = (p.arbitros||[]).length>0 ? ARB_H : 0;
-    return infoH + arbH;
+    return infoH + arbH + extraNom[i];
   });
   const sumInfoArbH = infoArbH.reduce((a,b)=>a+b,0);
 
@@ -16091,7 +16137,7 @@ async function _generarImagenProximosGrupo(ids){
     const horaBlockH = s(34);
     const infoH     = (tieneDia ? diaBlockH : 0) + (tieneHora ? horaBlockH : 0);
     const arbH      = tieneArb ? s(28) : 0;
-    const bloqueH   = ECSIZE + s(32); // escudo + nombre
+    const bloqueH   = ECSIZE + s(32) + extraNom[i]; // escudo + nombre (1 o 2 renglones)
     const totalH    = infoH + bloqueH + arbH;
     const offsetY   = Math.max(0, Math.floor((ROW_H - totalH) / 2));
 
@@ -16130,7 +16176,7 @@ async function _generarImagenProximosGrupo(ids){
     ctx.fillStyle=C.BLANCO;
     ctx.font=`${s(25)}px "Bebas Neue", Arial, sans-serif`;
     ctx.textAlign='center'; ctx.textBaseline='top';
-    cvFillTextTrunc(ctx,p.local.toUpperCase(),escLX+ECSIZE/2,escLY+ECSIZE+s(6),s(280));
+    cvFillTextWrap(ctx,p.local.toUpperCase(),escLX+ECSIZE/2,escLY+ECSIZE+s(6),Math.min(s(280),2*(escLX+ECSIZE/2-20)),NOMBRE_LH);
 
     // VS badge (centro)
     const vsW=s(72), vsH=s(36);
@@ -16155,7 +16201,7 @@ async function _generarImagenProximosGrupo(ids){
     ctx.fillStyle=C.BLANCO;
     ctx.font=`${s(25)}px "Bebas Neue", Arial, sans-serif`;
     ctx.textAlign='center'; ctx.textBaseline='top';
-    cvFillTextTrunc(ctx,p.visit.toUpperCase(),escVX+ECSIZE/2,escVY+ECSIZE+s(6),s(280));
+    cvFillTextWrap(ctx,p.visit.toUpperCase(),escVX+ECSIZE/2,escVY+ECSIZE+s(6),Math.min(s(280),2*(W-(escVX+ECSIZE/2)-20)),NOMBRE_LH);
 
     cy += bloqueH;
 
@@ -16659,7 +16705,7 @@ async function generarImagenReserva(ids){
     ctx.fillStyle = C.BLANCO;
     ctx.font = `${NFONT}px "Bebas Neue", Arial, sans-serif`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-    cvFillTextTrunc(ctx, p.local.toUpperCase(), COL_EC_L, ecBotY + s(4), COL_EC_L*1.8);
+    { const libre=(y+ROW_H)-(ecBotY+s(4))-2; if(libre>=NFONT*2.1) cvFillTextWrap(ctx, p.local.toUpperCase(), COL_EC_L, ecBotY + s(4), COL_EC_L*1.8, NFONT*1.05); else cvFillTextTrunc(ctx, p.local.toUpperCase(), COL_EC_L, ecBotY + s(4), COL_EC_L*1.8); }
 
     // ── ESCUDO VISITANTE ──
     const eImgV = escudoImgs[p.visit];
@@ -16674,7 +16720,7 @@ async function generarImagenReserva(ids){
     ctx.fillStyle = C.BLANCO;
     ctx.font = `${NFONT}px "Bebas Neue", Arial, sans-serif`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-    cvFillTextTrunc(ctx, p.visit.toUpperCase(), COL_EC_R, ecBotY + s(4), (W-COL_EC_R)*1.8);
+    { const libre=(y+ROW_H)-(ecBotY+s(4))-2; if(libre>=NFONT*2.1) cvFillTextWrap(ctx, p.visit.toUpperCase(), COL_EC_R, ecBotY + s(4), (W-COL_EC_R)*1.8, NFONT*1.05); else cvFillTextTrunc(ctx, p.visit.toUpperCase(), COL_EC_R, ecBotY + s(4), (W-COL_EC_R)*1.8); }
 
     // ── CENTRO: marcador o información de hora ──
     ctx.textBaseline = 'middle';
@@ -17001,7 +17047,7 @@ async function generarImagenPlayoff(torneo, esReserva){
       ctx.fillStyle=esGanL?C.DORADO:C.BLANCO;
       ctx.font=`${s(17)}px "Bebas Neue", Arial, sans-serif`;
       ctx.textAlign='right'; ctx.textBaseline='middle';
-      cvFillTextTrunc(ctx,(c.local||'–').toUpperCase(), escLX-s(12), fy, escLX-s(40));
+      cvFillTextWrapMid(ctx,(c.local||'–').toUpperCase(), escLX-s(12), fy, escLX-s(40), s(18));
 
       // Visitante — escudo + nombre
       const eImgV=escudoImgs[c.visit||''];
@@ -17014,7 +17060,7 @@ async function generarImagenPlayoff(torneo, esReserva){
       ctx.fillStyle=esGanV?C.DORADO:C.BLANCO;
       ctx.font=`${s(17)}px "Bebas Neue", Arial, sans-serif`;
       ctx.textAlign='left'; ctx.textBaseline='middle';
-      cvFillTextTrunc(ctx,(c.visit||'–').toUpperCase(), escVX+ECSIZE+s(12), fy, W-escVX-ECSIZE-s(40));
+      cvFillTextWrapMid(ctx,(c.visit||'–').toUpperCase(), escVX+ECSIZE+s(12), fy, W-escVX-ECSIZE-s(40), s(18));
 
       // Marcador central — caja con degradado dorado (jugado) o neutro (pendiente/en juego)
       const marcTxt = c.idavuelta ? (c.global||'VS') : (c.resultado||'VS');
@@ -17370,7 +17416,7 @@ function cvFilaCruceCC(ctx, c, CX, y, ROW, ECSIZE, escudoImgs, fontNombre, mH, f
   ctx.fillStyle=esGanL?C.DORADO2:C.BLANCO;
   ctx.font=`${fontNombre}px "Bebas Neue", Arial, sans-serif`;
   ctx.textAlign='right'; ctx.textBaseline='middle';
-  cvFillTextTrunc(ctx,(c.local||'–').toUpperCase(), escLX-s(12), fy, escLX-s(38));
+  cvFillTextWrapMid(ctx,(c.local||'–').toUpperCase(), escLX-s(12), fy, escLX-s(38), fontNombre*1.02);
 
   const eImgV=escudoImgs[c.visit||''];
   if(eImgV){ ctx.save(); ctx.beginPath(); ctx.arc(escVX+ECSIZE/2,escVY+ECSIZE/2,ECSIZE/2,0,Math.PI*2); ctx.clip(); cvDrawEscudoImg(ctx,eImgV,escVX,escVY,ECSIZE); ctx.restore(); }
@@ -17379,7 +17425,7 @@ function cvFilaCruceCC(ctx, c, CX, y, ROW, ECSIZE, escudoImgs, fontNombre, mH, f
   ctx.fillStyle=esGanV?C.DORADO2:C.BLANCO;
   ctx.font=`${fontNombre}px "Bebas Neue", Arial, sans-serif`;
   ctx.textAlign='left'; ctx.textBaseline='middle';
-  cvFillTextTrunc(ctx,(c.visit||'–').toUpperCase(), escVX+ECSIZE+s(12), fy, CX*2-escVX-ECSIZE-s(38));
+  cvFillTextWrapMid(ctx,(c.visit||'–').toUpperCase(), escVX+ECSIZE+s(12), fy, CX*2-escVX-ECSIZE-s(38), fontNombre*1.02);
 
   // Despeje vertical: el mayor entre escudo y marcador (para que el kicker y
   // el "✓ CLASIFICA" libren AMBOS, no solo el marcador)
@@ -17595,9 +17641,9 @@ async function generarImagenTicketFinalCC(c, escudoImgs, id, liga){
   ctx.font=`700 ${s(15)}px "Bebas Neue", Arial, sans-serif`;
   ctx.textAlign='center';
   ctx.fillStyle=esGanL?C.DORADO2:C.BLANCO;
-  cvFillTextTrunc(ctx,(c.local||'').toUpperCase(), escLX+ES/2, escY+ES+s(22), s(150));
+  cvFillTextWrap(ctx,(c.local||'').toUpperCase(), escLX+ES/2, escY+ES+s(22), s(150), s(16));
   ctx.fillStyle=esGanV?C.DORADO2:C.BLANCO;
-  cvFillTextTrunc(ctx,(c.visit||'').toUpperCase(), escVX+ES/2, escY+ES+s(22), s(150));
+  cvFillTextWrap(ctx,(c.visit||'').toUpperCase(), escVX+ES/2, escY+ES+s(22), s(150), s(16));
 
   ctx.save();
   if(estadoCls!=='pendiente'){ ctx.shadowColor='rgba(240,192,64,0.55)'; ctx.shadowBlur=s(16); }
