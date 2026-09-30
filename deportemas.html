@@ -13006,6 +13006,86 @@ function cvFillTextTrunc(ctx, text, x, y, maxW){
   ctx.fillText(t, x, y);
 }
 
+// Dibuja un nombre en 1 línea si entra; si no, lo parte en 2 renglones (balanceados
+// por palabras). Si aun así no entra, achica un poco la letra y como último recurso trunca.
+// Usa el font actual del ctx (tamaño en px) y textBaseline 'top'. Devuelve el alto ocupado.
+function cvFillTextWrap(ctx, text, cx, yTop, maxW, lineH){
+  const m=ctx.font.match(/(\d+(?:\.\d+)?)px/);
+  const baseSize=m?parseFloat(m[1]):20;
+  const setSize=sz=>{ ctx.font=ctx.font.replace(/\d+(?:\.\d+)?px/, sz+'px'); };
+  const words=String(text).split(/\s+/).filter(Boolean);
+  const lh=lineH||Math.round(baseSize*1.05);
+  if(ctx.measureText(text).width<=maxW || words.length<2){
+    cvFillTextTrunc(ctx,text,cx,yTop,maxW); return lh;
+  }
+  for(let sz=baseSize; sz>=baseSize*0.72; sz-=1){
+    setSize(sz);
+    let best=null;
+    for(let k=1;k<words.length;k++){
+      const a=words.slice(0,k).join(' '), b=words.slice(k).join(' ');
+      const w=Math.max(ctx.measureText(a).width, ctx.measureText(b).width);
+      if(!best||w<best.w) best={a,b,w};
+    }
+    if(best && best.w<=maxW){
+      ctx.fillText(best.a,cx,yTop);
+      ctx.fillText(best.b,cx,yTop+Math.round(lh*sz/baseSize));
+      setSize(baseSize);
+      return Math.round(lh*sz/baseSize)*2;
+    }
+  }
+  setSize(baseSize*0.72);
+  const k=Math.ceil(words.length/2);
+  cvFillTextTrunc(ctx,words.slice(0,k).join(' '),cx,yTop,maxW);
+  cvFillTextTrunc(ctx,words.slice(k).join(' '),cx,yTop+Math.round(lh*0.72),maxW);
+  setSize(baseSize);
+  return Math.round(lh*0.72)*2;
+}
+
+
+// ===== Torneo Provincial: losa de categoría (SUB 13 / SUB 15) =====
+// Se usa en Próximos partidos, Resultado de partido y Tabla de posiciones del Torneo Provincial.
+const CV_CAT_H = 116;
+function cvCatDe(p){ return (p&&p.esProvincial&&p.provincialCategoria)?(p.provincialCategoria==='sub15'?'SUB 15':'SUB 13'):null; }
+function cvZonaDe(p){ return (p&&p.provincialZona)?('ZONA '+String(p.provincialZona).replace(/\D/g,'')):null; }
+function cvCatBloque(ctx,W,y,catLabel,o){
+  o=o||{};
+  ctx.save();
+  const h=100, top=y+8, x1=470, sk=34;
+  // losa dorada (categoría)
+  const g=ctx.createLinearGradient(0,top,x1,top); g.addColorStop(0,'#b58f1e'); g.addColorStop(1,'#f0c040');
+  ctx.beginPath(); ctx.moveTo(0,top); ctx.lineTo(x1,top); ctx.lineTo(x1-sk,top+h); ctx.lineTo(0,top+h); ctx.closePath();
+  ctx.fillStyle=g; ctx.fill();
+  // losa oscura (torneo)
+  ctx.beginPath(); ctx.moveTo(x1+12,top); ctx.lineTo(W,top); ctx.lineTo(W,top+h); ctx.lineTo(x1+12-sk,top+h); ctx.closePath();
+  ctx.fillStyle='#232330'; ctx.fill();
+  // filete dorado inferior
+  ctx.beginPath(); ctx.moveTo(x1+12-sk,top+h); ctx.lineTo(W,top+h); ctx.lineTo(W,top+h+5); ctx.lineTo(x1+12-sk-1.5,top+h+5); ctx.closePath();
+  ctx.fillStyle='#c9a227'; ctx.fill();
+  // categoría
+  ctx.textBaseline='middle'; ctx.textAlign='left';
+  ctx.fillStyle='#080808'; ctx.font='96px "Bebas Neue", Arial, sans-serif'; ctx.letterSpacing='5px';
+  ctx.fillText(catLabel,34,top+h/2+5); ctx.letterSpacing='0px';
+  // logo del torneo (opcional) a la derecha de la losa oscura
+  let logoW=0;
+  if(o.logoImg){
+    const iw=o.logoImg.naturalWidth||o.logoImg.width||1, ih=o.logoImg.naturalHeight||o.logoImg.height||1;
+    const lh=72; const lw=Math.min(140, lh*iw/ih);
+    ctx.drawImage(o.logoImg, W-28-lw, top+(h-lh)/2, lw, lh);
+    logoW=lw+18;
+  }
+  const t1=o.tabla?'FASE DE GRUPOS':'TORNEO PROVINCIAL';
+  const t2=(o.tabla?'CLASIFICAN 1° Y 2° A COPA ORO':[o.zona,o.fecha].filter(Boolean).join('  ·  ')||'FASE DE GRUPOS').toUpperCase();
+  const availE=W-(x1+46)-28-logoW;
+  let f1=52; ctx.letterSpacing='3px';
+  for(;f1>28;f1-=2){ ctx.font=f1+'px "Bebas Neue", Arial, sans-serif'; if(ctx.measureText(t1).width<=availE) break; }
+  ctx.fillStyle='#ffffff'; ctx.fillText(t1,x1+44,top+38); ctx.letterSpacing='0px';
+  let f2=26; ctx.letterSpacing='4px';
+  for(;f2>15;f2-=1){ ctx.font='700 '+f2+'px "Rajdhani", Arial, sans-serif'; if(ctx.measureText(t2).width<=availE) break; }
+  ctx.fillStyle='#f0c040'; ctx.fillText(t2,x1+46,top+78); ctx.letterSpacing='0px';
+  ctx.restore();
+  return CV_CAT_H;
+}
+
 // Dibuja escudo en canvas con fallback a círculo con iniciales
 // Dibuja una imagen de escudo dentro de un cuadro size x size SIN deformarla:
 // escala manteniendo proporción original ("contain") y la centra en el cuadro.
@@ -13118,6 +13198,11 @@ async function generarImagenPartido(p){
   ctx.fillRect(0, 0, W, CV_H);
 
   let y = await cvHeader(ctx, W, id, 0);
+  const PROVP = cvCatDe(p);
+  if(PROVP){
+    const logoE = await cargarImagenAsync(logoParaPartido(p));
+    y += cvCatBloque(ctx,W,y,PROVP,{zona:cvZonaDe(p),fecha:p.fecha||'',logoImg:logoE});
+  }
   const hHeader = y;
 
   // ── HERO: Marcador grande centrado ────────────────────────
@@ -13132,9 +13217,9 @@ async function generarImagenPartido(p){
   // Fecha / info
   const divLabel  = p.div==='primera'?'1ª División':p.div==='segunda'?'2ª División':(p.torneoExtra||'Extra Liga');
   const tornLabel2 = (p.div!=='extraliga'&&p.torneo)?' · '+torneoLabel(p.torneo):'';
-  const infoTxt = [(p.fecha||''),(p.dia||''), divLabel+tornLabel2].filter(Boolean).join('  ·  ');
+  const infoTxt = PROVP ? (p.dia||'') : [(p.fecha||''),(p.dia||''), divLabel+tornLabel2].filter(Boolean).join('  ·  ');
   const infoY = heroY + s(28);
-  const logoImgPartido = await cargarImagenAsync(logoParaPartido(p));
+  const logoImgPartido = PROVP ? null : await cargarImagenAsync(logoParaPartido(p));
   ctx.font = `700 ${s(13)}px "Rajdhani", Arial, sans-serif`;
   if(logoImgPartido){
     const logoH = s(20);
@@ -13197,12 +13282,12 @@ async function generarImagenPartido(p){
   ctx.fillStyle = C.BLANCO;
   ctx.font = `${s(26)}px "Bebas Neue", Arial, sans-serif`;
   ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-  cvFillTextTrunc(ctx, p.local.toUpperCase(), escLX + ESCUDO/2, escY + ESCUDO + s(10), s(220));
+  cvFillTextWrap(ctx, p.local.toUpperCase(), escLX + ESCUDO/2, escY + ESCUDO + s(10), Math.min(s(220), 2*(escLX + ESCUDO/2 - 20)), s(27));
 
   await cvDrawEscudo(ctx, p.visit, escRX, escY, ESCUDO);
   ctx.font = `${s(26)}px "Bebas Neue", Arial, sans-serif`;
   ctx.textAlign = 'center';
-  cvFillTextTrunc(ctx, p.visit.toUpperCase(), escRX + ESCUDO/2, escY + ESCUDO + s(10), s(220));
+  cvFillTextWrap(ctx, p.visit.toUpperCase(), escRX + ESCUDO/2, escY + ESCUDO + s(10), Math.min(s(220), 2*(W - (escRX + ESCUDO/2) - 20)), s(27));
   ctx.textBaseline = 'alphabetic';
 
   y = heroY + heroH;
@@ -15877,7 +15962,10 @@ async function _generarImagenProximosGrupo(ids){
   const HORA_H      = s(34);
   const ARB_H       = s(28);
   const HEADER_H    = s(64);
-  const TITLE_H     = s(78);
+  const pCat        = ps.find(p=>cvCatDe(p));
+  const PROV        = !!pCat;              // Torneo Provincial: losa de categoría en vez de subtítulo
+  const CAT_H       = PROV ? CV_CAT_H : 0;
+  const TITLE_H     = PROV ? s(56) : s(78);
   const FOOTER_H    = s(40);
 
   const infoArbH = ps.map(p=>{
@@ -15893,7 +15981,7 @@ async function _generarImagenProximosGrupo(ids){
   // (por ejemplo 4 partidos con día+hora+árbitro), primero se achica el
   // escudo hasta ECSIZE_MIN — nunca queda demasiado chico — y solo si ni
   // así entra, como último recurso, el lienzo crece más alto que 1350.
-  const disponibleFijo  = CV_H - HEADER_H - TITLE_H - FOOTER_H;
+  const disponibleFijo  = CV_H - HEADER_H - TITLE_H - FOOTER_H - CAT_H;
   const totalRowsHBase  = sumInfoArbH + ps.length*(ECSIZE+GAP_NOMBRE);
   if(totalRowsHBase > disponibleFijo){
     const ecsizeNecesario = (disponibleFijo - sumInfoArbH - ps.length*GAP_NOMBRE) / ps.length;
@@ -15910,7 +15998,7 @@ async function _generarImagenProximosGrupo(ids){
     const extraPorFila = (disponibleFijo - totalRowsH) / ps.length;
     rowHeightsFinal = rowHeights.map(h => h + extraPorFila);
   } else {
-    H = Math.round(HEADER_H + TITLE_H + totalRowsH + FOOTER_H);
+    H = Math.round(HEADER_H + TITLE_H + CAT_H + totalRowsH + FOOTER_H);
     rowHeightsFinal = rowHeights;
   }
 
@@ -15925,6 +16013,10 @@ async function _generarImagenProximosGrupo(ids){
   ctx.fillStyle = bgGrad; ctx.fillRect(0,0,W,H);
 
   let y = await cvHeader(ctx,W,id,0);
+  if(PROV){
+    const logoE = await cargarImagenAsync(logoParaPartido(pCat));
+    y += cvCatBloque(ctx,W,y,cvCatDe(pCat),{zona:cvZonaDe(pCat),fecha:pCat.fecha||'',logoImg:logoE});
+  }
 
   // Titulo seccion
   const divLabel = ps[0].div==='primera'?'PRIMERA DIVISIÓN':ps[0].div==='segunda'?'SEGUNDA DIVISIÓN':(ps[0].torneoExtra||'EXTRA LIGA').toUpperCase();
@@ -15933,6 +16025,7 @@ async function _generarImagenProximosGrupo(ids){
   ctx.font = `${s(34)}px "Bebas Neue", Arial, sans-serif`;
   ctx.textAlign = 'center';
   ctx.fillText('PRÓXIMOS PARTIDOS', CX, y+s(40));
+  if(!PROV){
   const infoTxtPx = fechaLabel+divLabel;
   ctx.font = `600 ${s(18)}px "DM Sans", Arial, sans-serif`;
   const logoImgPx = await cargarImagenAsync(logoParaPartido(ps[0]));
@@ -15952,12 +16045,14 @@ async function _generarImagenProximosGrupo(ids){
     ctx.fillText(infoTxtPx, CX, y+s(64));
   }
 
+  }
+
   // Divisor
   const dg1=ctx.createLinearGradient(0,0,W,0);
   dg1.addColorStop(0,'transparent'); dg1.addColorStop(0.2,C.DORADO);
   dg1.addColorStop(0.8,C.DORADO); dg1.addColorStop(1,'transparent');
-  ctx.fillStyle=dg1; ctx.fillRect(0,y+s(76),W,1);
-  y += s(78);
+  ctx.fillStyle=dg1; ctx.fillRect(0,y+TITLE_H-s(2),W,1);
+  y += TITLE_H;
 
   // Precargar escudos
   const escudoImgs={};
@@ -17817,7 +17912,8 @@ async function generarImagenCopaProvincial(categoria, copa){
   const ROW_H=s(110), hEtapaHdr=s(38);
   const copaLabel=copa==='oro'?'🥇 COPA ORO':'🥈 COPA PLATA';
   const catLabel=categoria==='sub15'?'SUB 15':'SUB 13';
-  const CVH_TOTAL = s(64)+s(56)+s(16) + secciones.length*(hEtapaHdr+s(8)) + totalCruces*ROW_H + secciones.length*s(6) + s(40) + s(20);
+  const HDR_TP=205;
+  const CVH_TOTAL = s(64)+HDR_TP+s(16) + secciones.length*(hEtapaHdr+s(8)) + totalCruces*ROW_H + secciones.length*s(6) + s(40) + s(20);
 
   const canvas=document.createElement('canvas');
   canvas.width=W; canvas.height=CVH_TOTAL;
@@ -17828,24 +17924,43 @@ async function generarImagenCopaProvincial(categoria, copa){
   ctx.fillStyle=bgGrad; ctx.fillRect(0,0,W,CVH_TOTAL);
 
   let y=await cvHeader(ctx,W,id,0);
-  if(data.provincialLogo){
-    const logoSize=s(36);
-    await cvDrawLogo(ctx,data.provincialLogo,CX-s(116),y+s(8),logoSize);
-    ctx.fillStyle=C.DORADO;
-    ctx.font=`${s(26)}px "Bebas Neue", Arial, sans-serif`;
-    ctx.textAlign='left'; ctx.textBaseline='alphabetic';
-    ctx.fillText(copaLabel, CX-s(70), y+s(34));
-  } else {
-    ctx.fillStyle=C.DORADO;
-    ctx.font=`${s(28)}px "Bebas Neue", Arial, sans-serif`;
-    ctx.textAlign='center'; ctx.textBaseline='alphabetic';
-    ctx.fillText(copaLabel, CX, y+s(34));
-  }
-  ctx.fillStyle='rgba(201,162,39,0.55)';
-  ctx.font=`600 ${s(14)}px "DM Sans", Arial, sans-serif`;
-  ctx.textAlign='center';
-  ctx.fillText('TORNEO PROVINCIAL · '+catLabel, CX, y+s(52));
-  y+=s(56);
+  // Título grande (logo + Copa) y, debajo, "TORNEO PROVINCIAL" + categoría en una etiqueta dorada bien visible
+  const copaTxt=copa==='oro'?'COPA ORO':'COPA PLATA';
+  const copaEmoji=copa==='oro'?'🥇':'🥈';
+  ctx.font='68px "Bebas Neue", Arial, sans-serif';
+  const tW=ctx.measureText(copaTxt).width;
+  const logoSize=92, gapL=22;
+  const tieneLogo=!!data.provincialLogo;
+  const emojiW=tieneLogo?0:70;
+  const grupoW=(tieneLogo?logoSize+gapL:emojiW)+tW;
+  let gx=CX-grupoW/2;
+  if(tieneLogo){ await cvDrawLogo(ctx,data.provincialLogo,gx,y+16,logoSize); gx+=logoSize+gapL; }
+  else { ctx.font='56px Arial, sans-serif'; ctx.textAlign='left'; ctx.textBaseline='alphabetic'; ctx.fillText(copaEmoji,gx,y+72); gx+=emojiW; }
+  ctx.fillStyle=C.DORADO;
+  ctx.font='68px "Bebas Neue", Arial, sans-serif';
+  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+  ctx.fillText(copaTxt, gx, y+78);
+
+  const subTxt='TORNEO PROVINCIAL';
+  ctx.font='700 30px "Rajdhani", Arial, sans-serif';
+  const subW=ctx.measureText(subTxt).width;
+  ctx.font='700 44px "Rajdhani", Arial, sans-serif';
+  const pillW=ctx.measureText(catLabel).width+64, pillH=68, pGap=26;
+  const filaW=subW+pGap+pillW;
+  let fx=CX-filaW/2;
+  const pY=y+112;
+  ctx.font='700 30px "Rajdhani", Arial, sans-serif';
+  ctx.fillStyle='rgba(255,255,255,0.85)';
+  ctx.textAlign='left'; ctx.textBaseline='middle';
+  ctx.fillText(subTxt, fx, pY+pillH/2+2);
+  fx+=subW+pGap;
+  cvRoundRect(ctx, fx, pY, pillW, pillH, pillH/2);
+  ctx.fillStyle=C.DORADO; ctx.fill();
+  ctx.fillStyle=C.NEG; ctx.textAlign='center';
+  ctx.font='700 44px "Rajdhani", Arial, sans-serif';
+  ctx.fillText(catLabel, fx+pillW/2, pY+pillH/2+2);
+  ctx.textBaseline='alphabetic';
+  y+=HDR_TP;
   const dg=ctx.createLinearGradient(0,0,W,0);
   dg.addColorStop(0,'transparent'); dg.addColorStop(0.2,C.DORADO);
   dg.addColorStop(0.8,C.DORADO); dg.addColorStop(1,'transparent');
@@ -17901,54 +18016,52 @@ async function generarImagenTablaProvincial(categoria, zonaKey){
   ctx.fillStyle=bgGrad; ctx.fillRect(0,0,W,CV_H);
 
   let y=await cvHeader(ctx,W,id,0);
-  const tituloZona='TORNEO PROVINCIAL · '+zonaLabels[zonaKey].toUpperCase();
-  if(data.provincialLogo){
-    const logoSize=s(36);
-    await cvDrawLogo(ctx,data.provincialLogo,CX-s(150),y+s(8),logoSize);
-    ctx.fillStyle=C.DORADO;
-    ctx.font=`${s(24)}px "Bebas Neue", Arial, sans-serif`;
-    ctx.textAlign='left'; ctx.textBaseline='alphabetic';
-    ctx.fillText(tituloZona, CX-s(104), y+s(34));
-  } else {
-    ctx.fillStyle=C.DORADO;
-    ctx.font=`${s(26)}px "Bebas Neue", Arial, sans-serif`;
-    ctx.textAlign='center'; ctx.textBaseline='alphabetic';
-    ctx.fillText(tituloZona, CX, y+s(34));
-  }
-  ctx.fillStyle='rgba(201,162,39,0.55)';
-  ctx.font=`600 ${s(14)}px "DM Sans", Arial, sans-serif`;
-  ctx.textAlign='center';
-  ctx.fillText(catLabel, CX, y+s(52));
-  y+=s(56);
-  const dg=ctx.createLinearGradient(0,0,W,0);
-  dg.addColorStop(0,'transparent'); dg.addColorStop(0.2,C.DORADO);
-  dg.addColorStop(0.8,C.DORADO); dg.addColorStop(1,'transparent');
-  ctx.fillStyle=dg; ctx.fillRect(0,y,W,1);
-  y+=s(16);
 
-  // Columnas (mismo layout que generarImagenPosiciones)
-  const C1=s(10), C2=s(42), C3=s(82), EQMAX=s(224);
-  const HDR_H=s(32);
+  // ── Título grande (logo + texto centrados como grupo) ──
+  const tituloZona='TORNEO PROVINCIAL · '+zonaLabels[zonaKey].toUpperCase();
+  ctx.font='64px "Bebas Neue", Arial, sans-serif';
+  const tW=ctx.measureText(tituloZona).width;
+  const logoSize=92, gap=22;
+  const tieneLogo=!!data.provincialLogo;
+  const grupoW=(tieneLogo?logoSize+gap:0)+tW;
+  let gx=CX-grupoW/2;
+  if(tieneLogo){
+    await cvDrawLogo(ctx,data.provincialLogo,gx,y+22,logoSize);
+    gx+=logoSize+gap;
+  }
+  ctx.fillStyle=C.DORADO;
+  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+  ctx.fillText(tituloZona, gx, y+72);
+  // Categoría en losa dorada/oscura (mismo diseño que Próximos y Resultado)
+  y+=116;
+  y+=cvCatBloque(ctx,W,y,catLabel,{tabla:true});
+
+  // ── Columnas: ocupan todo el ancho ──
+  const PAD=28;
+  const xRank=PAD+34;              // centro del número
+  const xEsc=PAD+84;               // inicio escudo
+  const eSize=92;
+  const xName=xEsc+eSize+22;       // inicio del nombre
   const numCols=[
-    {l:'PTS', x:C3+EQMAX+s(4),   w:s(52)},
-    {l:'PJ',  x:C3+EQMAX+s(60),  w:s(38)},
-    {l:'G',   x:C3+EQMAX+s(100), w:s(34)},
-    {l:'E',   x:C3+EQMAX+s(136), w:s(34)},
-    {l:'P',   x:C3+EQMAX+s(172), w:s(34)},
-    {l:'GF',  x:C3+EQMAX+s(208), w:s(34)},
-    {l:'GC',  x:C3+EQMAX+s(244), w:s(34)},
-    {l:'DG',  x:C3+EQMAX+s(280), w:s(44)},
+    {l:'PTS', w:100},{l:'PJ', w:58},{l:'G', w:52},{l:'E', w:52},
+    {l:'P', w:52},{l:'GF', w:58},{l:'GC', w:58},{l:'DG', w:72}
   ];
-  ctx.fillStyle='rgba(201,162,39,0.1)'; ctx.fillRect(0,y,W,HDR_H);
-  ctx.fillStyle='rgba(201,162,39,0.8)';
-  ctx.font=`700 ${s(12)}px "Rajdhani", Arial, sans-serif`;
+  const numTotal=numCols.reduce((a,c)=>a+c.w,0);
+  let nx=W-PAD-numTotal;
+  numCols.forEach(c=>{ c.x=nx; nx+=c.w; });
+  const nameMaxW=numCols[0].x-xName-12;
+
+  const HDR_H=64;
+  ctx.fillStyle='rgba(201,162,39,0.14)'; ctx.fillRect(0,y,W,HDR_H);
+  ctx.fillStyle=C.DORADO2;
+  ctx.font='700 28px "Rajdhani", Arial, sans-serif';
   ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText('#', C1+s(16), y+HDR_H/2);
+  ctx.fillText('#', xRank, y+HDR_H/2);
   ctx.textAlign='left';
-  ctx.fillText('EQUIPO', C3, y+HDR_H/2);
+  ctx.fillText('EQUIPO', xName, y+HDR_H/2);
   numCols.forEach(c=>{ ctx.textAlign='center'; ctx.fillText(c.l, c.x+c.w/2, y+HDR_H/2); });
-  ctx.fillStyle='rgba(201,162,39,0.35)';
-  ctx.fillRect(0, y+HDR_H-1, W, 1);
+  ctx.fillStyle='rgba(201,162,39,0.6)';
+  ctx.fillRect(0, y+HDR_H-2, W, 2);
   ctx.textBaseline='alphabetic';
   y+=HDR_H;
 
@@ -17961,76 +18074,107 @@ async function generarImagenTablaProvincial(categoria, zonaKey){
     img.onload=()=>{escudoImgs[p.equipo]=img;res();}; img.onerror=()=>res(); img.src=src;
   })));
 
+  // Ajusta el nombre a 1–2 líneas sin cortarlo con "…"
+  const wrapNombre=(texto,maxW,maxFs=40)=>{
+    const words=String(texto).split(' ');
+    for(let fs=maxFs; fs>=26; fs-=2){
+      ctx.font=`700 ${fs}px "DM Sans", Arial, sans-serif`;
+      if(ctx.measureText(texto).width<=maxW) return {lines:[texto],fs};
+      // dos líneas
+      let best=null;
+      for(let k=1;k<words.length;k++){
+        const a=words.slice(0,k).join(' '), b=words.slice(k).join(' ');
+        const w=Math.max(ctx.measureText(a).width, ctx.measureText(b).width);
+        if(w<=maxW && (!best||w<best.w)) best={lines:[a,b],w};
+      }
+      if(best) return {lines:best.lines,fs};
+    }
+    ctx.font='700 26px "DM Sans", Arial, sans-serif';
+    return {lines:[texto],fs:26};
+  };
+
+  const commonFs=Math.min(...pos.map(p=>wrapNombre(p.equipo.toUpperCase(), nameMaxW).fs));
   const hFooter=s(40);
-  const hDisp=CV_H-y-hFooter-s(10);
-  const ROW_H=Math.max(s(70), Math.min(s(160), Math.floor(hDisp/pos.length)));
+  const hLeyenda=90;
+  const hDisp=CV_H-y-hFooter-hLeyenda;
+  const ROW_H=Math.max(120, Math.min(210, Math.floor(hDisp/pos.length)));
   y+=Math.max(0, Math.floor((hDisp-pos.length*ROW_H)/2));
 
   pos.forEach((p,i)=>{
     const fy=y+ROW_H/2;
-    ctx.fillStyle = i%2===0 ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.15)';
+    ctx.fillStyle = i%2===0 ? 'rgba(255,255,255,0.045)' : 'rgba(0,0,0,0.22)';
     ctx.fillRect(0,y,W,ROW_H);
 
-    const zc = i<2 ? C.VERDE : C.DORADO;
-    ctx.fillStyle=zc; ctx.fillRect(0,y,s(4),ROW_H);
+    const zc = i<2 ? '#2ea84f' : C.DORADO;
+    ctx.fillStyle=zc; ctx.fillRect(0,y,12,ROW_H);
 
+    // Posición
     ctx.textAlign='center'; ctx.textBaseline='middle';
     if(i===0){
-      ctx.shadowColor='rgba(201,162,39,0.5)'; ctx.shadowBlur=s(10);
-      ctx.beginPath(); ctx.arc(C1+s(16),fy,s(16),0,Math.PI*2);
+      ctx.shadowColor='rgba(201,162,39,0.6)'; ctx.shadowBlur=18;
+      ctx.beginPath(); ctx.arc(xRank,fy,30,0,Math.PI*2);
       ctx.fillStyle=C.DORADO; ctx.fill();
       ctx.shadowBlur=0;
-      ctx.fillStyle=C.NEG; ctx.font=`700 ${s(14)}px "Rajdhani", Arial, sans-serif`;
-      ctx.fillText('1', C1+s(16), fy);
+      ctx.fillStyle=C.NEG; ctx.font='700 36px "Rajdhani", Arial, sans-serif';
+      ctx.fillText('1', xRank, fy+2);
     } else {
-      ctx.fillStyle='rgba(255,255,255,0.45)';
-      ctx.font=`600 ${s(14)}px "Rajdhani", Arial, sans-serif`;
-      ctx.fillText(i+1, C1+s(16), fy);
+      ctx.fillStyle='rgba(255,255,255,0.75)';
+      ctx.font='700 40px "Rajdhani", Arial, sans-serif';
+      ctx.fillText(i+1, xRank, fy+2);
     }
 
-    const eSize=s(28), eX=C2+s(2), eY=y+(ROW_H-eSize)/2;
+    // Escudo (círculo con aro dorado suave)
+    const eY=y+(ROW_H-eSize)/2;
     const eImg=escudoImgs[p.equipo];
     if(eImg){
       ctx.save(); ctx.beginPath();
-      ctx.arc(eX+eSize/2,eY+eSize/2,eSize/2,0,Math.PI*2); ctx.clip();
-      cvDrawEscudoImg(ctx,eImg,eX,eY,eSize); ctx.restore();
-    } else { cvEscudoFallback(ctx,p.equipo,eX,eY,eSize); }
+      ctx.arc(xEsc+eSize/2,eY+eSize/2,eSize/2,0,Math.PI*2); ctx.clip();
+      cvDrawEscudoImg(ctx,eImg,xEsc,eY,eSize); ctx.restore();
+    } else { cvEscudoFallback(ctx,p.equipo,xEsc,eY,eSize); }
 
-    ctx.fillStyle=i===0?C.BLANCO:'rgba(255,255,255,0.85)';
-    ctx.font=`${i===0?'600':'500'} ${s(15)}px "DM Sans", Arial, sans-serif`;
+    // Nombre completo, en 1–2 líneas
+    const nm=wrapNombre(p.equipo.toUpperCase(), nameMaxW, commonFs);
+    ctx.fillStyle=i===0?'#ffffff':'rgba(255,255,255,0.95)';
+    ctx.font=`700 ${nm.fs}px "DM Sans", Arial, sans-serif`;
     ctx.textAlign='left'; ctx.textBaseline='middle';
-    cvFillTextTrunc(ctx, p.equipo, C3, fy, EQMAX-s(4));
+    const lh=nm.fs*1.15;
+    nm.lines.forEach((ln,li)=>{
+      ctx.fillText(ln, xName, fy+(li-(nm.lines.length-1)/2)*lh);
+    });
 
-    ctx.fillStyle=C.DORADO;
-    ctx.font=`${s(22)}px "Bebas Neue", Arial, sans-serif`;
+    // PTS destacado
+    ctx.fillStyle=C.DORADO2;
+    ctx.font='64px "Bebas Neue", Arial, sans-serif';
     ctx.textAlign='center';
-    ctx.fillText(p.pts!=null?p.pts:0, numCols[0].x+numCols[0].w/2, fy);
+    ctx.fillText(p.pts!=null?p.pts:0, numCols[0].x+numCols[0].w/2, fy+3);
 
-    ctx.fillStyle='rgba(255,255,255,0.6)';
-    ctx.font=`600 ${s(13)}px "Rajdhani", Arial, sans-serif`;
+    // Resto de estadísticas, más grandes y con mayor contraste
+    ctx.fillStyle='rgba(255,255,255,0.88)';
+    ctx.font='700 38px "Rajdhani", Arial, sans-serif';
     const dgVal=(p.gf||0)-(p.gc||0);
     const dgStr=dgVal>0?'+'+dgVal:String(dgVal);
     [p.pj||0,p.g||0,p.e||0,p.p||0,p.gf||0,p.gc||0,dgStr].forEach((v,ci)=>{
-      ctx.fillText(String(v), numCols[ci+1].x+numCols[ci+1].w/2, fy);
+      ctx.fillText(String(v), numCols[ci+1].x+numCols[ci+1].w/2, fy+2);
     });
 
-    ctx.fillStyle='rgba(255,255,255,0.05)';
+    ctx.fillStyle='rgba(255,255,255,0.08)';
     ctx.fillRect(0,y+ROW_H-1,W,1);
     y+=ROW_H;
   });
 
-  y+=s(8);
-  ctx.fillStyle='rgba(255,255,255,0.07)'; ctx.fillRect(s(40),y,W-s(80),1);
-  y+=s(14);
-  const leyenda=[{c:C.VERDE,l:'1° y 2° → Copa Oro'},{c:C.DORADO,l:'3° y 4° → Copa Plata'}];
-  const totalLeyW=leyenda.reduce((a,l)=>a+ctx.measureText(l.l).width+s(34),0);
+  // ── Leyenda ──
+  y+=28;
+  const leyenda=[{c:'#2ea84f',l:'1° y 2° → Copa Oro'},{c:C.DORADO,l:'3° y 4° → Copa Plata'}];
+  ctx.font='700 28px "Rajdhani", Arial, sans-serif';
+  const swW=8, swGap=14, itemGap=56;
+  const totalLeyW=leyenda.reduce((a,l)=>a+swW+swGap+ctx.measureText(l.l.toUpperCase()).width,0)+itemGap*(leyenda.length-1);
   let lx=CX-totalLeyW/2;
-  ctx.textAlign='left'; ctx.font=`600 ${s(12)}px "Rajdhani", Arial, sans-serif`;
+  ctx.textAlign='left'; ctx.textBaseline='middle';
   leyenda.forEach(l=>{
-    ctx.fillStyle=l.c; ctx.fillRect(lx,y,s(4),s(14));
-    ctx.fillStyle='rgba(255,255,255,0.6)';
-    ctx.fillText(l.l.toUpperCase(), lx+s(10), y+s(11));
-    lx+=ctx.measureText(l.l).width+s(34);
+    ctx.fillStyle=l.c; ctx.fillRect(lx,y,swW,32);
+    ctx.fillStyle='rgba(255,255,255,0.85)';
+    ctx.fillText(l.l.toUpperCase(), lx+swW+swGap, y+17);
+    lx+=swW+swGap+ctx.measureText(l.l.toUpperCase()).width+itemGap;
   });
 
   cvFooter(ctx,W,CV_H-s(40),liga);
