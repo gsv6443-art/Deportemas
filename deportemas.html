@@ -5001,6 +5001,7 @@ table.posiciones td:nth-child(8){
           <select id="promo-modo" onchange="promoCambiarModo()">
             <option value="uno">Un partido</option>
             <option value="tabla">Partido con título y tabla de posiciones (top 4)</option>
+            <option value="campeon">Campeón y ascenso (club campeón con foto)</option>
           </select>
         </div>
 
@@ -5132,6 +5133,35 @@ table.posiciones td:nth-child(8){
           </div>
           <p style="font-size:10px;color:var(--gris);margin-top:-4px;margin-bottom:14px;font-family:'Rajdhani',sans-serif">
             Muestra el partido con su título y, debajo, los primeros 4 puestos de la tabla elegida. Si elegís un partido guardado, la tabla se selecciona sola según su división y torneo. La foto es opcional y tiene corte diagonal.
+          </p>
+        </div>
+
+        <div id="promo-campeon-wrap" style="display:none">
+          <div class="form-group">
+            <label>Club campeón</label>
+            <input type="text" id="promo4-club" list="promo-equipos-datalist" placeholder="Nombre exacto del equipo (toma su escudo)"/>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Texto principal</label>
+              <input type="text" id="promo4-titulo" value="CAMPEÓN" placeholder="Ej: CAMPEÓN"/>
+            </div>
+            <div class="form-group"><label>Etiqueta negra</label>
+              <input type="text" id="promo4-etiqueta" value="Y ASCENSO" placeholder="Ej: Y ASCENSO"/>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Etiqueta superior</label>
+              <input type="text" id="promo4-tag" value="HISTÓRICO" placeholder="Ej: HISTÓRICO (vacío = no se dibuja)"/>
+            </div>
+            <div class="form-group"><label>Sello</label>
+              <input type="text" id="promo4-sello" value="B → A" placeholder="Ej: B → A (vacío = no se dibuja)"/>
+            </div>
+          </div>
+          <div class="form-group"><label>Texto bajo el nombre del club</label>
+            <input type="text" id="promo4-subtitulo" value="ASCIENDE A PRIMERA · 2026" placeholder="Ej: ASCIENDE A PRIMERA · 2026"/>
+          </div>
+          <p style="font-size:10px;color:var(--gris);margin-top:-4px;margin-bottom:14px;font-family:'Rajdhani',sans-serif">
+            Foto a pantalla completa (la subís abajo, en "Foto de fondo"), banda dorada con el texto principal, y barra negra con el escudo, el nombre del club y el sello. Si no subís foto queda un fondo oscuro. Todos los textos se pueden cambiar.
           </p>
         </div>
 
@@ -13957,10 +13987,11 @@ function promoCargarPartido(){
 }
 
 function promoCambiarModo(){
-  const tabla = document.getElementById('promo-modo').value === 'tabla';
-  const u = document.getElementById('promo-uno-wrap'), t = document.getElementById('promo-tabla-wrap');
-  if(u) u.style.display = tabla ? 'none' : '';
-  if(t) t.style.display = tabla ? '' : 'none';
+  const modo = document.getElementById('promo-modo').value;
+  const u = document.getElementById('promo-uno-wrap'), t = document.getElementById('promo-tabla-wrap'), c = document.getElementById('promo-campeon-wrap');
+  if(u) u.style.display = modo === 'uno' ? '' : 'none';
+  if(t) t.style.display = modo === 'tabla' ? '' : 'none';
+  if(c) c.style.display = modo === 'campeon' ? '' : 'none';
 }
 
 function promoCargarPartido3(){
@@ -14018,6 +14049,8 @@ function promoLimpiarForm(){
   });
   const t3 = document.getElementById('promo3-tabla'); if(t3 && t3.options.length) t3.selectedIndex = 0;
   const l3 = document.getElementById('promo3-lado'); if(l3) l3.value = 'izq';
+  const defs4 = {'promo4-club':'','promo4-titulo':'CAMPEÓN','promo4-etiqueta':'Y ASCENSO','promo4-tag':'HISTÓRICO','promo4-sello':'B → A','promo4-subtitulo':'ASCIENDE A PRIMERA · 2026'};
+  Object.keys(defs4).forEach(k=>{ const el = document.getElementById(k); if(el) el.value = defs4[k]; });
   promoQuitarFoto();
   promoQuitarLogoTorneo();
 }
@@ -14115,7 +14148,30 @@ function promoGenerarTabla(){
   abrirShare(() => generarImagenPromocionalTabla(p));
 }
 
+function promoGenerarCampeon(){
+  const val = id => (document.getElementById(id)||{value:''}).value.trim();
+  const club = val('promo4-club');
+  if(!club){
+    alert('Completá el club campeón.');
+    return;
+  }
+  const p = {
+    club,
+    titulo:    val('promo4-titulo'),
+    etiqueta:  val('promo4-etiqueta'),
+    tag:       val('promo4-tag'),
+    sello:     val('promo4-sello'),
+    subtitulo: val('promo4-subtitulo'),
+    foto: _promoFoto || '',
+  };
+  abrirShare(() => generarImagenPromoCampeon(p));
+}
+
 function promoGenerar(){
+  if(document.getElementById('promo-modo') && document.getElementById('promo-modo').value === 'campeon'){
+    promoGenerarCampeon();
+    return;
+  }
   if(document.getElementById('promo-modo') && document.getElementById('promo-modo').value === 'tabla'){
     promoGenerarTabla();
     return;
@@ -14478,6 +14534,200 @@ async function generarImagenPromocional(p){
    editable (blanco / dorado), el partido con los dos escudos y,
    debajo, los primeros 4 puestos de la tabla elegida.
    ══════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════
+   PROMOCIÓN — CAMPEÓN Y ASCENSO (1080×1350)
+   Foto a pantalla completa, banda dorada inclinada con el texto
+   principal + etiqueta negra, barra inferior negra con escudo,
+   nombre del club y sello. Bandas inclinadas 16° (estilo transmisión).
+   ══════════════════════════════════════════════════════════════ */
+async function generarImagenPromoCampeon(p){
+  await document.fonts.ready;
+  const id   = getIdentidad();
+  const liga = id.nombre || 'DEPORTEMAS';
+  const W = CV_W, H = CV_H;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.textBaseline = 'alphabetic';
+
+  const SK       = Math.tan(16 * Math.PI / 180);
+  const footH    = s(40);
+  const footerTop = H - footH;
+  const barH     = 260;
+  const barTop   = footerTop - barH;
+  const bandH    = 188;
+  const setLS    = v => { if('letterSpacing' in ctx) ctx.letterSpacing = v; };
+  const FB       = '"Bebas Neue", Arial, sans-serif';
+  const FR       = '"Rajdhani", Arial, sans-serif';
+  // Dibuja dentro de un sistema inclinado cuyo origen vertical es yAnchor
+  const skewY0 = (yAnchor, fn) => {
+    ctx.save(); ctx.translate(0, yAnchor); ctx.transform(1, 0, -SK, 1, 0, 0); fn(); ctx.restore();
+  };
+
+  // ── Fondo: foto a pantalla completa (o fondo oscuro) ─────────────
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#3a3a40'); bg.addColorStop(1, '#151518');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+  const foto = await cargarImagenAsync(p.foto);
+  if(foto){
+    const iw = foto.naturalWidth || foto.width || 1, ih = foto.naturalHeight || foto.height || 1;
+    const sc = Math.max(W/iw, H/ih);
+    const dw = iw*sc, dh = ih*sc;
+    // leve sesgo hacia arriba para no cortar caras
+    ctx.drawImage(foto, (W-dw)/2, (H-dh)*0.3, dw, dh);
+  } else {
+    ctx.fillStyle = 'rgba(255,255,255,.13)';
+    ctx.font = `260px ${FR}`;
+    ctx.textAlign = 'center';
+    ctx.fillText('⚽', W/2, H*0.42);
+  }
+  ctx.fillStyle = 'rgba(0,0,0,.25)';
+  ctx.fillRect(0, 0, W, H);
+
+  // ── Medidas de la banda: el texto siempre entra dentro del rectángulo ──
+  const titulo   = (p.titulo || 'CAMPEÓN').toUpperCase();
+  const etiqueta = (p.etiqueta || '').toUpperCase();
+  const bandLeft = -98, padL = 150, gap = 32, lblPadX = 32, padR = 70;
+  const textX    = bandLeft + padL;           // 52
+  const maxRight = 940;
+  let tSize = 136, eSize = 68, tw = 0, ew = 0, bandRight = 0;
+  const medir = () => {
+    ctx.font = `400 ${tSize}px ${FB}`; setLS(Math.round(tSize*0.045)+'px');
+    tw = ctx.measureText(titulo).width;
+    ew = 0;
+    if(etiqueta){
+      ctx.font = `400 ${eSize}px ${FB}`; setLS(Math.round(eSize*0.045)+'px');
+      ew = ctx.measureText(etiqueta).width + lblPadX*2;
+    }
+    bandRight = textX + tw + (ew ? gap + ew : 0) + padR;
+  };
+  medir();
+  while(bandRight > maxRight && tSize > 56){
+    tSize = Math.round(tSize*0.94); eSize = Math.round(eSize*0.94); medir();
+  }
+  bandRight = Math.max(bandRight, 640);
+  const bandW = bandRight - bandLeft;
+
+  // ── Barra inferior negra ─────────────────────────────────────────
+  ctx.fillStyle = C.NEG;
+  ctx.fillRect(0, barTop, W, barH);
+
+  // ── Banda dorada + tira blanca + barra dorada (inclinadas) ───────
+  skewY0(barTop, () => {
+    ctx.fillStyle = C.DORADO;
+    ctx.fillRect(bandLeft, -bandH, bandW, bandH);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(bandLeft, 0, bandW, 16);
+    ctx.fillStyle = C.DORADO;
+    ctx.fillRect(bandRight + 36, -bandH, 26, bandH);
+  });
+
+  // ── Texto principal + etiqueta negra, centrados en la banda ──────
+  const bandMidY = -bandH/2;
+  skewY0(barTop, () => {
+    ctx.textAlign = 'left';
+    ctx.fillStyle = C.NEG;
+    ctx.font = `400 ${tSize}px ${FB}`; setLS(Math.round(tSize*0.045)+'px');
+    ctx.fillText(titulo, textX, bandMidY + tSize*0.35);
+    if(etiqueta){
+      const bx = textX + tw + gap;
+      const bh = Math.round(eSize*1.2 + 22);
+      ctx.fillStyle = C.NEG;
+      ctx.fillRect(bx, bandMidY - bh/2, ew, bh);
+      ctx.fillStyle = C.DORADO2;
+      ctx.font = `400 ${eSize}px ${FB}`; setLS(Math.round(eSize*0.045)+'px');
+      ctx.fillText(etiqueta, bx + lblPadX, bandMidY + eSize*0.35);
+    }
+    setLS('0px');
+  });
+
+  // ── Etiqueta superior (HISTÓRICO) ────────────────────────────────
+  const tag = (p.tag || '').toUpperCase();
+  if(tag){
+    ctx.font = `700 36px ${FR}`; setLS('6px');
+    const ttw = ctx.measureText(tag).width;
+    const bw = ttw + 66, bh = 72;
+    const cx = W - 39 - bw/2, cy = 39 + bh/2 + 10;
+    ctx.save();
+    ctx.translate(cx, cy); ctx.transform(1, 0, -Math.tan(14*Math.PI/180), 1, 0, 0);
+    ctx.fillStyle = C.DORADO; ctx.fillRect(-bw/2, -bh/2, bw, bh);
+    ctx.restore();
+    ctx.fillStyle = C.NEG; ctx.textAlign = 'center';
+    ctx.fillText(tag, cx + 3, cy + 13);
+    setLS('0px');
+  }
+
+  // ── Barra inferior: escudo + nombre + subtítulo + sello ──────────
+  const shSize = 190, shX = 52, shY = barTop + (barH - shSize)/2;
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 16; ctx.shadowOffsetY = 4;
+  await cvDrawEscudoCompleto(ctx, p.club, shX, shY, shSize);
+  ctx.restore();
+
+  // Sello B → A (caja inclinada, texto derecho)
+  const sello = (p.sello || '').trim();
+  let selloW = 0;
+  const selloH = 104;
+  if(sello){
+    ctx.font = `400 78px ${FB}`; setLS('3px');
+    selloW = ctx.measureText(sello).width + 66;
+    const scx = W - 52 - selloW/2, scy = barTop + barH/2;
+    ctx.save();
+    ctx.translate(scx, scy); ctx.transform(1, 0, -SK, 1, 0, 0);
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(-selloW/2, -selloH/2, selloW, selloH);
+    ctx.restore();
+    ctx.fillStyle = C.NEG; ctx.textAlign = 'center';
+    ctx.fillText(sello, scx + 1, scy + 27);
+    setLS('0px');
+  }
+
+  const nameX = shX + shSize + 39;
+  const nameMaxW = (sello ? W - 52 - selloW - 30 : W - 52) - nameX;
+  const nombre = (p.club || '').toUpperCase();
+  const sub = (p.subtitulo || '').toUpperCase();
+  ctx.textAlign = 'left';
+  const fuenteN = sz => { ctx.font = `400 ${sz}px ${FB}`; setLS('3px'); };
+
+  // Nombre: 1 línea si entra; si no, se parte en 2 renglones balanceados
+  // (nunca se corta con "…" salvo que ni así entre)
+  let nLines = [nombre], nSize = 85;
+  fuenteN(nSize);
+  while(ctx.measureText(nombre).width > nameMaxW && nSize > 66){ nSize -= 3; fuenteN(nSize); }
+  if(ctx.measureText(nombre).width > nameMaxW){
+    const words = nombre.split(/\s+/).filter(Boolean);
+    let hecho = false;
+    for(let sz = 72; sz >= 44 && !hecho && words.length > 1; sz -= 2){
+      fuenteN(sz);
+      let best = null;
+      for(let k = 1; k < words.length; k++){
+        const a = words.slice(0, k).join(' '), b = words.slice(k).join(' ');
+        const w = Math.max(ctx.measureText(a).width, ctx.measureText(b).width);
+        if(!best || w < best.w) best = { a, b, w };
+      }
+      if(best && best.w <= nameMaxW){ nLines = [best.a, best.b]; nSize = sz; hecho = true; }
+    }
+    if(!hecho){ nSize = 44; fuenteN(nSize); }   // una sola palabra enorme: se trunca como último recurso
+  }
+  fuenteN(nSize);
+  const pitch   = Math.round(nSize * 0.92);
+  const grupoH  = nSize*0.7 + (nLines.length-1)*pitch + (sub ? 52 : 0);
+  const base0   = barTop + barH/2 - grupoH/2 + nSize*0.7;
+  ctx.fillStyle = C.BLANCO;
+  nLines.forEach((ln, i) => cvFillTextTrunc(ctx, ln, nameX, base0 + i*pitch, nameMaxW));
+  setLS('0px');
+  if(sub){
+    ctx.font = `700 36px ${FR}`;
+    ctx.fillStyle = C.DORADO2;
+    cvFillTextTrunc(ctx, sub, nameX, base0 + (nLines.length-1)*pitch + 52, nameMaxW);
+  }
+
+  cvFooter(ctx, W, footerTop, liga);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  return canvas;
+}
+
 async function generarImagenPromocionalTabla(p){
   await document.fonts.ready;
   const id   = getIdentidad();
