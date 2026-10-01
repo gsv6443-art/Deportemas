@@ -14536,9 +14536,9 @@ async function generarImagenPromocional(p){
    ══════════════════════════════════════════════════════════════ */
 /* ══════════════════════════════════════════════════════════════
    PROMOCIÓN — CAMPEÓN Y ASCENSO (1080×1350)
-   Foto a pantalla completa, banda dorada inclinada con el texto
-   principal + etiqueta negra, barra inferior negra con escudo,
-   nombre del club y sello. Bandas inclinadas 16° (estilo transmisión).
+   Foto a pantalla completa, banda dorada baja pegada a la barra negra
+   (borde derecho inclinado 16°) con el texto principal derecho +
+   etiqueta negra; barra inferior negra con escudo, nombre y sello.
    ══════════════════════════════════════════════════════════════ */
 async function generarImagenPromoCampeon(p){
   await document.fonts.ready;
@@ -14556,7 +14556,7 @@ async function generarImagenPromoCampeon(p){
   const footerTop = H - footH;
   const barH     = 260;
   const barTop   = footerTop - barH;
-  const bandH    = 188;
+  const bandH    = 124;
   const setLS    = v => { if('letterSpacing' in ctx) ctx.letterSpacing = v; };
   const FB       = '"Bebas Neue", Arial, sans-serif';
   const FR       = '"Rajdhani", Arial, sans-serif';
@@ -14586,62 +14586,61 @@ async function generarImagenPromoCampeon(p){
   ctx.fillStyle = 'rgba(0,0,0,.25)';
   ctx.fillRect(0, 0, W, H);
 
-  // ── Medidas de la banda: el texto siempre entra dentro del rectángulo ──
+  // ── Medidas de la banda (variante A): el texto siempre entra en el rectángulo ──
   const titulo   = (p.titulo || 'CAMPEÓN').toUpperCase();
   const etiqueta = (p.etiqueta || '').toUpperCase();
-  const bandLeft = -98, padL = 150, gap = 32, lblPadX = 32, padR = 70;
-  const textX    = bandLeft + padL;           // 52
+  const textX = 56, gap = 34, lblPadX = 28, padR = 60;
   const maxRight = 940;
-  let tSize = 136, eSize = 68, tw = 0, ew = 0, bandRight = 0;
+  const sl = bandH * SK;                    // inclinación del borde derecho
+  let tSize = 96, eSize = 50, tw = 0, ew = 0, bandRight = 0;
   const medir = () => {
-    ctx.font = `400 ${tSize}px ${FB}`; setLS(Math.round(tSize*0.045)+'px');
+    ctx.font = `400 ${tSize}px ${FB}`; setLS('4px');
     tw = ctx.measureText(titulo).width;
     ew = 0;
     if(etiqueta){
-      ctx.font = `400 ${eSize}px ${FB}`; setLS(Math.round(eSize*0.045)+'px');
+      ctx.font = `400 ${eSize}px ${FB}`; setLS('3px');
       ew = ctx.measureText(etiqueta).width + lblPadX*2;
     }
     bandRight = textX + tw + (ew ? gap + ew : 0) + padR;
   };
   medir();
-  while(bandRight > maxRight && tSize > 56){
+  while(bandRight > maxRight && tSize > 52){
     tSize = Math.round(tSize*0.94); eSize = Math.round(eSize*0.94); medir();
   }
-  bandRight = Math.max(bandRight, 640);
-  const bandW = bandRight - bandLeft;
+  bandRight = Math.max(bandRight, 600);
+  const bandTop = barTop - bandH;
+  const poligono = (pts, color) => {
+    ctx.beginPath(); pts.forEach((q, k) => k ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]));
+    ctx.closePath(); ctx.fillStyle = color; ctx.fill();
+  };
 
   // ── Barra inferior negra ─────────────────────────────────────────
   ctx.fillStyle = C.NEG;
   ctx.fillRect(0, barTop, W, barH);
 
-  // ── Banda dorada + tira blanca + barra dorada (inclinadas) ───────
-  skewY0(barTop, () => {
-    ctx.fillStyle = C.DORADO;
-    ctx.fillRect(bandLeft, -bandH, bandW, bandH);
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(bandLeft, 0, bandW, 16);
-    ctx.fillStyle = C.DORADO;
-    ctx.fillRect(bandRight + 36, -bandH, 26, bandH);
-  });
+  // ── Banda dorada baja, pegada a la barra, con borde derecho inclinado ──
+  poligono([[0, bandTop], [bandRight, bandTop], [bandRight - sl, barTop], [0, barTop]], C.DORADO);
+  // línea dorada que une la banda con la barra negra
+  ctx.fillStyle = C.DORADO;
+  ctx.fillRect(0, barTop, W, 8);
 
-  // ── Texto principal + etiqueta negra, centrados en la banda ──────
-  const bandMidY = -bandH/2;
-  skewY0(barTop, () => {
+  // ── Texto principal (derecho) + etiqueta negra, centrados en la banda ──
+  const midY = bandTop + bandH/2;
+  ctx.textAlign = 'left';
+  ctx.fillStyle = C.NEG;
+  ctx.font = `400 ${tSize}px ${FB}`; setLS('4px');
+  ctx.fillText(titulo, textX, midY + tSize*0.34);
+  if(etiqueta){
+    const bx = textX + tw + gap;
+    const eh = eSize + 30;
+    poligono([[bx + 10, midY - eh/2], [bx + ew + 10, midY - eh/2], [bx + ew - 10, midY + eh/2], [bx - 10, midY + eh/2]], C.NEG);
+    ctx.fillStyle = C.DORADO2;
+    ctx.font = `400 ${eSize}px ${FB}`; setLS('3px');
+    ctx.textAlign = 'center';
+    ctx.fillText(etiqueta, bx + ew/2, midY + eSize*0.34);
     ctx.textAlign = 'left';
-    ctx.fillStyle = C.NEG;
-    ctx.font = `400 ${tSize}px ${FB}`; setLS(Math.round(tSize*0.045)+'px');
-    ctx.fillText(titulo, textX, bandMidY + tSize*0.35);
-    if(etiqueta){
-      const bx = textX + tw + gap;
-      const bh = Math.round(eSize*1.2 + 22);
-      ctx.fillStyle = C.NEG;
-      ctx.fillRect(bx, bandMidY - bh/2, ew, bh);
-      ctx.fillStyle = C.DORADO2;
-      ctx.font = `400 ${eSize}px ${FB}`; setLS(Math.round(eSize*0.045)+'px');
-      ctx.fillText(etiqueta, bx + lblPadX, bandMidY + eSize*0.35);
-    }
-    setLS('0px');
-  });
+  }
+  setLS('0px');
 
   // ── Etiqueta superior (HISTÓRICO) ────────────────────────────────
   const tag = (p.tag || '').toUpperCase();
