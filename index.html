@@ -12719,7 +12719,7 @@ function renderCopaOroPlata(categoria, copa, el){
       <div class="playoff-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
         <span>${copaLabel} – ${catLabel}</span>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <button class="btn-share" onclick="abrirShare(()=>generarImagenCopaProvincial('${categoria}','${copa}'))">${SVG_SHARE} Compartir</button>
+          <button class="btn-share" onclick="abrirShare(()=>generarImagenesCopaProvincialPorFase('${categoria}','${copa}'))">${SVG_SHARE} Compartir por fase</button>
         </div>
       </div>
       <div class="cc-bracket-scroll">
@@ -17622,7 +17622,8 @@ async function cvPrecargarEscudosCC(cruces){
 // El ancho del marcador (mW) se calcula ACÁ, antes de ubicar los escudos,
 // así el hueco entre ellos siempre es mayor que el marcador — nunca se
 // superponen, sea cual sea el largo del resultado (ej. "10 - 8").
-function cvFilaCruceCC(ctx, c, CX, y, ROW, ECSIZE, escudoImgs, fontNombre, mH, fontMarc, mostrarEstadoKicker){
+function cvFilaCruceCC(ctx, c, CX, y, ROW, ECSIZE, escudoImgs, fontNombre, mH, fontMarc, mostrarEstadoKicker, etiquetaGanador){
+  etiquetaGanador = etiquetaGanador || 'CLASIFICA';
   const fy=y+ROW/2;
   const PAD=s(10);
 
@@ -17636,13 +17637,32 @@ function cvFilaCruceCC(ctx, c, CX, y, ROW, ECSIZE, escudoImgs, fontNombre, mH, f
   mH=Math.round(mH*rowScale);
   fontNombre=Math.round(fontNombre*rowScale);
   fontMarc=Math.round(fontMarc*rowScale);
-  const fontCap=Math.max(s(9), Math.round(s(11)*rowScale));
+  const capScale=Math.max(0.6, Math.min(ROW>=s(190)?1.7:1.2, ROW/ROW_REF));
+  const fontCap=Math.max(s(9), Math.round(s(11)*capScale));
   const fontKick=Math.max(s(8), Math.round(s(10)*rowScale));
 
   const marcTxt=c.idavuelta?(c.global||'VS'):(c.resultado||'VS');
   const estadoCls=c.estado||'pendiente';
+
+  // Penales: se muestran DENTRO del marcador (segunda línea, debajo del
+  // resultado), así nunca quedan tapados por el cuadro dorado ni dependen
+  // de que el cruce tenga ganador cargado.
+  const tienePen=!!(c.tienePenales && c.penales) && estadoCls!=='pendiente';
+  let penTxt='';
+  if(tienePen){
+    const pp=String(c.penales).split(/\s*[-–—]\s*/).filter(Boolean);
+    penTxt='PEN. '+(pp.length===2 ? pp[0]+' - '+pp[1] : String(c.penales).trim());
+  }
+  const fontPen=Math.max(s(10), Math.round(fontMarc*0.34));
+  const penH=tienePen?Math.round(fontPen*1.9):0;
+  const boxH=mH+penH;
+
   ctx.font=`700 ${fontMarc}px "Bebas Neue", Arial, sans-serif`;
-  const mW=Math.max(s(58)*rowScale, ctx.measureText(marcTxt).width + s(26));
+  let mW=Math.max(s(58)*rowScale, ctx.measureText(marcTxt).width + s(26));
+  if(tienePen){
+    ctx.font=`700 ${fontPen}px "Rajdhani", Arial, sans-serif`;
+    mW=Math.max(mW, ctx.measureText(penTxt).width + s(26));
+  }
 
   // hueco entre escudos = mW + 2*PAD → el marcador jamás puede tocarlos
   const escLX=CX-mW/2-PAD-ECSIZE, escLY=y+(ROW-ECSIZE)/2;
@@ -17678,7 +17698,7 @@ function cvFilaCruceCC(ctx, c, CX, y, ROW, ECSIZE, escudoImgs, fontNombre, mH, f
 
   // Despeje vertical: el mayor entre escudo y marcador (para que el kicker y
   // el "✓ CLASIFICA" libren AMBOS, no solo el marcador)
-  const clearance=Math.max(mH,ECSIZE)/2;
+  const clearance=Math.max(boxH,ECSIZE)/2;
 
   if(mostrarEstadoKicker && (c.idavuelta || estadoCls==='en-juego')){
     // Anclado al tope de LA FILA (nunca a la fila anterior), aunque la fila sea baja
@@ -17689,7 +17709,8 @@ function cvFilaCruceCC(ctx, c, CX, y, ROW, ECSIZE, escudoImgs, fontNombre, mH, f
     ctx.fillText(estadoCls==='en-juego'?'EN VIVO':'IDA Y VUELTA', CX, kickerY);
   }
 
-  cvRoundRect(ctx,CX-mW/2,fy-mH/2,mW,mH,s(10));
+  const boxTop=fy-boxH/2;
+  cvRoundRect(ctx,CX-mW/2,boxTop,mW,boxH,s(10));
   if(estadoCls==='jugado'){
     ctx.save();
     ctx.shadowColor='rgba(240,192,64,0.55)'; ctx.shadowBlur=s(16);
@@ -17707,26 +17728,29 @@ function cvFilaCruceCC(ctx, c, CX, y, ROW, ECSIZE, escudoImgs, fontNombre, mH, f
   }
   ctx.font=`700 ${fontMarc}px "Bebas Neue", Arial, sans-serif`;
   ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText(marcTxt,CX,fy+1);
+  ctx.fillText(marcTxt,CX,boxTop+mH/2+1);
+
+  if(tienePen){
+    const oscuro=(estadoCls==='jugado');
+    ctx.fillStyle=oscuro?'rgba(10,10,12,0.28)':'rgba(255,255,255,0.28)';
+    ctx.fillRect(CX-mW/2+s(12), boxTop+mH, mW-s(24), Math.max(1,Math.round(s(1))));
+    ctx.fillStyle=oscuro?C.NEG:'#ffffff';
+    ctx.font=`700 ${fontPen}px "Rajdhani", Arial, sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(penTxt, CX, boxTop+mH+penH/2+1);
+  }
   ctx.textBaseline='alphabetic';
 
   if(c.ganador){
-    const penalesSuf=(c.tienePenales&&c.penales)?'  (PEN. '+c.penales+')':'';
     // Anclado al pie de LA FILA (nunca invade la fila siguiente), aunque la fila sea baja
-    const capY=Math.min(y+ROW-s(6), fy+clearance+s(12));
-    // El ancho del texto se limita al hueco entre escudos, para que un
-    // ganador con nombre largo jamás se meta por debajo de los escudos
-    const capMaxW=Math.min(CX*2-s(58), (escVX-(escLX+ECSIZE))+s(52));
-    ctx.fillStyle='rgba(201,162,39,0.6)';
+    const capY=Math.min(y+ROW-s(6), fy+clearance+Math.round(fontCap*0.95)+s(4));
+    // La leyenda va SIEMPRE por debajo del mayor entre escudo y marcador
+    // (ver 'clearance'), así que puede usar casi todo el ancho de la tarjeta
+    const capMaxW=CX*2-s(80);
+    ctx.fillStyle='rgba(201,162,39,0.75)';
     ctx.font=`600 ${fontCap}px "DM Sans", Arial, sans-serif`;
     ctx.textAlign='center'; ctx.textBaseline='alphabetic';
-    cvFillTextTrunc(ctx,'✓ CLASIFICA '+c.ganador.toUpperCase()+penalesSuf, CX, capY, capMaxW);
-  } else if(c.tienePenales && c.penales){
-    const capY=Math.min(y+ROW-s(6), fy+clearance+s(12));
-    ctx.fillStyle='rgba(255,255,255,0.45)';
-    ctx.font=`600 ${fontCap}px "DM Sans", Arial, sans-serif`;
-    ctx.textAlign='center';
-    ctx.fillText('PENALES: '+c.penales, CX, capY);
+    cvFillTextTrunc(ctx,'✓ '+etiquetaGanador+' '+c.ganador.toUpperCase(), CX, capY, capMaxW);
   }
 }
 
@@ -18285,6 +18309,134 @@ async function generarImagenCopaProvincial(categoria, copa){
   cvFooter(ctx,W,CVH_TOTAL-s(40),liga);
   ctx.textAlign='left'; ctx.textBaseline='alphabetic';
   return canvas;
+}
+
+// Encabezado de las imágenes de Copa Oro / Copa Plata (barra de liga + título
+// "COPA ORO/PLATA" con logo + "TORNEO PROVINCIAL" y losa dorada con la
+// categoría + línea divisoria). Devuelve la Y donde puede empezar el contenido.
+async function cvTituloCopaProvincial(ctx, W, id, categoria, copa){
+  const CX=W/2;
+  const catLabel=categoria==='sub15'?'SUB 15':'SUB 13';
+  const HDR_TP=205;
+  let y=await cvHeader(ctx,W,id,0);
+  const copaTxt=copa==='oro'?'COPA ORO':'COPA PLATA';
+  const copaEmoji=copa==='oro'?'🥇':'🥈';
+  ctx.font='68px "Bebas Neue", Arial, sans-serif';
+  const tW=ctx.measureText(copaTxt).width;
+  const logoSize=92, gapL=22;
+  const tieneLogo=!!data.provincialLogo;
+  const emojiW=tieneLogo?0:70;
+  const grupoW=(tieneLogo?logoSize+gapL:emojiW)+tW;
+  let gx=CX-grupoW/2;
+  if(tieneLogo){ await cvDrawLogo(ctx,data.provincialLogo,gx,y+16,logoSize); gx+=logoSize+gapL; }
+  else { ctx.font='56px Arial, sans-serif'; ctx.textAlign='left'; ctx.textBaseline='alphabetic'; ctx.fillText(copaEmoji,gx,y+72); gx+=emojiW; }
+  ctx.fillStyle=C.DORADO;
+  ctx.font='68px "Bebas Neue", Arial, sans-serif';
+  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+  ctx.fillText(copaTxt, gx, y+78);
+
+  const subTxt='TORNEO PROVINCIAL';
+  ctx.font='700 30px "Rajdhani", Arial, sans-serif';
+  const subW=ctx.measureText(subTxt).width;
+  ctx.font='700 44px "Rajdhani", Arial, sans-serif';
+  const pillW=ctx.measureText(catLabel).width+64, pillH=68, pGap=26;
+  const filaW=subW+pGap+pillW;
+  let fx=CX-filaW/2;
+  const pY=y+112;
+  ctx.font='700 30px "Rajdhani", Arial, sans-serif';
+  ctx.fillStyle='rgba(255,255,255,0.85)';
+  ctx.textAlign='left'; ctx.textBaseline='middle';
+  ctx.fillText(subTxt, fx, pY+pillH/2+2);
+  fx+=subW+pGap;
+  cvRoundRect(ctx, fx, pY, pillW, pillH, pillH/2);
+  ctx.fillStyle=C.DORADO; ctx.fill();
+  ctx.fillStyle=C.NEG; ctx.textAlign='center';
+  ctx.font='700 44px "Rajdhani", Arial, sans-serif';
+  ctx.fillText(catLabel, fx+pillW/2, pY+pillH/2+2);
+  ctx.textBaseline='alphabetic';
+  y+=HDR_TP;
+  const dg=ctx.createLinearGradient(0,0,W,0);
+  dg.addColorStop(0,'transparent'); dg.addColorStop(0.2,C.DORADO);
+  dg.addColorStop(0.8,C.DORADO); dg.addColorStop(1,'transparent');
+  ctx.fillStyle=dg; ctx.fillRect(0,y,W,1);
+  y+=s(16);
+  return y;
+}
+
+// Imagen de UNA fase (Cuartos / Semifinales / Final) de Copa Oro o Plata,
+// siempre en formato 1080×1350. Las filas se agrandan según cuántos cruces
+// tiene la fase (4 → tamaño base, 2 → más grande, 1 → todavía más) y el
+// bloque queda centrado en el espacio disponible. Los penales se dibujan
+// dentro del marcador (ver cvFilaCruceCC).
+async function generarImagenFaseCopaProvincial(categoria, copa, faseKey){
+  await document.fonts.ready;
+  const id=getIdentidad();
+  const liga=id.nombre||'DEPORTEMAS';
+  const W=CV_W, CX=W/2, H=CV_H;
+  const fase=FASES_TP.find(f=>f.key===faseKey);
+  if(!fase) return null;
+  const cruces=data.provincialCopas
+    .filter(c=>c.categoria===categoria&&c.copa===copa&&c.fase===faseKey)
+    .sort((a,b)=>a.cruce-b.cruce);
+  if(!cruces.length) return null;
+  const escudoImgs=await cvPrecargarEscudosCC(cruces);
+
+  const canvas=document.createElement('canvas');
+  canvas.width=W; canvas.height=H;
+  const ctx=canvas.getContext('2d');
+  ctx.textBaseline='alphabetic';
+  const bgGrad=ctx.createLinearGradient(0,0,0,H);
+  bgGrad.addColorStop(0,C.NEG3); bgGrad.addColorStop(1,C.NEG);
+  ctx.fillStyle=bgGrad; ctx.fillRect(0,0,W,H);
+
+  let y=await cvTituloCopaProvincial(ctx,W,id,categoria,copa);
+
+  const n=cruces.length;
+  const hFooter=s(40);
+  const hBand=s(38), gapBand=s(14), gapRow=s(12);
+  const hDisp=H-y-hFooter-s(14);
+  // Factores de tamaño: escudos / marcador / nombres (los nombres crecen
+  // poco para no comerse el ancho que necesitan escudos y marcador)
+  const kE = n===1 ? 1.4  : (n===2 ? 1.25 : 1);
+  const kM = n===1 ? 1.35 : (n===2 ? 1.2  : 0.9);
+  const kN = n===1 ? 1.08 : (n===2 ? 1.1  : 1);
+  const maxRow = n===1 ? s(280) : (n===2 ? s(210) : s(150));
+  const ROW=Math.min(maxRow, Math.floor((hDisp-hBand-gapBand-(n-1)*gapRow)/n));
+  const hContenido=hBand+gapBand+n*ROW+(n-1)*gapRow;
+  y+=Math.max(0, Math.floor((hDisp-hContenido)/2));
+
+  // Banda con el nombre de la fase
+  ctx.fillStyle='rgba(201,162,39,0.10)';
+  ctx.fillRect(s(24),y,W-s(48),hBand);
+  ctx.fillStyle=C.DORADO;
+  ctx.font=`700 ${s(17)}px "Rajdhani", Arial, sans-serif`;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText((faseKey==='final'?'🏆 ':'')+fase.label.toUpperCase(), CX, y+hBand/2);
+  ctx.textBaseline='alphabetic';
+  y+=hBand+gapBand;
+
+  const ECSIZE=Math.round(s(56)*kE), fNom=Math.round(s(19)*kN);
+  const mH=Math.round(s(64)*kM), fMarc=Math.round(s(40)*kM);
+  const etiqueta = faseKey==='final' ? 'CAMPEÓN' : 'CLASIFICA';
+  for(const c of cruces){
+    cvFilaCruceCC(ctx,c,CX,y,ROW,ECSIZE,escudoImgs,fNom,mH,fMarc,true,etiqueta);
+    y+=ROW+gapRow;
+  }
+
+  cvFooter(ctx,W,H-s(40),liga);
+  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+  return canvas;
+}
+
+// Array de imágenes (una por fase con cruces cargados) para el modal de
+// compartir, que ya sabe navegar entre varias imágenes.
+async function generarImagenesCopaProvincialPorFase(categoria, copa){
+  const canvases=[];
+  for(const f of FASES_TP){
+    const cv=await generarImagenFaseCopaProvincial(categoria,copa,f.key);
+    if(cv) canvases.push(cv);
+  }
+  return canvases.length?canvases:null;
 }
 
 // Imagen de la tabla de posiciones de UNA zona del Torneo Provincial
