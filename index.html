@@ -12604,68 +12604,89 @@ function s3Resolver(lista){
 }
 
 // ---- Vista pública ----
-function s3CruceCardHTML(c){
+// Cuadro de llaves (Opción A): una grilla con columnas por etapa, los cruces
+// de cada ronda centrados entre los dos que los alimentan y conectores dorados.
+const S3_CSS=`<style>
+.s3-scroll{overflow-x:auto;padding:4px 10px 10px}
+.s3-grid{display:grid;row-gap:10px;min-width:600px;align-items:stretch}
+.s3-h{font-size:11px;letter-spacing:.6px;text-transform:uppercase;color:var(--dorado);font-family:'DM Sans',sans-serif;font-weight:700;padding:2px 2px 0}
+.s3-c{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:5px 8px 4px;display:flex;flex-direction:column;justify-content:center;gap:2px;min-width:0}
+.s3-r{display:flex;align-items:center;gap:6px;font-family:'DM Sans',sans-serif;font-size:12px;color:#f2f2f2;min-width:0}
+.s3-r.p{opacity:.5;font-style:italic}
+.s3-r.w{color:var(--dorado);font-weight:700}
+.s3-n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.s3-s{font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;min-width:16px;text-align:right}
+.s3-s small{font-size:10px;font-weight:600;opacity:.8}
+.s3-q{width:18px;height:18px;border-radius:50%;background:rgba(201,162,39,.15);color:var(--dorado);display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-style:normal;flex-shrink:0}
+.s3-d{font-size:10px;color:rgba(255,255,255,.4);font-family:'DM Sans',sans-serif;border-top:1px solid rgba(255,255,255,.07);padding-top:2px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.s3-live{color:#e24b4a}
+.s3-hint{display:none;padding:0 14px 2px;font-size:11px;color:var(--gris);font-family:'DM Sans',sans-serif}
+@media(max-width:560px){.s3-hint{display:block}}
+.s3-j{position:relative}
+.s3-j::before{content:'';position:absolute;left:0;right:50%;top:24%;bottom:24%;border:1px solid rgba(201,162,39,.55);border-left:none}
+.s3-j::after{content:'';position:absolute;left:50%;right:0;top:50%;border-top:1px solid rgba(201,162,39,.55)}
+</style>`;
+
+function s3LlaveCard(c){
   const est=c.estado||'pendiente';
-  const cls=est==='jugado'?'jugado':est==='en-juego'?'en-juego':'pendiente';
-  const pen=(c.tienePenales&&c.penales)?` <span style="color:rgba(255,255,255,.45);font-weight:400">(Penales ${c.penales})</span>`:'';
-  const esc=(nombre,pend)=>pend
-    ?`<div class="escudo-mini" style="width:28px;height:28px;font-size:12px;opacity:.55">?</div>`
-    :getEscudoHTML(nombre,28);
-  const nom=(nombre,pend)=>pend?`<span style="opacity:.55;font-style:italic">${nombre}</span>`:nombre;
-  const vacio=`style="color:rgba(255,255,255,.2);font-family:'Rajdhani',sans-serif"`;
-  let marcador, detalle='';
-  if(c.idavuelta){
-    marcador=`<div class="cruce-marcador ${cls}">${est==='en-juego'?'EN VIVO':est==='jugado'?'FIN':'VS'}</div>`;
-    const mini=(lbl,res,fecha)=>res
-      ?`<div class="cruce-partido-mini"><span class="cpm-label">${lbl} ${fecha?'· '+fecha:''}</span><span class="cpm-res">${res}</span></div>`
-      :`<div class="cruce-partido-mini"><span class="cpm-label">${lbl} ${fecha?'· '+fecha:''}</span><span ${vacio}>Pendiente</span></div>`;
-    detalle=`<div class="cruce-ida-vuelta">${mini('Ida',c.resIda,c.fechaIda)}${mini('Vuelta',c.resVuelta,c.fechaVuelta)}</div>`;
-    if(c.global||c.ganador){
-      const gb=c.global?`<span style="background:rgba(201,162,39,.15);border:1px solid var(--dorado-border);border-radius:var(--r-sm);padding:2px 8px;font-size:12px;color:var(--dorado);font-weight:700">Global: ${c.global}${pen}</span>`:'';
-      const gn=c.ganador?`<span style="color:rgba(255,255,255,.5);font-size:11px">Clasifica: <b style="color:var(--dorado)">${c.ganador}</b></span>`:'';
-      detalle+=`<div class="cruce-ganador" style="display:flex;gap:12px;align-items:center">${gb}${gn}</div>`;
+  const p=parsearResultado(c.idavuelta?c.global:c.resultado);
+  const pens=(c.tienePenales&&c.penales)?String(c.penales).split('-').map(x=>x.trim()):null;
+  const score=(v,i)=>(v===undefined?'–':v)+((pens&&pens[i]!==undefined&&pens[i]!=='')?` <small>(${pens[i]})</small>`:'');
+  const gan=c.ganador?normalizar(c.ganador):'';
+  const fila=(nombre,pend,sc)=>{
+    const esG=gan&&normalizar(nombre)===gan;
+    return `<div class="s3-r${esG?' w':''}${pend?' p':''}">${pend?'<span class="s3-q">?</span>':getEscudoHTML(nombre,18)}<span class="s3-n" title="${nombre}">${nombre}</span><span class="s3-s">${sc}</span></div>`;
+  };
+  let det=c.idavuelta?`Ida ${c.resIda||'–'} · Vuelta ${c.resVuelta||'–'}`:(c.fecha||'Partido único');
+  if(pens&&c.penales) det+=` · Pen. ${c.penales}`;
+  if(est==='en-juego') det+=' · <b class="s3-live">EN VIVO</b>';
+  return `<div class="s3-c">${fila(c.local,c.localPend,score(p?p.golesLocal:undefined,0))}${fila(c.visit,c.visitPend,score(p?p.golesVisit:undefined,1))}<div class="s3-d">${det}</div></div>`;
+}
+
+// Cuadro de 3 rondas (4-2-1) o de 2 rondas (2-1) según las etapas del bloque
+function s3LlaveHTML(bloque,r){
+  const et=S3_ETAPAS[bloque];
+  const n1=et[0].max; // cruces de la primera ronda
+  const filas=n1+1;   // + fila de encabezados
+  const cols=et.length===3?'minmax(0,1fr) 22px minmax(0,1fr) 22px minmax(0,1fr)':'minmax(0,1fr) 22px minmax(0,1fr)';
+  const celdas=[];
+  const put=(col,row,html,extra)=>celdas.push(`<div style="grid-column:${col};grid-row:${row};${extra||''}">${html}</div>`);
+  et.forEach((e,k)=>put(1+2*k,1,`<div class="s3-h">${e.label}</div>`));
+  // primera ronda
+  r[bloque][et[0].key].forEach((c,i)=>put(1,i+2,s3LlaveCard(c)));
+  // rondas siguientes: cada cruce ocupa el alto de los dos que lo alimentan
+  for(let k=1;k<et.length;k++){
+    const cnt=et[k].max, span=n1/cnt;
+    r[bloque][et[k].key].forEach((c,i)=>{
+      const row=2+i*span;
+      put(1+2*k,`${row} / span ${span}`,s3LlaveCard(c),'align-self:center');
+    });
+    // conectores entre la ronda anterior y esta (uno por cada par)
+    for(let i=0;i<cnt;i++){
+      const row=2+i*span, prevSpan=span/2;
+      const sp=prevSpan*2;
+      put(2*k,`${row} / span ${sp}`,'','' );
+      celdas[celdas.length-1]=celdas[celdas.length-1].replace('<div style="','<div class="s3-j" style="');
     }
-  } else {
-    marcador=`<div class="cruce-marcador ${cls}">${c.resultado||'VS'}</div>`;
-    if(c.ganador) detalle=`<div class="cruce-ganador">Clasifica: <b>${c.ganador}</b>${pen}</div>`;
-    else if(pen) detalle=`<div class="cruce-ganador">Definición por penales: <b style="color:var(--dorado)">${c.penales}</b></div>`;
   }
-  const titulo=c.etapa==='final'?'Final':'Cruce '+c.cruce;
-  return `<div class="cruce-card">
-    <div class="cruce-header">
-      <span class="cruce-num">${titulo}</span>
-      <span>${c.idavuelta?'Ida y Vuelta':'Partido Único'}${c.fecha&&!c.idavuelta?' · '+c.fecha:''}</span>
-      <span class="estado ${est}" style="padding:2px 8px">${est==='en-juego'?'EN VIVO':est==='jugado'?'Finalizado':'Pendiente'}</span>
-    </div>
-    <div class="cruce-body">
-      <div class="cruce-equipo local">${nom(c.local,c.localPend)}${esc(c.local,c.localPend)}</div>
-      ${marcador}
-      <div class="cruce-equipo visit">${esc(c.visit,c.visitPend)}${nom(c.visit,c.visitPend)}</div>
-    </div>
-    ${detalle}
-  </div>`;
+  return `<div class="s3-scroll"><div class="s3-grid" style="grid-template-columns:${cols};grid-template-rows:auto repeat(${n1},auto)">${celdas.join('')}</div></div>`;
 }
 
 function renderSegunda3(el){
   const r=s3Resolver();
-  const nota=txt=>`<span style="color:rgba(255,255,255,.3);font-size:10px">· ${txt}</span>`;
-  const etapaHTML=(bloque,e)=>`<div class="playoff-etapa">
-      <div class="playoff-etapa-header"><span>${e.label} ${nota(bloque==='cuadro'?'Ida y vuelta':'Partido único')}</span></div>
-      <div class="playoff-cruces">${r[bloque][e.key].map(s3CruceCardHTML).join('')}</div>
-    </div>`;
   const aviso=(html)=>`<div style="padding:8px 14px;font-size:12px;color:var(--gris);font-family:'DM Sans',sans-serif;line-height:1.5">${html}</div>`;
   const ascenso=r.campeon
     ?aviso(`🏆 Segundo ascenso a Primera División: <b style="color:var(--dorado)">${r.campeon}</b>`):'';
   const reval=aviso(`El ganador de la Final logra el <b style="color:var(--dorado)">segundo ascenso</b>. El perdedor de la Final disputa la <b>Reválida</b> con el 14° de la Tabla General${r.perdedorFinal?`: <b style="color:var(--dorado)">${r.perdedorFinal}</b>`:''}.`);
-  el.innerHTML=`
+  el.innerHTML=S3_CSS+`
     <div class="card" style="margin-bottom:.8rem">
       <div class="card-header"><span>3ª Fase – Segundo Ascenso</span>
         <div style="display:flex;align-items:center;gap:8px"><span class="div-badge">2ª</span>
           <button class="btn-share" onclick="abrirShare(()=>generarImagenSegunda3('cuadro'))">${SVG_SHARE} Cuadro</button></div>
       </div>
-      <div class="playoff-section" style="margin-top:0;padding:0 10px">
-        ${S3_ETAPAS.cuadro.map(e=>etapaHTML('cuadro',e)).join('')}
-      </div>
+      ${aviso('Cuartos, Semifinales y Final, todos a ida y vuelta.')}
+      <div class="s3-hint">Deslizá hacia el costado para ver el cuadro completo →</div>
+      ${s3LlaveHTML('cuadro',r)}
       ${ascenso}${reval}
     </div>
     <div class="card" style="margin-bottom:.8rem">
@@ -12674,9 +12695,8 @@ function renderSegunda3(el){
           <button class="btn-share" onclick="abrirShare(()=>generarImagenSegunda3('po'))">${SVG_SHARE} Play Off</button></div>
       </div>
       ${aviso('Los 4 mejores de la zona Repechaje definen quién entra al cuadro principal: Semifinales 1° vs 4° y 2° vs 3°, y la Final entre los ganadores, todo a partido único.')}
-      <div class="playoff-section" style="margin-top:0;padding:0 10px">
-        ${S3_ETAPAS.po.map(e=>etapaHTML('po',e)).join('')}
-      </div>
+      <div class="s3-hint">Deslizá hacia el costado para ver la final →</div>
+      ${s3LlaveHTML('po',r)}
       ${r.ganadorPO?aviso(`Entra al cuadro principal: <b style="color:var(--dorado)">${r.ganadorPO}</b>`):''}
     </div>`;
 }
