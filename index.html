@@ -644,7 +644,7 @@
     window._alinFotosCache = fbAlinFotos || {};
 
     if(fbData)      { data = fbData; if(!data.playoff) data.playoff=[];
-                      if(!data.copaCordoba) data.copaCordoba=[];
+                      if(!data.copaCordoba) data.copaCordoba=[]; if(!data.segunda3) data.segunda3=[];
                       if(!data.copaCordobaLogo) data.copaCordobaLogo='';
                       if(!data.provincialCopas) data.provincialCopas=[];
                       if(!data.provincialLogo) data.provincialLogo='';
@@ -786,7 +786,7 @@
       const partidosAnteriores = window._fbDataAnterior ? (window._fbDataAnterior.partidos||[]) : [];
       data = fbVal;
       if(!data.playoff) data.playoff=[];
-      if(!data.copaCordoba) data.copaCordoba=[];
+      if(!data.copaCordoba) data.copaCordoba=[]; if(!data.segunda3) data.segunda3=[];
       if(!data.copaCordobaLogo) data.copaCordobaLogo='';
       if(!data.provincialCopas) data.provincialCopas=[];
       if(!data.provincialLogo) data.provincialLogo='';
@@ -3396,6 +3396,7 @@ table.posiciones td:nth-child(8){
       <button class="admin-tab" onclick="switchAdminTab('fotos',this)">Fotos</button>
       <button class="admin-tab" onclick="switchAdminTab('playoff',this)">Play Off</button>
       <button class="admin-tab" onclick="switchAdminTab('copacordoba',this)">🏆 Copa Córdoba</button>
+      <button class="admin-tab" onclick="switchAdminTab('segunda3',this)">🥈 2ª · 3ª Fase</button>
       <button class="admin-tab" onclick="switchAdminTab('provincial',this)">🥇 Torneo Provincial</button>
       <button class="admin-tab" onclick="switchAdminTab('config',this)">Config</button>
       <button class="admin-tab" onclick="switchAdminTab('estadisticas',this)">📊 Estadisticas</button>
@@ -4402,6 +4403,88 @@ table.posiciones td:nth-child(8){
         <br/>
         <button class="btn-primary" onclick="guardarCruceCC()">💾 Guardar Cruce</button>
         <div class="admin-list" id="lista-copacordoba" style="margin-top:12px"></div>
+      </div>
+
+      <!-- SEGUNDA DIVISIÓN – 3ª FASE (Segundo Ascenso) -->
+      <div class="admin-section" id="admin-segunda3">
+        <div class="admin-title">🥈 Segunda División – 3ª Fase (Segundo Ascenso)</div>
+        <p style="font-family:'DM Sans',sans-serif;font-size:12px;color:rgba(255,255,255,.4);margin-bottom:14px;line-height:1.5">Cuadro principal de 8 equipos (Cuartos, Semis y Final, todo <b style="color:rgba(255,255,255,.7)">ida y vuelta</b>) y Play Off aparte de la zona Repechaje (partido único). Los equipos de las rondas siguientes se completan solos con los ganadores; en los Cuartos y el Play Off podés usar el botón de abajo o escribirlos a mano. Si dejás los equipos vacíos, el cruce usa los automáticos.</p>
+        <button class="btn-primary" style="margin-bottom:14px" onclick="s3CompletarDesdePosiciones()">⬇ Completar equipos desde las posiciones de la 2ª Fase</button>
+        <hr style="border-color:rgba(255,255,255,.08);margin:6px 0 16px"/>
+
+        <div class="form-row">
+          <div class="form-group"><label>Bloque</label>
+            <select id="s3-bloque" onchange="s3AdminActualizar()">
+              <option value="cuadro">Cuadro principal (ida y vuelta)</option>
+              <option value="po">Play Off Zona Repechaje (partido único)</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Etapa</label>
+            <select id="s3-etapa" onchange="s3AdminActualizar()"></select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Cruce N°</label>
+            <select id="s3-cruce" onchange="s3AdminActualizar()"></select>
+          </div>
+          <div class="form-group"><label>Estado</label>
+            <select id="s3-estado">
+              <option value="pendiente">Pendiente</option>
+              <option value="en-juego">En juego</option>
+              <option value="jugado">Jugado</option>
+            </select>
+          </div>
+        </div>
+        <p id="s3-auto-info" style="font-family:'DM Sans',sans-serif;font-size:12px;color:rgba(255,255,255,.5);margin:0 0 10px;line-height:1.5"></p>
+        <div class="form-row">
+          <div class="form-group"><label>Equipo Local (opcional)</label><input type="text" id="s3-local" placeholder="Vacío = automático"/></div>
+          <div class="form-group"><label>Equipo Visitante (opcional)</label><input type="text" id="s3-visit" placeholder="Vacío = automático"/></div>
+        </div>
+        <!-- partido único (Play Off) -->
+        <div id="s3-unico-wrap" style="display:none">
+          <div class="form-row">
+            <div class="form-group"><label>Resultado</label><input type="text" id="s3-res" placeholder="2-1"/></div>
+            <div class="form-group"><label>Fecha</label><input type="text" id="s3-fecha" placeholder="Ej: 12/07"/></div>
+          </div>
+          <div class="form-group"><label>Ganador (solo si hay empate / penales)</label><input type="text" id="s3-ganador" placeholder="Nombre del equipo que clasifica"/></div>
+          <div class="form-group">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+              <input type="checkbox" id="s3-tiene-penales" onchange="togglePenalesInput('s3')" style="width:16px;height:16px;accent-color:var(--dorado)"/>
+              <span>Se definió por penales</span>
+            </label>
+            <input type="text" id="s3-penales" placeholder="Ej: 5-4" style="display:none;margin-top:8px"/>
+          </div>
+        </div>
+        <!-- ida y vuelta (Cuadro principal) -->
+        <div id="s3-iv-wrap">
+          <div class="seccion-label">Partido de Ida (el Local juega de local)</div>
+          <div class="form-row">
+            <div class="form-group"><label>Resultado ida</label><input type="text" id="s3-res-ida" placeholder="1-0"/></div>
+            <div class="form-group"><label>Fecha ida</label><input type="text" id="s3-fecha-ida" placeholder="Ej: 12/07"/></div>
+          </div>
+          <div class="seccion-label">Partido de Vuelta (el Visitante juega de local)</div>
+          <div class="form-row">
+            <div class="form-group"><label>Resultado vuelta (primero los goles de quien fue local en la vuelta)</label><input type="text" id="s3-res-vuelta" placeholder="1-2"/></div>
+            <div class="form-group"><label>Fecha vuelta</label><input type="text" id="s3-fecha-vuelta" placeholder="Ej: 19/07"/></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Global (opcional, se calcula solo)</label><input type="text" id="s3-global" placeholder="2-2"/></div>
+            <div class="form-group"><label>Ganador (solo si hay empate global / penales)</label><input type="text" id="s3-ganador-iv" placeholder="Nombre del equipo que clasifica"/></div>
+          </div>
+          <div class="form-group">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+              <input type="checkbox" id="s3iv-tiene-penales" onchange="togglePenalesInput('s3iv')" style="width:16px;height:16px;accent-color:var(--dorado)"/>
+              <span>Se definió por penales</span>
+            </label>
+            <input type="text" id="s3iv-penales" placeholder="Ej: 5-4" style="display:none;margin-top:8px"/>
+          </div>
+        </div>
+        <br/>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn-primary" onclick="guardarCruceS3()">💾 Guardar Cruce</button>
+          <button class="btn-edit" onclick="s3AdminLimpiarForm()">Limpiar formulario</button>
+        </div>
+        <div class="admin-list" id="lista-segunda3" style="margin-top:12px"></div>
       </div>
 
       <!-- TORNEO PROVINCIAL (Copa Oro / Copa Plata) -->
@@ -5551,7 +5634,7 @@ function setLSSafe(key, value){
   }
 }
 
-function getData(){try{const d=JSON.parse(localStorage.getItem(DATA_KEY))||defData();if(!d.playoff)d.playoff=[];if(!d.alineaciones)d.alineaciones=[];if(!d.copaCordoba)d.copaCordoba=[];if(!d.copaCordobaLogo)d.copaCordobaLogo='';if(!d.provincialCopas)d.provincialCopas=[];if(!d.provincialLogo)d.provincialLogo='';if(!d.historiaPlantillas)d.historiaPlantillas=[];return d;}catch(e){return defData();}}
+function getData(){try{const d=JSON.parse(localStorage.getItem(DATA_KEY))||defData();if(!d.playoff)d.playoff=[];if(!d.alineaciones)d.alineaciones=[];if(!d.copaCordoba)d.copaCordoba=[];if(!d.segunda3)d.segunda3=[];if(!d.copaCordobaLogo)d.copaCordobaLogo='';if(!d.provincialCopas)d.provincialCopas=[];if(!d.provincialLogo)d.provincialLogo='';if(!d.historiaPlantillas)d.historiaPlantillas=[];return d;}catch(e){return defData();}}
 // Construye una copia de "d" sin las fotos de goleadores:
 // van en documentos individuales para no superar el límite de 1MB de Firestore.
 function dataParaFirestore(d){
@@ -5639,7 +5722,7 @@ async function saveIdentidad(i){
 function getFotos(){try{return JSON.parse(localStorage.getItem(FOTOS_KEY))||[];}catch(e){return[];}}
 function saveFotos(f){if(!setLSSafe(FOTOS_KEY,JSON.stringify(f)))return;if(window._fb)window._fb.set('fotos',f);}
 
-function defData(){return{partidos:[],posiciones:[],goleadores:[],equipos:[],torneos:[],playoff:[],copaCordoba:[],copaCordobaLogo:'',provincialCopas:[],provincialLogo:'',historiaPlantillas:[],alineaciones:[]};};
+function defData(){return{partidos:[],posiciones:[],goleadores:[],equipos:[],torneos:[],playoff:[],copaCordoba:[],segunda3:[],copaCordobaLogo:'',provincialCopas:[],provincialLogo:'',historiaPlantillas:[],alineaciones:[]};};
 
 let data=getData();
 let escudos=getEscudos();
@@ -8029,11 +8112,11 @@ function renderPosicionesSegunda(){
       el.innerHTML=tablaHTML('2ª Fase – Repechaje',filtrar('fase2','repechaje'),4,'');
     }
   } else if(currentFase==='fase3'){
-    const pos=filtrar('fase3',null);
-    if(!pos.length){
-      el.innerHTML=`<div class="card"><div class="card-header"><span>3ª Fase – Mata a Mata</span><span class="div-badge">2ª</span></div><div class="empty-msg">No hay posiciones cargadas para esta fase</div></div>`;
-    } else {
-      el.innerHTML=tablaHTML('3ª Fase – Segundo Ascenso',pos,1,`<span style="border-left:3px solid var(--dorado);padding-left:6px">Asciende a Primera División</span>`);
+    renderSegunda3(el);
+    // Compatibilidad: si hay posiciones cargadas a mano para esta fase, se siguen mostrando abajo
+    const posManual=filtrar('fase3',null);
+    if(posManual.length){
+      el.innerHTML+=tablaHTML('3ª Fase – Posiciones cargadas',posManual,1,`<span style="border-left:3px solid var(--dorado);padding-left:6px">Asciende a Primera División</span>`);
     }
   }
   applyGoldPts();
@@ -11999,6 +12082,7 @@ function switchAdminTab(tab,el){
   el.classList.add('active');
   if(tab==='playoff') renderAdminListaPlayoff();
   if(tab==='copacordoba'){ updateAdminCCFase(); updateAdminCCTipo(); renderAdminListaCopaCordoba(); ccSyncLogoPreview(); }
+  if(tab==='segunda3'){ s3AdminActualizar(); s3AdminLimpiarForm(); renderAdminListaS3(); }
   if(tab==='provincial'){ updateAdminTPFase(); updateAdminTPTipo(); renderAdminListaProvincial(); tpSyncLogoPreview(); }
   if(tab==='fotos') renderAdminListaFotos();
   if(tab==='fichas'){ poblarSelectFichas(); renderAdminListaFichas(); }
@@ -12425,6 +12509,359 @@ function editarCruceCC(id){
   }
   // eliminar el viejo para que guardarCruceCC lo reescriba
   data.copaCordoba=data.copaCordoba.filter(x=>String(x.id)!==String(id));
+}
+
+// ============================================================
+// SEGUNDA DIVISIÓN – 3ª FASE (Segundo Ascenso)
+// Cuadro principal de 8 equipos (Cuartos → Semifinales → Final, todo ida y
+// vuelta) + Play Off aparte de la zona Repechaje (Semifinales → Final, partido
+// único) cuyo ganador entra al cuadro principal como "Ganador Play Off Zona
+// Repechaje". Los equipos de las rondas siguientes se resuelven solos a partir
+// de los ganadores; lo que se cargue a mano en un cruce tiene prioridad.
+// Se guarda en data.segunda3 (independiente de data.partidos y data.playoff).
+// ============================================================
+const S3_ETAPAS={
+  cuadro:[{key:'cuartos',label:'Cuartos de Final',max:4},{key:'semifinal',label:'Semifinales',max:2},{key:'final',label:'Final',max:1}],
+  po:[{key:'semifinal',label:'Semifinales',max:2},{key:'final',label:'Final',max:1}]
+};
+function s3EtapaMax(bloque,etapa){const e=(S3_ETAPAS[bloque]||[]).find(x=>x.key===etapa);return e?e.max:1;}
+function s3EtapaLabel(bloque,etapa){const e=(S3_ETAPAS[bloque]||[]).find(x=>x.key===etapa);return e?e.label:etapa;}
+function s3BloqueLabel(b){return b==='po'?'Play Off Repechaje':'Cuadro principal';}
+
+// Posiciones ordenadas (con desempate) de una zona de la 2ª Fase de Segunda
+function s3Posiciones(zona){
+  const faseDe=p=>(p.faseRes||p.fase||'fase1');
+  const registros=(data.posiciones||[]).filter(p=>p.div==='segunda'&&p.fase==='fase2'&&(p.zona||'')===zona);
+  const parts=(data.partidos||[]).filter(p=>p.div==='segunda'&&p.estado==='jugado'&&faseDe(p)==='fase2'&&(p.zona||'')===zona);
+  return ordenarConDesempate(registros,parts);
+}
+
+// Global y ganador de un cruce a partir de los resultados cargados (el campo
+// "ganador" cargado a mano siempre manda; un empate sin ganador cargado queda
+// sin definir hasta que se cargue quién clasifica, p. ej. por penales)
+function s3Calcular(c){
+  const out={global:c.global||'',ganador:c.ganador||''};
+  if(c.idavuelta){
+    const i=parsearResultado(c.resIda), v=parsearResultado(c.resVuelta);
+    if(i&&v){
+      const gl=i.golesLocal+v.golesVisit, gv=i.golesVisit+v.golesLocal;
+      if(!out.global) out.global=gl+'-'+gv;
+      if(!out.ganador && gl!==gv) out.ganador=gl>gv?c.local:c.visit;
+    }
+  } else {
+    const r=parsearResultado(c.resultado);
+    if(r && !out.ganador && r.golesLocal!==r.golesVisit) out.ganador=r.golesLocal>r.golesVisit?c.local:c.visit;
+  }
+  return out;
+}
+
+// Devuelve el cuadro completo con equipos y ganadores resueltos:
+// {cuadro:{cuartos,semifinal,final}, po:{semifinal,final}, campeon, perdedorFinal, ganadorPO}
+function s3Resolver(lista){
+  const guardados=lista||data.segunda3||[];
+  const buscar=(b,e,n)=>guardados.find(c=>c.bloque===b&&c.etapa===e&&+c.cruce===n)||{};
+  const slot=nombre=>({nombre,pend:true});
+  const gan=(c,etiqueta)=>(c&&c.ganador)?{nombre:c.ganador,pend:false}:slot(etiqueta);
+  function armar(bloque,etapa,n,lDef,vDef){
+    const g=buscar(bloque,etapa,n);
+    const lProp=(g.local||'').trim(), vProp=(g.visit||'').trim();
+    const c={...g,bloque,etapa,cruce:n,idavuelta:bloque==='cuadro',
+      local:lProp||lDef.nombre, visit:vProp||vDef.nombre,
+      localPend:lProp?false:lDef.pend, visitPend:vProp?false:vDef.pend,
+      cargado:!!g.id};
+    const calc=s3Calcular(c);
+    c.global=calc.global; c.ganador=calc.ganador;
+    c.estado=(g.estado&&g.estado!=='pendiente')?g.estado:(c.ganador?'jugado':'pendiente');
+    return c;
+  }
+  const r={cuadro:{},po:{}};
+  // Play Off de la zona Repechaje (1° vs 4°, 2° vs 3° → final, partido único)
+  r.po.semifinal=[
+    armar('po','semifinal',1,slot('1° Zona Repechaje'),slot('4° Zona Repechaje')),
+    armar('po','semifinal',2,slot('2° Zona Repechaje'),slot('3° Zona Repechaje'))
+  ];
+  r.po.final=[armar('po','final',1,gan(r.po.semifinal[0],'Ganador Semifinal 1'),gan(r.po.semifinal[1],'Ganador Semifinal 2'))];
+  r.ganadorPO=r.po.final[0].ganador||'';
+  const gpo=r.ganadorPO?{nombre:r.ganadorPO,pend:false}:slot('Ganador Play Off Zona Repechaje');
+  // Cuadro principal (de arriba hacia abajo, como en el cuadro oficial)
+  r.cuadro.cuartos=[
+    armar('cuadro','cuartos',1,slot('2° Zona Campeonato'),gpo),
+    armar('cuadro','cuartos',2,slot('5° Zona Campeonato'),slot('6° Zona Campeonato')),
+    armar('cuadro','cuartos',3,slot('4° Zona Campeonato'),slot('7° Zona Campeonato')),
+    armar('cuadro','cuartos',4,slot('3° Zona Campeonato'),slot('8° Zona Campeonato'))
+  ];
+  const q=r.cuadro.cuartos;
+  r.cuadro.semifinal=[
+    armar('cuadro','semifinal',1,gan(q[0],'Ganador Cuartos 1'),gan(q[1],'Ganador Cuartos 2')),
+    armar('cuadro','semifinal',2,gan(q[2],'Ganador Cuartos 3'),gan(q[3],'Ganador Cuartos 4'))
+  ];
+  const s=r.cuadro.semifinal;
+  r.cuadro.final=[armar('cuadro','final',1,gan(s[0],'Ganador Semifinal 1'),gan(s[1],'Ganador Semifinal 2'))];
+  const f=r.cuadro.final[0];
+  r.campeon=f.ganador||'';
+  r.perdedorFinal=f.ganador?(normalizar(f.ganador)===normalizar(f.local)?f.visit:f.local):'';
+  return r;
+}
+
+// ---- Vista pública ----
+function s3CruceCardHTML(c){
+  const est=c.estado||'pendiente';
+  const cls=est==='jugado'?'jugado':est==='en-juego'?'en-juego':'pendiente';
+  const pen=(c.tienePenales&&c.penales)?` <span style="color:rgba(255,255,255,.45);font-weight:400">(Penales ${c.penales})</span>`:'';
+  const esc=(nombre,pend)=>pend
+    ?`<div class="escudo-mini" style="width:28px;height:28px;font-size:12px;opacity:.55">?</div>`
+    :getEscudoHTML(nombre,28);
+  const nom=(nombre,pend)=>pend?`<span style="opacity:.55;font-style:italic">${nombre}</span>`:nombre;
+  const vacio=`style="color:rgba(255,255,255,.2);font-family:'Rajdhani',sans-serif"`;
+  let marcador, detalle='';
+  if(c.idavuelta){
+    marcador=`<div class="cruce-marcador ${cls}">${est==='en-juego'?'EN VIVO':est==='jugado'?'FIN':'VS'}</div>`;
+    const mini=(lbl,res,fecha)=>res
+      ?`<div class="cruce-partido-mini"><span class="cpm-label">${lbl} ${fecha?'· '+fecha:''}</span><span class="cpm-res">${res}</span></div>`
+      :`<div class="cruce-partido-mini"><span class="cpm-label">${lbl} ${fecha?'· '+fecha:''}</span><span ${vacio}>Pendiente</span></div>`;
+    detalle=`<div class="cruce-ida-vuelta">${mini('Ida',c.resIda,c.fechaIda)}${mini('Vuelta',c.resVuelta,c.fechaVuelta)}</div>`;
+    if(c.global||c.ganador){
+      const gb=c.global?`<span style="background:rgba(201,162,39,.15);border:1px solid var(--dorado-border);border-radius:var(--r-sm);padding:2px 8px;font-size:12px;color:var(--dorado);font-weight:700">Global: ${c.global}${pen}</span>`:'';
+      const gn=c.ganador?`<span style="color:rgba(255,255,255,.5);font-size:11px">Clasifica: <b style="color:var(--dorado)">${c.ganador}</b></span>`:'';
+      detalle+=`<div class="cruce-ganador" style="display:flex;gap:12px;align-items:center">${gb}${gn}</div>`;
+    }
+  } else {
+    marcador=`<div class="cruce-marcador ${cls}">${c.resultado||'VS'}</div>`;
+    if(c.ganador) detalle=`<div class="cruce-ganador">Clasifica: <b>${c.ganador}</b>${pen}</div>`;
+    else if(pen) detalle=`<div class="cruce-ganador">Definición por penales: <b style="color:var(--dorado)">${c.penales}</b></div>`;
+  }
+  const titulo=c.etapa==='final'?'Final':'Cruce '+c.cruce;
+  return `<div class="cruce-card">
+    <div class="cruce-header">
+      <span class="cruce-num">${titulo}</span>
+      <span>${c.idavuelta?'Ida y Vuelta':'Partido Único'}${c.fecha&&!c.idavuelta?' · '+c.fecha:''}</span>
+      <span class="estado ${est}" style="padding:2px 8px">${est==='en-juego'?'EN VIVO':est==='jugado'?'Finalizado':'Pendiente'}</span>
+    </div>
+    <div class="cruce-body">
+      <div class="cruce-equipo local">${nom(c.local,c.localPend)}${esc(c.local,c.localPend)}</div>
+      ${marcador}
+      <div class="cruce-equipo visit">${esc(c.visit,c.visitPend)}${nom(c.visit,c.visitPend)}</div>
+    </div>
+    ${detalle}
+  </div>`;
+}
+
+function renderSegunda3(el){
+  const r=s3Resolver();
+  const nota=txt=>`<span style="color:rgba(255,255,255,.3);font-size:10px">· ${txt}</span>`;
+  const etapaHTML=(bloque,e)=>`<div class="playoff-etapa">
+      <div class="playoff-etapa-header"><span>${e.label} ${nota(bloque==='cuadro'?'Ida y vuelta':'Partido único')}</span></div>
+      <div class="playoff-cruces">${r[bloque][e.key].map(s3CruceCardHTML).join('')}</div>
+    </div>`;
+  const aviso=(html)=>`<div style="padding:8px 14px;font-size:12px;color:var(--gris);font-family:'DM Sans',sans-serif;line-height:1.5">${html}</div>`;
+  const ascenso=r.campeon
+    ?aviso(`🏆 Segundo ascenso a Primera División: <b style="color:var(--dorado)">${r.campeon}</b>`):'';
+  const reval=aviso(`El ganador de la Final logra el <b style="color:var(--dorado)">segundo ascenso</b>. El perdedor de la Final disputa la <b>Reválida</b> con el 14° de la Tabla General${r.perdedorFinal?`: <b style="color:var(--dorado)">${r.perdedorFinal}</b>`:''}.`);
+  el.innerHTML=`
+    <div class="card" style="margin-bottom:.8rem">
+      <div class="card-header"><span>3ª Fase – Segundo Ascenso</span>
+        <div style="display:flex;align-items:center;gap:8px"><span class="div-badge">2ª</span>
+          <button class="btn-share" onclick="abrirShare(()=>generarImagenSegunda3('cuadro'))">${SVG_SHARE} Cuadro</button></div>
+      </div>
+      <div class="playoff-section" style="margin-top:0;padding:0 10px">
+        ${S3_ETAPAS.cuadro.map(e=>etapaHTML('cuadro',e)).join('')}
+      </div>
+      ${ascenso}${reval}
+    </div>
+    <div class="card" style="margin-bottom:.8rem">
+      <div class="card-header"><span>Play Off – Zona Repechaje</span>
+        <div style="display:flex;align-items:center;gap:8px"><span class="div-badge">2ª</span>
+          <button class="btn-share" onclick="abrirShare(()=>generarImagenSegunda3('po'))">${SVG_SHARE} Play Off</button></div>
+      </div>
+      ${aviso('Los 4 mejores de la zona Repechaje definen quién entra al cuadro principal: Semifinales 1° vs 4° y 2° vs 3°, y la Final entre los ganadores, todo a partido único.')}
+      <div class="playoff-section" style="margin-top:0;padding:0 10px">
+        ${S3_ETAPAS.po.map(e=>etapaHTML('po',e)).join('')}
+      </div>
+      ${r.ganadorPO?aviso(`Entra al cuadro principal: <b style="color:var(--dorado)">${r.ganadorPO}</b>`):''}
+    </div>`;
+}
+
+// ---- Imágenes para compartir (reutiliza el cuadro de llaves de Copa Córdoba) ----
+async function cvTituloSegunda3(ctx, W, id, titulo, subtitulo){
+  const CX=W/2;
+  let y=await cvHeader(ctx,W,id,0);
+  ctx.fillStyle=C.DORADO;
+  ctx.font=`${s(28)}px "Bebas Neue", Arial, sans-serif`;
+  ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+  ctx.fillText(titulo, CX, y+s(34));
+  ctx.fillStyle='rgba(201,162,39,0.55)';
+  ctx.font=`600 ${s(14)}px "DM Sans", Arial, sans-serif`;
+  ctx.fillText(subtitulo, CX, y+s(52));
+  y+=s(56);
+  const dg=ctx.createLinearGradient(0,0,W,0);
+  dg.addColorStop(0,'transparent'); dg.addColorStop(0.2,C.DORADO);
+  dg.addColorStop(0.8,C.DORADO); dg.addColorStop(1,'transparent');
+  ctx.fillStyle=dg; ctx.fillRect(0,y,W,1);
+  y+=s(16);
+  return y;
+}
+async function generarImagenSegunda3(bloque){
+  await document.fonts.ready;
+  const id=getIdentidad();
+  const liga=id.nombre||'DEPORTEMAS';
+  const r=s3Resolver();
+  // En la imagen las columnas son angostas: los puestos/ganadores pendientes se abrevian
+  const corto=n=>n.replace('Ganador Play Off Zona Repechaje','Gan. Play Off').replace(/^Ganador /,'Gan. ').replace(' Zona ',' ');
+  const secciones=S3_ETAPAS[bloque].map(f=>({fase:f,cruces:r[bloque][f.key].map(c=>({
+    ...c,local:c.localPend?corto(c.local):c.local,visit:c.visitPend?corto(c.visit):c.visit
+  }))}));
+  const tituloFn=(ctx,W,idd)=>bloque==='cuadro'
+    ?cvTituloSegunda3(ctx,W,idd,'🏆 SEGUNDO ASCENSO','SEGUNDA DIVISIÓN · 3ª FASE · IDA Y VUELTA')
+    :cvTituloSegunda3(ctx,W,idd,'PLAY OFF ZONA REPECHAJE','SEGUNDA DIVISIÓN · 3ª FASE · PARTIDO ÚNICO');
+  return cvRenderBracketCC(secciones,id,liga,tituloFn);
+}
+
+// ---- Admin ----
+function s3Upsert(lista,obj){
+  const i=lista.findIndex(c=>c.bloque===obj.bloque&&c.etapa===obj.etapa&&+c.cruce===+obj.cruce);
+  if(i>=0) lista[i]={...lista[i],...obj,id:lista[i].id};
+  else lista.push(obj);
+  return lista;
+}
+function s3AdminActualizar(){
+  const $=x=>document.getElementById(x);
+  if(!$('s3-bloque')) return;
+  const bloque=$('s3-bloque').value;
+  const prevE=$('s3-etapa').value;
+  $('s3-etapa').innerHTML=S3_ETAPAS[bloque].map(e=>`<option value="${e.key}">${e.label}</option>`).join('');
+  if(S3_ETAPAS[bloque].some(e=>e.key===prevE)) $('s3-etapa').value=prevE;
+  const etapa=$('s3-etapa').value;
+  const max=s3EtapaMax(bloque,etapa);
+  const prevC=+$('s3-cruce').value||1;
+  $('s3-cruce').innerHTML=Array.from({length:max},(_,i)=>`<option value="${i+1}">Cruce ${i+1}</option>`).join('');
+  $('s3-cruce').value=String(Math.min(prevC,max));
+  const iv=bloque==='cuadro';
+  $('s3-unico-wrap').style.display=iv?'none':'';
+  $('s3-iv-wrap').style.display=iv?'':'none';
+  const c=s3Resolver()[bloque][etapa][(+$('s3-cruce').value||1)-1];
+  $('s3-auto-info').innerHTML=c
+    ?`Equipos que se muestran ahora: <b>${c.local}</b> vs <b>${c.visit}</b>${(c.localPend||c.visitPend)?' — los que figuran como puesto/“Ganador…” se completan solos cuando se define el cruce anterior, o los podés escribir abajo.':''}${iv?' · El primero juega la ida de local.':''}`
+    :'';
+}
+function s3AdminLimpiarForm(){
+  ['s3-local','s3-visit','s3-res','s3-fecha','s3-ganador','s3-penales','s3-res-ida','s3-fecha-ida','s3-res-vuelta','s3-fecha-vuelta','s3-global','s3-ganador-iv','s3iv-penales'].forEach(i=>{const e=document.getElementById(i);if(e)e.value='';});
+  ['s3-tiene-penales','s3iv-tiene-penales'].forEach(i=>{const e=document.getElementById(i);if(e)e.checked=false;});
+  document.getElementById('s3-estado').value='pendiente';
+  togglePenalesInput('s3'); togglePenalesInput('s3iv');
+}
+function guardarCruceS3(){
+  const $=x=>document.getElementById(x);
+  const bloque=$('s3-bloque').value, etapa=$('s3-etapa').value, cruce=+$('s3-cruce').value;
+  const idavuelta=bloque==='cuadro';
+  const obj={id:String(Date.now()),bloque,etapa,cruce,idavuelta,
+    local:$('s3-local').value.trim(),visit:$('s3-visit').value.trim(),estado:$('s3-estado').value};
+  if(idavuelta){
+    obj.resIda=$('s3-res-ida').value.trim(); obj.fechaIda=$('s3-fecha-ida').value.trim();
+    obj.resVuelta=$('s3-res-vuelta').value.trim(); obj.fechaVuelta=$('s3-fecha-vuelta').value.trim();
+    obj.global=$('s3-global').value.trim(); obj.ganador=$('s3-ganador-iv').value.trim();
+    obj.tienePenales=$('s3iv-tiene-penales').checked;
+    obj.penales=obj.tienePenales?$('s3iv-penales').value.trim():'';
+  } else {
+    obj.resultado=$('s3-res').value.trim(); obj.fecha=$('s3-fecha').value.trim();
+    obj.ganador=$('s3-ganador').value.trim();
+    obj.tienePenales=$('s3-tiene-penales').checked;
+    obj.penales=obj.tienePenales?$('s3-penales').value.trim():'';
+  }
+  for(const k of ['resIda','resVuelta','resultado']){
+    if(obj[k]&&!parsearResultado(obj[k])){alert('El resultado "'+obj[k]+'" no es válido. Usá el formato 2-1.');return;}
+  }
+  const nueva=s3Upsert([...(data.segunda3||[])],obj);
+  // El ganador cargado a mano tiene que coincidir con uno de los dos equipos del cruce
+  if(obj.ganador){
+    const c=s3Resolver(nueva)[bloque][etapa][cruce-1];
+    if(normalizar(obj.ganador)!==normalizar(c.local)&&normalizar(obj.ganador)!==normalizar(c.visit)){
+      alert('El ganador "'+obj.ganador+'" no coincide con ninguno de los equipos del cruce ('+c.local+' / '+c.visit+'). Escribilo igual que el nombre del equipo.');
+      return;
+    }
+  }
+  data.segunda3=nueva;
+  saveData(data);
+  renderAdminListaS3(); s3AdminActualizar();
+  renderSection(currentSection);
+}
+function eliminarCruceS3(id){
+  pedirConfirmacion('¿Eliminar este cruce de la 3ª Fase?',function(){
+    data.segunda3=(data.segunda3||[]).filter(c=>String(c.id)!==String(id));
+    saveData(data);renderAdminListaS3();s3AdminActualizar();renderSection(currentSection);
+  });
+}
+function editarCruceS3(id){
+  const c=(data.segunda3||[]).find(x=>String(x.id)===String(id));
+  if(!c) return;
+  const $=x=>document.getElementById(x);
+  $('s3-bloque').value=c.bloque||'cuadro'; s3AdminActualizar();
+  $('s3-etapa').value=c.etapa; s3AdminActualizar();
+  $('s3-cruce').value=String(c.cruce||1); s3AdminActualizar();
+  s3AdminLimpiarForm();
+  $('s3-estado').value=c.estado||'pendiente';
+  $('s3-local').value=c.local||''; $('s3-visit').value=c.visit||'';
+  if(c.idavuelta){
+    $('s3-res-ida').value=c.resIda||''; $('s3-fecha-ida').value=c.fechaIda||'';
+    $('s3-res-vuelta').value=c.resVuelta||''; $('s3-fecha-vuelta').value=c.fechaVuelta||'';
+    $('s3-global').value=c.global||''; $('s3-ganador-iv').value=c.ganador||'';
+    $('s3iv-tiene-penales').checked=!!c.tienePenales; $('s3iv-penales').value=c.penales||'';
+    togglePenalesInput('s3iv');
+  } else {
+    $('s3-res').value=c.resultado||''; $('s3-fecha').value=c.fecha||''; $('s3-ganador').value=c.ganador||'';
+    $('s3-tiene-penales').checked=!!c.tienePenales; $('s3-penales').value=c.penales||'';
+    togglePenalesInput('s3');
+  }
+  $('s3-bloque').scrollIntoView({behavior:'smooth',block:'center'});
+}
+function renderAdminListaS3(){
+  const el=document.getElementById('lista-segunda3');
+  if(!el) return;
+  const lista=data.segunda3||[];
+  if(!lista.length){el.innerHTML='<p class="admin-empty">Sin cruces cargados</p>';return;}
+  const r=s3Resolver();
+  const ordB={cuadro:0,po:1}, ordE={cuartos:0,semifinal:1,final:2};
+  el.innerHTML=[...lista].sort((a,b)=>(ordB[a.bloque]-ordB[b.bloque])||(ordE[a.etapa]-ordE[b.etapa])||(a.cruce-b.cruce)).map(g=>{
+    const c=((r[g.bloque]||{})[g.etapa]||[])[g.cruce-1]||g;
+    const marc=c.idavuelta?(c.global?' | Global: '+c.global:''):(c.resultado?' | '+c.resultado:'');
+    return `<div class="admin-list-item">
+      <span><b>${s3BloqueLabel(c.bloque)} · ${s3EtapaLabel(c.bloque,c.etapa)}</b> Cruce ${c.cruce} | ${c.local} vs ${c.visit} | <em>${c.estado}</em>${marc}${c.ganador?' | Clasifica: '+c.ganador:''}${c.tienePenales&&c.penales?' | Pen: '+c.penales:''}</span>
+      <div style="display:flex;gap:5px;flex-shrink:0">
+        <button class="btn-edit" onclick="editarCruceS3('${g.id}')">✏ Editar</button>
+        <button class="btn-danger" onclick="eliminarCruceS3('${g.id}')">✕ Eliminar</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+// Completa los equipos de los cruces iniciales con las posiciones actuales de
+// la 2ª Fase (Campeonato: 2° al 8°; Repechaje: 1° al 4°). El rival "Ganador
+// Play Off Zona Repechaje" no se escribe: se completa solo al definirse el Play Off.
+function s3CompletarDesdePosiciones(){
+  const camp=s3Posiciones('campeonato'), rep=s3Posiciones('repechaje');
+  const eq=(arr,i)=>arr[i]?arr[i].equipo:'';
+  const plan=[
+    {bloque:'po',etapa:'semifinal',cruce:1,local:eq(rep,0),visit:eq(rep,3)},
+    {bloque:'po',etapa:'semifinal',cruce:2,local:eq(rep,1),visit:eq(rep,2)},
+    {bloque:'cuadro',etapa:'cuartos',cruce:1,local:eq(camp,1),visit:''},
+    {bloque:'cuadro',etapa:'cuartos',cruce:2,local:eq(camp,4),visit:eq(camp,5)},
+    {bloque:'cuadro',etapa:'cuartos',cruce:3,local:eq(camp,3),visit:eq(camp,6)},
+    {bloque:'cuadro',etapa:'cuartos',cruce:4,local:eq(camp,2),visit:eq(camp,7)}
+  ];
+  pedirConfirmacion('Se van a completar los equipos de los Cuartos y del Play Off con las posiciones ACTUALES de la 2ª Fase (Campeonato 2° al 8°, Repechaje 1° al 4°). Conviene hacerlo cuando esa fase ya terminó. Los cruces que ya tienen resultados cargados no se modifican. ¿Continuar?',function(){
+    let lista=[...(data.segunda3||[])], hechos=0, faltan=0;
+    plan.forEach(p=>{
+      const ya=lista.find(c=>c.bloque===p.bloque&&c.etapa===p.etapa&&+c.cruce===p.cruce);
+      if(ya&&(ya.resIda||ya.resVuelta||ya.resultado)) return;
+      if(!p.local&&!p.visit){faltan++;return;}
+      const base=ya?{...ya}:{id:String(Date.now()+hechos),bloque:p.bloque,etapa:p.etapa,cruce:p.cruce,idavuelta:p.bloque==='cuadro',estado:'pendiente'};
+      base.local=p.local; base.visit=p.visit||(ya?ya.visit:'')||'';
+      if(p.bloque==='cuadro'&&p.cruce===1) base.visit=(ya&&ya.visit)||'';
+      lista=s3Upsert(lista,base); hechos++;
+    });
+    data.segunda3=lista;
+    saveData(data);
+    renderAdminListaS3(); s3AdminActualizar(); renderSection(currentSection);
+    alert('Se completaron '+hechos+' cruce(s).'+(faltan?' '+faltan+' no se pudieron completar porque faltan posiciones cargadas.':''));
+  });
 }
 
 // ============================================================
@@ -13190,7 +13627,7 @@ function cvEscudoFallback(ctx, nombre, x, y, size){
   ctx.font = `700 ${Math.round(size*0.38)}px Arial`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText((nombre||'?').substring(0,2).toUpperCase(), x+size/2, y+size/2);
+  ctx.fillText(/^gan(ador|\.)/i.test(nombre||'')?'?':(nombre||'?').substring(0,2).toUpperCase(), x+size/2, y+size/2);
   ctx.textBaseline = 'alphabetic';
   ctx.restore();
 }
@@ -18049,7 +18486,8 @@ function cvMiniCruceCC(ctx, c, x, y, w, h, escudoImgs){
   const fName=Math.max(12, Math.min(32, h*0.105));
   const fScoreLose=Math.max(12, Math.min(30, h*0.095));
   const fScoreWin=Math.max(fScoreLose, Math.min(35, fScoreLose*1.3));
-  const resW=Math.max(34, fScoreWin*1.7);
+  const pens=(c.tienePenales&&c.penales)?String(c.penales).split('-').map(q=>q.trim()):null;
+  const resW=Math.max(34, fScoreWin*1.7)*(pens?2.1:1);
   const padL=Math.max(7, Math.min(16, w*0.03));
 
   [c.local, c.visit].forEach((nombre,i)=>{
@@ -18060,7 +18498,7 @@ function cvMiniCruceCC(ctx, c, x, y, w, h, escudoImgs){
     else if(nombre){ cvEscudoFallback(ctx,nombre,x+padL,ry+rowH/2-ES/2,ES); }
     if(esGan){ const rw=Math.max(1.3,ES*0.045); ctx.beginPath(); ctx.arc(x+padL+ES/2,ry+rowH/2,ES/2+rw,0,Math.PI*2); ctx.lineWidth=rw; ctx.strokeStyle=C.DORADO2; ctx.stroke(); }
 
-    ctx.fillStyle=esGan?C.DORADO2:C.BLANCO;
+    ctx.fillStyle=esGan?C.DORADO2:((i===0?c.localPend:c.visitPend)?'rgba(255,255,255,0.45)':C.BLANCO);
     ctx.font=`600 ${fName}px "Bebas Neue", Arial, sans-serif`;
     ctx.textAlign='left'; ctx.textBaseline='middle';
     cvFillTextTrunc(ctx,(nombre||'–').toUpperCase(), x+padL+ES+Math.max(6,padL*0.6), ry+rowH/2, w-ES-resW-padL*2-8);
@@ -18071,7 +18509,7 @@ function cvMiniCruceCC(ctx, c, x, y, w, h, escudoImgs){
       ctx.textAlign='right'; ctx.textBaseline='middle';
       ctx.font=`700 ${enVivo?fScoreLose:(esGan?fScoreWin:fScoreLose)}px "Bebas Neue", Arial, sans-serif`;
       ctx.fillStyle = enVivo ? '#ff6b63' : (esGan?C.DORADO2:'rgba(255,255,255,0.6)');
-      cvFillTextTrunc(ctx, partes[i]||'-', x+w-padL, ry+rowH/2, resW);
+      cvFillTextTrunc(ctx, (partes[i]||'-')+((pens&&pens[i]!==undefined&&pens[i]!=='')?' ('+pens[i]+')':''), x+w-padL, ry+rowH/2, resW);
     }
 
     if(i===0){ ctx.strokeStyle='rgba(255,255,255,0.08)'; ctx.beginPath(); ctx.moveTo(x+padL*0.6,y+rowH); ctx.lineTo(x+w-padL*0.6,y+rowH); ctx.stroke(); }
@@ -18098,7 +18536,7 @@ function cvMiniCruceCC(ctx, c, x, y, w, h, escudoImgs){
 // imágenes de Copa Córdoba. El ancho de columna y el alto de cada tarjeta
 // escalan según cuántas fases/cruces entran en ESTE grupo (nunca quedan
 // fijos en un tamaño chico si hay espacio de sobra para agrandarlos).
-async function cvRenderBracketCC(secciones, id, liga){
+async function cvRenderBracketCC(secciones, id, liga, tituloFn){
   const W=CV_W, H=CV_H;
   const escudoImgs=await cvPrecargarEscudosCC(secciones.flatMap(sec=>sec.cruces));
 
@@ -18125,7 +18563,7 @@ async function cvRenderBracketCC(secciones, id, liga){
   bgGrad.addColorStop(0,C.NEG3); bgGrad.addColorStop(1,C.NEG);
   ctx.fillStyle=bgGrad; ctx.fillRect(0,0,W,H);
 
-  let y=await cvTituloCopaCordoba(ctx,W,id,'CUADRO DE ELIMINACIÓN DIRECTA');
+  let y=await (tituloFn?tituloFn(ctx,W,id):cvTituloCopaCordoba(ctx,W,id,'CUADRO DE ELIMINACIÓN DIRECTA'));
 
   const hDisp=H-y-hColLabels-hFooter-s(10);
   const offsetV=Math.max(0, Math.floor((hDisp-trackH)/2));
