@@ -4227,7 +4227,7 @@ table.posiciones td:nth-child(8){
 
       <!-- PLAY OFF -->
       <div class="admin-section" id="admin-playoff">
-        <div class="admin-title">🏆 Play Off – Primera División</div>
+        <div class="admin-title">🏆 Play Off – Primera División / Reserva Segunda</div>
         <div class="form-group" style="margin-bottom:10px">
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
             <input type="checkbox" id="po-es-reserva" style="width:16px;height:16px;accent-color:var(--dorado)"/>
@@ -4236,7 +4236,7 @@ table.posiciones td:nth-child(8){
         </div>
         <div class="form-row">
           <div class="form-group"><label>Torneo</label>
-            <select id="po-torneo"><option value="apertura">Apertura 2026</option><option value="clausura">Clausura 2026</option></select>
+            <select id="po-torneo" onchange="updateAdminPlayoffTorneo()"><option value="apertura">Apertura 2026</option><option value="clausura">Clausura 2026</option><option value="segunda">Reserva · Segunda División (4 primeros)</option></select>
           </div>
           <div class="form-group"><label>Etapa</label>
             <select id="po-etapa" onchange="updateAdminPlayoffEtapa()">
@@ -4265,6 +4265,10 @@ table.posiciones td:nth-child(8){
         <div class="form-row">
           <div class="form-group"><label>Equipo Local / Mejor clasificado</label><input type="text" id="po-local" placeholder="Nombre del equipo"/></div>
           <div class="form-group"><label>Equipo Visitante</label><input type="text" id="po-visit" placeholder="Nombre del equipo"/></div>
+        </div>
+        <div id="po-autocompletar-wrap" style="display:none;margin-bottom:10px">
+          <button type="button" class="btn-edit" onclick="autocompletarCruceSegundaReserva()">⚡ Completar equipos según la Tabla General / semifinales</button>
+          <div style="font-size:11px;color:var(--gris);margin-top:4px">Semifinal 1: 1° vs 4° · Semifinal 2: 2° vs 3° · Final: ganadores de las semifinales (local = mejor clasificado)</div>
         </div>
         <!-- partido único (cuartos) -->
         <div id="po-unico-wrap">
@@ -5777,7 +5781,7 @@ function getEscudoHTML(nombre,size){
   return `<div class="escudo-mini" style="width:${size}px;height:${size}px;font-size:${Math.floor(size*.32)}px">${ini}</div>`;
 }
 
-function torneoLabel(t){return t==='apertura'?'Apertura 2026':'Clausura 2026';}
+function torneoLabel(t){return t==='segunda'?'Segunda División':(t==='apertura'?'Apertura 2026':'Clausura 2026');}
 
 // ============================================================
 // IDENTIDAD
@@ -7876,6 +7880,11 @@ function renderPosicionesReserva(div, el){
   if(div === 'segunda'){
     const pos = calcularPosicionesReserva('segunda', null);
     el.innerHTML = posReservaTablaHTML('Reserva – Tabla General', pos, 'RESERVA · 2ª', shareBtn, {clasifican:4});
+    // Play Off de Reserva Segunda (4 primeros): semifinales y final, ida y vuelta
+    const playoffSeg=document.createElement('div');
+    playoffSeg.id='playoff-render-area-reserva-segunda';
+    el.appendChild(playoffSeg);
+    renderPlayoff('segunda','playoff-render-area-reserva-segunda',true);
     return;
   }
 
@@ -12199,13 +12208,13 @@ function renderPlayoff(torneo,contenedorId,esReserva){
         <span>🏆 Play Off${esReserva?' Reserva':''} – ${torneoLabel(torneo)}</span>
         <button class="btn-share" onclick="abrirShare(()=>generarImagenPlayoff('${torneo}',${esReserva}))">${SVG_SHARE} Compartir</button>
       </div>
-      <div class="playoff-etapa">
+      ${torneo==='segunda'?'':`<div class="playoff-etapa">
         <div class="playoff-etapa-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
           <span>Cuartos de Final <span style="color:rgba(255,255,255,.3);font-size:10px">· Partido único en cancha del mejor clasificado</span></span>
           ${btnEtapa('cuartos', hayGanCuartos, 'Cuartos de Final')}
         </div>
         <div class="playoff-cruces">${cuartosHTML}</div>
-      </div>
+      </div>`}
       <div class="playoff-etapa">
         <div class="playoff-etapa-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
           <span>Semifinales <span style="color:rgba(255,255,255,.3);font-size:10px">· Ida y vuelta</span></span>
@@ -12226,8 +12235,41 @@ function renderPlayoff(torneo,contenedorId,esReserva){
 // ============================================================
 // PLAY OFF – ADMIN
 // ============================================================
+function updateAdminPlayoffTorneo(){
+  const esSeg=document.getElementById('po-torneo').value==='segunda';
+  const chk=document.getElementById('po-es-reserva');
+  if(esSeg) chk.checked=true;
+  else if(chk.disabled) chk.checked=false;
+  chk.disabled=esSeg;
+  const et=document.getElementById('po-etapa');
+  const optC=[...et.options].find(o=>o.value==='cuartos');
+  if(optC){ optC.disabled=esSeg; optC.hidden=esSeg; }
+  if(esSeg && et.value==='cuartos') et.value='semifinal';
+  updateAdminPlayoffEtapa();
+}
+
+// Reserva Segunda: completa local/visitante del cruce elegido (semis desde la tabla, final desde las semis)
+function autocompletarCruceSegundaReserva(){
+  const etapa=document.getElementById('po-etapa').value;
+  const cruce=+document.getElementById('po-cruce').value;
+  const tabla=calcularPosicionesReserva('segunda',null).map(r=>r.equipo);
+  const setEq=(a,b)=>{ document.getElementById('po-local').value=a||''; document.getElementById('po-visit').value=b||''; };
+  if(etapa==='semifinal'){
+    if(tabla.length<4){ alert('Todavía no hay 4 equipos en la Tabla General de Reserva'); return; }
+    if(cruce===1) setEq(tabla[0],tabla[3]); else setEq(tabla[1],tabla[2]);
+  } else if(etapa==='final'){
+    const gan=n=>{ const c=data.playoff.find(x=>x.torneo==='segunda'&&!!x.esReserva&&x.etapa==='semifinal'&&x.cruce===n); return c&&c.ganador||''; };
+    const g1=gan(1), g2=gan(2);
+    if(!g1||!g2){ alert('Cargá primero el ganador de las dos semifinales'); return; }
+    const rank=e=>{ const i=tabla.findIndex(t=>normalizar(t)===normalizar(e)); return i<0?99:i; };
+    if(rank(g1)<=rank(g2)) setEq(g1,g2); else setEq(g2,g1);
+  }
+}
+
 function updateAdminPlayoffEtapa(){
   const etapa=document.getElementById('po-etapa').value;
+  const aw=document.getElementById('po-autocompletar-wrap');
+  if(aw) aw.style.display=(document.getElementById('po-torneo').value==='segunda'&&etapa!=='cuartos')?'':'none';
   const idavuelta=etapa==='semifinal'||etapa==='final';
   document.getElementById('po-unico-wrap').style.display=idavuelta?'none':'';
   document.getElementById('po-idavuelta-wrap').style.display=idavuelta?'':'none';
@@ -12247,7 +12289,8 @@ function guardarCruce(){
   const visit=document.getElementById('po-visit').value.trim();
   if(!local||!visit){alert('Completá los dos equipos');return;}
   const estado=document.getElementById('po-estado').value;
-  const esReserva=document.getElementById('po-es-reserva').checked;
+  const esReserva=(torneo==='segunda')?true:document.getElementById('po-es-reserva').checked;
+  if(torneo==='segunda' && etapa==='cuartos'){alert('La Reserva de Segunda tiene solo Semifinales y Final');return;}
 
   const obj={id:String(Date.now()),torneo,etapa,cruce,idavuelta,local,visit,estado,esReserva};
   if(idavuelta){
@@ -12303,6 +12346,8 @@ function editarCruce(id){
   if(!c)return;
   document.getElementById('po-es-reserva').checked=!!c.esReserva;
   document.getElementById('po-torneo').value=c.torneo||'apertura';
+  updateAdminPlayoffTorneo();
+  document.getElementById('po-es-reserva').checked=!!c.esReserva;
   document.getElementById('po-etapa').value=c.etapa||'cuartos';
   updateAdminPlayoffEtapa();
   document.getElementById('po-cruce').value=c.cruce||1;
