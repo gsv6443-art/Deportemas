@@ -7880,11 +7880,10 @@ function renderPosicionesReserva(div, el){
   if(div === 'segunda'){
     const pos = calcularPosicionesReserva('segunda', null);
     el.innerHTML = posReservaTablaHTML('Reserva – Tabla General', pos, 'RESERVA · 2ª', shareBtn, {clasifican:4});
-    // Play Off de Reserva Segunda (4 primeros): semifinales y final, ida y vuelta
+    // Play Off de Reserva Segunda (4 primeros): cuadro de llaves, igual que la 3ª Fase
     const playoffSeg=document.createElement('div');
-    playoffSeg.id='playoff-render-area-reserva-segunda';
     el.appendChild(playoffSeg);
-    renderPlayoff('segunda','playoff-render-area-reserva-segunda',true);
+    renderReservaSegundaPlayoff(playoffSeg);
     return;
   }
 
@@ -12567,7 +12566,8 @@ function editarCruceCC(id){
 // ============================================================
 const S3_ETAPAS={
   cuadro:[{key:'cuartos',label:'Cuartos de Final',max:4},{key:'semifinal',label:'Semifinales',max:2},{key:'final',label:'Final',max:1}],
-  po:[{key:'semifinal',label:'Semifinales',max:2},{key:'final',label:'Final',max:1}]
+  po:[{key:'semifinal',label:'Semifinales',max:2},{key:'final',label:'Final',max:1}],
+  reserva:[{key:'semifinal',label:'Semifinales',max:2},{key:'final',label:'Final',max:1}]
 };
 function s3EtapaMax(bloque,etapa){const e=(S3_ETAPAS[bloque]||[]).find(x=>x.key===etapa);return e?e.max:1;}
 function s3EtapaLabel(bloque,etapa){const e=(S3_ETAPAS[bloque]||[]).find(x=>x.key===etapa);return e?e.label:etapa;}
@@ -12778,6 +12778,69 @@ async function generarImagenSegunda3(bloque){
   const tituloFn=(ctx,W,idd)=>bloque==='cuadro'
     ?cvTituloSegunda3(ctx,W,idd,'🏆 SEGUNDO ASCENSO','SEGUNDA DIVISIÓN · 3ª FASE · IDA Y VUELTA')
     :cvTituloSegunda3(ctx,W,idd,'PLAY OFF ZONA REPECHAJE','SEGUNDA DIVISIÓN · 3ª FASE · PARTIDO ÚNICO');
+  return cvRenderBracketCC(secciones,id,liga,tituloFn);
+}
+
+// ---- Reserva Segunda: Play Off (mismo cuadro de llaves que la 3ª Fase) ----
+// Semifinales (1° vs 4°, 2° vs 3°) y Final, todo ida y vuelta. Los cruces se cargan en
+// el admin (Play Off → "Reserva · Segunda División") y se guardan en data.playoff
+// con torneo:'segunda' y esReserva:true. Los equipos de la Final se completan solos
+// con los ganadores de las semifinales; lo cargado a mano en un cruce tiene prioridad.
+function rsResolver(){
+  const guardados=(data.playoff||[]).filter(c=>c.torneo==='segunda'&&!!c.esReserva);
+  const buscar=(e,n)=>guardados.find(c=>c.etapa===e&&+c.cruce===n)||{};
+  const slot=nombre=>({nombre,pend:true});
+  const gan=(c,etiqueta)=>(c&&c.ganador)?{nombre:c.ganador,pend:false}:slot(etiqueta);
+  function armar(etapa,n,lDef,vDef){
+    const g=buscar(etapa,n);
+    const lProp=(g.local||'').trim(), vProp=(g.visit||'').trim();
+    const c={...g,bloque:'reserva',etapa,cruce:n,idavuelta:true,
+      local:lProp||lDef.nombre, visit:vProp||vDef.nombre,
+      localPend:lProp?false:lDef.pend, visitPend:vProp?false:vDef.pend,
+      cargado:!!g.id};
+    const calc=s3Calcular(c);
+    c.global=calc.global; c.ganador=calc.ganador;
+    c.estado=(g.estado&&g.estado!=='pendiente')?g.estado:(c.ganador?'jugado':'pendiente');
+    return c;
+  }
+  const r={};
+  r.semifinal=[
+    armar('semifinal',1,slot('1° Tabla General'),slot('4° Tabla General')),
+    armar('semifinal',2,slot('2° Tabla General'),slot('3° Tabla General'))
+  ];
+  r.final=[armar('final',1,gan(r.semifinal[0],'Ganador Semifinal 1'),gan(r.semifinal[1],'Ganador Semifinal 2'))];
+  r.campeon=r.final[0].ganador||'';
+  return r;
+}
+
+function renderReservaSegundaPlayoff(el){
+  const r={reserva:rsResolver()};
+  const aviso=(html)=>`<div style="padding:8px 14px;font-size:12px;color:var(--gris);font-family:'DM Sans',sans-serif;line-height:1.5">${html}</div>`;
+  const campeon=r.reserva.campeon
+    ?aviso(`🏆 Campeón de la Reserva de Segunda: <b style="color:var(--dorado)">${r.reserva.campeon}</b>`):'';
+  el.innerHTML=S3_CSS+`
+    <div class="card" style="margin-bottom:.8rem">
+      <div class="card-header"><span>Play Off – Reserva</span>
+        <div style="display:flex;align-items:center;gap:8px"><span class="div-badge">RESERVA · 2ª</span>
+          <button class="btn-share" onclick="abrirShare(generarImagenReservaSegunda)">${SVG_SHARE} Cuadro</button></div>
+      </div>
+      ${aviso('Los 4 primeros de la Tabla General: Semifinales 1° vs 4° y 2° vs 3°, y Final entre los ganadores, todo a ida y vuelta.')}
+      <div class="s3-hint">Deslizá hacia el costado para ver la final →</div>
+      ${s3LlaveHTML('reserva',r)}
+      ${campeon}
+    </div>`;
+}
+
+async function generarImagenReservaSegunda(){
+  await document.fonts.ready;
+  const id=getIdentidad();
+  const liga=id.nombre||'DEPORTEMAS';
+  const r={reserva:rsResolver()};
+  const corto=n=>n.replace(/^Ganador /,'Gan. ').replace(' Tabla General','');
+  const secciones=S3_ETAPAS.reserva.map(f=>({fase:f,cruces:r.reserva[f.key].map(c=>({
+    ...c,local:c.localPend?corto(c.local):c.local,visit:c.visitPend?corto(c.visit):c.visit
+  }))}));
+  const tituloFn=(ctx,W,idd)=>cvTituloSegunda3(ctx,W,idd,'🏆 PLAY OFF RESERVA','SEGUNDA DIVISIÓN · RESERVA · IDA Y VUELTA');
   return cvRenderBracketCC(secciones,id,liga,tituloFn);
 }
 
