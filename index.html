@@ -5500,12 +5500,14 @@ table.posiciones td:nth-child(8){
         <div class="tabs-row" id="gol-torneo-tabs">
           <button class="torneo-tab active" onclick="switchTorneoTab('apertura',this,'gol')">Apertura 2026</button>
           <button class="torneo-tab" onclick="switchTorneoTab('clausura',this,'gol')">Clausura 2026</button>
+          <button class="torneo-tab" onclick="switchTorneoTab('anual',this,'gol')">Anual 2026</button>
         </div>
         <!-- tabs segunda: fases -->
         <div class="tabs-row" id="gol-fase-tabs" style="display:none">
           <button class="torneo-tab active" onclick="switchFaseGolTab('fase1',this)">1ª Fase</button>
           <button class="torneo-tab" onclick="switchFaseGolTab('fase2',this)">2ª Fase</button>
           <button class="torneo-tab" onclick="switchFaseGolTab('fase3',this)">3ª Fase</button>
+          <button class="torneo-tab" onclick="switchFaseGolTab('anual',this)">Anual</button>
         </div>
         
         
@@ -5781,7 +5783,7 @@ function getEscudoHTML(nombre,size){
   return `<div class="escudo-mini" style="width:${size}px;height:${size}px;font-size:${Math.floor(size*.32)}px">${ini}</div>`;
 }
 
-function torneoLabel(t){return t==='segunda'?'Segunda División':(t==='apertura'?'Apertura 2026':'Clausura 2026');}
+function torneoLabel(t){return t==='segunda'?'Segunda División':(t==='apertura'?'Apertura 2026':(t==='anual'?'Anual 2026':'Clausura 2026'));}
 
 // ============================================================
 // IDENTIDAD
@@ -8139,6 +8141,34 @@ function renderPosicionesSegunda(){
 function ordenarGoleadores(arr){
   return arr.slice().sort((a,b)=> (b.goles-a.goles) || ((b.prioridad||0)-(a.prioridad||0)) );
 }
+// Devuelve los goleadores ya ordenados de una división/período.
+// periodo: 'apertura'|'clausura' (primera), 'fase1'|'fase2'|'fase3' (segunda) o 'anual'.
+// "Anual" no se guarda: se calcula sumando los goles de cada jugador en todos
+// los torneos (Primera) o todas las fases (Segunda).
+function golesPorPeriodo(div,periodo){
+  const esPrimera=div==='primera';
+  const periodoDe=g=>esPrimera?(g.torneo||'apertura'):(g.faseGol||g.torneo||'fase1');
+  const base=data.goleadores.filter(g=>g.div===div);
+  if(periodo!=='anual') return ordenarGoleadores(base.filter(g=>periodoDe(g)===periodo));
+
+  const orden=esPrimera?['apertura','clausura']:['fase1','fase2','fase3'];
+  const rank=g=>{const i=orden.indexOf(periodoDe(g));return i<0?-1:i;};
+  const mapa={};
+  // del período más viejo al más nuevo, así el equipo/foto "actual" es el último
+  base.slice().sort((a,b)=>rank(a)-rank(b)).forEach(g=>{
+    const k=normalizar(g.nombre);
+    if(!k) return;
+    if(!mapa[k]) mapa[k]={id:'anual_'+k,div,nombre:g.nombre,equipo:g.equipo,goles:0,prioridad:0,foto:'',_equipos:[]};
+    const r=mapa[k];
+    // el nombre se toma del registro donde más goles hizo (por si está escrito distinto)
+    if((+g.goles||0)>(r._maxG||0)){ r._maxG=+g.goles||0; r.nombre=g.nombre; }
+    r.goles+=(+g.goles||0);
+    if(g.equipo){ r.equipo=g.equipo; if(!r._equipos.some(e=>normalizar(e)===normalizar(g.equipo))) r._equipos.push(g.equipo); }
+    r.prioridad=Math.max(r.prioridad,g.prioridad||0);
+    if(g.foto) r.foto=g.foto;
+  });
+  return ordenarGoleadores(Object.values(mapa).filter(r=>r.goles>0));
+}
 function renderGoleadores(){
   const div=currentDivision;
   const el=document.getElementById('goleadores-content');
@@ -8154,11 +8184,11 @@ function renderGoleadores(){
 
   // ---- SEGUNDA DIVISIÓN: por fase ----
   if(div==='segunda'){
-    const faseLabels={'fase1':'1ª Fase','fase2':'2ª Fase','fase3':'3ª Fase'};
+    const faseLabels={'fase1':'1ª Fase','fase2':'2ª Fase','fase3':'3ª Fase','anual':'Anual'};
     const fase=currentFaseGol;
-    const gs=ordenarGoleadores(data.goleadores.filter(g=>g.div==='segunda'&&(g.faseGol||g.torneo||'fase1')===fase));
+    const gs=golesPorPeriodo('segunda',fase);
     if(!gs.length){
-      el.innerHTML=`<div class="card"><div class="card-header"><span>Goleadores – ${faseLabels[fase]}</span><span class="div-badge">2ª</span></div><div class="empty-msg">No hay goleadores para esta fase</div></div>`;
+      el.innerHTML=`<div class="card"><div class="card-header"><span>Goleadores – ${faseLabels[fase]}</span><span class="div-badge">2ª</span></div><div class="empty-msg">${fase==='anual'?'Todavía no hay goles cargados en ninguna fase':'No hay goleadores para esta fase'}</div></div>`;
       return;
     }
     const fotoBg = gs[0].foto ? `<img class="goleadores-bg-foto" src="${gs[0].foto}" alt=""/><div class="goleadores-bg-grad"></div>` : '';
@@ -8169,9 +8199,9 @@ function renderGoleadores(){
 
   // ---- PRIMERA DIVISIÓN: por torneo ----
   const torneo=currentTorneo.gol;
-  const gs=ordenarGoleadores(data.goleadores.filter(g=>g.div==='primera'&&(g.torneo||'apertura')===torneo));
+  const gs=golesPorPeriodo('primera',torneo);
   if(!gs.length){
-    el.innerHTML=`<div class="card"><div class="card-header"><span>Goleadores – ${torneoLabel(torneo)}</span><span class="div-badge">1ª</span></div><div class="empty-msg">No hay goleadores para este torneo</div></div>`;
+    el.innerHTML=`<div class="card"><div class="card-header"><span>Goleadores – ${torneoLabel(torneo)}</span><span class="div-badge">1ª</span></div><div class="empty-msg">${torneo==='anual'?'Todavía no hay goles cargados en ningún torneo':'No hay goleadores para este torneo'}</div></div>`;
     return;
   }
   const fotoBg = gs[0].foto ? `<img class="goleadores-bg-foto" src="${gs[0].foto}" alt=""/><div class="goleadores-bg-grad"></div>` : '';
@@ -16177,12 +16207,12 @@ async function generarImagenGoleadores(){
   let gs, subtitulo;
 
   if(currentDivision==='segunda'){
-    const fl={'fase1':'1ª Fase','fase2':'2ª Fase','fase3':'3ª Fase'};
-    gs=ordenarGoleadores(data.goleadores.filter(g=>g.div==='segunda'&&(g.faseGol||g.torneo||'fase1')===currentFaseGol));
+    const fl={'fase1':'1ª Fase','fase2':'2ª Fase','fase3':'3ª Fase','anual':'Anual'};
+    gs=golesPorPeriodo('segunda',currentFaseGol);
     subtitulo=(fl[currentFaseGol]||'')+' · Segunda División';
   } else {
     const torneo=currentTorneo.gol;
-    gs=ordenarGoleadores(data.goleadores.filter(g=>g.div==='primera'&&(g.torneo||'apertura')===torneo));
+    gs=golesPorPeriodo('primera',torneo);
     subtitulo=torneoLabel(torneo)+' · Primera División';
   }
   if(!gs.length) return null;
