@@ -12780,7 +12780,7 @@ function renderSegunda3(el){
 async function cvTituloSegunda3(ctx, W, id, titulo, subtitulo){
   const CX=W/2;
   let y=await cvHeader(ctx,W,id,0);
-  if(!(await cvTituloPlayoffLogo(ctx,W,id,y,titulo,subtitulo,28,34,52,'rgba(201,162,39,0.55)'))){
+  if(!(await cvTituloPlayoffLogo(ctx,W,{...id,logo:id.logoSegunda},y,titulo,subtitulo,28,34,52,'rgba(201,162,39,0.55)'))){
     ctx.fillStyle=C.DORADO;
     ctx.font=`${s(28)}px "Bebas Neue", Arial, sans-serif`;
     ctx.textAlign='center'; ctx.textBaseline='alphabetic';
@@ -12981,7 +12981,7 @@ async function cvRenderBracketSegunda(secciones, id, liga, o){
   o=o||{};
   const W=CV_W, H=CV_H, CX=W/2;
   const escudoImgs=await cvPrecargarEscudosCC(secciones.flatMap(sec=>sec.cruces));
-  const logoImg=await cvImgAsync(id.logo);
+  const logoImg=await cvImgAsync(id.logoSegunda);   // logo de Segunda División (Admin → Logo/Nombre)
   const trofeoImg=o.sinTrofeo?null:await cvImgAsync(TROFEO_CAMPEON_B64);
 
   const canvas=document.createElement('canvas');
@@ -18216,7 +18216,7 @@ async function generarImagenPlayoff(torneo, esReserva){
 
   // Título — Bebas Neue grande + subtítulo DM Sans (mismo criterio que Posiciones)
   const subPO = torneoLabel(torneo)+(esReserva?' · Reserva':' · Primera División');
-  if(!(await cvTituloPlayoffLogo(ctx,W,id,y,'PLAY OFF',subPO,28,34,52,'rgba(201,162,39,0.55)'))){
+  if(!(await cvTituloPlayoffLogo(ctx,W,{...id,logo:(torneo==='segunda'?id.logoSegunda:id.logoPrimera)},y,'PLAY OFF',subPO,28,34,52,'rgba(201,162,39,0.55)'))){
     ctx.fillStyle=C.DORADO;
     ctx.font=`${s(28)}px "Bebas Neue", Arial, sans-serif`;
     ctx.textAlign='center';
@@ -18503,9 +18503,10 @@ async function generarImagenEtapaPlayoff(torneo, esReserva, etapa){
     ctx.fillText('¡Felicitaciones, campeón del torneo!', CX, cy);
 
     // Logo de la liga (el cargado en Admin → Logo/Nombre)
-    if(id.logo){
+    const logoDiv=(torneo==='segunda'?id.logoSegunda:id.logoPrimera);
+    if(logoDiv){
       const LG=s(52);
-      await cvDrawLogo(ctx,id.logo,CX-LG/2,cy+s(20),LG);
+      await cvDrawLogo(ctx,logoDiv,CX-LG/2,cy+s(20),LG);
     }
 
   } else {
@@ -18513,7 +18514,7 @@ async function generarImagenEtapaPlayoff(torneo, esReserva, etapa){
     const label    = etapa==='cuartos' ? 'CUARTOS DE FINAL' : 'SEMIFINALES';
     const subtitulo= etapa==='cuartos' ? 'Avanzan a Semifinales' : 'Finalistas del torneo';
 
-    if(!(await cvTituloPlayoffLogo(ctx,W,id,y,label,subtitulo+' · '+subLiga,30,38,58,'rgba(201,162,39,0.6)'))){
+    if(!(await cvTituloPlayoffLogo(ctx,W,{...id,logo:(torneo==='segunda'?id.logoSegunda:id.logoPrimera)},y,label,subtitulo+' · '+subLiga,30,38,58,'rgba(201,162,39,0.6)'))){
       ctx.fillStyle=C.DORADO;
       ctx.font=`${s(30)}px "Bebas Neue", Arial, sans-serif`;
       ctx.textAlign='center';
