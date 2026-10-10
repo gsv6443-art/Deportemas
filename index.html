@@ -9862,7 +9862,11 @@ function abrirClubModal(nombreEquipo){
     html = `<div class="club-empty">Este club aún no tiene ficha cargada.</div>`;
   }
 
-  document.getElementById('club-modal-body').innerHTML = html;
+  window._clubModalNombre = nombreEquipo;
+  const _btnCal = calPartidosDeEquipo(nombreEquipo,{reserva:true}).length
+    ? `<div style="margin-bottom:14px"><button class="btn-share" onclick="calAbrirDialogo(window._clubModalNombre)">${SVG_SHARE} Calendario del equipo</button></div>`
+    : '';
+  document.getElementById('club-modal-body').innerHTML = _btnCal + html;
   document.getElementById('club-modal').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
@@ -19705,6 +19709,663 @@ function shareCambiarImagen(delta){
   if(!_shareCanvases || !_shareCanvases.length) return;
   _shareIdx = (_shareIdx + delta + _shareCanvases.length) % _shareCanvases.length;
   _shareMostrarImagen();
+}
+
+// ============================================================
+// CALENDARIO DE EQUIPO — imagen para compartir (1080×1350)
+// Tres estilos: 'grilla' (3 columnas, día grande), 'lista' (mes vertical + lista) y 'tarjetas' (una tarjeta por partido).
+// Se abre desde la ficha del club (botón "Calendario del equipo").
+// Los datos salen de data.partidos; el "día" es texto libre, así que se interpreta
+// (calParseDia) para agrupar por mes. Los escudos salen de `escudos`.
+// ============================================================
+const CAL_MESES = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+const CAL_MESES_ABR = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const CAL_PALETA = [['#1f4e8c','#12305a'],['#8c2a2a','#5a1717'],['#2a6b3a','#17401f'],['#6b3a8c','#43225a'],['#8c6b1f','#5c4710'],['#2a6b6b','#173f3f'],['#3a3a48','#22222c']];
+const CAL_K = 1080 / 340;            // las medidas de diseño están en "unidades de maqueta" (340 de ancho)
+const ck = v => v * CAL_K;
+const calF = (sz, peso) => `${peso||'600'} ${sz}px "Rajdhani", Arial, sans-serif`;
+const calB = sz => `${sz}px "Bebas Neue", Arial, sans-serif`;
+const CAL_COL_RES = { G:'#4cc16d', E:'#bbbbbb', P:'#e0584a' };
+
+// ── Interpretación de datos ─────────────────────────────────
+function calParseDia(txt){
+  const out = {dia:null, mes:null, anio:null, dow:null};
+  if(!txt) return out;
+  const t = String(txt).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const full = ['lunes','martes','miercoles','jueves','viernes','sabado','domingo'];
+  const abr  = ['lun','mar','mie','jue','vie','sab','dom'];
+  const DOW  = ['LUN','MAR','MIÉ','JUE','VIE','SÁB','DOM'];
+  for(const tk of t.split(/[^a-z0-9\/\-\.]+/).filter(Boolean)){
+    const w = tk.replace(/\.$/,'');
+    let i = full.indexOf(w); if(i<0) i = abr.indexOf(w); if(i<0 && w==='mier') i = 2;
+    if(i>=0){ out.dow = DOW[i]; break; }
+  }
+  let m = t.match(/(\d{1,2})\s*[\/\-.]\s*(\d{1,2})(?:\s*[\/\-.]\s*(\d{2,4}))?/);
+  if(m && +m[1]>=1 && +m[1]<=31 && +m[2]>=1 && +m[2]<=12){
+    out.dia = +m[1]; out.mes = +m[2]-1;
+    if(m[3]) out.anio = m[3].length===2 ? 2000+(+m[3]) : +m[3];
+    return out;
+  }
+  m = t.match(/(\d{1,2})\s*(?:de\s+)?([a-z]{3,10})/);
+  if(m){
+    const mi = CAL_MESES_ABR.findIndex(a=>m[2].startsWith(a));
+    if(mi>=0 && +m[1]>=1 && +m[1]<=31){ out.dia = +m[1]; out.mes = mi; }
+  }
+  return out;
+}
+function calNumFecha(p){ const m = String(p.fecha||'').match(/(\d+)/); return m ? parseInt(m[1],10) : null; }
+function calCompetencia(p){
+  let l;
+  if(p.esProvincial) l = 'PROVINCIAL' + (p.provincialCategoria ? ' ' + (p.provincialCategoria==='sub15'?'SUB 15':'SUB 13') : '');
+  else if(p.div==='extraliga') l = (p.torneoExtra||'EXTRA LIGA').toUpperCase();
+  else if(p.div==='segunda') l = ({fase1:'1ª FASE',fase2:'2ª FASE',fase3:'3ª FASE'})[p.faseRes] || 'SEGUNDA';
+  else l = (p.torneo==='apertura'?'APERTURA':p.torneo==='clausura'?'CLAUSURA':p.torneo==='anual'?'ANUAL':'LIGA') + (p.esPlayoff?' · PLAY OFF':'');
+  if(p.esReserva) l = 'RESERVA · ' + l;
+  return l;
+}
+function calPartidosDeEquipo(nombre, opts){
+  const n = normalizar(nombre);
+  let ps = (data.partidos||[]).filter(p=>normalizar(p.local)===n || normalizar(p.visit)===n);
+  if(!(opts && opts.reserva)) ps = ps.filter(p=>!p.esReserva);
+  return ps.map((p,i)=>{
+    const esLocal = normalizar(p.local)===n;
+    const jugado = p.estado==='jugado';
+    const r = jugado ? parsearResultado(p.resultado) : null;
+    let res = null;
+    if(r){
+      const gf = esLocal ? r.golesLocal : r.golesVisit, gc = esLocal ? r.golesVisit : r.golesLocal;
+      res = {gf, gc, t: gf>gc?'G':gf<gc?'P':'E'};
+    }
+    return {p, i, d:calParseDia(p.dia), esLocal, rival: esLocal?p.visit:p.local, res, jugado, nf:calNumFecha(p), comp:calCompetencia(p)};
+  });
+}
+function calOrdenar(arr){
+  const g = x => x.d.mes!=null ? 0 : 1;
+  const k = x => x.d.mes!=null ? x.d.mes*100+x.d.dia : (x.nf!=null ? x.nf : 9999);
+  return arr.slice().sort((a,b)=> (g(a)-g(b)) || (k(a)-k(b)) || (a.i-b.i));
+}
+function calPeriodos(nombre, reserva){
+  const arr = calPartidosDeEquipo(nombre,{reserva});
+  const meses = [...new Set(arr.filter(x=>x.d.mes!=null).map(x=>x.d.mes))].sort((a,b)=>a-b);
+  const out = [{id:'prox', label:'Próximos partidos'}];
+  meses.forEach(m=>out.push({id:'m'+m, label:CAL_MESES[m].charAt(0)+CAL_MESES[m].slice(1).toLowerCase()}));
+  out.push({id:'todo', label:'Toda la temporada'});
+  return out;
+}
+function calFiltrarPeriodo(arr, per){
+  if(per==='todo') return arr;
+  if(per==='prox') return arr.filter(x=>!x.jugado);
+  const m = +String(per).slice(1);
+  return arr.filter(x=>x.d.mes===m);
+}
+const calSinHora = x => !x.p.hora || x.p.hora==='--:--';
+const calPad = n => String(n).padStart(2,'0');
+function calNum(x){ return x.d.dia!=null ? calPad(x.d.dia) : (x.nf!=null ? 'F'+x.nf : '–'); }
+function calWD(x, multi){
+  const a = [];
+  if(multi && x.d.mes!=null) a.push(CAL_MESES[x.d.mes].slice(0,3));
+  if(x.d.dow) a.push(x.d.dow);
+  if(!calSinHora(x)) a.push(x.p.hora);
+  if(!a.length && x.nf!=null) a.push('FECHA '+x.nf);
+  return a.join(' · ');
+}
+function calFechaCorta(x){
+  if(x.d.dia!=null) return (x.d.dow ? x.d.dow+' ' : '') + calPad(x.d.dia) + '/' + calPad(x.d.mes+1);
+  return x.nf!=null ? 'FECHA '+x.nf : String(x.p.fecha||'').toUpperCase();
+}
+
+// ── Utilidades de dibujo ────────────────────────────────────
+function calW(ctx, txt, sp){ let w=0; for(const ch of String(txt)) w += ctx.measureText(ch).width + sp; return Math.max(0, w-sp); }
+// Texto con espaciado entre letras; align 'left'|'right'|'center'; maxW trunca con "…"
+function calTxt(ctx, txt, x, y, sp, opts){
+  opts = opts || {};
+  let t = String(txt);
+  if(opts.maxW && calW(ctx,t,sp) > opts.maxW){
+    const base = t; let n = base.length;
+    while(n>1 && calW(ctx, base.slice(0,n).trimEnd()+'…', sp) > opts.maxW) n--;
+    t = base.slice(0,n).trimEnd()+'…';
+  }
+  const w = calW(ctx,t,sp);
+  let cx = opts.align==='right' ? x-w : opts.align==='center' ? x-w/2 : x;
+  const prevAlign = ctx.textAlign; ctx.textAlign = 'left';
+  for(const ch of t){ ctx.fillText(ch, cx, y); cx += ctx.measureText(ch).width + sp; }
+  ctx.textAlign = prevAlign;
+  return w;
+}
+// Varios tramos de color separados por " · "; el tramo con trunc:true se acorta si no entra
+function calSegW(ctx, segs, sp){
+  const it = segs.filter(s=>s.t), sepW = calW(ctx,' · ',sp) + sp;
+  return it.reduce((a,s,i)=>a + calW(ctx,s.t,sp) + sp + (i ? sepW : 0), 0) - sp;
+}
+function calSeg(ctx, segs, x, y, maxW, sp, colSep){
+  const items = segs.filter(s=>s.t).map(s=>({...s, base:s.t}));
+  const sep = ' · ';
+  const tr = items.find(s=>s.trunc);
+  if(tr){ let n = tr.base.length; while(calSegW(ctx,items,sp)>maxW && n>2){ n--; tr.t = tr.base.slice(0,n).trimEnd()+'…'; } }
+  let cx = x;
+  items.forEach((s,i)=>{
+    if(i){ ctx.fillStyle = colSep; ctx.font = calF(ctx._calMetaSz||ck(11)); cx += calTxt(ctx, sep, cx, y, sp) + sp; }
+    ctx.fillStyle = s.c; ctx.font = s.f || calF(ctx._calMetaSz||ck(11));
+    cx += calTxt(ctx, s.t, cx, y, sp) + sp;
+  });
+}
+function calFotoCover(ctx, img, x, y, w, h, biasY){
+  const iw = img.naturalWidth||img.width||1, ih = img.naturalHeight||img.height||1;
+  const sc = Math.max(w/iw, h/ih), dw = iw*sc, dh = ih*sc;
+  ctx.drawImage(img, x+(w-dw)/2, y+(h-dh)*(biasY==null?0.5:biasY), dw, dh);
+}
+function calAvion(ctx, cx, cy, sz, color){
+  const P = [[1,0],[0.18,-0.22],[-0.15,-1],[-0.42,-1],[-0.3,-0.22],[-0.78,-0.16],[-1,-0.42],[-1.12,-0.42],[-1,0]];
+  ctx.save(); ctx.translate(cx,cy); ctx.rotate(-Math.PI/4); ctx.scale(sz/2, sz/2);
+  ctx.beginPath();
+  P.forEach((p,i)=> i ? ctx.lineTo(p[0],p[1]) : ctx.moveTo(p[0],p[1]));
+  for(let i=P.length-2;i>=1;i--) ctx.lineTo(P[i][0], -P[i][1]);
+  ctx.closePath(); ctx.fillStyle = color; ctx.fill(); ctx.restore();
+}
+
+// Escudos: imagen real (modo "contain", sin recortar) o escudo-forma con iniciales de respaldo
+function calIni(n){
+  const w = String(n||'?').trim().split(/\s+/).filter(Boolean);
+  return w.length>=2 ? (w[0][0]+w[1][0]).toUpperCase() : String(n||'?').substr(0,2).toUpperCase();
+}
+function calPaleta(n){
+  let h = 0; const s = normalizar(n||'');
+  for(let i=0;i<s.length;i++) h = (h*31 + s.charCodeAt(i))>>>0;
+  return CAL_PALETA[h % CAL_PALETA.length];
+}
+function calPathEscudo(ctx,x,y,w,h){
+  ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+w,y); ctx.lineTo(x+w,y+h*0.56); ctx.lineTo(x+w/2,y+h); ctx.lineTo(x,y+h*0.56); ctx.closePath();
+}
+function calEscudoForma(ctx,x,y,w,h,nombre){
+  const [a,b] = calPaleta(nombre), bd = Math.max(2, w*0.1);
+  calPathEscudo(ctx,x,y,w,h); ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.fill();
+  ctx.save(); calPathEscudo(ctx, x+bd, y+bd, w-2*bd, h-bd*1.8); ctx.clip();
+  ctx.fillStyle = a; ctx.fillRect(x,y,w,h*0.58); ctx.fillStyle = b; ctx.fillRect(x,y+h*0.58,w,h*0.42);
+  ctx.restore();
+  ctx.fillStyle = '#fff'; ctx.font = `700 ${Math.round(w*0.36)}px "Rajdhani", Arial, sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(calIni(nombre), x+w/2, y+h*0.3);
+  ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
+}
+async function calCargarEscudos(nombres){
+  const m = {};
+  for(const n of nombres){
+    const k = normalizar(n); if(m[k]) continue;
+    const e = escudos[k] || escudos[n];
+    const src = e && typeof e==='object' ? e.img : e;
+    m[k] = { img: await cargarImagenAsync(src) };
+  }
+  return m;
+}
+function calEscudo(ctx, mapa, nombre, x, y, w, h){
+  const ent = mapa[normalizar(nombre)];
+  if(ent && ent.img){
+    const iw = ent.img.naturalWidth||ent.img.width||1, ih = ent.img.naturalHeight||ent.img.height||1;
+    const sc = Math.min(w/iw, h/ih), dw = iw*sc, dh = ih*sc;
+    ctx.drawImage(ent.img, x+(w-dw)/2, y+(h-dh)/2, dw, dh);
+  } else calEscudoForma(ctx,x,y,w,h,nombre);
+}
+
+// Marca DEPORTEMAS (cuadradito dorado + texto), alineada a la derecha o a la izquierda
+function calWordmark(ctx, x, y, size, align){
+  ctx.font = calB(size);
+  const sp = size*0.08, sq = ck(8), gap = ck(5);
+  const total = sq + gap + calW(ctx,'DEPORTE',sp) + sp + calW(ctx,'MAS',sp);
+  let cx = align==='right' ? x-total : x;
+  ctx.fillStyle = '#c9a227'; ctx.fillRect(cx, y-ck(9), sq, sq);
+  cx += sq + gap;
+  ctx.fillStyle = '#f5f5f5'; cx += calTxt(ctx,'DEPORTE',cx,y,sp) + sp;
+  ctx.fillStyle = '#c9a227'; calTxt(ctx,'MAS',cx,y,sp);
+  return total;
+}
+function calFondo(ctx, W, H){ ctx.fillStyle = '#07070a'; ctx.fillRect(0,0,W,H); }
+// Brillos de ambiente: se dibujan DESPUÉS de la foto para que no se note el borde de su degradé
+function calBrillos(ctx, W, H){
+  const rg = (cx,cy,r,rgb,a)=>{ const g = ctx.createRadialGradient(cx,cy,0,cx,cy,r); g.addColorStop(0,`rgba(${rgb},${a})`); g.addColorStop(1,`rgba(${rgb},0)`); ctx.fillStyle = g; ctx.fillRect(0,0,W,H); };
+  rg(W*0.18, H*0.06, 590, '201,162,39', 0.22);
+  rg(W*0.92, H*0.62, 550, '90,90,150', 0.22);
+}
+function calFooter(ctx, W, H, izq, der){
+  const fh = ck(34), y = H-fh;
+  ctx.fillStyle = '#000'; ctx.fillRect(ck(6), y, W-ck(6), fh);
+  ctx.fillStyle = '#c9a227'; ctx.fillRect(ck(6), y, W-ck(6), ck(3));
+  ctx.font = calF(ck(11)); ctx.textBaseline = 'alphabetic';
+  const by = y + ck(3) + (fh-ck(3))/2 + ck(4);
+  ctx.fillStyle = '#8a8a96'; calTxt(ctx, izq, ck(20), by, ck(1.1), {maxW: W*0.5});
+  ctx.fillStyle = '#c9a227'; calTxt(ctx, der, W-ck(12), by, ck(1.1), {align:'right'});
+}
+function calNuevoCanvas(){ const c = document.createElement('canvas'); c.width = CV_W; c.height = CV_H; return c; }
+
+// ── Estilo 1: GRILLA ────────────────────────────────────────
+async function _calGrilla(items, info){
+  const c = calNuevoCanvas(), ctx = c.getContext('2d'), W = c.width, H = c.height;
+  ctx.textBaseline = 'alphabetic';
+  calFondo(ctx,W,H);
+  const nx = info.next && items.includes(info.next) ? info.next : null;
+  const filas = Math.ceil(items.length/3);
+
+  // Foto (o escudo del club como marca de agua) abajo a la derecha, fundida con el fondo
+  const phW = ck(0.58*334), phX = W-phW, phY = ck(205), phH = H-ck(34)-phY;
+  ctx.save(); ctx.beginPath(); ctx.rect(phX,phY,phW,phH); ctx.clip();
+  if(info.foto){
+    ctx.fillStyle = '#2a2a37'; ctx.fillRect(phX,phY,phW,phH);
+    calFotoCover(ctx, info.foto, phX, phY, phW, phH, 0.1);
+  } else {
+    ctx.globalAlpha = 0.13;
+    calEscudo(ctx, info.mapa, info.equipo, phX+phW*0.16, phY+ck(34), phW*0.78, phH*0.8);
+    ctx.globalAlpha = 1;
+  }
+  let g = ctx.createLinearGradient(0,phY,0,phY+phH);
+  g.addColorStop(0,'#07070a'); g.addColorStop(0.3,'rgba(7,7,10,.7)'); g.addColorStop(0.58,'rgba(7,7,10,0)');
+  ctx.fillStyle = g; ctx.fillRect(phX,phY,phW,phH);
+  g = ctx.createLinearGradient(phX,0,phX+phW,0);
+  g.addColorStop(0,'#07070a'); g.addColorStop(0.45,'rgba(7,7,10,0)');
+  ctx.fillStyle = g; ctx.fillRect(phX,phY,phW,phH);
+  ctx.restore();
+  calBrillos(ctx,W,H);
+  ctx.fillStyle = '#c9a227'; ctx.fillRect(0,0,ck(6),H);
+
+  // Cabecera
+  const wmW = calWordmark(ctx, ck(20), ck(24.5), ck(16), 'left');
+  ctx.font = calF(ck(11)); ctx.fillStyle = '#8a8a96';
+  calTxt(ctx, info.liga, W-ck(12), ck(24), ck(1.1), {align:'right', maxW: W-ck(12)-ck(20)-wmW-ck(18)});
+
+  // Título: mes + año en contorno
+  ctx.font = calB(ck(54));
+  const anioW = ctx.measureText(info.anio).width;
+  const maxT = W - ck(12) - ck(20) - anioW - ck(14);
+  let fs = ck(54); ctx.font = calB(fs);
+  while(ctx.measureText(info.titulo).width > maxT && fs > ck(30)){ fs -= 2; ctx.font = calB(fs); }
+  ctx.fillStyle = '#f5f5f5'; ctx.fillText(info.titulo, ck(20), ck(80));
+  ctx.font = calB(ck(54)); ctx.textAlign = 'right';
+  ctx.strokeStyle = '#c9a227'; ctx.lineWidth = ck(1); ctx.strokeText(info.anio, W-ck(12), ck(80));
+  ctx.textAlign = 'left';
+
+  // Línea del equipo
+  calEscudo(ctx, info.mapa, info.equipo, ck(20), ck(88), ck(17), ck(20));
+  ctx.font = calF(ck(12)); ctx.fillStyle = '#c9a227';
+  calTxt(ctx, (info.equipo + ' · ' + info.subt).toUpperCase(), ck(20+17+7), ck(102), ck(1.9), {maxW: W-ck(20+17+7)-ck(16)});
+
+  // Grilla de partidos
+  const gx = ck(20), gy = ck(118), colW = (W-ck(12)-gx)/3, rowH = ck(filas<=2?74:68);
+  let hayAway = false, hayAst = false;
+  items.forEach((x,i)=>{
+    const col = i%3, row = Math.floor(i/3);
+    const x0 = gx + col*colW, y0 = gy + row*rowH;
+    ctx.fillStyle = 'rgba(255,255,255,.14)';
+    if(col>0) ctx.fillRect(x0, y0, ck(1), rowH);
+    if(row>0) ctx.fillRect(x0, y0, colW, ck(1));
+    const padL = col===0 ? 0 : ck(8), padR = ck(8), padT = ck(6);
+    const cx = x0 + padL, cw = colW - padL - padR;
+    const esNext = x===nx, sinHora = calSinHora(x);
+    if(sinHora) hayAst = true;
+    if(!x.esLocal) hayAway = true;
+    // día/hora
+    const wd = calWD(x, info.multiMes);
+    let wsz = ck(11); ctx.font = calF(wsz);
+    while(calW(ctx, wd, ck(0.9)) > cw && wsz > ck(9.2)){ wsz -= ck(0.4); ctx.font = calF(wsz); }
+    ctx.fillStyle = '#8a8a96';
+    calTxt(ctx, wd, cx, y0+padT+ck(9), ck(0.9), {maxW: cw});
+    // número + escudo del rival
+    ctx.font = calB(ck(38));
+    ctx.fillStyle = esNext ? '#f0c040' : (x.jugado ? '#b8b8c4' : '#f5f5f5');
+    ctx.fillText(calNum(x) + (sinHora ? '*' : ''), cx, y0+padT+ck(44));
+    const cwid = ck(26), chei = ck(30.7);
+    calEscudo(ctx, info.mapa, x.rival, cx+cw-cwid, y0+padT+ck(31)-chei/2, cwid, chei);
+    // competición + (avión si es visitante) + resultado
+    const by = y0 + ck(64);
+    const reservado = (x.res ? ck(36) : 0) + (!x.esLocal ? ck(14) : 0);
+    // si la etiqueta no entra, primero se achica un poco la letra; recién después se trunca
+    let tsz = ck(11);
+    ctx.font = calF(tsz);
+    while(calW(ctx, x.comp, ck(0.5)) > cw - reservado && tsz > ck(9.2)){ tsz -= ck(0.4); ctx.font = calF(tsz); }
+    ctx.fillStyle = '#c9a227';
+    const tw = calTxt(ctx, x.comp, cx, by, ck(0.5), {maxW: cw - reservado});
+    if(!x.esLocal) calAvion(ctx, cx+tw+ck(9), by-ck(4), ck(11), '#c9a227');
+    if(x.res){
+      ctx.font = calF(ck(12),'700'); ctx.fillStyle = CAL_COL_RES[x.res.t];
+      calTxt(ctx, `${x.res.t} ${x.res.gf}-${x.res.gc}`, cx+cw, by, 0, {align:'right'});
+    }
+  });
+
+  // Recuadro "próximo partido" (sube si la grilla es de una sola fila)
+  if(nx && filas<=2){
+    const bx = ck(20), by0 = filas===1 ? gy + rowH + ck(18) : ck(271), bh = ck(78);
+    ctx.fillStyle = '#c9a227'; ctx.fillRect(bx, by0, ck(3), bh);
+    const tx = bx + ck(12), mw = ck(125);
+    ctx.font = calF(ck(11)); ctx.fillStyle = '#c9a227'; calTxt(ctx,'PRÓXIMO PARTIDO', tx, by0+ck(12), ck(1.5));
+    ctx.font = calB(ck(26)); ctx.fillStyle = '#f5f5f5'; ctx.fillText(calFechaCorta(nx), tx, by0+ck(40));
+    let rf = ck(13.5); ctx.font = calF(rf);
+    const riv = nx.rival.toUpperCase();
+    while(calW(ctx, riv, ck(0.4)) > mw && rf > ck(10)){ rf -= ck(0.4); ctx.font = calF(rf); }
+    ctx.fillStyle = '#f5f5f5'; calTxt(ctx, riv, tx, by0+ck(58), ck(0.4), {maxW: mw});
+    ctx.font = calF(ck(12)); ctx.fillStyle = '#c8c8d0';
+    calTxt(ctx, (calSinHora(nx) ? '' : nx.p.hora + ' · ') + (nx.esLocal ? 'DE LOCAL' : 'DE VISITANTE'), tx, by0+ck(73), ck(0.4), {maxW: mw});
+  }
+  // Notas al pie
+  ctx.font = calF(ck(11)); ctx.fillStyle = '#8a8a96';
+  let nxp = ck(20); const ny = H - ck(43);
+  if(hayAst){ nxp += calTxt(ctx, '* Horario a confirmar', nxp, ny, ck(0.3)) + ck(10); }
+  if(hayAway){ calAvion(ctx, nxp+ck(5), ny-ck(4), ck(11), '#c9a227'); calTxt(ctx, 'Visitante', nxp+ck(14), ny, ck(0.3)); }
+
+  calFooter(ctx, W, H, 'FIXTURE COMPLETO', 'deportemas.pages.dev');
+  return c;
+}
+
+// ── Estilo 2: LISTA ─────────────────────────────────────────
+async function _calLista(items, info){
+  const c = calNuevoCanvas(), ctx = c.getContext('2d'), W = c.width, H = c.height;
+  ctx.textBaseline = 'alphabetic';
+  calFondo(ctx,W,H);
+  const nx = info.next && items.includes(info.next) ? info.next : null;
+  const bx = ck(6);                         // borde dorado izquierdo
+  const phW = ck(0.72*334);
+
+  // Foto a la izquierda (o escudo grande de marca de agua)
+  ctx.save(); ctx.beginPath(); ctx.rect(bx,0,phW,H); ctx.clip();
+  if(info.foto){
+    ctx.fillStyle = '#2a2a37'; ctx.fillRect(bx,0,phW,H);
+    calFotoCover(ctx, info.foto, bx, 0, phW, H, 0.12);
+  } else {
+    ctx.globalAlpha = 0.14;
+    calEscudo(ctx, info.mapa, info.equipo, ck(34), ck(110), ck(190), ck(222));
+    ctx.globalAlpha = 1;
+  }
+  ctx.restore();
+  // Degradés de integración (horizontal + vertical) sobre todo el cuerpo
+  const bw = W-bx;
+  let g = ctx.createLinearGradient(bx,0,W,0);
+  g.addColorStop(0,'rgba(7,7,10,.15)'); g.addColorStop(0.25,'rgba(7,7,10,0)');
+  g.addColorStop(0.52,'rgba(7,7,10,.82)'); g.addColorStop(1,'#07070a');
+  ctx.fillStyle = g; ctx.fillRect(bx,0,bw,H);
+  g = ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'rgba(7,7,10,.9)'); g.addColorStop(0.16,'rgba(7,7,10,0)');
+  g.addColorStop(0.7,'rgba(7,7,10,0)'); g.addColorStop(1,'rgba(7,7,10,.95)');
+  ctx.fillStyle = g; ctx.fillRect(bx,0,bw,H);
+  calBrillos(ctx,W,H);
+  ctx.fillStyle = '#c9a227'; ctx.fillRect(0,0,bx,H);
+
+  // Cabecera: escudo + nombre del club | marca
+  calEscudo(ctx, info.mapa, info.equipo, ck(20), ck(14), ck(22), ck(26));
+  ctx.font = calB(ck(18)); ctx.fillStyle = '#f5f5f5';
+  calTxt(ctx, info.equipo.toUpperCase(), ck(50), ck(33), ck(1.1), {maxW: ck(150)});
+  calWordmark(ctx, W-ck(12), ck(26.5), ck(16), 'right');
+
+  // Mes en vertical (se lee de abajo hacia arriba) + línea de temporada
+  const yBase = H - ck(48), maxLen = yBase - ck(62);
+  let fs = ck(64); ctx.font = calB(fs);
+  while(ctx.measureText(info.titulo).width > maxLen && fs > ck(34)){ fs -= 2; ctx.font = calB(fs); }
+  ctx.save(); ctx.translate(ck(16)+fs*0.82, yBase); ctx.rotate(-Math.PI/2);
+  ctx.fillStyle = '#f5f5f5'; ctx.fillText(info.titulo, 0, 0); ctx.restore();
+  ctx.save(); ctx.translate(ck(78)+ck(9.5), yBase); ctx.rotate(-Math.PI/2);
+  ctx.font = calF(ck(11)); ctx.fillStyle = '#c9a227';
+  calTxt(ctx, info.subt.toUpperCase(), 0, 0, ck(3.3), {maxW: maxLen}); ctx.restore();
+
+  // Lista de partidos (panel derecho)
+  const n = items.length;
+  const xr = W-ck(12), pw = ck(0.65*334), xl = xr - pw;
+  const y0 = ck(52), y1 = H - ck(42);
+  const rowH = Math.min((y1-y0)/n, ck(70));
+  const yStart = y0 + ((y1-y0) - rowH*n)/2;
+  let hayAst = false;
+  items.forEach((x,i)=>{
+    const top = yStart + i*rowH, cy = top + rowH/2;
+    const esNext = x===nx, sinHora = calSinHora(x);
+    if(sinHora) hayAst = true;
+    if(esNext){
+      const gr = ctx.createLinearGradient(xl,0,xr,0);
+      gr.addColorStop(0,'rgba(201,162,39,.24)'); gr.addColorStop(1,'rgba(201,162,39,0)');
+      ctx.fillStyle = gr; ctx.fillRect(xl, top, pw, rowH);
+      ctx.fillStyle = '#c9a227'; ctx.fillRect(xl, top, ck(3), rowH);
+    }
+    if(i<n-1){ ctx.fillStyle = 'rgba(255,255,255,.14)'; ctx.fillRect(xl, top+rowH-ck(0.5), pw, ck(1)); }
+    const st = xl + (esNext ? ck(9) : ck(4));
+    // día
+    ctx.font = calB(ck(30)); ctx.fillStyle = esNext ? '#f0c040' : (x.jugado ? '#b8b8c4' : '#f5f5f5');
+    const dNy = (info.multiMes && x.d.mes!=null) ? cy+ck(6) : cy+ck(10.5);
+    ctx.textAlign = 'right'; ctx.fillText(calNum(x) + (sinHora ? '*' : ''), st+ck(38), dNy); ctx.textAlign = 'left';
+    if(info.multiMes && x.d.mes!=null){
+      ctx.font = calF(ck(10.5)); ctx.fillStyle = esNext ? '#c9a227' : '#8a8a96';
+      calTxt(ctx, CAL_MESES[x.d.mes].slice(0,3), st+ck(38), cy+ck(19), ck(1.2), {align:'right'});
+    }
+    // escudo rival
+    calEscudo(ctx, info.mapa, x.rival, st+ck(46), cy-ck(15.3), ck(26), ck(30.7));
+    // nombre + meta
+    const tx = st + ck(80), mw = xr - tx - ck(2);
+    let nfs = ck(18); ctx.font = calB(nfs);
+    const nom = x.rival.toUpperCase();
+    while(ctx.measureText(nom).width > mw && nfs > ck(14)){ nfs -= 1; ctx.font = calB(nfs); }
+    ctx.fillStyle = '#f5f5f5'; cvFillTextTrunc(ctx, nom, tx, cy-ck(1.5), mw);
+    const loc = x.res ? {t:`${x.res.t} ${x.res.gf}-${x.res.gc}`, c:CAL_COL_RES[x.res.t], f:calF(ck(11),'700')} : {t: x.esLocal?'LOCAL':'VISITA', c:'#9a9aa6'};
+    const mk = conDia => [{t:conDia?(x.d.dow||''):'', c:'#9a9aa6'}, {t:x.comp, c:'#c9a227', trunc:true}, loc];
+    const msp = ck(0.33);
+    let msz = ck(11), conDia = true;
+    for(; msz>=ck(9.4); msz-=ck(0.4)){ ctx.font = calF(msz); if(calSegW(ctx, mk(true), msp) <= mw) break; }
+    if(msz < ck(9.4)){ msz = ck(10); conDia = false; }   // no entra ni achicando: se omite el día (ya está el número)
+    ctx._calMetaSz = msz; ctx.font = calF(msz);
+    if(loc.f) loc.f = calF(msz,'700');
+    calSeg(ctx, mk(conDia), tx, cy+ck(13), mw, msp, '#9a9aa6');
+  });
+
+  calFooter(ctx, W, H, hayAst ? '* HORARIO A CONFIRMAR' : info.liga, 'deportemas.pages.dev');
+  return c;
+}
+
+
+// ── Estilo 3: TARJETAS (una tarjeta por partido, escudo grande, foto de fondo) ──
+async function _calTarjetas(items, info){
+  const c = calNuevoCanvas(), ctx = c.getContext('2d'), W = c.width, H = c.height;
+  ctx.textBaseline = 'alphabetic';
+  calFondo(ctx,W,H);
+  const bx = ck(6);
+  const nx = info.next && items.includes(info.next) ? info.next : null;
+
+  // Fondo: foto a pantalla completa (o escudo del club como marca de agua) + velo oscuro
+  if(info.foto){
+    ctx.save(); ctx.beginPath(); ctx.rect(bx,0,W-bx,H); ctx.clip();
+    calFotoCover(ctx, info.foto, bx, 0, W-bx, H, 0.08);
+    ctx.restore();
+  } else {
+    ctx.globalAlpha = 0.13;
+    calEscudo(ctx, info.mapa, info.equipo, W/2-ck(95), ck(38), ck(190), ck(222));
+    ctx.globalAlpha = 1;
+  }
+  const g = ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'rgba(7,7,10,.78)'); g.addColorStop(0.28,'rgba(7,7,10,.28)');
+  g.addColorStop(0.5,'rgba(7,7,10,.45)'); g.addColorStop(1,'rgba(7,7,10,.95)');
+  ctx.fillStyle = g; ctx.fillRect(bx,0,W-bx,H);
+  calBrillos(ctx,W,H);
+  ctx.fillStyle = '#c9a227'; ctx.fillRect(0,0,bx,H);
+
+  // Cabecera: escudo + club | marca
+  calEscudo(ctx, info.mapa, info.equipo, ck(20), ck(14), ck(22), ck(26));
+  ctx.font = calB(ck(20)); ctx.fillStyle = '#f5f5f5';
+  calTxt(ctx, info.equipo.toUpperCase(), ck(50), ck(33), ck(1.2), {maxW: ck(165)});
+  calWordmark(ctx, W-ck(12), ck(26.5), ck(16), 'right');
+
+  // Banda del mes (franja oscura con filetes dorados) + año en contorno
+  const by0 = ck(62), bh = ck(50), bcx = (bx+W)/2;
+  ctx.fillStyle = 'rgba(8,8,8,.76)'; ctx.fillRect(bx, by0, W-bx, bh);
+  ctx.fillStyle = '#c9a227'; ctx.fillRect(bx, by0, W-bx, ck(1.6)); ctx.fillRect(bx, by0+bh-ck(1.6), W-bx, ck(1.6));
+  let fs = ck(46); const gapY = ck(10), maxB = W-bx-ck(40);
+  const medir = () => { ctx.font = calB(fs); return ctx.measureText(info.titulo).width + gapY + ctx.measureText(info.anio).width; };
+  while(medir() > maxB && fs > ck(26)) fs -= 2;
+  const tot = medir(), sx = bcx - tot/2, bl = by0 + bh/2 + fs*0.35;
+  ctx.textAlign = 'left'; ctx.fillStyle = '#f5f5f5'; ctx.fillText(info.titulo, sx, bl);
+  ctx.strokeStyle = '#c9a227'; ctx.lineWidth = ck(0.9);
+  ctx.strokeText(info.anio, sx + ctx.measureText(info.titulo).width + gapY, bl);
+  // Píldora con el subtítulo
+  ctx.font = calF(ck(11));
+  const sub = info.subt.toUpperCase(), sw = calW(ctx, sub, ck(2.2)), pw = sw + ck(26), ph = ck(18), py = ck(120);
+  cvRoundRect(ctx, bcx-pw/2, py, pw, ph, ph/2);
+  ctx.fillStyle = 'rgba(8,8,8,.62)'; ctx.fill();
+  ctx.strokeStyle = 'rgba(201,162,39,.85)'; ctx.lineWidth = ck(1); ctx.stroke();
+  ctx.fillStyle = '#c9a227'; calTxt(ctx, sub, bcx, py + ph/2 + ck(3.8), ck(2.2), {align:'center'});
+
+  // Tarjetas (3 por fila), ancladas abajo para que la foto respire cuando hay pocas
+  const n = items.length, filas = Math.ceil(n/3), gap = ck(8), left = ck(20);
+  const cw = (W - left - ck(14) - 2*gap)/3, chh = ck(110);
+  const yTop = H - ck(34+17) - (filas*chh + (filas-1)*gap);
+  items.forEach((x,i)=>{
+    const col = i%3, row = Math.floor(i/3);
+    const cx0 = left + col*(cw+gap), cy0 = yTop + row*(chh+gap), esNext = x===nx;
+    cvRoundRect(ctx, cx0, cy0, cw, chh, ck(8));
+    ctx.fillStyle = 'rgba(8,8,8,.80)'; ctx.fill();
+    ctx.strokeStyle = esNext ? '#f0c040' : 'rgba(201,162,39,.45)'; ctx.lineWidth = ck(esNext ? 2.4 : 1.2); ctx.stroke();
+    // número del día (izq.) y día/mes + local/visita (der.)
+    ctx.font = calB(ck(26)); ctx.fillStyle = esNext ? '#f0c040' : (x.jugado ? '#b8b8c4' : '#f5f5f5');
+    ctx.fillText(calNum(x), cx0+ck(9), cy0+ck(25));
+    const ld = [info.multiMes && x.d.mes!=null ? CAL_MESES[x.d.mes].slice(0,3) : '', x.d.dow||''].filter(Boolean).join(' · ');
+    ctx.font = calF(ck(10)); ctx.fillStyle = '#8a8a96';
+    if(ld) calTxt(ctx, ld, cx0+cw-ck(9), cy0+ck(12), ck(0.6), {align:'right', maxW: cw-ck(52)});
+    ctx.font = calF(ck(9.5),'700'); ctx.fillStyle = '#c9a227';
+    calTxt(ctx, x.esLocal ? 'LOCAL' : 'VISITA', cx0+cw-ck(9), cy0+ck(24), ck(0.8), {align:'right'});
+    // escudo del rival
+    const es = ck(42);
+    calEscudo(ctx, info.mapa, x.rival, cx0+(cw-es)/2, cy0+ck(28), es, es);
+    // nombre (se achica si es largo), competición y hora/resultado
+    const mw = cw - ck(12);
+    let nfs = ck(15); ctx.font = calB(nfs); const nom = x.rival.toUpperCase();
+    while(calW(ctx, nom, ck(0.3)) > mw && nfs > ck(11)){ nfs -= 1; ctx.font = calB(nfs); }
+    ctx.fillStyle = '#f5f5f5'; calTxt(ctx, nom, cx0+cw/2, cy0+ck(82), ck(0.3), {align:'center', maxW: mw});
+    let csz = ck(10); ctx.font = calF(csz);
+    while(calW(ctx, x.comp, ck(0.6)) > mw && csz > ck(8.4)){ csz -= ck(0.3); ctx.font = calF(csz); }
+    ctx.fillStyle = '#c9a227'; calTxt(ctx, x.comp, cx0+cw/2, cy0+ck(93), ck(0.6), {align:'center', maxW: mw});
+    if(x.res){
+      ctx.font = calF(ck(12),'700'); ctx.fillStyle = CAL_COL_RES[x.res.t];
+      calTxt(ctx, `${x.res.t} ${x.res.gf}-${x.res.gc}`, cx0+cw/2, cy0+ck(105), 0, {align:'center'});
+    } else if(calSinHora(x)){
+      ctx.font = calF(ck(10)); ctx.fillStyle = '#8a8a96';
+      calTxt(ctx, 'A CONFIRMAR', cx0+cw/2, cy0+ck(105), ck(0.8), {align:'center'});
+    } else {
+      ctx.font = calF(ck(11.5)); ctx.fillStyle = '#c8c8d0';
+      calTxt(ctx, x.p.hora, cx0+cw/2, cy0+ck(105), ck(0.6), {align:'center'});
+    }
+  });
+  calFooter(ctx, W, H, 'FIXTURE COMPLETO', 'deportemas.pages.dev');
+  return c;
+}
+
+// ── API: genera 1 canvas o un array (si hay más partidos que los que entran) ──
+async function generarImagenCalendarioEquipo(opts){
+  await document.fonts.ready;
+  const equipo = opts.equipo, estilo = opts.estilo==='lista' ? 'lista' : (opts.estilo==='tarjetas' ? 'tarjetas' : 'grilla');
+  const arr = calOrdenar(calFiltrarPeriodo(calPartidosDeEquipo(equipo,{reserva:!!opts.reserva}), opts.periodo||'prox'));
+  if(!arr.length) return null;
+  const mapa = await calCargarEscudos([equipo, ...arr.map(x=>x.rival)]);
+  const foto = opts.foto ? await cargarImagenAsync(opts.foto) : null;
+  const per = opts.periodo||'prox';
+  const anio = String((arr.find(x=>x.d.anio)||{d:{}}).d.anio || new Date().getFullYear());
+  const titulo = per==='prox' ? 'PRÓXIMOS' : per==='todo' ? 'CALENDARIO' : (CAL_MESES[+per.slice(1)]||'CALENDARIO');
+  const subt   = per==='prox' ? 'PARTIDOS' : per==='todo' ? 'TEMPORADA '+anio : 'CALENDARIO';
+  const multiMes = new Set(arr.map(x=>x.d.mes).filter(m=>m!=null)).size > 1;
+  const info = { equipo, mapa, foto, titulo, subt, anio, multiMes, liga:(getIdentidad().nombre||'DEPORTEMAS').toUpperCase(),
+                 next: arr.find(x=>!x.jugado)||null };
+  const max = estilo==='lista' ? 7 : (estilo==='tarjetas' ? 6 : 9);
+  const grupos = _repartirEnGruposParejos(arr.map((_,i)=>i), max).map(gr=>gr.map(i=>arr[i]));
+  const out = [];
+  for(const gr of grupos) out.push(estilo==='lista' ? await _calLista(gr,info) : (estilo==='tarjetas' ? await _calTarjetas(gr,info) : await _calGrilla(gr,info)));
+  return out.length===1 ? out[0] : out;
+}
+
+// ── Diálogo de opciones (desde la ficha del club) ───────────
+let _calFotoData = '';
+function calReducirFoto(file){
+  return new Promise(res=>{
+    const fr = new FileReader();
+    fr.onload = () => {
+      const im = new Image();
+      im.onload = () => {
+        const mx = 1600, sc = Math.min(1, mx/Math.max(im.width, im.height));
+        const cv = document.createElement('canvas'); cv.width = Math.round(im.width*sc); cv.height = Math.round(im.height*sc);
+        cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);
+        res(cv.toDataURL('image/jpeg',0.9));
+      };
+      im.onerror = () => res('');
+      im.src = fr.result;
+    };
+    fr.onerror = () => res('');
+    fr.readAsDataURL(file);
+  });
+}
+function calAbrirDialogo(nombre){
+  if(!nombre) return;
+  const prev = document.getElementById('cal-eq-modal'); if(prev) prev.remove();
+  _calFotoData = '';
+  const hayReserva = (data.partidos||[]).some(p=>p.esReserva && (normalizar(p.local)===normalizar(nombre)||normalizar(p.visit)===normalizar(nombre)));
+  const fotosClub = (data.goleadores||[]).filter(g=>g.foto && normalizar(g.equipo)===normalizar(nombre));
+  const unicas = []; fotosClub.forEach(g=>{ if(!unicas.some(u=>normalizar(u.nombre)===normalizar(g.nombre))) unicas.push(g); });
+  const el = document.createElement('div');
+  el.id = 'cal-eq-modal';
+  el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:7000;display:flex;align-items:center;justify-content:center;padding:1rem;overflow-y:auto;';
+  const lbl = 'display:block;font-family:Rajdhani,sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--dorado);margin:14px 0 6px;';
+  const inp = 'width:100%;background:var(--negro3);color:var(--blanco);border:1px solid var(--dorado-border);border-radius:8px;padding:9px 10px;font-family:Rajdhani,sans-serif;font-size:15px;';
+  el.innerHTML = `
+    <div style="background:var(--negro2);border:1px solid var(--dorado-border);border-radius:14px;width:420px;max-width:96vw;padding:20px 20px 18px;box-shadow:0 12px 80px rgba(0,0,0,.9);">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:1px;color:var(--dorado)">📅 Calendario del equipo</div>
+      <div id="cal-eq-nombre" style="font-family:Rajdhani,sans-serif;font-size:15px;color:var(--blanco);opacity:.85"></div>
+      <span style="${lbl}">Estilo</span>
+      <div style="display:flex;gap:8px">
+        <button type="button" data-est="grilla" class="cal-est" style="flex:1"></button>
+        <button type="button" data-est="lista" class="cal-est" style="flex:1"></button>
+        <button type="button" data-est="tarjetas" class="cal-est" style="flex:1"></button>
+      </div>
+      <span style="${lbl}">Período</span>
+      <select id="cal-eq-periodo" style="${inp}"></select>
+      ${hayReserva ? `<label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-family:Rajdhani,sans-serif;font-size:14px;color:var(--blanco)"><input type="checkbox" id="cal-eq-reserva"/> Incluir partidos de Reserva</label>` : ''}
+      <span style="${lbl}">Foto (opcional)</span>
+      ${unicas.length ? `<select id="cal-eq-fotosel" style="${inp};margin-bottom:8px"><option value="">— Elegir jugador con foto cargada —</option>${unicas.map((g,i)=>`<option value="${i}">${String(g.nombre||'').replace(/</g,'&lt;')}</option>`).join('')}</select>` : ''}
+      <input type="file" id="cal-eq-file" accept="image/*" style="${inp}"/>
+      <div id="cal-eq-fotoinfo" style="font-family:Rajdhani,sans-serif;font-size:13px;color:var(--blanco);opacity:.7;margin-top:6px">Sin foto: se usa el escudo del club como fondo.</div>
+      <div id="cal-eq-msg" style="font-family:Rajdhani,sans-serif;font-size:14px;color:#e0584a;margin-top:10px;min-height:18px"></div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button type="button" id="cal-eq-cancel" class="btn-share" style="flex:1;justify-content:center">Cancelar</button>
+        <button type="button" id="cal-eq-ok" class="btn-share" style="flex:2;justify-content:center;font-weight:700">Generar imagen</button>
+      </div>
+    </div>`;
+  document.body.appendChild(el);
+  el.querySelector('#cal-eq-nombre').textContent = nombre;
+  let estilo = 'grilla';
+  const pintarEstilo = () => el.querySelectorAll('.cal-est').forEach(b=>{
+    const act = b.dataset.est===estilo;
+    b.textContent = b.dataset.est==='grilla' ? '▦ Grilla' : b.dataset.est==='lista' ? '☰ Lista' : '▤ Tarjetas';
+    b.style.cssText = `flex:1;padding:10px;border-radius:8px;cursor:pointer;font-family:Rajdhani,sans-serif;font-weight:700;font-size:15px;border:1px solid var(--dorado-border);` + (act ? 'background:var(--dorado);color:var(--negro);' : 'background:var(--negro3);color:var(--blanco);');
+  });
+  pintarEstilo();
+  el.querySelectorAll('.cal-est').forEach(b=>b.onclick = ()=>{ estilo = b.dataset.est; pintarEstilo(); });
+  const selP = el.querySelector('#cal-eq-periodo');
+  const cargarPeriodos = () => {
+    const res = !!(el.querySelector('#cal-eq-reserva')||{}).checked;
+    const ps = calPeriodos(nombre, res);
+    selP.innerHTML = ps.map(p=>`<option value="${p.id}">${p.label}</option>`).join('');
+    const sig = calOrdenar(calPartidosDeEquipo(nombre,{reserva:res})).find(x=>!x.jugado);
+    selP.value = (sig && sig.d.mes!=null && ps.some(p=>p.id==='m'+sig.d.mes)) ? 'm'+sig.d.mes : (sig ? 'prox' : 'todo');
+  };
+  cargarPeriodos();
+  const chkR = el.querySelector('#cal-eq-reserva'); if(chkR) chkR.onchange = cargarPeriodos;
+  const info = el.querySelector('#cal-eq-fotoinfo');
+  const fsel = el.querySelector('#cal-eq-fotosel');
+  if(fsel) fsel.onchange = () => {
+    if(fsel.value===''){ _calFotoData = ''; info.textContent = 'Sin foto: se usa el escudo del club como fondo.'; return; }
+    _calFotoData = unicas[+fsel.value].foto; el.querySelector('#cal-eq-file').value = '';
+    info.textContent = 'Foto de ' + unicas[+fsel.value].nombre + ' seleccionada.';
+  };
+  el.querySelector('#cal-eq-file').onchange = async ev => {
+    const f = ev.target.files && ev.target.files[0]; if(!f) return;
+    info.textContent = 'Procesando foto…';
+    _calFotoData = await calReducirFoto(f);
+    if(fsel) fsel.value = '';
+    info.textContent = _calFotoData ? 'Foto cargada: ' + f.name : 'No se pudo leer la foto.';
+  };
+  el.querySelector('#cal-eq-cancel').onclick = () => el.remove();
+  el.onclick = ev => { if(ev.target===el) el.remove(); };
+  el.querySelector('#cal-eq-ok').onclick = () => {
+    const opts = { equipo:nombre, estilo, periodo:selP.value, reserva:!!(el.querySelector('#cal-eq-reserva')||{}).checked, foto:_calFotoData };
+    const hay = calFiltrarPeriodo(calPartidosDeEquipo(nombre,{reserva:opts.reserva}), opts.periodo).length;
+    if(!hay){ el.querySelector('#cal-eq-msg').textContent = 'No hay partidos cargados para ese período.'; return; }
+    el.remove();
+    abrirShare(()=>generarImagenCalendarioEquipo(opts));
+  };
 }
 
 // Reemplaza abrirShare (llamado desde los botones de las cards)
