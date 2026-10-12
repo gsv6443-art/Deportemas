@@ -19976,6 +19976,40 @@ function calLineaClub(ctx, info, x, yCentro, h, sz, sp){
   return calTxt(ctx, info.club.toUpperCase(), x+h*0.9+14, yCentro+sz*0.35, sp, {maxW: CV_W*0.5});
 }
 
+
+// Parte un título en líneas (por palabras) y busca el mayor tamaño en que entra. ok=false si no entra ni al mínimo.
+function calWrap(ctx, txt, maxW, fs){
+  ctx.font = calT(fs,800);
+  const words = String(txt).split(/\s+/).filter(Boolean), lines = []; let cur = '';
+  for(const w of words){ const t = cur ? cur+' '+w : w; if(!cur || ctx.measureText(t).width <= maxW) cur = t; else { lines.push(cur); cur = w; } }
+  if(cur) lines.push(cur);
+  return lines;
+}
+function calTituloLayout(ctx, txt, maxW, fsMax, fsMin, maxLines){
+  for(let fs=fsMax; fs>=fsMin; fs-=2){
+    const L = calWrap(ctx, txt, maxW, fs);
+    if(L.length<=maxLines && L.every(l=>ctx.measureText(l).width<=maxW)) return {lines:L, fs, ok:true};
+  }
+  return {lines:calWrap(ctx, txt, maxW, fsMin).slice(0,maxLines), fs:fsMin, ok:false};
+}
+function calTituloAuto(ctx, txt, maxW, fsMax, fsMin1, fsMax2, fsMin2, maxLines){
+  const a = calTituloLayout(ctx, txt, maxW, fsMax, fsMin1, 1); if(a.ok) return a;
+  return calTituloLayout(ctx, txt, maxW, fsMax2, fsMin2, maxLines);
+}
+const calAclarar = (hex, t) => { const h = String(hex).replace('#',''); const n = parseInt(h,16); const m = c => Math.round(c+(255-c)*t); return `rgb(${m((n>>16)&255)},${m((n>>8)&255)},${m(n&255)})`; };
+// Subtítulo siempre legible: texto claro con color de acento sobre una cinta oscura translúcida. Devuelve el ancho total.
+function calSubtitulo(ctx, txt, x, y, align, info, sz){
+  sz = sz || 26; ctx.font = calT(sz,700);
+  const sp = sz*0.28, tw = calW(ctx,txt,sp), padX = sz*0.65, padT = sz*0.5, padB = sz*0.42;
+  const w = tw + padX*2, bx = align==='right' ? x - w : x - padX;
+  calRoundRect(ctx, bx, y - sz*0.74 - padT, w, sz*0.74 + padT + padB, 8);
+  ctx.fillStyle = 'rgba(4,5,9,.66)'; ctx.fill();
+  ctx.fillStyle = info.acc; ctx.fillRect(bx, y - sz*0.74 - padT, 4, sz*0.74 + padT + padB);
+  ctx.fillStyle = calAclarar(info.acc, 0.35); ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 8;
+  calTxt(ctx, txt, bx + padX, y, sp); ctx.restore();
+  return w;
+}
+
 // ── Estilo 1: GRILLA (tipo ENERO) ───────────────────────────
 async function _calGrilla(items, info){
   const c = calNuevoCanvas(), ctx = c.getContext('2d'), W = c.width, H = c.height;
@@ -19984,51 +20018,54 @@ async function _calGrilla(items, info){
   if(info.bg) calVelo(ctx,W,H,[[0,0.93],[0.3,0.62],[0.62,0.5],[1,0.82]]);
   const nx = info.next && items.includes(info.next) ? info.next : null;
 
-  // Cabecera: mes grande a la izquierda, "CALENDARIO" chico y espaciado a la derecha, marca arriba a la derecha
+  // Cabecera. El subtítulo va a la derecha del título si hay lugar (como en la referencia); si no, arriba del título.
   calWordmark(ctx, W*0.975, H*0.052, 32, 'right', info.acc);
-  const mx = W*0.094;
-  const fs = calFitSize(ctx, info.titulo, 800, false, 122, 64, W*0.60, 0);
-  ctx.fillStyle = '#ffffff'; ctx.fillText(info.titulo, mx, H*0.182);
-  ctx.font = calT(23,500); ctx.fillStyle = 'rgba(255,255,255,.72)';
-  calTxt(ctx, info.subt.toUpperCase(), W*0.873, H*0.152, 8, {align:'right'});
+  const mx = W*0.094, subt = info.subt.toUpperCase(), baseT = H*0.182;
+  ctx.font = calT(26,700); const subW = calW(ctx,subt,26*0.28) + 26*1.3;
+  let T = calTituloLayout(ctx, info.titulo, W*0.60, 122, 84, 1), subDerecha = T.ok;
+  if(subDerecha){ ctx.font = calT(T.fs,800); const tw = ctx.measureText(T.lines[0]).width; subDerecha = (mx + tw + 40) <= (W*0.945 - subW); }
+  if(!subDerecha) T = calTituloAuto(ctx, info.titulo, W*0.84, 122, 56, 76, 44, 2);
+  ctx.fillStyle = '#ffffff'; ctx.font = calT(T.fs,800);
+  T.lines.forEach((l,i)=> ctx.fillText(l, mx, baseT - (T.lines.length-1-i)*T.fs*0.98));
+  if(subDerecha) calSubtitulo(ctx, subt, W*0.945, H*0.152, 'right', info, 26);
+  else calSubtitulo(ctx, subt, mx, Math.max(H*0.098, baseT - (T.lines.length-1)*T.fs*0.98 - T.fs*0.74 - 30), 'left', info, 26);
   calLineaClub(ctx, info, mx, H*0.213, 40, 26, 5);
 
-  // Partidos: número grande en cursiva + escudo + ícono de avión (visitante); competición debajo
-  const colX = [0.062, 0.366, 0.670].map(f=>f*W), cy0 = H*0.284, pitch = H*0.14;
+  // Partidos: día de la semana + número en cursiva + escudo (+ avión si es visitante); debajo, nombre del rival y competición
+  const colX = [0.062, 0.366, 0.670].map(f=>f*W), cy0 = H*0.298, pitch = H*0.152;
   items.forEach((x,i)=>{
     const col = i%3, row = Math.floor(i/3), x0 = colX[col], cy = cy0 + row*pitch, esNext = x===nx;
     const num = calNum2(x);
+    if(x.d.dow){ ctx.font = calT(25,700); ctx.fillStyle = esNext ? info.acc : 'rgba(255,255,255,.92)'; calTxt(ctx, x.d.dow, x0+5, cy-60, 3.5); }
     ctx.font = calT(114,800,true);
     ctx.fillStyle = esNext ? info.acc : (x.jugado||x.susp ? 'rgba(255,255,255,.78)' : '#ffffff');
     const nw = ctx.measureText(num).width; ctx.fillText(num, x0, cy+40);
     if(x.ast){ ctx.font = calT(50,600); ctx.fillStyle = '#ffffff'; ctx.fillText('*'.repeat(x.ast), x0+nw+2, cy-12); }
-    const crW = 104, crH = 118, crX = x0 + nw + 20 + x.ast*17;
+    const crW = 104, crH = 118, crX = x0 + nw + 20 + x.ast*17, anchoCelda = crX + crW - x0;
     calEscudo(ctx, info, x.rival, crX, cy-crH/2, crW, crH, {blanco:info.blancos, def:x.def, sombra:true});
     if(!x.esLocal) calAvion(ctx, crX+crW+13, cy-44, 22, '#ffffff');
-    // debajo del número: logo + nombre de la competición (o el estado)
-    const by = cy + 78, bx = x0 + 18, maxW = crX + crW*0.35 - bx;
-    let ex = bx;
+    // línea 1: nombre del rival (o el texto de "a definir")
+    const nom = calNombre(x);
+    if(nom){
+      let nfs = 29; ctx.font = calT(nfs,800);
+      while(calW(ctx,nom,0.5) > anchoCelda && nfs > 17){ nfs -= 1; ctx.font = calT(nfs,800); }
+      ctx.fillStyle = '#ffffff'; calTxt(ctx, nom, x0+3, cy+88, 0.5, {maxW: anchoCelda});
+    }
+    // línea 2: logo + competición (o estado) a la izquierda, resultado a la derecha
+    const by = cy + 121, resW = x.res ? 84 : 0;
+    let ex = x0 + 3;
     const lg = !x.est && info.logos[normalizar(x.compRaw)];
-    if(lg){ const dw = calContain(ctx, lg, ex, by-19, 36, 36); ex += dw + 8; }
-    ctx.font = calT(20,600); ctx.fillStyle = x.est ? calEstadoCol(x.est) : 'rgba(255,255,255,.92)';
-    calTxt(ctx, x.est || x.comp, ex, by+7, 1.2, {maxW: maxW-(ex-bx)});
-    // debajo del escudo: etiqueta (rival a definir); el resultado va en una segunda línea bajo la competición
-    if(x.def){
-      const t = calNombre(x);
-      ctx.font = calT(23,600); ctx.fillStyle = '#ffffff';
-      if(t) calTxt(ctx, t, crX+crW/2, cy+crH/2+24, 1, {align:'center', maxW:crW+50});
-    }
-    if(x.res){
-      ctx.font = calT(26,800); ctx.fillStyle = CAL_COL_RES[x.res.t];
-      calTxt(ctx, `${x.res.t} ${x.res.gf}-${x.res.gc}`, bx, cy+120, 1.2);
-    }
+    if(lg){ const dw = calContain(ctx, lg, ex, by-21, 34, 34); ex += dw + 8; }
+    ctx.font = calT(20,600); ctx.fillStyle = x.est ? calEstadoCol(x.est) : 'rgba(255,255,255,.85)';
+    calTxt(ctx, x.est || x.comp, ex, by, 1.1, {maxW: anchoCelda - (ex-x0) - resW});
+    if(x.res){ ctx.font = calT(26,800); ctx.fillStyle = CAL_COL_RES[x.res.t]; calTxt(ctx, `${x.res.t} ${x.res.gf}-${x.res.gc}`, x0+anchoCelda, by+2, 1, {align:'right'}); }
   });
   const filas = Math.ceil(items.length/3), ultima = cy0 + (filas-1)*pitch;
   const nLin = (items.some(t=>t.ast>=1)&&info.nota1 ? 1 : 0) + (items.some(t=>t.ast>=2)&&info.nota2 ? 1 : 0);
-  calNotas(ctx, items, info, colX[0], ultima + H*0.1 + Math.max(0,nLin-1)*22*1.45, 22);
+  calNotas(ctx, items, info, colX[0], ultima + H*0.108 + Math.max(0,nLin-1)*22*1.45, 22);
   ctx.font = calT(20,500); ctx.fillStyle = 'rgba(255,255,255,.45)'; calTxt(ctx,'deportemas.pages.dev', colX[0], H-34, 3);
   if(info.cut){   // la cabeza queda en el hueco de la última fila si está incompleta; si no, debajo de la grilla
-    const top = (items.length%3===0) ? (ultima + H*0.1 + nLin*22*1.45*0 + 0.0)/H : (ultima - H*0.058)/H;
+    const top = (items.length%3===0) ? (ultima + H*0.112)/H : (ultima - H*0.058)/H;
     calCutout(ctx, info.cut, W, H, Math.min(0.62, 1 - top), 'right');
   }
   return c;
@@ -20044,13 +20081,16 @@ async function _calLista(items, info){
   calVelo(ctx,W,H,[[0,0.55],[0.16,0.0],[0.78,0.0],[1,0.7]]);
   const nx = info.next && items.includes(info.next) ? info.next : null;
 
-  // Mes a la izquierda (grande) y línea del club debajo
-  const mx = W*0.0625;
-  calFitSize(ctx, info.titulo, 800, false, 118, 60, W*0.44, 0);
-  ctx.fillStyle = '#ffffff'; ctx.fillText(info.titulo, mx, H*0.522);
-  calLineaClub(ctx, info, mx, H*0.522+62, 36, 24, 4);
+  // Título (hasta 3 líneas, sin invadir la lista), subtítulo debajo y línea del club
+  const mx = W*0.0625, baseT = H*0.522;
+  const T = calTituloLayout(ctx, info.titulo, W*0.42, 118, 52, 3);
+  ctx.fillStyle = '#ffffff'; ctx.font = calT(T.fs,800);
+  T.lines.forEach((l,i)=> calTxt(ctx, l, mx, baseT - (T.lines.length-1-i)*T.fs*0.98, 0, {maxW: W*0.43}));
+  const ySub = baseT + 52;
+  calSubtitulo(ctx, info.subt.toUpperCase(), mx, ySub, 'left', info, 26);
+  calLineaClub(ctx, info, mx, ySub + 58, 36, 24, 4);
 
-  // Columna de partidos (derecha, centrada): escudo, "día NOMBRE" y línea de datos
+  // Columna de partidos (derecha, centrada): escudo, "DÍA día NOMBRE" y línea de datos
   const xc = W*0.71, n = items.length;
   const pitch = Math.min(H*0.155, (H*0.935)/n), k = pitch/(H*0.155);
   const y0 = H*0.028 + (H*0.935 - pitch*n)/2;
@@ -20058,15 +20098,17 @@ async function _calLista(items, info){
     const top = y0 + i*pitch, esNext = x===nx;
     const crH = Math.min(H*0.062, pitch*0.42), crW = crH*0.95;
     calEscudo(ctx, info, x.rival, xc-crW/2, top, crW, crH, {blanco:info.blancos, def:x.def, sombra:true});
-    // nombre
-    const nom = calNombre(x), nt = [calNum(x), nom].filter(Boolean).join(' ') + (x.ast ? '*'.repeat(x.ast) : '');
-    calFitSize(ctx, nt, 800, false, Math.round(62*k), 30, W*0.42, 0);
-    ctx.fillStyle = esNext ? info.acc : '#ffffff'; ctx.textAlign = 'center'; ctx.fillText(nt, xc, top + 139*k); ctx.textAlign = 'left';
-    // datos: día · logo/competición · local-visita (o resultado / estado)
+    // nombre: día de la semana chico + número + rival, centrado y ajustado al ancho
+    const dow = x.d.dow || '', nt = [calNum(x), calNombre(x)].filter(Boolean).join(' ') + (x.ast ? '*'.repeat(x.ast) : '');
+    const medir = fs => { ctx.font = calT(fs,800); const w1 = ctx.measureText(nt).width; let w0 = 0; if(dow){ ctx.font = calT(Math.round(fs*0.5),800); w0 = ctx.measureText(dow).width + 12; } return w0 + w1; };
+    let nfs = Math.round(62*k); while(medir(nfs) > W*0.42 && nfs > 30) nfs -= 1;
+    let px = xc - medir(nfs)/2; const nbase = top + 139*k;
+    ctx.textAlign = 'left';
+    if(dow){ ctx.font = calT(Math.round(nfs*0.5),800); ctx.fillStyle = esNext ? info.acc : 'rgba(255,255,255,.85)'; ctx.fillText(dow, px, nbase); px += ctx.measureText(dow).width + 12; }
+    ctx.font = calT(nfs,800); ctx.fillStyle = esNext ? info.acc : '#ffffff'; ctx.fillText(nt, px, nbase);
+    // datos: logo/competición · local-visita (o resultado / estado)
     const my = top + 181*k, msz = Math.max(15, Math.round(21*k));
-    ctx.font = calT(msz,600);
     const partes = [];
-    if(x.d.dow) partes.push({t:x.d.dow, c:'rgba(255,255,255,.85)'});
     const lg = info.logos[normalizar(x.compRaw)];
     if(lg) partes.push({img:lg}); else if(x.comp) partes.push({t:x.comp, c:'rgba(255,255,255,.85)'});
     if(x.res) partes.push({t:`${x.res.t} ${x.res.gf}-${x.res.gc}`, c:CAL_COL_RES[x.res.t], b:true});
@@ -20075,11 +20117,11 @@ async function _calLista(items, info){
     const lh = msz*1.35, gap = 16, sp = 1.2;
     const ws = partes.map(p=>{ if(p.img){ const iw = p.img.naturalWidth||p.img.width, ih = p.img.naturalHeight||p.img.height; return lh*iw/ih; } ctx.font = calT(msz,p.b?800:600); return calW(ctx,p.t,sp); });
     const tot = ws.reduce((a,b)=>a+b,0) + gap*(partes.length-1);
-    let px = xc - Math.min(tot, W*0.44)/2;
+    let qx = xc - Math.min(tot, W*0.44)/2;
     partes.forEach((p,j)=>{
-      if(p.img) calContain(ctx, p.img, px, my-lh*0.72, ws[j], lh);
-      else { ctx.font = calT(msz,p.b?800:600); ctx.fillStyle = p.c; calTxt(ctx, p.t, px, my, sp, {maxW: W*0.3}); }
-      px += ws[j] + gap;
+      if(p.img) calContain(ctx, p.img, qx, my-lh*0.72, ws[j], lh);
+      else { ctx.font = calT(msz,p.b?800:600); ctx.fillStyle = p.c; calTxt(ctx, p.t, qx, my, sp, {maxW: W*0.3}); }
+      qx += ws[j] + gap;
     });
   });
   calNotas(ctx, items, info, mx, H*0.945, 22);
@@ -20101,20 +20143,28 @@ async function _calTarjetas(items, info){
   calVelo(ctx,W,H,[[0,0.35],[0.55,0.0],[0.82,0.45],[1,0.95]]);
   const nx = info.next && items.includes(info.next) ? info.next : null;
 
-  // Cabecera: marca (izq.), escudo del club (der.), nombre del club, mes enorme, filete + subtítulo
+  // Cabecera: marca (izq.), escudo del club (der.), nombre del club, título (1-2 líneas), filete + subtítulo
   calWordmark(ctx, W*0.05, H*0.055, 32, 'left', info.acc);
   calEscudo(ctx, info, info.club, W*0.95-76, H*0.026, 76, 86, {sombra:true});
-  const lx = W*0.124;
-  ctx.font = calT(31,600); ctx.fillStyle = '#ffffff'; calTxt(ctx, info.club.toUpperCase(), lx, H*0.158, 9, {maxW: W*0.6});
-  // mes: algo estirado y con más separación entre letras para parecerse a la tipografía extendida de la referencia
-  ctx.font = calT(124,800); const mw0 = ctx.measureText(info.titulo).width, mMax = W*0.752, nl = Math.max(1, info.titulo.length-1);
-  let sx = 1, tr = 0;
-  if(mw0 < mMax){ sx = Math.min(1.22, mMax/mw0); tr = Math.min(22, Math.max(0, (mMax - mw0*sx)/nl/sx)); }
-  else calFitSize(ctx, info.titulo, 800, false, 124, 70, mMax, 0);
-  ctx.fillStyle = '#ffffff'; ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 20; ctx.translate(lx, H*0.232); ctx.scale(sx,1);
-  calTxt(ctx, info.titulo, 0, 0, tr); ctx.restore();
-  ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fillRect(lx, H*0.262, W*0.23, 2.5);
-  ctx.font = calT(22,600); ctx.fillStyle = info.acc; calTxt(ctx, info.subt.toUpperCase(), lx+W*0.26, H*0.268, 7, {maxW: W*0.4});
+  const lx = W*0.124, mMax = W*0.752, baseT = H*0.232;
+  const T = calTituloAuto(ctx, info.titulo, mMax, 124, 70, 76, 50, 2), n = T.lines.length, gapL = T.fs*0.98;
+  const y1 = baseT - (n-1)*gapL;                                  // línea base de la primera línea
+  const yClub = Math.max(H*0.092, Math.min(H*0.158, y1 - T.fs*0.74 - 30));
+  ctx.font = calT(31,600); ctx.fillStyle = '#ffffff'; calTxt(ctx, info.club.toUpperCase(), lx, yClub, 9, {maxW: W*0.6});
+  ctx.fillStyle = '#ffffff';
+  T.lines.forEach((l,i)=>{
+    ctx.font = calT(T.fs,800);
+    const w0 = ctx.measureText(l).width, nl = Math.max(1,l.length-1);
+    let sx = 1, tr = 0;                                           // un título de una línea se estira un poco para parecerse a la letra extendida
+    if(n===1 && w0 < mMax){ sx = Math.min(1.22, mMax/w0); tr = Math.min(22, Math.max(0, (mMax - w0*sx)/nl/sx)); }
+    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 20; ctx.translate(lx, y1 + i*gapL); ctx.scale(sx,1);
+    calTxt(ctx, l, 0, 0, tr, {maxW: mMax/sx}); ctx.restore();
+  });
+  const yLinea = baseT + H*0.03;
+  ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fillRect(lx, yLinea, W*0.23, 2.5);
+  const subt = info.subt.toUpperCase(); ctx.font = calT(26,700); const subW = calW(ctx,subt,26*0.28) + 26*1.3;
+  if(lx + W*0.26 + subW <= W*0.95) calSubtitulo(ctx, subt, lx + W*0.26 + 17, yLinea + 9, 'left', info, 26);
+  else calSubtitulo(ctx, subt, lx, yLinea + 52, 'left', info, 26);
 
   // Tarjetas translúcidas, 3 por fila
   const xs = [0.116, 0.394, 0.675].map(f=>f*W), cw = W*0.245, ch = H*0.222, ys = [0.334*H, 0.579*H];
@@ -20134,10 +20184,10 @@ async function _calTarjetas(items, info){
     // escudo grande
     const es = ch*0.5;
     calEscudo(ctx, info, x.rival, cx0+(cw-es)/2, cy0+ch*0.2, es, es*1.05, {blanco:info.blancos, def:x.def, sombra:true});
-    // competición / hora / resultado
+    // nombre / competición y hora / resultado
     const mw = cw - 28;
     ctx.font = calT(19,600); ctx.fillStyle = 'rgba(255,255,255,.92)';
-    calTxt(ctx, calNombre(x) && !x.def ? calNombre(x) : (x.def ? calNombre(x) : x.comp), cx0+cw/2, cy0+ch-58, 1.5, {align:'center', maxW: mw});
+    calTxt(ctx, calNombre(x) || x.comp, cx0+cw/2, cy0+ch-58, 1.5, {align:'center', maxW: mw});
     const l2 = x.res ? {t:`${x.res.t} ${x.res.gf}-${x.res.gc}`, c:CAL_COL_RES[x.res.t], b:true}
              : x.est ? {t:x.est, c:calEstadoCol(x.est), b:true}
              : {t:[x.hora||'', x.d.dow||'', x.esLocal?'LOCAL':'VISITA'].filter(Boolean).join(' · '), c:'rgba(255,255,255,.75)'};
