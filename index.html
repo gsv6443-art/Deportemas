@@ -643,7 +643,7 @@
     // Cache en memoria de fotos de fondo de alineaciones (id de alineación → base64)
     window._alinFotosCache = fbAlinFotos || {};
 
-    if(fbData)      { data = fbData; if(!data.playoff) data.playoff=[];
+    if(fbData)      { data = fbData; if(!data.playoff) data.playoff=[]; if(!data.equiposTemporada) data.equiposTemporada=[];
                       if(!data.copaCordoba) data.copaCordoba=[]; if(!data.segunda3) data.segunda3=[];
                       if(!data.copaCordobaLogo) data.copaCordobaLogo='';
                       if(!data.provincialCopas) data.provincialCopas=[];
@@ -3402,6 +3402,7 @@ table.posiciones td:nth-child(8){
       <button class="admin-tab" onclick="switchAdminTab('estadisticas',this)">📊 Estadisticas</button>
       <button class="admin-tab" onclick="switchAdminTab('sanciones',this)">🟥 Sanciones</button>
       <button class="admin-tab" onclick="switchAdminTab('alineaciones',this)">🧩 Alineaciones</button>
+      <button class="admin-tab" onclick="switchAdminTab('equipotemp',this)">🏅 Equipo de la Temporada</button>
       <button class="admin-tab" onclick="switchAdminTab('historiagol',this)">🎬 Historia</button>
       <button class="admin-tab" onclick="switchAdminTab('promo',this)">📣 Promoción</button>
       <button class="admin-tab" onclick="switchAdminTab('notificaciones',this)">🔔 Notificaciones</button>
@@ -4983,6 +4984,55 @@ table.posiciones td:nth-child(8){
         <div class="admin-list" id="alin-lista"></div>
       </div>
 
+      <!-- EQUIPO DE LA TEMPORADA -->
+      <div class="admin-section" id="admin-equipotemp">
+        <div class="admin-title">🏅 Equipo de la Temporada</div>
+        <p style="font-size:11px;color:var(--gris);margin-bottom:14px;font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px">Armá el once ideal o el Top 6 de la temporada con foto, nombre y club de cada jugador, y generá la imagen para compartir.</p>
+
+        <datalist id="et-clubes-datalist"></datalist>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-group">
+            <label>Tipo de imagen</label>
+            <select id="et-tipo" onchange="etCambiarTipo()">
+              <option value="xi">Equipo ideal (11 jugadores)</option>
+              <option value="top6">Top 6 (mejores jugadores)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Estilo</label>
+            <select id="et-tema">
+              <option value="oscuro">Oscuro y dorado</option>
+              <option value="dorado">Dorado</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-group">
+            <label>Título</label>
+            <input type="text" id="et-titulo" placeholder="Equipo de la Temporada"/>
+          </div>
+          <div class="form-group">
+            <label>Temporada</label>
+            <input type="text" id="et-anio" placeholder="Ej: 2026"/>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Subtítulo / División (opcional)</label>
+          <input type="text" id="et-sub" placeholder="Ej: Primera División"/>
+        </div>
+
+        <p style="font-size:11px;color:var(--dorado);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 6px">Jugadores <span style="color:var(--gris)">— tocá el recuadro 📷 para cargar la foto</span></p>
+        <div id="et-slots"></div>
+
+        <div style="display:flex;gap:8px;margin-top:14px">
+          <button class="btn-primary" id="et-guardar-btn" onclick="etGuardar()">Guardar</button>
+          <button class="btn-edit" onclick="etLimpiarForm()">Limpiar</button>
+        </div>
+
+        <div class="admin-list" id="et-lista"></div>
+      </div>
+
       <!-- HISTORIA DE PARTIDO -->
       <div class="admin-section" id="admin-historiagol">
         <div class="admin-title">🎬 Historia de Partido</div>
@@ -5640,7 +5690,7 @@ function setLSSafe(key, value){
   }
 }
 
-function getData(){try{const d=JSON.parse(localStorage.getItem(DATA_KEY))||defData();if(!d.playoff)d.playoff=[];if(!d.alineaciones)d.alineaciones=[];if(!d.copaCordoba)d.copaCordoba=[];if(!d.segunda3)d.segunda3=[];if(!d.copaCordobaLogo)d.copaCordobaLogo='';if(!d.provincialCopas)d.provincialCopas=[];if(!d.provincialLogo)d.provincialLogo='';if(!d.historiaPlantillas)d.historiaPlantillas=[];return d;}catch(e){return defData();}}
+function getData(){try{const d=JSON.parse(localStorage.getItem(DATA_KEY))||defData();if(!d.playoff)d.playoff=[];if(!d.alineaciones)d.alineaciones=[];if(!d.equiposTemporada)d.equiposTemporada=[];if(!d.copaCordoba)d.copaCordoba=[];if(!d.segunda3)d.segunda3=[];if(!d.copaCordobaLogo)d.copaCordobaLogo='';if(!d.provincialCopas)d.provincialCopas=[];if(!d.provincialLogo)d.provincialLogo='';if(!d.historiaPlantillas)d.historiaPlantillas=[];return d;}catch(e){return defData();}}
 // Construye una copia de "d" sin las fotos de goleadores:
 // van en documentos individuales para no superar el límite de 1MB de Firestore.
 function dataParaFirestore(d){
@@ -5728,7 +5778,7 @@ async function saveIdentidad(i){
 function getFotos(){try{return JSON.parse(localStorage.getItem(FOTOS_KEY))||[];}catch(e){return[];}}
 function saveFotos(f){if(!setLSSafe(FOTOS_KEY,JSON.stringify(f)))return;if(window._fb)window._fb.set('fotos',f);}
 
-function defData(){return{partidos:[],posiciones:[],goleadores:[],equipos:[],torneos:[],playoff:[],copaCordoba:[],segunda3:[],copaCordobaLogo:'',provincialCopas:[],provincialLogo:'',historiaPlantillas:[],alineaciones:[]};};
+function defData(){return{partidos:[],posiciones:[],goleadores:[],equipos:[],torneos:[],playoff:[],copaCordoba:[],segunda3:[],copaCordobaLogo:'',provincialCopas:[],provincialLogo:'',historiaPlantillas:[],alineaciones:[],equiposTemporada:[]};};
 
 let data=getData();
 let escudos=getEscudos();
@@ -12133,6 +12183,7 @@ function switchAdminTab(tab,el){
   if(tab==='torneos'){ renderTorneoClubesChecklist(); toActualizarVisEstado(); }
   if(tab==='notificaciones'){ actualizarContadorSubs(); }
   if(tab==='alineaciones'){ poblarSelectPartidoAlineacion(); renderAdminListaAlineaciones(); alinRenderSlots(); }
+  if(tab==='equipotemp'){ etPoblarClubes(); etRenderSlots(); etRenderLista(); }
   if(tab==='historiagol'){ hgPoblarEquipos(); hgActualizarCamposEvento(); hgPoblarPlantillas(); }
   if(tab==='promo'){ promoPoblarEquipos(); promoPoblarPartidos(); }}
 function cambiarPassword(){
@@ -20984,6 +21035,412 @@ function cvWrapTexto(ctx, text, x, y, maxW, lineH, maxLineas){
     lineas[maxLineas-1] = last + '…';
   }
   lineas.forEach((l,i)=> ctx.fillText(l, x, y + i*lineH));
+}
+
+// ============================================================
+// EQUIPO DE LA TEMPORADA — once ideal (11) o Top 6, con foto,
+// nombre y club de cada jugador, y generación de imagen para
+// compartir (estilo "Team of the Year" de los PFA Awards)
+// ============================================================
+const ET_MAX = 11;
+let _etEditId = null;     // id en edición (null = nuevo)
+let _etSlots = [];        // [{nombre, club, foto(base64), nueva(bool)}] x ET_MAX
+
+function etNuevosSlots(){ return Array.from({length:ET_MAX}, ()=>({nombre:'', club:'', foto:'', nueva:false})); }
+function etEsc(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function etTipoActual(){ const t=document.getElementById('et-tipo'); return t ? t.value : 'xi'; }
+function etN(){ return etTipoActual()==='top6' ? 6 : 11; }
+function etTituloDefault(tipo){ return tipo==='top6' ? 'Top 6 de la Temporada' : 'Equipo de la Temporada'; }
+function etFotoKey(id, i){ return id + '_f' + i; }
+
+function etPoblarClubes(){
+  const dl = document.getElementById('et-clubes-datalist'); if(!dl) return;
+  const nombres = [...new Set((data.equipos||[]).map(e=>e.nombre).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  dl.innerHTML = nombres.map(n=>`<option value="${etEsc(n)}">`).join('');
+}
+
+function etCambiarTipo(){
+  const tipo = etTipoActual();
+  const inp = document.getElementById('et-titulo');
+  const actual = (inp.value||'').trim();
+  if(!actual || actual===etTituloDefault('xi') || actual===etTituloDefault('top6')) inp.value = etTituloDefault(tipo);
+  etRenderSlots();
+}
+
+function etRenderSlots(){
+  const cont = document.getElementById('et-slots'); if(!cont) return;
+  if(!_etSlots.length) _etSlots = etNuevosSlots();
+  const inp = document.getElementById('et-titulo');
+  if(inp && !inp.value.trim()) inp.value = etTituloDefault(etTipoActual());
+  const n = etN();
+  let html = '';
+  for(let i=0;i<n;i++){
+    const sl = _etSlots[i];
+    const thumb = sl.foto
+      ? `<img src="${sl.foto}" alt="" style="width:100%;height:100%;object-fit:cover;object-position:top">`
+      : `<span style="font-size:20px;opacity:.7">📷</span>`;
+    html += `<div style="display:grid;grid-template-columns:56px 1fr 28px;gap:8px;margin-bottom:10px;align-items:center">
+      <label style="position:relative;width:56px;height:56px;border-radius:8px;border:1px dashed rgba(201,162,39,.55);overflow:hidden;cursor:pointer;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.04)">
+        ${thumb}
+        <input type="file" accept="image/*" style="display:none" onchange="etFoto(${i},this)">
+      </label>
+      <div style="display:grid;gap:6px">
+        <input type="text" placeholder="${i+1}. Nombre y apellido" value="${etEsc(sl.nombre)}" oninput="_etSlots[${i}].nombre=this.value">
+        <input type="text" list="et-clubes-datalist" placeholder="Club" value="${etEsc(sl.club)}" oninput="_etSlots[${i}].club=this.value">
+      </div>
+      ${sl.foto ? `<button type="button" class="btn-danger" style="padding:4px 0;font-size:11px" title="Quitar foto" onclick="etQuitarFoto(${i})">✕</button>` : '<span></span>'}
+    </div>`;
+  }
+  cont.innerHTML = html;
+}
+
+function etFoto(i, input){
+  const file = input.files[0]; if(!file) return;
+  comprimirABase64(file, 640, 0.8).then(d=>{
+    _etSlots[i].foto = d; _etSlots[i].nueva = true; etRenderSlots();
+  }).catch(()=>alert('No se pudo leer la imagen.'));
+}
+function etQuitarFoto(i){ _etSlots[i].foto=''; _etSlots[i].nueva=false; etRenderSlots(); }
+
+function etLimpiarForm(){
+  _etEditId = null;
+  _etSlots = etNuevosSlots();
+  document.getElementById('et-tipo').value = 'xi';
+  document.getElementById('et-tema').value = 'oscuro';
+  document.getElementById('et-titulo').value = etTituloDefault('xi');
+  document.getElementById('et-anio').value = '';
+  document.getElementById('et-sub').value = '';
+  document.getElementById('et-guardar-btn').textContent = 'Guardar';
+  etRenderSlots();
+}
+
+function etGuardar(){
+  const tipo = etTipoActual();
+  const n = etN();
+  const jugadores = [];
+  for(let i=0;i<n;i++){
+    jugadores.push({ nombre:(_etSlots[i].nombre||'').trim(), club:(_etSlots[i].club||'').trim() });
+  }
+  if(!jugadores.some(j=>j.nombre)){ alert('Cargá al menos un jugador.'); return; }
+
+  const obj = {
+    id: _etEditId || ('etm_'+Date.now()),
+    tipo,
+    tema: document.getElementById('et-tema').value,
+    titulo: document.getElementById('et-titulo').value.trim() || etTituloDefault(tipo),
+    anio: document.getElementById('et-anio').value.trim(),
+    sub: document.getElementById('et-sub').value.trim(),
+    jugadores
+  };
+  if(!data.equiposTemporada) data.equiposTemporada = [];
+  const idx = data.equiposTemporada.findIndex(x=>x.id===obj.id);
+  if(idx>-1) data.equiposTemporada[idx] = obj; else data.equiposTemporada.push(obj);
+  saveData(data);
+
+  // Las fotos van aparte (un documento por foto), igual que las fotos de alineaciones,
+  // para no inflar el documento principal ni pasarse del límite de 1MB de Firestore.
+  if(!window._alinFotosCache) window._alinFotosCache = {};
+  for(let i=0;i<ET_MAX;i++){
+    const key = etFotoKey(obj.id, i);
+    const sl = _etSlots[i];
+    if(i<n && sl.foto){
+      if(sl.nueva){
+        if(window._fb) window._fb.setAlinFoto(key, sl.foto);
+        window._alinFotosCache[key] = sl.foto;
+      }
+    } else if(window._alinFotosCache[key]){
+      if(window._fb) window._fb.delAlinFoto(key);
+      delete window._alinFotosCache[key];
+    }
+  }
+  etLimpiarForm();
+  etRenderLista();
+}
+
+function etEditar(id){
+  const e = (data.equiposTemporada||[]).find(x=>x.id===id); if(!e) return;
+  _etEditId = id;
+  document.getElementById('et-tipo').value = e.tipo || 'xi';
+  document.getElementById('et-tema').value = e.tema || 'oscuro';
+  document.getElementById('et-titulo').value = e.titulo || etTituloDefault(e.tipo);
+  document.getElementById('et-anio').value = e.anio || '';
+  document.getElementById('et-sub').value = e.sub || '';
+  _etSlots = etNuevosSlots();
+  (e.jugadores||[]).forEach((j,i)=>{
+    if(!_etSlots[i]) return;
+    _etSlots[i].nombre = j.nombre||''; _etSlots[i].club = j.club||'';
+    _etSlots[i].foto = (window._alinFotosCache && window._alinFotosCache[etFotoKey(id,i)]) || '';
+    _etSlots[i].nueva = false;
+  });
+  document.getElementById('et-guardar-btn').textContent = 'Guardar cambios';
+  etRenderSlots();
+}
+
+function etEliminar(id){
+  pedirConfirmacion('¿Eliminar esta imagen de temporada?', function(){
+    data.equiposTemporada = (data.equiposTemporada||[]).filter(x=>x.id!==id);
+    saveData(data);
+    for(let i=0;i<ET_MAX;i++){
+      const key = etFotoKey(id, i);
+      if(window._alinFotosCache && window._alinFotosCache[key]){
+        if(window._fb) window._fb.delAlinFoto(key);
+        delete window._alinFotosCache[key];
+      }
+    }
+    if(_etEditId===id) etLimpiarForm();
+    etRenderLista();
+  });
+}
+
+function etRenderLista(){
+  const cont = document.getElementById('et-lista'); if(!cont) return;
+  const items = [...(data.equiposTemporada||[])].reverse();
+  if(!items.length){ cont.innerHTML = '<p class="admin-empty">Todavía no armaste ningún equipo de la temporada.</p>'; return; }
+  cont.innerHTML = items.map(e=>`
+    <div class="admin-list-item">
+      <span>${etEsc(e.titulo||'')}${e.anio?' · '+etEsc(e.anio):''} · ${e.tipo==='top6'?'Top 6':'Once ideal'}</span>
+      <button class="btn-edit" onclick="abrirShare(()=>generarImagenEquipoTemporada('${e.id}'))">🖼️ Imagen</button>
+      <button class="btn-edit" onclick="etEditar('${e.id}')">✏ Editar</button>
+      <button class="btn-danger" onclick="etEliminar('${e.id}')">✕ Eliminar</button>
+    </div>
+  `).join('');
+}
+
+// ── Imagen para compartir ────────────────────────────────────
+
+// Achica la fuente hasta que el texto entre en maxW. Devuelve el tamaño usado.
+function etAjustarFuente(ctx, texto, plantilla, maxW, px, minPx){
+  let sz = px;
+  ctx.font = plantilla.replace('{s}', sz);
+  while(ctx.measureText(texto).width > maxW && sz > minPx){ sz -= 1; ctx.font = plantilla.replace('{s}', sz); }
+  return sz;
+}
+
+async function etDibujarLogo(ctx, identidad, cx, y, size, T){
+  const ok = await cvDrawLogo(ctx, identidad.logo, cx-size/2, y, size);
+  if(!ok){
+    ctx.save();
+    ctx.beginPath(); ctx.arc(cx, y+size/2, size/2, 0, Math.PI*2);
+    ctx.fillStyle = T.logoFill; ctx.fill();
+    ctx.fillStyle = T.logoText;
+    ctx.font = `${Math.round(size*0.42)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText((identidad.nombre||'DM').substr(0,2).toUpperCase(), cx, y+size/2+2);
+    ctx.restore();
+  }
+  ctx.save();
+  ctx.strokeStyle = T.logoRing; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(cx, y+size/2, size/2, 0, Math.PI*2); ctx.stroke();
+  ctx.restore();
+  ctx.textBaseline = 'alphabetic';
+}
+
+async function etDibujarCelda(ctx, j, x, y, w, h, labelH, skew, T, fotoSrc){
+  const photoH = h - labelH;
+  const visH = photoH + skew;   // la foto se extiende bajo el corte diagonal de la etiqueta
+
+  // Foto (recorte tipo "cover", anclado hacia arriba para no cortar la cara)
+  ctx.save();
+  ctx.beginPath(); ctx.rect(x, y, w, visH); ctx.clip();
+  const g = ctx.createLinearGradient(0, y, 0, y+visH);
+  g.addColorStop(0, T.photoBg0); g.addColorStop(1, T.photoBg1);
+  ctx.fillStyle = g; ctx.fillRect(x, y, w, visH);
+  let dibujada = false;
+  if(fotoSrc){
+    await new Promise(res=>{
+      const img = new Image();
+      img.onload = ()=>{
+        const iw = img.naturalWidth, ih = img.naturalHeight;
+        const sc = Math.max(w/iw, visH/ih);
+        const dw = iw*sc, dh = ih*sc;
+        ctx.drawImage(img, x+(w-dw)/2, y-(dh-visH)*0.2, dw, dh);
+        dibujada = true; res();
+      };
+      img.onerror = ()=>res();
+      img.src = fotoSrc;
+    });
+  }
+  if(!dibujada){
+    const ini = (j.nombre||'?').split(/\s+/).filter(Boolean).slice(0,2).map(p=>p[0]).join('').toUpperCase();
+    ctx.fillStyle = 'rgba(255,255,255,.12)';
+    ctx.font = `${Math.round(visH*0.5)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(ini, x+w/2, y+visH*0.68);
+  }
+  ctx.restore();
+
+  // Etiqueta con borde superior en diagonal
+  const lg = ctx.createLinearGradient(x, 0, x+w, 0);
+  lg.addColorStop(0, T.label0); lg.addColorStop(1, T.label1);
+  ctx.fillStyle = lg;
+  ctx.beginPath();
+  ctx.moveTo(x, y+photoH+skew);
+  ctx.lineTo(x+w, y+photoH);
+  ctx.lineTo(x+w, y+h);
+  ctx.lineTo(x, y+h);
+  ctx.closePath();
+  ctx.fill();
+
+  // Textos de la etiqueta
+  const avail = labelH - skew;
+  const top = y + photoH + skew;
+  const pad = 18;
+  const maxW = w - pad*2;
+  const partes = (j.nombre||'').trim().split(/\s+/).filter(Boolean);
+  const apellido = partes.length ? partes[partes.length-1] : '';
+  const nombre = partes.slice(0,-1).join(' ');
+
+  ctx.textAlign = 'left';
+  if(nombre){
+    ctx.fillStyle = T.first;
+    ctx.font = `700 ${Math.round(avail*0.21)}px "Rajdhani", Arial, sans-serif`;
+    cvFillTextTrunc(ctx, nombre.toUpperCase(), x+pad, top+avail*0.25, maxW);
+  }
+  ctx.fillStyle = T.last;
+  etAjustarFuente(ctx, apellido.toUpperCase(), `{s}px "Bebas Neue", Arial, sans-serif`, maxW, Math.round(avail*0.46), 18);
+  cvFillTextTrunc(ctx, apellido.toUpperCase(), x+pad, top+avail*0.65, maxW);
+
+  if(j.club){
+    const fs3 = Math.round(avail*0.19);
+    const base = top + avail*0.92;
+    let tx = x + pad;
+    const tieneEscudo = !!(escudos[j.club] || escudos[normalizar(j.club)]);
+    if(tieneEscudo){
+      const sz = Math.round(fs3*1.5);
+      await cvDrawEscudo(ctx, j.club, tx, base - sz*0.82, sz);
+      tx += sz + 8;
+    }
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = T.club;
+    ctx.font = `600 ${fs3}px "DM Sans", Arial, sans-serif`;
+    cvFillTextTrunc(ctx, j.club, tx, base, x + w - pad - tx);
+  }
+}
+
+async function generarImagenEquipoTemporada(id){
+  const e = (data.equiposTemporada||[]).find(x=>x.id===id);
+  if(!e) return null;
+  await document.fonts.ready;
+  const identidad = getIdentidad();
+  const W = CV_W, H = CV_H;
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.textBaseline = 'alphabetic';
+
+  const dorado = e.tema === 'dorado';
+  const T = dorado ? {
+    bg0:'#e6c34f', bg1:'#b58b1c', title:'#17171d', soft:'rgba(23,23,29,.72)', accent:'#232330',
+    label0:'#232330', label1:'#191920', first:'rgba(255,255,255,.72)', last:'#ffffff', club:'#f0c040',
+    photoBg0:'#4a4a55', photoBg1:'#25252d', brandName:'#17171d', brandYear:'#232330',
+    logoFill:'#232330', logoText:'#f0c040', logoRing:'#232330'
+  } : {
+    bg0:'#17171d', bg1:'#0a0a0d', title:'#f5f5f5', soft:'rgba(201,162,39,.9)', accent:'#c9a227',
+    label0:'#e3b93c', label1:'#c9a227', first:'rgba(17,17,17,.72)', last:'#111111', club:'rgba(17,17,17,.72)',
+    photoBg0:'#3a3a40', photoBg1:'#18181c', brandName:'#f5f5f5', brandYear:'#c9a227',
+    logoFill:'#c9a227', logoText:'#080808', logoRing:'rgba(201,162,39,.8)'
+  };
+
+  // Fondo
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, T.bg0); bg.addColorStop(1, T.bg1);
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  if(dorado){
+    ctx.fillStyle = T.accent;
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(70,0); ctx.lineTo(0,190); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(W,H); ctx.lineTo(W-70,H); ctx.lineTo(W,H-190); ctx.closePath(); ctx.fill();
+  } else {
+    const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, 700);
+    glow.addColorStop(0, 'rgba(201,162,39,.16)'); glow.addColorStop(1, 'rgba(201,162,39,0)');
+    ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
+  }
+
+  const top6 = e.tipo === 'top6';
+  const jug = (e.jugadores||[]).slice(0, top6 ? 6 : 11);
+  const liga = (identidad.nombre||'DEPORTEMAS').toUpperCase();
+  const anio = (e.anio||'').trim();
+  const titulo = (e.titulo || etTituloDefault(e.tipo)).toUpperCase();
+
+  // Grilla: 3 columnas. En el once ideal, la celda 12 queda para el logo de la liga.
+  const cols = 3, mX = 64, gapX = 22, gapY = top6 ? 24 : 18;
+  const cellW = (W - mX*2 - gapX*(cols-1)) / cols;
+  const rows = top6 ? 2 : 4;
+  const gridTop = top6 ? 270 : 258;
+  const gridBottom = top6 ? 205 : 52;
+  const cellH = (H - gridTop - gridBottom - gapY*(rows-1)) / rows;
+  const labelH = Math.round(cellH * (top6 ? 0.36 : 0.40));
+  const skew = top6 ? 18 : 12;
+
+  ctx.textAlign = 'left';
+  if(!top6){
+    // Encabezado a la izquierda
+    ctx.fillStyle = T.soft;
+    ctx.font = '700 26px "Rajdhani", Arial, sans-serif';
+    if('letterSpacing' in ctx) ctx.letterSpacing = '4px';
+    cvFillTextTrunc(ctx, liga + (anio ? '  ·  ' + anio : ''), mX, 88, W - mX*2);
+    if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+    ctx.fillStyle = T.title;
+    etAjustarFuente(ctx, titulo, '{s}px "Bebas Neue", Arial, sans-serif', W - mX*2, 96, 44);
+    ctx.fillText(titulo, mX, 176);
+    if(e.sub){
+      ctx.fillStyle = T.accent; ctx.fillRect(mX, 196, 6, 28);
+      ctx.fillStyle = T.soft;
+      ctx.font = '600 24px "Rajdhani", Arial, sans-serif';
+      cvFillTextTrunc(ctx, e.sub.toUpperCase(), mX+18, 220, W - mX*2 - 18);
+    }
+  } else {
+    // Encabezado centrado: logo + liga/temporada
+    await etDibujarLogo(ctx, identidad, W/2, 50, 130, T);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = T.soft;
+    ctx.font = '700 28px "Rajdhani", Arial, sans-serif';
+    if('letterSpacing' in ctx) ctx.letterSpacing = '4px';
+    cvFillTextTrunc(ctx, liga + (anio ? '  ·  ' + anio : ''), W/2, 232, W - mX*2);
+    if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+    ctx.textAlign = 'left';
+  }
+
+  // Celdas
+  for(let i=0;i<jug.length;i++){
+    const col = i % cols, row = Math.floor(i / cols);
+    const x = mX + col*(cellW + gapX);
+    const y = gridTop + row*(cellH + gapY);
+    const fotoSrc = (window._alinFotosCache && window._alinFotosCache[etFotoKey(e.id, i)]) || '';
+    await etDibujarCelda(ctx, jug[i], x, y, cellW, cellH, labelH, skew, T, fotoSrc);
+  }
+
+  if(!top6){
+    // Celda 12: logo + liga + temporada (como el sello "PFA Awards")
+    const x = mX + 2*(cellW + gapX);
+    const y = gridTop + 3*(cellH + gapY);
+    const logoSz = Math.min(112, Math.round(cellH*0.46));
+    await etDibujarLogo(ctx, identidad, x + cellW/2, y + cellH*0.06, logoSz, T);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = T.brandName;
+    etAjustarFuente(ctx, liga, '800 {s}px "Rajdhani", Arial, sans-serif', cellW - 20, 28, 14);
+    ctx.fillText(liga, x + cellW/2, y + cellH*0.76);
+    if(anio){
+      ctx.fillStyle = T.brandYear;
+      ctx.font = '54px "Bebas Neue", Arial, sans-serif';
+      ctx.fillText(anio, x + cellW/2, y + cellH*0.97);
+    }
+    ctx.textAlign = 'left';
+  } else {
+    // Pie centrado: título grande + subtítulo
+    ctx.textAlign = 'center';
+    ctx.fillStyle = T.title;
+    etAjustarFuente(ctx, titulo, '{s}px "Bebas Neue", Arial, sans-serif', W - mX*2, 70, 36);
+    ctx.fillText(titulo, W/2, H - 98);
+    if(e.sub){
+      ctx.fillStyle = T.soft;
+      ctx.font = '600 24px "Rajdhani", Arial, sans-serif';
+      if('letterSpacing' in ctx) ctx.letterSpacing = '3px';
+      cvFillTextTrunc(ctx, e.sub.toUpperCase(), W/2, H - 56, W - mX*2);
+      if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+    }
+    ctx.textAlign = 'left';
+  }
+  return canvas;
 }
 </script>
 
