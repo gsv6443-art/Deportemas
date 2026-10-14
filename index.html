@@ -4995,15 +4995,18 @@ table.posiciones td:nth-child(8){
           <div class="form-group">
             <label>Tipo de imagen</label>
             <select id="et-tipo" onchange="etCambiarTipo()">
-              <option value="xi">Equipo ideal (11 jugadores)</option>
+              <option value="xi">Equipo ideal (11 + DT)</option>
+              <option value="top8">Nominados (8 jugadores)</option>
               <option value="top6">Top 6 (mejores jugadores)</option>
             </select>
           </div>
           <div class="form-group">
             <label>Estilo</label>
-            <select id="et-tema">
-              <option value="oscuro">Oscuro y dorado</option>
-              <option value="dorado">Dorado</option>
+            <select id="et-tema" onchange="etRenderSlots()">
+              <option value="claro">Nominados claro (tarjetas de color)</option>
+              <option value="completo">Equipo completo (fotos a pantalla completa)</option>
+              <option value="oscuro">Clásico oscuro y dorado</option>
+              <option value="dorado">Clásico dorado</option>
             </select>
           </div>
         </div>
@@ -21038,20 +21041,47 @@ function cvWrapTexto(ctx, text, x, y, maxW, lineH, maxLineas){
 }
 
 // ============================================================
-// EQUIPO DE LA TEMPORADA — once ideal (11) o Top 6, con foto,
-// nombre y club de cada jugador, y generación de imagen para
-// compartir (estilo "Team of the Year" de los PFA Awards)
+// EQUIPO DE LA TEMPORADA — once ideal (11) o Top 6, con foto
+// (encuadre manual), nombre, club y posición de cada jugador, y
+// generación de imagen para compartir (estilo "Team of the Year")
 // ============================================================
-const ET_MAX = 11;
+const ET_MAX = 12;   // 11 jugadores + DT (solo en el once ideal)
 let _etEditId = null;     // id en edición (null = nuevo)
-let _etSlots = [];        // [{nombre, club, foto(base64), nueva(bool)}] x ET_MAX
+let _etSlots = [];        // [{nombre, club, pos, zoom, px, py, foto, nueva, enc}] x ET_MAX
 
-function etNuevosSlots(){ return Array.from({length:ET_MAX}, ()=>({nombre:'', club:'', foto:'', nueva:false})); }
+function etNuevosSlots(){ return Array.from({length:ET_MAX}, ()=>({nombre:'', club:'', pos:'', zoom:1, px:0.5, py:0.2, foto:'', nueva:false, enc:false})); }
 function etEsc(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function etTipoActual(){ const t=document.getElementById('et-tipo'); return t ? t.value : 'xi'; }
-function etN(){ return etTipoActual()==='top6' ? 6 : 11; }
-function etTituloDefault(tipo){ return tipo==='top6' ? 'Top 6 de la Temporada' : 'Equipo de la Temporada'; }
+function etNTipo(t){ return t==='top6' ? 6 : (t==='top8' ? 8 : 11); }
+function etN(){ return etNTipo(etTipoActual()); }
+function etNSlots(){ return etN() + (etTipoActual()==='xi' ? 1 : 0); }   // el once ideal suma el casillero del DT
+function etTemaActual(){ const t=document.getElementById('et-tema'); return t ? t.value : 'claro'; }
+function etNombreTipo(t){ return t==='top6' ? 'Top 6' : (t==='top8' ? 'Nominados' : 'Once ideal'); }
+function etTituloDefault(tipo){ return tipo==='top6' ? 'Top 6 de la Temporada' : (tipo==='top8' ? 'Nominados a Mejor Jugador' : 'Equipo de la Temporada'); }
 function etFotoKey(id, i){ return id + '_f' + i; }
+
+// Geometría compartida entre la imagen final y la vista previa de encuadre
+function etGeomClasico(tipo){
+  const top6 = tipo !== 'xi';
+  const W = CV_W, H = CV_H;
+  const cols = tipo==='top8' ? 4 : 3, mX = 64, gapX = 22, gapY = top6 ? 24 : 14;
+  const cellW = (W - mX*2 - gapX*(cols-1)) / cols;
+  const rows = top6 ? 2 : 4;
+  const gridTop = top6 ? 270 : 246;
+  const gridBottom = top6 ? 205 : 46;
+  const cellH = (H - gridTop - gridBottom - gapY*(rows-1)) / rows;
+  const labelH = Math.round(cellH * (top6 ? 0.36 : 0.38));
+  const skew = top6 ? 18 : 12;
+  const photoH = cellH - labelH;
+  return {W, H, cols, mX, gapX, gapY, cellW, rows, gridTop, gridBottom, cellH, labelH, skew, photoH, visH: photoH + skew};
+}
+
+// Tamaño del recuadro de foto según estilo/tipo (para la vista previa de encuadre)
+function etRectFoto(tipo, tema){
+  if(tema==='claro'){ const g = etGeomClaro(tipo); return {w:g.cellW, h:g.photoH, skew:0, barH:0}; }
+  if(tema==='completo'){ const g = etGeomCompleto(tipo); return {w:g.cellW, h:g.cellH, skew:0, barH:g.barH}; }
+  const g = etGeomClasico(tipo); return {w:g.cellW, h:g.visH, skew:g.skew, barH:0};
+}
 
 function etPoblarClubes(){
   const dl = document.getElementById('et-clubes-datalist'); if(!dl) return;
@@ -21063,50 +21093,123 @@ function etCambiarTipo(){
   const tipo = etTipoActual();
   const inp = document.getElementById('et-titulo');
   const actual = (inp.value||'').trim();
-  if(!actual || actual===etTituloDefault('xi') || actual===etTituloDefault('top6')) inp.value = etTituloDefault(tipo);
+  if(!actual || actual===etTituloDefault('xi') || actual===etTituloDefault('top6') || actual===etTituloDefault('top8')) inp.value = etTituloDefault(tipo);
   etRenderSlots();
 }
+
+// Dibuja una foto "cover" con zoom y desplazamiento (px/py de 0 a 1)
+function etPintarFoto(ctx, img, x, y, w, h, zoom, px, py){
+  const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
+  const sc = Math.max(w/iw, h/ih) * Math.max(1, zoom||1);
+  const dw = iw*sc, dh = ih*sc;
+  const fx = (px==null) ? 0.5 : px, fy = (py==null) ? 0.2 : py;
+  ctx.drawImage(img, x-(dw-w)*fx, y-(dh-h)*fy, dw, dh);
+}
+
+function etCargarImg(sl, cb){
+  if(sl._img && sl._imgSrc===sl.foto){ cb(sl._img); return; }
+  const im = new Image();
+  im.onload = ()=>{ sl._img = im; sl._imgSrc = sl.foto; cb(im); };
+  im.src = sl.foto;
+}
+
+function etPintarPreview(i){
+  const cv = document.getElementById('et-prev-'+i); if(!cv) return;
+  const sl = _etSlots[i]; if(!sl.foto) return;
+  etCargarImg(sl, img=>{
+    const r = etRectFoto(etTipoActual(), etTemaActual());
+    const ctx = cv.getContext('2d');
+    ctx.clearRect(0,0,cv.width,cv.height);
+    ctx.fillStyle = '#18181c'; ctx.fillRect(0,0,cv.width,cv.height);
+    etPintarFoto(ctx, img, 0, 0, cv.width, cv.height, sl.zoom, sl.px, sl.py);
+    // zonas que tapa la etiqueta / barra del nombre
+    ctx.fillStyle = 'rgba(0,0,0,.55)';
+    if(r.skew){ ctx.beginPath(); ctx.moveTo(0,cv.height); ctx.lineTo(cv.width,cv.height); ctx.lineTo(cv.width,cv.height-r.skew); ctx.closePath(); ctx.fill(); }
+    if(r.barH){ ctx.fillRect(0, cv.height-r.barH, cv.width, r.barH); }
+  });
+}
+
+function etBindPreview(i){
+  const cv = document.getElementById('et-prev-'+i); if(!cv) return;
+  const sl = _etSlots[i]; let drag = null;
+  cv.onpointerdown = ev=>{ drag = {x:ev.clientX, y:ev.clientY, px:sl.px, py:sl.py}; cv.setPointerCapture(ev.pointerId); cv.style.cursor='grabbing'; ev.preventDefault(); };
+  cv.onpointermove = ev=>{
+    if(!drag || !sl._img) return;
+    const r = cv.getBoundingClientRect(); const k = cv.width / r.width;
+    const img = sl._img;
+    const sc = Math.max(cv.width/img.naturalWidth, cv.height/img.naturalHeight) * Math.max(1, sl.zoom);
+    const ox = img.naturalWidth*sc - cv.width, oy = img.naturalHeight*sc - cv.height;
+    if(ox > 0.5) sl.px = Math.min(1, Math.max(0, drag.px - ((ev.clientX-drag.x)*k)/ox));
+    if(oy > 0.5) sl.py = Math.min(1, Math.max(0, drag.py - ((ev.clientY-drag.y)*k)/oy));
+    etPintarPreview(i);
+  };
+  cv.onpointerup = cv.onpointercancel = ()=>{ drag = null; cv.style.cursor='grab'; };
+}
+
+function etZoom(i, v){ _etSlots[i].zoom = parseFloat(v)||1; etPintarPreview(i); }
+function etToggleEnc(i){ _etSlots[i].enc = !_etSlots[i].enc; etRenderSlots(); }
 
 function etRenderSlots(){
   const cont = document.getElementById('et-slots'); if(!cont) return;
   if(!_etSlots.length) _etSlots = etNuevosSlots();
   const inp = document.getElementById('et-titulo');
   if(inp && !inp.value.trim()) inp.value = etTituloDefault(etTipoActual());
-  const n = etN();
-  let html = '';
-  for(let i=0;i<n;i++){
+  const n = etN(), nTot = etNSlots();
+  const r = etRectFoto(etTipoActual(), etTemaActual());
+  const maxPrev = (r.h / r.w) > 1.2 ? 200 : 320;
+  let html = `<datalist id="et-pos-datalist"><option value="ARQ"><option value="DEF"><option value="MED"><option value="DEL"></datalist>`;
+  for(let i=0;i<nTot;i++){
     const sl = _etSlots[i];
+    const esDT = i >= n;
     const thumb = sl.foto
-      ? `<img src="${sl.foto}" alt="" style="width:100%;height:100%;object-fit:cover;object-position:top">`
+      ? `<img src="${sl.foto}" alt="" style="width:100%;height:100%;object-fit:cover;object-position:${Math.round(sl.px*100)}% ${Math.round(sl.py*100)}%">`
       : `<span style="font-size:20px;opacity:.7">📷</span>`;
-    html += `<div style="display:grid;grid-template-columns:56px 1fr 28px;gap:8px;margin-bottom:10px;align-items:center">
-      <label style="position:relative;width:56px;height:56px;border-radius:8px;border:1px dashed rgba(201,162,39,.55);overflow:hidden;cursor:pointer;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.04)">
-        ${thumb}
-        <input type="file" accept="image/*" style="display:none" onchange="etFoto(${i},this)">
-      </label>
-      <div style="display:grid;gap:6px">
-        <input type="text" placeholder="${i+1}. Nombre y apellido" value="${etEsc(sl.nombre)}" oninput="_etSlots[${i}].nombre=this.value">
-        <input type="text" list="et-clubes-datalist" placeholder="Club" value="${etEsc(sl.club)}" oninput="_etSlots[${i}].club=this.value">
+    const camposClub = esDT
+      ? `<input type="text" list="et-clubes-datalist" placeholder="Club (opcional)" value="${etEsc(sl.club)}" oninput="_etSlots[${i}].club=this.value">`
+      : `<div style="display:grid;grid-template-columns:1fr 74px;gap:6px">
+            <input type="text" list="et-clubes-datalist" placeholder="Club" value="${etEsc(sl.club)}" oninput="_etSlots[${i}].club=this.value">
+            <input type="text" list="et-pos-datalist" maxlength="4" placeholder="Pos." value="${etEsc(sl.pos)}" oninput="_etSlots[${i}].pos=this.value.toUpperCase()" style="text-transform:uppercase;text-align:center">
+          </div>`;
+    html += `<div style="margin-bottom:12px">
+      ${esDT ? '<p style="font-size:11px;color:var(--dorado);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 6px">Director técnico (opcional)</p>' : ''}
+      <div style="display:grid;grid-template-columns:56px 1fr 30px 30px;gap:8px;align-items:center">
+        <label style="position:relative;width:56px;height:56px;border-radius:8px;border:1px dashed rgba(201,162,39,.55);overflow:hidden;cursor:pointer;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.04)">
+          ${thumb}
+          <input type="file" accept="image/*" style="display:none" onchange="etFoto(${i},this)">
+        </label>
+        <div style="display:grid;gap:6px">
+          <input type="text" placeholder="${esDT ? 'DT · Nombre y apellido' : (i+1)+'. Nombre y apellido'}" value="${etEsc(sl.nombre)}" oninput="_etSlots[${i}].nombre=this.value">
+          ${camposClub}
+        </div>
+        ${sl.foto ? `<button type="button" class="btn-edit" style="padding:4px 0;font-size:13px" title="Encuadrar foto" onclick="etToggleEnc(${i})">✂</button>` : '<span></span>'}
+        ${sl.foto ? `<button type="button" class="btn-danger" style="padding:4px 0;font-size:11px" title="Quitar foto" onclick="etQuitarFoto(${i})">✕</button>` : '<span></span>'}
       </div>
-      ${sl.foto ? `<button type="button" class="btn-danger" style="padding:4px 0;font-size:11px" title="Quitar foto" onclick="etQuitarFoto(${i})">✕</button>` : '<span></span>'}
+      ${sl.foto && sl.enc ? `<div style="margin:8px 0 0 64px">
+        <canvas id="et-prev-${i}" width="${Math.round(r.w)}" height="${Math.round(r.h)}" style="width:100%;max-width:${maxPrev}px;border-radius:6px;border:1px solid rgba(201,162,39,.5);touch-action:none;cursor:grab;display:block"></canvas>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:6px;max-width:${maxPrev}px"><span style="font-size:11px;color:var(--gris)">Zoom</span><input type="range" min="1" max="3" step="0.05" value="${sl.zoom}" oninput="etZoom(${i},this.value)" style="flex:1"></div>
+        <p style="font-size:10px;color:var(--gris);margin-top:4px">Arrastrá la foto para centrar la cara. La zona oscura queda tapada por la etiqueta o barra del nombre.</p>
+      </div>` : ''}
     </div>`;
   }
   cont.innerHTML = html;
+  for(let i=0;i<nTot;i++){ if(_etSlots[i].foto && _etSlots[i].enc){ etBindPreview(i); etPintarPreview(i); } }
 }
 
 function etFoto(i, input){
   const file = input.files[0]; if(!file) return;
-  comprimirABase64(file, 640, 0.8).then(d=>{
-    _etSlots[i].foto = d; _etSlots[i].nueva = true; etRenderSlots();
+  comprimirABase64(file, 900, 0.82).then(d=>{
+    const sl = _etSlots[i];
+    sl.foto = d; sl.nueva = true; sl.zoom = 1; sl.px = 0.5; sl.py = 0.2; sl.enc = true; sl._img = null;
+    etRenderSlots();
   }).catch(()=>alert('No se pudo leer la imagen.'));
 }
-function etQuitarFoto(i){ _etSlots[i].foto=''; _etSlots[i].nueva=false; etRenderSlots(); }
+function etQuitarFoto(i){ const sl=_etSlots[i]; sl.foto=''; sl.nueva=false; sl.enc=false; sl._img=null; etRenderSlots(); }
 
 function etLimpiarForm(){
   _etEditId = null;
   _etSlots = etNuevosSlots();
   document.getElementById('et-tipo').value = 'xi';
-  document.getElementById('et-tema').value = 'oscuro';
+  document.getElementById('et-tema').value = 'claro';
   document.getElementById('et-titulo').value = etTituloDefault('xi');
   document.getElementById('et-anio').value = '';
   document.getElementById('et-sub').value = '';
@@ -21116,12 +21219,14 @@ function etLimpiarForm(){
 
 function etGuardar(){
   const tipo = etTipoActual();
-  const n = etN();
+  const n = etN(), nTot = etNSlots();
+  const r3 = v=>Math.round((+v)*1000)/1000;
   const jugadores = [];
-  for(let i=0;i<n;i++){
-    jugadores.push({ nombre:(_etSlots[i].nombre||'').trim(), club:(_etSlots[i].club||'').trim() });
+  for(let i=0;i<nTot;i++){
+    const sl = _etSlots[i];
+    jugadores.push({ nombre:(sl.nombre||'').trim(), club:(sl.club||'').trim(), pos:(sl.pos||'').trim(), zoom:r3(sl.zoom||1), px:r3(sl.px), py:r3(sl.py) });
   }
-  if(!jugadores.some(j=>j.nombre)){ alert('Cargá al menos un jugador.'); return; }
+  if(!jugadores.slice(0,n).some(j=>j.nombre)){ alert('Cargá al menos un jugador.'); return; }
 
   const obj = {
     id: _etEditId || ('etm_'+Date.now()),
@@ -21137,13 +21242,13 @@ function etGuardar(){
   if(idx>-1) data.equiposTemporada[idx] = obj; else data.equiposTemporada.push(obj);
   saveData(data);
 
-  // Las fotos van aparte (un documento por foto), igual que las fotos de alineaciones,
+  // Las fotos van aparte (un documento por foto), igual que las de Alineaciones,
   // para no inflar el documento principal ni pasarse del límite de 1MB de Firestore.
   if(!window._alinFotosCache) window._alinFotosCache = {};
   for(let i=0;i<ET_MAX;i++){
     const key = etFotoKey(obj.id, i);
     const sl = _etSlots[i];
-    if(i<n && sl.foto){
+    if(i<nTot && sl.foto){
       if(sl.nueva){
         if(window._fb) window._fb.setAlinFoto(key, sl.foto);
         window._alinFotosCache[key] = sl.foto;
@@ -21167,10 +21272,11 @@ function etEditar(id){
   document.getElementById('et-sub').value = e.sub || '';
   _etSlots = etNuevosSlots();
   (e.jugadores||[]).forEach((j,i)=>{
-    if(!_etSlots[i]) return;
-    _etSlots[i].nombre = j.nombre||''; _etSlots[i].club = j.club||'';
-    _etSlots[i].foto = (window._alinFotosCache && window._alinFotosCache[etFotoKey(id,i)]) || '';
-    _etSlots[i].nueva = false;
+    const sl = _etSlots[i]; if(!sl) return;
+    sl.nombre = j.nombre||''; sl.club = j.club||''; sl.pos = j.pos||'';
+    sl.zoom = j.zoom||1; sl.px = (j.px==null?0.5:j.px); sl.py = (j.py==null?0.2:j.py);
+    sl.foto = (window._alinFotosCache && window._alinFotosCache[etFotoKey(id,i)]) || '';
+    sl.nueva = false; sl.enc = false;
   });
   document.getElementById('et-guardar-btn').textContent = 'Guardar cambios';
   etRenderSlots();
@@ -21198,7 +21304,7 @@ function etRenderLista(){
   if(!items.length){ cont.innerHTML = '<p class="admin-empty">Todavía no armaste ningún equipo de la temporada.</p>'; return; }
   cont.innerHTML = items.map(e=>`
     <div class="admin-list-item">
-      <span>${etEsc(e.titulo||'')}${e.anio?' · '+etEsc(e.anio):''} · ${e.tipo==='top6'?'Top 6':'Once ideal'}</span>
+      <span>${etEsc(e.titulo||'')}${e.anio?' · '+etEsc(e.anio):''} · ${etNombreTipo(e.tipo)}</span>
       <button class="btn-edit" onclick="abrirShare(()=>generarImagenEquipoTemporada('${e.id}'))">🖼️ Imagen</button>
       <button class="btn-edit" onclick="etEditar('${e.id}')">✏ Editar</button>
       <button class="btn-danger" onclick="etEliminar('${e.id}')">✕ Eliminar</button>
@@ -21217,6 +21323,13 @@ function etAjustarFuente(ctx, texto, plantilla, maxW, px, minPx){
 }
 
 async function etDibujarLogo(ctx, identidad, cx, y, size, T){
+  // Halo suave detrás del logo
+  ctx.save();
+  const halo = ctx.createRadialGradient(cx, y+size/2, size*0.4, cx, y+size/2, size*0.95);
+  halo.addColorStop(0, T.halo); halo.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = halo; ctx.fillRect(cx-size, y-size/2, size*2, size*2);
+  ctx.restore();
+
   const ok = await cvDrawLogo(ctx, identidad.logo, cx-size/2, y, size);
   if(!ok){
     ctx.save();
@@ -21235,51 +21348,97 @@ async function etDibujarLogo(ctx, identidad, cx, y, size, T){
   ctx.textBaseline = 'alphabetic';
 }
 
-async function etDibujarCelda(ctx, j, x, y, w, h, labelH, skew, T, fotoSrc){
-  const photoH = h - labelH;
-  const visH = photoH + skew;   // la foto se extiende bajo el corte diagonal de la etiqueta
+// Texto centrado con líneas finas a los costados (ornamento de encabezado/pie)
+function etTextoConLineas(ctx, texto, cx, y, W, mX, color, lineColor){
+  const tw = ctx.measureText(texto).width;
+  ctx.textAlign = 'center'; ctx.fillStyle = color;
+  ctx.fillText(texto, cx, y);
+  const gap = 26, ly = y - 9;
+  ctx.strokeStyle = lineColor; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(mX, ly); ctx.lineTo(cx - tw/2 - gap, ly); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx + tw/2 + gap, ly); ctx.lineTo(W - mX, ly); ctx.stroke();
+}
 
-  // Foto (recorte tipo "cover", anclado hacia arriba para no cortar la cara)
+async function etDibujarCelda(ctx, j, x, y, g, T, fotoSrc){
+  const w = g.cellW, h = g.cellH, labelH = g.labelH, skew = g.skew, photoH = g.photoH, visH = g.visH;
+  const grande = h > 330;
+
+  // Sombra de la tarjeta
+  ctx.save();
+  ctx.shadowColor = T.sombra; ctx.shadowBlur = 24; ctx.shadowOffsetY = 9;
+  ctx.fillStyle = '#000'; ctx.fillRect(x, y, w, h);
+  ctx.restore();
+
+  // Foto
   ctx.save();
   ctx.beginPath(); ctx.rect(x, y, w, visH); ctx.clip();
-  const g = ctx.createLinearGradient(0, y, 0, y+visH);
-  g.addColorStop(0, T.photoBg0); g.addColorStop(1, T.photoBg1);
-  ctx.fillStyle = g; ctx.fillRect(x, y, w, visH);
+  const bgp = ctx.createLinearGradient(0, y, 0, y+visH);
+  bgp.addColorStop(0, T.photoBg0); bgp.addColorStop(1, T.photoBg1);
+  ctx.fillStyle = bgp; ctx.fillRect(x, y, w, visH);
   let dibujada = false;
   if(fotoSrc){
     await new Promise(res=>{
       const img = new Image();
-      img.onload = ()=>{
-        const iw = img.naturalWidth, ih = img.naturalHeight;
-        const sc = Math.max(w/iw, visH/ih);
-        const dw = iw*sc, dh = ih*sc;
-        ctx.drawImage(img, x+(w-dw)/2, y-(dh-visH)*0.2, dw, dh);
-        dibujada = true; res();
-      };
+      img.onload = ()=>{ etPintarFoto(ctx, img, x, y, w, visH, j.zoom, j.px, j.py); dibujada = true; res(); };
       img.onerror = ()=>res();
       img.src = fotoSrc;
     });
   }
   if(!dibujada){
-    const ini = (j.nombre||'?').split(/\s+/).filter(Boolean).slice(0,2).map(p=>p[0]).join('').toUpperCase();
-    ctx.fillStyle = 'rgba(255,255,255,.12)';
-    ctx.font = `${Math.round(visH*0.5)}px "Bebas Neue", Arial, sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.fillText(ini, x+w/2, y+visH*0.68);
+    // Sin foto: escudo del club grande y translúcido; si no hay, iniciales
+    const tieneEscudo = !!(j.club && (escudos[j.club] || escudos[normalizar(j.club)]));
+    if(tieneEscudo){
+      const sz = Math.round(Math.min(w, visH) * 0.62);
+      ctx.globalAlpha = 0.32;
+      await cvDrawEscudo(ctx, j.club, x + (w-sz)/2, y + (visH-sz)/2 - 6, sz);
+      ctx.globalAlpha = 1;
+    } else {
+      const ini = (j.nombre||'?').split(/\s+/).filter(Boolean).slice(0,2).map(p=>p[0]).join('').toUpperCase();
+      ctx.fillStyle = 'rgba(255,255,255,.13)';
+      ctx.font = `${Math.round(visH*0.5)}px "Bebas Neue", Arial, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText(ini, x+w/2, y+visH*0.68);
+    }
   }
+  // Degradé inferior para fundir la foto con la etiqueta
+  const sh = ctx.createLinearGradient(0, y+visH*0.5, 0, y+visH);
+  sh.addColorStop(0, 'rgba(0,0,0,0)'); sh.addColorStop(1, 'rgba(0,0,0,.5)');
+  ctx.fillStyle = sh; ctx.fillRect(x, y+visH*0.5, w, visH*0.5);
   ctx.restore();
+
+  // Posición (ARQ / DEF / MED / DEL)
+  if(j.pos){
+    ctx.save();
+    const fs = grande ? 24 : 19;
+    ctx.font = `800 ${fs}px "Rajdhani", Arial, sans-serif`;
+    if('letterSpacing' in ctx) ctx.letterSpacing = '2px';
+    const tw = ctx.measureText(j.pos).width;
+    const bw = tw + 22, bh = fs + 14, bx = x + 12, by = y + 12;
+    ctx.fillStyle = 'rgba(8,8,8,.8)'; cvRoundRect(ctx, bx, by, bw, bh, bh/2); ctx.fill();
+    ctx.strokeStyle = 'rgba(201,162,39,.85)'; ctx.lineWidth = 1.5; cvRoundRect(ctx, bx, by, bw, bh, bh/2); ctx.stroke();
+    ctx.fillStyle = '#f0c040'; ctx.textAlign = 'left';
+    ctx.fillText(j.pos, bx + 12, by + bh/2 + fs*0.34);
+    if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+    ctx.restore();
+  }
 
   // Etiqueta con borde superior en diagonal
   const lg = ctx.createLinearGradient(x, 0, x+w, 0);
   lg.addColorStop(0, T.label0); lg.addColorStop(1, T.label1);
-  ctx.fillStyle = lg;
   ctx.beginPath();
-  ctx.moveTo(x, y+photoH+skew);
-  ctx.lineTo(x+w, y+photoH);
-  ctx.lineTo(x+w, y+h);
-  ctx.lineTo(x, y+h);
-  ctx.closePath();
-  ctx.fill();
+  ctx.moveTo(x, y+photoH+skew); ctx.lineTo(x+w, y+photoH); ctx.lineTo(x+w, y+h); ctx.lineTo(x, y+h); ctx.closePath();
+  ctx.fillStyle = lg; ctx.fill();
+  ctx.save(); ctx.clip();
+  const sheen = ctx.createLinearGradient(0, y+photoH, 0, y+h);
+  sheen.addColorStop(0, 'rgba(255,255,255,.20)'); sheen.addColorStop(0.6, 'rgba(255,255,255,0)');
+  ctx.fillStyle = sheen; ctx.fillRect(x, y+photoH, w, labelH+skew);
+  ctx.restore();
+  // Costura brillante sobre el corte diagonal
+  ctx.save();
+  ctx.strokeStyle = T.seam; ctx.lineWidth = 3;
+  ctx.shadowColor = T.seam; ctx.shadowBlur = 8;
+  ctx.beginPath(); ctx.moveTo(x, y+photoH+skew); ctx.lineTo(x+w, y+photoH); ctx.stroke();
+  ctx.restore();
 
   // Textos de la etiqueta
   const avail = labelH - skew;
@@ -21320,9 +21479,13 @@ async function etDibujarCelda(ctx, j, x, y, w, h, labelH, skew, T, fotoSrc){
 async function generarImagenEquipoTemporada(id){
   const e = (data.equiposTemporada||[]).find(x=>x.id===id);
   if(!e) return null;
+  if(e.tema === 'claro') return etGenerarClaro(e);
+  if(e.tema === 'completo') return etGenerarCompleto(e);
   await document.fonts.ready;
   const identidad = getIdentidad();
-  const W = CV_W, H = CV_H;
+  const top6 = e.tipo !== 'xi';
+  const g = etGeomClasico(e.tipo);
+  const W = g.W, H = g.H, mX = g.mX;
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
@@ -21330,116 +21493,532 @@ async function generarImagenEquipoTemporada(id){
 
   const dorado = e.tema === 'dorado';
   const T = dorado ? {
-    bg0:'#e6c34f', bg1:'#b58b1c', title:'#17171d', soft:'rgba(23,23,29,.72)', accent:'#232330',
-    label0:'#232330', label1:'#191920', first:'rgba(255,255,255,.72)', last:'#ffffff', club:'#f0c040',
-    photoBg0:'#4a4a55', photoBg1:'#25252d', brandName:'#17171d', brandYear:'#232330',
-    logoFill:'#232330', logoText:'#f0c040', logoRing:'#232330'
+    bg0:'#ebc955', bg1:'#b08717', title:'#17171d', soft:'rgba(23,23,29,.74)', accent:'#232330', linea:'rgba(23,23,29,.45)',
+    label0:'#262633', label1:'#17171d', first:'rgba(255,255,255,.72)', last:'#ffffff', club:'#f0c040', seam:'#f0c040',
+    photoBg0:'#4a4a55', photoBg1:'#25252d', brandName:'#17171d', brandYear:'#232330', sombra:'rgba(40,28,0,.5)',
+    logoFill:'#232330', logoText:'#f0c040', logoRing:'#232330', halo:'rgba(255,255,255,.35)'
   } : {
-    bg0:'#17171d', bg1:'#0a0a0d', title:'#f5f5f5', soft:'rgba(201,162,39,.9)', accent:'#c9a227',
-    label0:'#e3b93c', label1:'#c9a227', first:'rgba(17,17,17,.72)', last:'#111111', club:'rgba(17,17,17,.72)',
-    photoBg0:'#3a3a40', photoBg1:'#18181c', brandName:'#f5f5f5', brandYear:'#c9a227',
-    logoFill:'#c9a227', logoText:'#080808', logoRing:'rgba(201,162,39,.8)'
+    bg0:'#181820', bg1:'#09090c', title:'#f5f5f5', soft:'rgba(201,162,39,.92)', accent:'#c9a227', linea:'rgba(201,162,39,.5)',
+    label0:'#e8be40', label1:'#c9a227', first:'rgba(17,17,17,.72)', last:'#111111', club:'rgba(17,17,17,.74)', seam:'#ffe58a',
+    photoBg0:'#3a3a40', photoBg1:'#18181c', brandName:'#f5f5f5', brandYear:'#c9a227', sombra:'rgba(0,0,0,.7)',
+    logoFill:'#c9a227', logoText:'#080808', logoRing:'rgba(201,162,39,.85)', halo:'rgba(201,162,39,.28)'
   };
 
-  // Fondo
+  // Fondo con degradé, rayas diagonales muy sutiles y viñeta
   const bg = ctx.createLinearGradient(0, 0, 0, H);
   bg.addColorStop(0, T.bg0); bg.addColorStop(1, T.bg1);
   ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  ctx.save();
+  ctx.translate(W/2, H/2); ctx.rotate(-28*Math.PI/180);
+  ctx.strokeStyle = dorado ? 'rgba(0,0,0,.045)' : 'rgba(255,255,255,.028)'; ctx.lineWidth = 14;
+  for(let k=-1800; k<1800; k+=46){ ctx.beginPath(); ctx.moveTo(k, -1800); ctx.lineTo(k, 1800); ctx.stroke(); }
+  ctx.restore();
   if(dorado){
+    const lite = ctx.createRadialGradient(W*0.3, 0, 0, W*0.3, 0, 900);
+    lite.addColorStop(0, 'rgba(255,245,200,.35)'); lite.addColorStop(1, 'rgba(255,245,200,0)');
+    ctx.fillStyle = lite; ctx.fillRect(0, 0, W, H);
     ctx.fillStyle = T.accent;
     ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(70,0); ctx.lineTo(0,190); ctx.closePath(); ctx.fill();
     ctx.beginPath(); ctx.moveTo(W,H); ctx.lineTo(W-70,H); ctx.lineTo(W,H-190); ctx.closePath(); ctx.fill();
   } else {
-    const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, 700);
-    glow.addColorStop(0, 'rgba(201,162,39,.16)'); glow.addColorStop(1, 'rgba(201,162,39,0)');
+    const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, 760);
+    glow.addColorStop(0, 'rgba(201,162,39,.20)'); glow.addColorStop(1, 'rgba(201,162,39,0)');
     ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
+    const vg = ctx.createRadialGradient(W/2, H/2, H*0.35, W/2, H/2, H*0.85);
+    vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.45)');
+    ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+    // Marco dorado fino
+    ctx.strokeStyle = 'rgba(201,162,39,.28)'; ctx.lineWidth = 2;
+    ctx.strokeRect(22, 22, W-44, H-44);
   }
 
-  const top6 = e.tipo === 'top6';
-  const jug = (e.jugadores||[]).slice(0, top6 ? 6 : 11);
   const liga = (identidad.nombre||'DEPORTEMAS').toUpperCase();
   const anio = (e.anio||'').trim();
   const titulo = (e.titulo || etTituloDefault(e.tipo)).toUpperCase();
-
-  // Grilla: 3 columnas. En el once ideal, la celda 12 queda para el logo de la liga.
-  const cols = 3, mX = 64, gapX = 22, gapY = top6 ? 24 : 18;
-  const cellW = (W - mX*2 - gapX*(cols-1)) / cols;
-  const rows = top6 ? 2 : 4;
-  const gridTop = top6 ? 270 : 258;
-  const gridBottom = top6 ? 205 : 52;
-  const cellH = (H - gridTop - gridBottom - gapY*(rows-1)) / rows;
-  const labelH = Math.round(cellH * (top6 ? 0.36 : 0.40));
-  const skew = top6 ? 18 : 12;
+  const jug = (e.jugadores||[]).map((j,i)=>Object.assign({i}, j)).filter(j=>(j.nombre||'').trim()).slice(0, etNTipo(e.tipo));
 
   ctx.textAlign = 'left';
   if(!top6){
     // Encabezado a la izquierda
     ctx.fillStyle = T.soft;
     ctx.font = '700 26px "Rajdhani", Arial, sans-serif';
-    if('letterSpacing' in ctx) ctx.letterSpacing = '4px';
-    cvFillTextTrunc(ctx, liga + (anio ? '  ·  ' + anio : ''), mX, 88, W - mX*2);
+    if('letterSpacing' in ctx) ctx.letterSpacing = '5px';
+    cvFillTextTrunc(ctx, liga + (anio ? '  ·  ' + anio : ''), mX, 90, W - mX*2);
     if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+    ctx.save();
+    ctx.shadowColor = dorado ? 'rgba(0,0,0,.25)' : 'rgba(0,0,0,.6)'; ctx.shadowBlur = 14; ctx.shadowOffsetY = 4;
     ctx.fillStyle = T.title;
-    etAjustarFuente(ctx, titulo, '{s}px "Bebas Neue", Arial, sans-serif', W - mX*2, 96, 44);
-    ctx.fillText(titulo, mX, 176);
+    etAjustarFuente(ctx, titulo, '{s}px "Bebas Neue", Arial, sans-serif', W - mX*2, 100, 44);
+    ctx.fillText(titulo, mX, 178);
+    ctx.restore();
     if(e.sub){
-      ctx.fillStyle = T.accent; ctx.fillRect(mX, 196, 6, 28);
+      ctx.fillStyle = T.accent; ctx.fillRect(mX, 198, 6, 28);
       ctx.fillStyle = T.soft;
       ctx.font = '600 24px "Rajdhani", Arial, sans-serif';
-      cvFillTextTrunc(ctx, e.sub.toUpperCase(), mX+18, 220, W - mX*2 - 18);
+      cvFillTextTrunc(ctx, e.sub.toUpperCase(), mX+18, 222, W - mX*2 - 18);
     }
   } else {
-    // Encabezado centrado: logo + liga/temporada
-    await etDibujarLogo(ctx, identidad, W/2, 50, 130, T);
-    ctx.textAlign = 'center';
-    ctx.fillStyle = T.soft;
+    // Encabezado centrado: logo + liga/temporada con líneas laterales
+    await etDibujarLogo(ctx, identidad, W/2, 48, 130, T);
     ctx.font = '700 28px "Rajdhani", Arial, sans-serif';
-    if('letterSpacing' in ctx) ctx.letterSpacing = '4px';
-    cvFillTextTrunc(ctx, liga + (anio ? '  ·  ' + anio : ''), W/2, 232, W - mX*2);
+    if('letterSpacing' in ctx) ctx.letterSpacing = '5px';
+    etTextoConLineas(ctx, liga + (anio ? '  ·  ' + anio : ''), W/2, 232, W, mX, T.soft, T.linea);
     if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
     ctx.textAlign = 'left';
   }
 
-  // Celdas
-  for(let i=0;i<jug.length;i++){
-    const col = i % cols, row = Math.floor(i / cols);
-    const x = mX + col*(cellW + gapX);
-    const y = gridTop + row*(cellH + gapY);
-    const fotoSrc = (window._alinFotosCache && window._alinFotosCache[etFotoKey(e.id, i)]) || '';
-    await etDibujarCelda(ctx, jug[i], x, y, cellW, cellH, labelH, skew, T, fotoSrc);
+  // Celdas (solo jugadores cargados, sin casilleros vacíos)
+  for(let k=0;k<jug.length;k++){
+    const col = k % g.cols, row = Math.floor(k / g.cols);
+    const enFila = Math.min(g.cols, jug.length - row*g.cols);
+    const desp = top6 ? (g.cols - enFila)*(g.cellW + g.gapX)/2 : 0;   // centra la última fila incompleta
+    const x = mX + desp + col*(g.cellW + g.gapX);
+    const y = g.gridTop + row*(g.cellH + g.gapY);
+    const fotoSrc = (window._alinFotosCache && window._alinFotosCache[etFotoKey(e.id, jug[k].i)]) || '';
+    await etDibujarCelda(ctx, jug[k], x, y, g, T, fotoSrc);
   }
 
   if(!top6){
-    // Celda 12: logo + liga + temporada (como el sello "PFA Awards")
-    const x = mX + 2*(cellW + gapX);
-    const y = gridTop + 3*(cellH + gapY);
-    const logoSz = Math.min(112, Math.round(cellH*0.46));
-    await etDibujarLogo(ctx, identidad, x + cellW/2, y + cellH*0.06, logoSz, T);
+    // Celda 12: sello con logo + liga + temporada
+    const x = mX + 2*(g.cellW + g.gapX);
+    const y = g.gridTop + 3*(g.cellH + g.gapY);
+    const logoSz = Math.min(124, Math.round(g.cellH*0.5));
+    await etDibujarLogo(ctx, identidad, x + g.cellW/2, y + g.cellH*0.04, logoSz, T);
     ctx.textAlign = 'center';
     ctx.fillStyle = T.brandName;
-    etAjustarFuente(ctx, liga, '800 {s}px "Rajdhani", Arial, sans-serif', cellW - 20, 28, 14);
-    ctx.fillText(liga, x + cellW/2, y + cellH*0.76);
+    etAjustarFuente(ctx, liga, '800 {s}px "Rajdhani", Arial, sans-serif', g.cellW - 20, 28, 14);
+    ctx.fillText(liga, x + g.cellW/2, y + g.cellH*0.78);
     if(anio){
       ctx.fillStyle = T.brandYear;
       ctx.font = '54px "Bebas Neue", Arial, sans-serif';
-      ctx.fillText(anio, x + cellW/2, y + cellH*0.97);
+      ctx.fillText(anio, x + g.cellW/2, y + g.cellH*0.98);
     }
     ctx.textAlign = 'left';
   } else {
-    // Pie centrado: título grande + subtítulo
+    // Pie centrado: título grande + subtítulo con líneas laterales
     ctx.textAlign = 'center';
+    ctx.save();
+    ctx.shadowColor = dorado ? 'rgba(0,0,0,.2)' : 'rgba(0,0,0,.6)'; ctx.shadowBlur = 14; ctx.shadowOffsetY = 4;
     ctx.fillStyle = T.title;
-    etAjustarFuente(ctx, titulo, '{s}px "Bebas Neue", Arial, sans-serif', W - mX*2, 70, 36);
-    ctx.fillText(titulo, W/2, H - 98);
+    etAjustarFuente(ctx, titulo, '{s}px "Bebas Neue", Arial, sans-serif', W - mX*2, 74, 36);
+    ctx.fillText(titulo, W/2, H - 100);
+    ctx.restore();
     if(e.sub){
-      ctx.fillStyle = T.soft;
       ctx.font = '600 24px "Rajdhani", Arial, sans-serif';
-      if('letterSpacing' in ctx) ctx.letterSpacing = '3px';
-      cvFillTextTrunc(ctx, e.sub.toUpperCase(), W/2, H - 56, W - mX*2);
+      if('letterSpacing' in ctx) ctx.letterSpacing = '4px';
+      etTextoConLineas(ctx, e.sub.toUpperCase(), W/2, H - 54, W, mX, T.soft, T.linea);
       if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
     }
     ctx.textAlign = 'left';
   }
+  return canvas;
+}
+
+// ============================================================
+// ESTILOS CLAROS: "Nominados" (tarjetas de color) y "Equipo completo"
+// (fotos a pantalla completa). El color de cada tarjeta sale del escudo
+// del club; si no hay escudo se usa un color por defecto.
+// ============================================================
+const _etColCache = {};
+
+function etRgb(c, a){ return `rgba(${c[0]},${c[1]},${c[2]},${a==null?1:a})`; }
+function etMezcla(a, b, t){ return [Math.round(a[0]+(b[0]-a[0])*t), Math.round(a[1]+(b[1]-a[1])*t), Math.round(a[2]+(b[2]-a[2])*t)]; }
+function etRR(ctx, x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.arcTo(x+w, y, x+w, y+h, r); ctx.arcTo(x+w, y+h, x, y+h, r);
+  ctx.arcTo(x, y+h, x, y, r);     ctx.arcTo(x, y, x+w, y, r);
+  ctx.closePath();
+}
+function etTieneEscudo(club){ return !!(club && (escudos[club] || escudos[normalizar(club)])); }
+
+// Color dominante (el más saturado) del escudo del club
+async function etColorClub(club){
+  if(!club) return null;
+  if(_etColCache[club] !== undefined) return _etColCache[club];
+  let res = null;
+  try{
+    const entry = escudos[club] || escudos[normalizar(club)];
+    const src = entry && typeof entry === 'object' ? entry.img : entry;
+    const img = src ? await cargarImagenAsync(src) : null;
+    if(img){
+      const c = document.createElement('canvas'); c.width = 32; c.height = 32;
+      const x = c.getContext('2d');
+      x.drawImage(img, 0, 0, 32, 32);
+      const d = x.getImageData(0, 0, 32, 32).data;
+      let r=0, g=0, b=0, ws=0;
+      for(let i=0;i<d.length;i+=4){
+        if(d[i+3] < 128) continue;
+        const R=d[i], G=d[i+1], B=d[i+2];
+        const mx = Math.max(R,G,B), mn = Math.min(R,G,B);
+        if(mx < 45 || mn > 215) continue;           // casi negro / casi blanco
+        const sat = (mx-mn)/mx;
+        const w = sat*sat + 0.02;
+        r += R*w; g += G*w; b += B*w; ws += w;
+      }
+      if(ws > 0) res = [Math.round(r/ws), Math.round(g/ws), Math.round(b/ws)];
+    }
+  }catch(err){ res = null; }
+  _etColCache[club] = res;
+  return res;
+}
+
+function etDividirTitulo(t){
+  if(t.length <= 16 || t.indexOf(' ') < 0) return [t];
+  const p = t.split(' ');
+  let best = 1, diff = 1e9;
+  for(let k=1;k<p.length;k++){
+    const d = Math.abs(p.slice(0,k).join(' ').length - p.slice(k).join(' ').length);
+    if(d < diff){ diff = d; best = k; }
+  }
+  return [p.slice(0,best).join(' '), p.slice(best).join(' ')];
+}
+
+function etPillPos(ctx, txt, x, y, fs, bg, borde, color){
+  ctx.save();
+  ctx.font = `800 ${fs}px "Rajdhani", Arial, sans-serif`;
+  if('letterSpacing' in ctx) ctx.letterSpacing = '2px';
+  const tw = ctx.measureText(txt).width;
+  const bw = tw + 20, bh = fs + 12;
+  ctx.fillStyle = bg; etRR(ctx, x, y, bw, bh, bh/2); ctx.fill();
+  if(borde){ ctx.strokeStyle = borde; ctx.lineWidth = 1.5; etRR(ctx, x, y, bw, bh, bh/2); ctx.stroke(); }
+  ctx.fillStyle = color; ctx.textAlign = 'left';
+  ctx.fillText(txt, x + 10, y + bh/2 + fs*0.34);
+  if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+  ctx.restore();
+}
+
+function etPosCelda(g, k, total, centrar){
+  const col = k % g.cols, row = Math.floor(k / g.cols);
+  let desp = 0;
+  if(centrar){ const enFila = Math.min(g.cols, total - row*g.cols); desp = (g.cols - enFila)*(g.cellW + g.gapX)/2; }
+  return { x: g.mX + desp + col*(g.cellW + g.gapX), y: g.gridTop + row*(g.cellH + g.gapY) };
+}
+
+function etJugadoresDe(e){
+  const n = etNTipo(e.tipo);
+  const jug = (e.jugadores||[]).slice(0, n).map((j,i)=>Object.assign({i}, j)).filter(j=>(j.nombre||'').trim());
+  const d = (e.tipo==='xi') ? (e.jugadores||[])[11] : null;
+  const dt = (d && (d.nombre||'').trim()) ? Object.assign({i:11, pos:'DT'}, d) : null;
+  return { jug, dt };
+}
+
+function etFotoDe(e, j){ return (window._alinFotosCache && window._alinFotosCache[etFotoKey(e.id, j.i)]) || ''; }
+
+// ── Estilo "Nominados claro" ─────────────────────────────────
+function etGeomClaro(tipo){
+  const W = CV_W, H = CV_H;
+  const cols = tipo==='top6' ? 3 : 4;
+  const slots = tipo==='xi' ? 12 : etNTipo(tipo);
+  const rows = Math.ceil(slots/cols);
+  const mX = 48, gapX = 18, gapY = 20;
+  const cellW = (W - mX*2 - gapX*(cols-1)) / cols;
+  const gridTop = tipo==='xi' ? 318 : 340;
+  const gridBottom = 78;
+  const cellH = (H - gridTop - gridBottom - gapY*(rows-1)) / rows;
+  const barH = Math.round(Math.min(cellH*0.21, 86));
+  return {W, H, cols, rows, mX, gapX, gapY, cellW, cellH, gridTop, gridBottom, barH, photoH: cellH - barH};
+}
+
+async function etCartaClaro(ctx, j, x, y, g, fotoSrc, colRgb){
+  const w = g.cellW, h = g.cellH, barH = g.barH, ph = g.photoH, r = 18;
+  const base = colRgb || [118, 68, 214];
+  const top = etMezcla(base, [255,255,255], 0.38), bot = etMezcla(base, [0,0,0], 0.5);
+
+  // Sombra
+  ctx.save();
+  ctx.shadowColor = 'rgba(40,20,90,.32)'; ctx.shadowBlur = 20; ctx.shadowOffsetY = 9;
+  etRR(ctx, x, y, w, h, r); ctx.fillStyle = etRgb(base); ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  etRR(ctx, x, y, w, h, r); ctx.clip();
+  const gr = ctx.createLinearGradient(0, y, 0, y+h);
+  gr.addColorStop(0, etRgb(top)); gr.addColorStop(0.55, etRgb(base)); gr.addColorStop(1, etRgb(bot));
+  ctx.fillStyle = gr; ctx.fillRect(x, y, w, h);
+  const rg = ctx.createRadialGradient(x+w/2, y+ph*0.35, 0, x+w/2, y+ph*0.35, w*0.85);
+  rg.addColorStop(0, 'rgba(255,255,255,.34)'); rg.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = rg; ctx.fillRect(x, y, w, ph);
+
+  let dibujada = false;
+  if(fotoSrc){
+    const img = await cargarImagenAsync(fotoSrc);
+    if(img){
+      ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, ph); ctx.clip();
+      etPintarFoto(ctx, img, x, y, w, ph, j.zoom, j.px, j.py);
+      ctx.restore(); dibujada = true;
+    }
+  }
+  if(!dibujada){
+    const ini = (j.nombre||'?').split(/\s+/).filter(Boolean).slice(0,2).map(p=>p[0]).join('').toUpperCase();
+    ctx.fillStyle = 'rgba(255,255,255,.28)';
+    ctx.font = `${Math.round(ph*0.5)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(ini, x+w/2, y+ph*0.62);
+  }
+  // Baño de color del club sobre la foto (más fuerte hacia abajo) para que el color se note aunque la foto sea completa
+  ctx.fillStyle = etRgb(base, 0.14); ctx.fillRect(x, y, w, ph);
+  const sh = ctx.createLinearGradient(0, y+ph*0.42, 0, y+ph);
+  sh.addColorStop(0, etRgb(bot, 0)); sh.addColorStop(1, etRgb(bot, 0.88));
+  ctx.fillStyle = sh; ctx.fillRect(x, y+ph*0.42, w, ph*0.58);
+
+
+  // Barra del nombre
+  const bg = ctx.createLinearGradient(0, y+ph, 0, y+h);
+  bg.addColorStop(0, '#2a1248'); bg.addColorStop(1, '#150a26');
+  ctx.fillStyle = bg; ctx.fillRect(x, y+ph, w, barH);
+  ctx.fillStyle = 'rgba(255,255,255,.28)'; ctx.fillRect(x, y+ph, w, 2);
+  ctx.restore();
+
+  // Borde claro del color del club
+  ctx.save();
+  etRR(ctx, x, y, w, h, r); ctx.lineWidth = 4; ctx.strokeStyle = etRgb(etMezcla(base, [255,255,255], 0.35));
+  ctx.stroke(); ctx.restore();
+
+  // Escudo apoyado sobre la barra
+  if(etTieneEscudo(j.club)){
+    const sz = Math.round(Math.min(72, w*0.3));
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 12; ctx.shadowOffsetY = 4;
+    await cvDrawEscudoCompleto(ctx, j.club, x + (w-sz)/2, y + ph - sz - 10, sz);
+    ctx.restore();
+  }
+  if(j.pos) etPillPos(ctx, j.pos, x+10, y+10, Math.round(Math.min(20, w*0.08)), 'rgba(20,8,40,.72)', 'rgba(255,255,255,.35)', '#ffffff');
+
+  // Textos
+  const partes = (j.nombre||'').trim().split(/\s+/).filter(Boolean);
+  const ape = partes.length ? partes[partes.length-1] : '';
+  const nom = partes.slice(0,-1).join(' ');
+  const cx = x + w/2, by = y + ph, maxW = w - 22;
+  ctx.textAlign = 'center';
+  if(nom){
+    ctx.fillStyle = 'rgba(255,255,255,.82)';
+    ctx.font = `600 ${Math.round(barH*0.25)}px "Rajdhani", Arial, sans-serif`;
+    cvFillTextTrunc(ctx, nom.toUpperCase(), cx, by + barH*0.36, maxW);
+  }
+  ctx.fillStyle = '#ffffff';
+  etAjustarFuente(ctx, ape.toUpperCase(), '{s}px "Bebas Neue", Arial, sans-serif', maxW, Math.round(barH*0.52), 16);
+  cvFillTextTrunc(ctx, ape.toUpperCase(), cx, by + barH*(nom ? 0.84 : 0.68), maxW);
+}
+
+async function etGenerarClaro(e){
+  await document.fonts.ready;
+  const identidad = getIdentidad();
+  const g = etGeomClaro(e.tipo);
+  const W = g.W, H = g.H, mX = g.mX;
+  const canvas = document.createElement('canvas'); canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d'); ctx.textBaseline = 'alphabetic';
+  const TL = { halo:'rgba(140,80,230,.22)', logoFill:'#4b1d8f', logoText:'#ffffff', logoRing:'#7b3fe4' };
+
+  // Fondo claro con cuadrícula y franjas diagonales
+  ctx.fillStyle = '#f2f1f8'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = 'rgba(255,255,255,.8)';
+  ctx.beginPath(); ctx.moveTo(W*0.5,0); ctx.lineTo(W*0.78,0); ctx.lineTo(W*0.22,H); ctx.lineTo(0,H); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(W*0.9,0); ctx.lineTo(W,0); ctx.lineTo(W,H*0.35); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = 'rgba(95,70,170,.08)'; ctx.lineWidth = 1.5;
+  for(let x=0;x<=W;x+=54){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for(let y=0;y<=H;y+=54){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+
+  const liga = (identidad.nombre||'DEPORTEMAS').toUpperCase();
+  const anio = (e.anio||'').trim();
+  const titulo = (e.titulo || etTituloDefault(e.tipo)).toUpperCase();
+
+  // Encabezado: logo + título con degradé + etiqueta
+  await etDibujarLogo(ctx, identidad, mX+62, 62, 124, TL);
+  const tx = mX + 170, tw = W - mX - tx;
+  const lineas = etDividirTitulo(titulo), dos = lineas.length > 1;
+  let sz = dos ? 96 : 120;
+  lineas.forEach(l=>{ sz = Math.min(sz, etAjustarFuente(ctx, l, '{s}px "Bebas Neue", Arial, sans-serif', tw, sz, 36)); });
+  const gt = ctx.createLinearGradient(tx, 0, tx+tw, 0);
+  gt.addColorStop(0, '#10c2ea'); gt.addColorStop(0.55, '#7d4df3'); gt.addColorStop(1, '#c43fe0');
+  ctx.fillStyle = gt; ctx.font = `${sz}px "Bebas Neue", Arial, sans-serif`; ctx.textAlign = 'left';
+  const y0 = (dos ? 66 : 80) + sz*0.9;
+  lineas.forEach((l,k)=>ctx.fillText(l, tx, y0 + k*sz*0.92));
+  const yEnd = y0 + (lineas.length-1)*sz*0.92;
+  const pillTxt = (e.sub||'').trim().toUpperCase() || (liga + (anio ? '  ·  ' + anio : ''));
+  ctx.font = '700 24px "Rajdhani", Arial, sans-serif';
+  if('letterSpacing' in ctx) ctx.letterSpacing = '3px';
+  const pw = Math.min(tw, ctx.measureText(pillTxt).width + 60), ph = 44, py = yEnd + 20;
+  const gp = ctx.createLinearGradient(tx, 0, tx+pw, 0);
+  gp.addColorStop(0, '#8a4df5'); gp.addColorStop(1, '#d048d8');
+  ctx.fillStyle = gp; etRR(ctx, tx, py, pw, ph, ph/2); ctx.fill();
+  ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center';
+  cvFillTextTrunc(ctx, pillTxt, tx + pw/2, py + ph/2 + 8, pw - 36);
+  if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+
+  // Tarjetas
+  const { jug, dt } = etJugadoresDe(e);
+  const centrar = e.tipo !== 'xi';
+  for(let k=0;k<jug.length;k++){
+    const p = etPosCelda(g, k, jug.length, centrar);
+    const col = await etColorClub(jug[k].club);
+    await etCartaClaro(ctx, jug[k], p.x, p.y, g, etFotoDe(e, jug[k]), col);
+  }
+  if(e.tipo === 'xi'){
+    const p = etPosCelda(g, 11, 12, false);
+    if(dt){
+      const col = await etColorClub(dt.club);
+      await etCartaClaro(ctx, dt, p.x, p.y, g, etFotoDe(e, dt), col);
+    } else {
+      // Sello de la liga en el casillero libre
+      const lsz = Math.min(150, Math.round(g.cellW*0.66));
+      await etDibujarLogo(ctx, identidad, p.x + g.cellW/2, p.y + g.cellH*0.1, lsz, TL);
+      ctx.textAlign = 'center'; ctx.fillStyle = '#2a1248';
+      etAjustarFuente(ctx, liga, '800 {s}px "Rajdhani", Arial, sans-serif', g.cellW - 16, 28, 14);
+      ctx.fillText(liga, p.x + g.cellW/2, p.y + g.cellH*0.78);
+      if(anio){
+        const gy = ctx.createLinearGradient(p.x, 0, p.x+g.cellW, 0);
+        gy.addColorStop(0, '#7d4df3'); gy.addColorStop(1, '#c43fe0');
+        ctx.fillStyle = gy; ctx.font = '60px "Bebas Neue", Arial, sans-serif';
+        ctx.fillText(anio, p.x + g.cellW/2, p.y + g.cellH*0.98);
+      }
+    }
+  }
+
+  // Pie: LIGA ——— AÑO ——— LIGA
+  ctx.font = '700 20px "Rajdhani", Arial, sans-serif';
+  if('letterSpacing' in ctx) ctx.letterSpacing = '3px';
+  const fy = H - 34, col = 'rgba(60,30,110,.6)';
+  const wl = ctx.measureText(liga).width, wc = anio ? ctx.measureText(anio).width : 0;
+  ctx.fillStyle = col; ctx.textAlign = 'left'; ctx.fillText(liga, mX, fy);
+  ctx.textAlign = 'right'; ctx.fillText(liga, W - mX, fy);
+  if(anio){ ctx.textAlign = 'center'; ctx.fillText(anio, W/2, fy); }
+  ctx.strokeStyle = 'rgba(60,30,110,.35)'; ctx.lineWidth = 1.5;
+  const ly = fy - 7;
+  ctx.beginPath(); ctx.moveTo(mX + wl + 22, ly); ctx.lineTo(W/2 - (wc/2) - 22, ly); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(W/2 + (wc/2) + 22, ly); ctx.lineTo(W - mX - wl - 22, ly); ctx.stroke();
+  if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+  ctx.textAlign = 'left';
+  return canvas;
+}
+
+// ── Estilo "Equipo completo" (fotos a pantalla completa) ─────
+function etGeomCompleto(tipo){
+  const W = CV_W, H = CV_H;
+  const cols = tipo==='top6' ? 3 : 4;
+  const slots = tipo==='xi' ? 12 : etNTipo(tipo);
+  const rows = Math.ceil(slots/cols);
+  const gap = 3, gridTop = 250;
+  const cellW = (W - gap*(cols-1)) / cols;
+  const cellH = (H - gridTop - gap*(rows-1)) / rows;
+  const barH = tipo==='xi' ? 56 : 66;
+  return {W, H, cols, rows, mX:0, gapX:gap, gapY:gap, cellW, cellH, gridTop, barH, photoH: cellH};
+}
+
+async function etTileCompleto(ctx, j, x, y, g, fotoSrc, colRgb, esDT){
+  const w = g.cellW, h = g.cellH, barH = g.barH;
+  const base = colRgb || [70, 60, 100];
+  ctx.save();
+  ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+  const gr = ctx.createLinearGradient(0, y, 0, y+h);
+  gr.addColorStop(0, etRgb(etMezcla(base, [255,255,255], 0.22))); gr.addColorStop(1, etRgb(etMezcla(base, [0,0,0], 0.5)));
+  ctx.fillStyle = gr; ctx.fillRect(x, y, w, h);
+  let dibujada = false;
+  if(fotoSrc){
+    const img = await cargarImagenAsync(fotoSrc);
+    if(img){ etPintarFoto(ctx, img, x, y, w, h, j.zoom, j.px, j.py); dibujada = true; }
+  }
+  if(!dibujada){
+    if(etTieneEscudo(j.club)){
+      const sz = Math.round(Math.min(w, h) * 0.6);
+      ctx.globalAlpha = 0.4;
+      await cvDrawEscudoCompleto(ctx, j.club, x + (w-sz)/2, y + (h-barH-sz)/2, sz);
+      ctx.globalAlpha = 1;
+    } else {
+      const ini = (j.nombre||'?').split(/\s+/).filter(Boolean).slice(0,2).map(p=>p[0]).join('').toUpperCase();
+      ctx.fillStyle = 'rgba(255,255,255,.25)';
+      ctx.font = `${Math.round(h*0.34)}px "Bebas Neue", Arial, sans-serif`;
+      ctx.textAlign = 'center'; ctx.fillText(ini, x+w/2, y+h*0.5);
+    }
+  }
+  const sh = ctx.createLinearGradient(0, y+h*0.6, 0, y+h);
+  sh.addColorStop(0, 'rgba(0,0,0,0)'); sh.addColorStop(1, 'rgba(0,0,0,.5)');
+  ctx.fillStyle = sh; ctx.fillRect(x, y+h*0.6, w, h*0.4);
+  // Barra con el nombre
+  ctx.fillStyle = '#17171d'; ctx.fillRect(x, y+h-barH, w, barH);
+  ctx.fillStyle = etRgb(etMezcla(base, [255,255,255], 0.2)); ctx.fillRect(x, y+h-barH, w, 4);
+  ctx.restore();
+
+  if(etTieneEscudo(j.club)){
+    const sz = Math.round(Math.min(58, w*0.22));
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 3;
+    await cvDrawEscudoCompleto(ctx, j.club, x + w - sz - 10, y + 10, sz);
+    ctx.restore();
+  }
+  if(j.pos && !esDT) etPillPos(ctx, j.pos, x+10, y+10, Math.round(Math.min(20, w*0.08)), 'rgba(8,8,8,.8)', 'rgba(201,162,39,.85)', '#f0c040');
+  if(esDT){
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '800 17px "Rajdhani", Arial, sans-serif';
+    if('letterSpacing' in ctx) ctx.letterSpacing = '2px';
+    const tw = ctx.measureText('DT').width + 30;
+    ctx.fillRect(x + (w-tw)/2, y+h-barH-24, tw, 24);
+    ctx.fillStyle = '#17171d'; ctx.textAlign = 'center';
+    ctx.fillText('DT', x + w/2, y+h-barH-7);
+    if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+  }
+  // Nombre completo centrado
+  ctx.textAlign = 'center'; ctx.fillStyle = '#ffffff';
+  const nombre = (j.nombre||'').trim();
+  etAjustarFuente(ctx, nombre, '700 {s}px "Rajdhani", Arial, sans-serif', w - 20, Math.round(barH*0.5), 14);
+  cvFillTextTrunc(ctx, nombre, x + w/2, y + h - barH/2 + barH*0.16, w - 20);
+}
+
+async function etGenerarCompleto(e){
+  await document.fonts.ready;
+  const identidad = getIdentidad();
+  const g = etGeomCompleto(e.tipo);
+  const W = g.W, H = g.H;
+  const canvas = document.createElement('canvas'); canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d'); ctx.textBaseline = 'alphabetic';
+  const TC = { halo:'rgba(255,255,255,0)', logoFill:'#17171d', logoText:'#f0c040', logoRing:'#17171d' };
+
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+  const liga = (identidad.nombre||'DEPORTEMAS').toUpperCase();
+  const anio = (e.anio||'').trim();
+  const titulo = (e.titulo || etTituloDefault(e.tipo));
+
+  // Pestaña dorada con el logo + título oscuro
+  const tab = ctx.createLinearGradient(0, 0, 160, 0);
+  tab.addColorStop(0, '#e8be40'); tab.addColorStop(1, '#c9a227');
+  ctx.fillStyle = tab; etRR(ctx, -40, 40, 200, 150, 24); ctx.fill();
+  await etDibujarLogo(ctx, identidad, 72, 40 + 75 - 46, 92, TC);
+  const tx = 196, tw = W - tx - 48;
+  const lineas = etDividirTitulo(titulo), dos = lineas.length > 1;
+  let sz = dos ? 90 : 112;
+  lineas.forEach(l=>{ sz = Math.min(sz, etAjustarFuente(ctx, l, '{s}px "Bebas Neue", Arial, sans-serif', tw, sz, 36)); });
+  ctx.fillStyle = '#14121c'; ctx.font = `${sz}px "Bebas Neue", Arial, sans-serif`; ctx.textAlign = 'left';
+  const y0 = 46 + sz*0.86;
+  lineas.forEach((l,k)=>ctx.fillText(l, tx, y0 + k*sz*0.9));
+  const yEnd = y0 + (lineas.length-1)*sz*0.9;
+  const subTxt = [ (e.sub||'').trim(), anio ].filter(Boolean).join('  ·  ');
+  if(subTxt){
+    ctx.fillStyle = '#6b6b78'; ctx.font = '600 28px "Rajdhani", Arial, sans-serif';
+    cvFillTextTrunc(ctx, subTxt, tx, yEnd + 36, tw);
+  }
+
+  const { jug, dt } = etJugadoresDe(e);
+  const centrar = false;
+  for(let k=0;k<jug.length;k++){
+    const p = etPosCelda(g, k, jug.length, centrar);
+    const col = await etColorClub(jug[k].club);
+    await etTileCompleto(ctx, jug[k], p.x, p.y, g, etFotoDe(e, jug[k]), col, false);
+  }
+  if(e.tipo === 'xi'){
+    const p = etPosCelda(g, 11, 12, false);
+    if(dt){
+      const col = await etColorClub(dt.club);
+      await etTileCompleto(ctx, dt, p.x, p.y, g, etFotoDe(e, dt), col, true);
+    } else {
+      const lsz = Math.min(150, Math.round(g.cellW*0.6));
+      await etDibujarLogo(ctx, identidad, p.x + g.cellW/2, p.y + g.cellH*0.22, lsz, TC);
+      ctx.textAlign = 'center'; ctx.fillStyle = '#14121c';
+      etAjustarFuente(ctx, liga, '800 {s}px "Rajdhani", Arial, sans-serif', g.cellW - 16, 28, 14);
+      ctx.fillText(liga, p.x + g.cellW/2, p.y + g.cellH*0.22 + lsz + 44);
+      if(anio){ ctx.fillStyle = '#c9a227'; ctx.font = '60px "Bebas Neue", Arial, sans-serif'; ctx.fillText(anio, p.x + g.cellW/2, p.y + g.cellH*0.22 + lsz + 104); }
+    }
+  }
+  ctx.textAlign = 'left';
   return canvas;
 }
 </script>
