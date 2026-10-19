@@ -643,7 +643,7 @@
     // Cache en memoria de fotos de fondo de alineaciones (id de alineación → base64)
     window._alinFotosCache = fbAlinFotos || {};
 
-    if(fbData)      { data = fbData; if(!data.playoff) data.playoff=[]; if(!data.equiposTemporada) data.equiposTemporada=[];
+    if(fbData)      { data = fbData; if(!data.playoff) data.playoff=[]; if(!data.jugadoresFecha) data.jugadoresFecha=[];
                       if(!data.copaCordoba) data.copaCordoba=[]; if(!data.segunda3) data.segunda3=[];
                       if(!data.copaCordobaLogo) data.copaCordobaLogo='';
                       if(!data.provincialCopas) data.provincialCopas=[];
@@ -3105,7 +3105,7 @@ table.posiciones td:nth-child(8){
 .share-box-close{background:none;border:none;color:rgba(255,255,255,.4);font-size:20px;cursor:pointer;line-height:1;padding:0;}
 .share-box-close:hover{color:var(--dorado);}
 .share-img-preview-wrap{margin:14px 16px 6px;border-radius:var(--r-md);overflow:hidden;border:1px solid rgba(201,162,39,.2);background:var(--negro3);display:flex;align-items:center;justify-content:center;min-height:100px;}
-.share-img-preview-wrap img{width:100%;display:block;border-radius:var(--r-md);}
+.share-img-preview-wrap img{width:100%;max-height:72vh;object-fit:contain;display:block;border-radius:var(--r-md);}
 .share-img-loading{font-family:'Rajdhani',sans-serif;font-size:12px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.5px;padding:28px;display:flex;flex-direction:column;align-items:center;gap:8px;}
 .share-spinner{width:22px;height:22px;border:2px solid rgba(201,162,39,.2);border-top-color:var(--dorado);border-radius:50%;animation:spin .7s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -3402,7 +3402,7 @@ table.posiciones td:nth-child(8){
       <button class="admin-tab" onclick="switchAdminTab('estadisticas',this)">📊 Estadisticas</button>
       <button class="admin-tab" onclick="switchAdminTab('sanciones',this)">🟥 Sanciones</button>
       <button class="admin-tab" onclick="switchAdminTab('alineaciones',this)">🧩 Alineaciones</button>
-      <button class="admin-tab" onclick="switchAdminTab('equipotemp',this)">🏅 Equipo de la Temporada</button>
+      <button class="admin-tab" onclick="switchAdminTab('jugfecha',this)">⭐ Jugador de la Fecha</button>
       <button class="admin-tab" onclick="switchAdminTab('historiagol',this)">🎬 Historia</button>
       <button class="admin-tab" onclick="switchAdminTab('promo',this)">📣 Promoción</button>
       <button class="admin-tab" onclick="switchAdminTab('notificaciones',this)">🔔 Notificaciones</button>
@@ -4984,56 +4984,63 @@ table.posiciones td:nth-child(8){
         <div class="admin-list" id="alin-lista"></div>
       </div>
 
-      <!-- EQUIPO DE LA TEMPORADA -->
-      <div class="admin-section" id="admin-equipotemp">
-        <div class="admin-title">🏅 Equipo de la Temporada</div>
-        <p style="font-size:11px;color:var(--gris);margin-bottom:14px;font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px">Armá el once ideal o el Top 6 de la temporada con foto, nombre y club de cada jugador, y generá la imagen para compartir.</p>
+      <!-- JUGADOR DE LA FECHA -->
+      <div class="admin-section" id="admin-jugfecha">
+        <div class="admin-title">⭐ Jugador de la Fecha</div>
+        <p style="font-size:11px;color:var(--gris);margin-bottom:14px;font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px">Armá la placa de votación con los destacados de la fecha y, cuando haya resultado, la placa del ganador. Cada una sale en post 4:5 y en historia 9:16.</p>
 
-        <datalist id="et-clubes-datalist"></datalist>
+        <datalist id="jf-clubes-datalist"></datalist>
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
           <div class="form-group">
-            <label>Tipo de imagen</label>
-            <select id="et-tipo" onchange="etCambiarTipo()">
-              <option value="xi">Equipo ideal (11 + DT)</option>
-              <option value="top8">Nominados (8 jugadores)</option>
-              <option value="top6">Top 6 (mejores jugadores)</option>
+            <label>Tipo de placa</label>
+            <select id="jf-tipo" onchange="jfCambiarTipo()">
+              <option value="votacion">Votación (nominados)</option>
+              <option value="ganador">Ganador</option>
             </select>
           </div>
           <div class="form-group">
-            <label>Estilo</label>
-            <select id="et-tema" onchange="etRenderSlots()">
-              <option value="claro">Nominados claro (tarjetas de color)</option>
-              <option value="completo">Equipo completo (fotos a pantalla completa)</option>
-              <option value="oscuro">Clásico oscuro y dorado</option>
-              <option value="dorado">Clásico dorado</option>
-            </select>
-          </div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <div class="form-group">
-            <label>Título</label>
-            <input type="text" id="et-titulo" placeholder="Equipo de la Temporada"/>
-          </div>
-          <div class="form-group">
-            <label>Temporada</label>
-            <input type="text" id="et-anio" placeholder="Ej: 2026"/>
+            <label>Fecha / jornada</label>
+            <input type="text" id="jf-fecha" placeholder="Ej: Fecha 12"/>
           </div>
         </div>
         <div class="form-group">
-          <label>Subtítulo / División (opcional)</label>
-          <input type="text" id="et-sub" placeholder="Ej: Primera División"/>
+          <label>División / torneo (opcional)</label>
+          <input type="text" id="jf-sub" placeholder="Ej: Primera División"/>
         </div>
 
-        <p style="font-size:11px;color:var(--dorado);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 6px">Jugadores <span style="color:var(--gris)">— tocá el recuadro 📷 para cargar la foto</span></p>
-        <div id="et-slots"></div>
+        <div id="jf-campos-vot">
+          <div class="form-group">
+            <label>Consigna para votar</label>
+            <input type="text" id="jf-cta" placeholder="Comentá el número de tu figura"/>
+          </div>
+          <div class="form-group">
+            <label>Cierre de la votación</label>
+            <input type="text" id="jf-cierre" placeholder="La votación cierra el domingo a las 21:00 hs"/>
+          </div>
+        </div>
+        <div id="jf-campos-gan" style="display:none">
+          <div style="display:grid;grid-template-columns:1fr 120px;gap:12px">
+            <div class="form-group">
+              <label>Quién lo eligió</label>
+              <input type="text" id="jf-elegido" placeholder="Elegido por el público"/>
+            </div>
+            <div class="form-group">
+              <label>% de votos</label>
+              <input type="number" id="jf-pct" min="0" max="100" step="0.1" placeholder="Ej: 46"/>
+            </div>
+          </div>
+        </div>
+
+        <p style="font-size:11px;color:var(--dorado);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 6px">Jugadores <span style="color:var(--gris)">— tocá el recuadro 📷 para cargar la foto. Si el apellido es compuesto, separalo con / (ej: Juan / De la Cruz)</span></p>
+        <div id="jf-slots"></div>
 
         <div style="display:flex;gap:8px;margin-top:14px">
-          <button class="btn-primary" id="et-guardar-btn" onclick="etGuardar()">Guardar</button>
-          <button class="btn-edit" onclick="etLimpiarForm()">Limpiar</button>
+          <button class="btn-primary" id="jf-guardar-btn" onclick="jfGuardar()">Guardar</button>
+          <button class="btn-edit" onclick="jfLimpiarForm()">Limpiar</button>
         </div>
 
-        <div class="admin-list" id="et-lista"></div>
+        <div class="admin-list" id="jf-lista"></div>
       </div>
 
       <!-- HISTORIA DE PARTIDO -->
@@ -5693,7 +5700,7 @@ function setLSSafe(key, value){
   }
 }
 
-function getData(){try{const d=JSON.parse(localStorage.getItem(DATA_KEY))||defData();if(!d.playoff)d.playoff=[];if(!d.alineaciones)d.alineaciones=[];if(!d.equiposTemporada)d.equiposTemporada=[];if(!d.copaCordoba)d.copaCordoba=[];if(!d.segunda3)d.segunda3=[];if(!d.copaCordobaLogo)d.copaCordobaLogo='';if(!d.provincialCopas)d.provincialCopas=[];if(!d.provincialLogo)d.provincialLogo='';if(!d.historiaPlantillas)d.historiaPlantillas=[];return d;}catch(e){return defData();}}
+function getData(){try{const d=JSON.parse(localStorage.getItem(DATA_KEY))||defData();if(!d.playoff)d.playoff=[];if(!d.alineaciones)d.alineaciones=[];if(!d.jugadoresFecha)d.jugadoresFecha=[];if(!d.copaCordoba)d.copaCordoba=[];if(!d.segunda3)d.segunda3=[];if(!d.copaCordobaLogo)d.copaCordobaLogo='';if(!d.provincialCopas)d.provincialCopas=[];if(!d.provincialLogo)d.provincialLogo='';if(!d.historiaPlantillas)d.historiaPlantillas=[];return d;}catch(e){return defData();}}
 // Construye una copia de "d" sin las fotos de goleadores:
 // van en documentos individuales para no superar el límite de 1MB de Firestore.
 function dataParaFirestore(d){
@@ -5781,7 +5788,7 @@ async function saveIdentidad(i){
 function getFotos(){try{return JSON.parse(localStorage.getItem(FOTOS_KEY))||[];}catch(e){return[];}}
 function saveFotos(f){if(!setLSSafe(FOTOS_KEY,JSON.stringify(f)))return;if(window._fb)window._fb.set('fotos',f);}
 
-function defData(){return{partidos:[],posiciones:[],goleadores:[],equipos:[],torneos:[],playoff:[],copaCordoba:[],segunda3:[],copaCordobaLogo:'',provincialCopas:[],provincialLogo:'',historiaPlantillas:[],alineaciones:[],equiposTemporada:[]};};
+function defData(){return{partidos:[],posiciones:[],goleadores:[],equipos:[],torneos:[],playoff:[],copaCordoba:[],segunda3:[],copaCordobaLogo:'',provincialCopas:[],provincialLogo:'',historiaPlantillas:[],alineaciones:[],jugadoresFecha:[]};};
 
 let data=getData();
 let escudos=getEscudos();
@@ -12186,7 +12193,7 @@ function switchAdminTab(tab,el){
   if(tab==='torneos'){ renderTorneoClubesChecklist(); toActualizarVisEstado(); }
   if(tab==='notificaciones'){ actualizarContadorSubs(); }
   if(tab==='alineaciones'){ poblarSelectPartidoAlineacion(); renderAdminListaAlineaciones(); alinRenderSlots(); }
-  if(tab==='equipotemp'){ etPoblarClubes(); etRenderSlots(); etRenderLista(); }
+  if(tab==='jugfecha'){ jfLimpiarLegado(); jfPoblarClubes(); jfCambiarTipo(); jfRenderLista(); }
   if(tab==='historiagol'){ hgPoblarEquipos(); hgActualizarCamposEvento(); hgPoblarPlantillas(); }
   if(tab==='promo'){ promoPoblarEquipos(); promoPoblarPartidos(); }}
 function cambiarPassword(){
@@ -21041,97 +21048,87 @@ function cvWrapTexto(ctx, text, x, y, maxW, lineH, maxLineas){
 }
 
 // ============================================================
-// EQUIPO DE LA TEMPORADA — once ideal (11) o Top 6, con foto
-// (encuadre manual), nombre, club y posición de cada jugador, y
-// generación de imagen para compartir (estilo "Team of the Year")
+// JUGADOR DE LA FECHA — placa de votación (nominados) y placa del ganador.
+// Cada una sale en post 4:5 (1080×1350) y en historia 9:16 (1080×1920).
+// Fotos con encuadre manual; las fotos se guardan aparte (un documento por foto),
+// igual que las de Alineaciones, para no pasarse del límite de 1MB de Firestore.
 // ============================================================
-const ET_MAX = 12;   // 11 jugadores + DT (solo en el once ideal)
-let _etEditId = null;     // id en edición (null = nuevo)
-let _etSlots = [];        // [{nombre, club, pos, zoom, px, py, foto, nueva, enc}] x ET_MAX
+const JF_MAX = 4;                 // máximo de nominados en la placa de votación
+let _jfEditId = null;             // id en edición (null = nueva)
+let _jfSlots = [];                // [{nombre, club, dato, zoom, px, py, foto, nueva, enc}] x JF_MAX
+const _jfColCache = {};
 
-function etNuevosSlots(){ return Array.from({length:ET_MAX}, ()=>({nombre:'', club:'', pos:'', zoom:1, px:0.5, py:0.2, foto:'', nueva:false, enc:false})); }
-function etEsc(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function etTipoActual(){ const t=document.getElementById('et-tipo'); return t ? t.value : 'xi'; }
-function etNTipo(t){ return t==='top6' ? 6 : (t==='top8' ? 8 : 11); }
-function etN(){ return etNTipo(etTipoActual()); }
-function etNSlots(){ return etN() + (etTipoActual()==='xi' ? 1 : 0); }   // el once ideal suma el casillero del DT
-function etTemaActual(){ const t=document.getElementById('et-tema'); return t ? t.value : 'claro'; }
-function etNombreTipo(t){ return t==='top6' ? 'Top 6' : (t==='top8' ? 'Nominados' : 'Once ideal'); }
-function etTituloDefault(tipo){ return tipo==='top6' ? 'Top 6 de la Temporada' : (tipo==='top8' ? 'Nominados a Mejor Jugador' : 'Equipo de la Temporada'); }
-function etFotoKey(id, i){ return id + '_f' + i; }
+const JF_BEBAS = s => `${s}px "Bebas Neue", Arial, sans-serif`;
+const JF_RAJ   = (s,w) => `${w||700} ${s}px "Rajdhani", Arial, sans-serif`;
+const JF_DM    = (s,w) => `${w||700} ${s}px "DM Sans", Arial, sans-serif`;
+const JF_TXT_CTA_DEF    = 'Comentá el número de tu figura';
+const JF_TXT_CIERRE_DEF = 'La votación cierra el domingo a las 21:00 hs';
+const JF_TXT_ELEGIDO_DEF = 'Elegido por el público';
 
-// Geometría compartida entre la imagen final y la vista previa de encuadre
-function etGeomClasico(tipo){
-  const top6 = tipo !== 'xi';
-  const W = CV_W, H = CV_H;
-  const cols = tipo==='top8' ? 4 : 3, mX = 64, gapX = 22, gapY = top6 ? 24 : 14;
-  const cellW = (W - mX*2 - gapX*(cols-1)) / cols;
-  const rows = top6 ? 2 : 4;
-  const gridTop = top6 ? 270 : 246;
-  const gridBottom = top6 ? 205 : 46;
-  const cellH = (H - gridTop - gridBottom - gapY*(rows-1)) / rows;
-  const labelH = Math.round(cellH * (top6 ? 0.36 : 0.38));
-  const skew = top6 ? 18 : 12;
-  const photoH = cellH - labelH;
-  return {W, H, cols, mX, gapX, gapY, cellW, rows, gridTop, gridBottom, cellH, labelH, skew, photoH, visH: photoH + skew};
+function jfNuevosSlots(){ return Array.from({length:JF_MAX}, ()=>({nombre:'', club:'', dato:'', zoom:1, px:0.5, py:0.2, foto:'', nueva:false, enc:false})); }
+function jfEsc(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function jfTipoActual(){ const t=document.getElementById('jf-tipo'); return t ? t.value : 'votacion'; }
+function jfN(){ return jfTipoActual()==='ganador' ? 1 : JF_MAX; }
+function jfNombreTipo(t){ return t==='ganador' ? 'Ganador' : 'Votación'; }
+function jfFotoKey(id, i){ return id + '_f' + i; }
+// Tamaño del recuadro de foto (para la vista previa de encuadre)
+function jfRectFoto(tipo){ return tipo==='ganador' ? {w:880, h:1060} : {w:471, h:262}; }
+
+
+// Limpieza única: borra los "equipos de la temporada" que quedaron guardados de la sección anterior
+// (el listado y las fotos, que vivían como documentos aparte con clave etm_*).
+function jfLimpiarLegado(){
+  let cambio = false;
+  if(data['equipos'+'Temporada']){ delete data['equipos'+'Temporada']; cambio = true; }
+  const cache = window._alinFotosCache || {};
+  Object.keys(cache).filter(k=>k.indexOf('etm_')===0).forEach(k=>{
+    if(window._fb) window._fb.delAlinFoto(k);
+    delete cache[k]; cambio = true;
+  });
+  if(cambio) saveData(data);
 }
 
-// Tamaño del recuadro de foto según estilo/tipo (para la vista previa de encuadre)
-function etRectFoto(tipo, tema){
-  if(tema==='claro'){ const g = etGeomClaro(tipo); return {w:g.cellW, h:g.photoH, skew:0, barH:0}; }
-  if(tema==='completo'){ const g = etGeomCompleto(tipo); return {w:g.cellW, h:g.cellH, skew:0, barH:g.barH}; }
-  const g = etGeomClasico(tipo); return {w:g.cellW, h:g.visH, skew:g.skew, barH:0};
-}
-
-function etPoblarClubes(){
-  const dl = document.getElementById('et-clubes-datalist'); if(!dl) return;
+function jfPoblarClubes(){
+  const dl = document.getElementById('jf-clubes-datalist'); if(!dl) return;
   const nombres = [...new Set((data.equipos||[]).map(e=>e.nombre).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
-  dl.innerHTML = nombres.map(n=>`<option value="${etEsc(n)}">`).join('');
+  dl.innerHTML = nombres.map(n=>`<option value="${jfEsc(n)}">`).join('');
 }
 
-function etCambiarTipo(){
-  const tipo = etTipoActual();
-  const inp = document.getElementById('et-titulo');
-  const actual = (inp.value||'').trim();
-  if(!actual || actual===etTituloDefault('xi') || actual===etTituloDefault('top6') || actual===etTituloDefault('top8')) inp.value = etTituloDefault(tipo);
-  etRenderSlots();
+function jfCambiarTipo(){
+  const t = jfTipoActual();
+  const v = document.getElementById('jf-campos-vot'), g = document.getElementById('jf-campos-gan');
+  if(v) v.style.display = t==='votacion' ? '' : 'none';
+  if(g) g.style.display = t==='ganador' ? '' : 'none';
+  jfRenderSlots();
 }
 
 // Dibuja una foto "cover" con zoom y desplazamiento (px/py de 0 a 1)
-function etPintarFoto(ctx, img, x, y, w, h, zoom, px, py){
+function jfPintarFoto(ctx, img, x, y, w, h, zoom, px, py){
   const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
   const sc = Math.max(w/iw, h/ih) * Math.max(1, zoom||1);
   const dw = iw*sc, dh = ih*sc;
   const fx = (px==null) ? 0.5 : px, fy = (py==null) ? 0.2 : py;
   ctx.drawImage(img, x-(dw-w)*fx, y-(dh-h)*fy, dw, dh);
 }
-
-function etCargarImg(sl, cb){
+function jfCargarImg(sl, cb){
   if(sl._img && sl._imgSrc===sl.foto){ cb(sl._img); return; }
   const im = new Image();
   im.onload = ()=>{ sl._img = im; sl._imgSrc = sl.foto; cb(im); };
   im.src = sl.foto;
 }
-
-function etPintarPreview(i){
-  const cv = document.getElementById('et-prev-'+i); if(!cv) return;
-  const sl = _etSlots[i]; if(!sl.foto) return;
-  etCargarImg(sl, img=>{
-    const r = etRectFoto(etTipoActual(), etTemaActual());
+function jfPintarPreview(i){
+  const cv = document.getElementById('jf-prev-'+i); if(!cv) return;
+  const sl = _jfSlots[i]; if(!sl.foto) return;
+  jfCargarImg(sl, img=>{
     const ctx = cv.getContext('2d');
     ctx.clearRect(0,0,cv.width,cv.height);
     ctx.fillStyle = '#18181c'; ctx.fillRect(0,0,cv.width,cv.height);
-    etPintarFoto(ctx, img, 0, 0, cv.width, cv.height, sl.zoom, sl.px, sl.py);
-    // zonas que tapa la etiqueta / barra del nombre
-    ctx.fillStyle = 'rgba(0,0,0,.55)';
-    if(r.skew){ ctx.beginPath(); ctx.moveTo(0,cv.height); ctx.lineTo(cv.width,cv.height); ctx.lineTo(cv.width,cv.height-r.skew); ctx.closePath(); ctx.fill(); }
-    if(r.barH){ ctx.fillRect(0, cv.height-r.barH, cv.width, r.barH); }
+    jfPintarFoto(ctx, img, 0, 0, cv.width, cv.height, sl.zoom, sl.px, sl.py);
   });
 }
-
-function etBindPreview(i){
-  const cv = document.getElementById('et-prev-'+i); if(!cv) return;
-  const sl = _etSlots[i]; let drag = null;
+function jfBindPreview(i){
+  const cv = document.getElementById('jf-prev-'+i); if(!cv) return;
+  const sl = _jfSlots[i]; let drag = null;
   cv.onpointerdown = ev=>{ drag = {x:ev.clientX, y:ev.clientY, px:sl.px, py:sl.py}; cv.setPointerCapture(ev.pointerId); cv.style.cursor='grabbing'; ev.preventDefault(); };
   cv.onpointermove = ev=>{
     if(!drag || !sl._img) return;
@@ -21141,114 +21138,100 @@ function etBindPreview(i){
     const ox = img.naturalWidth*sc - cv.width, oy = img.naturalHeight*sc - cv.height;
     if(ox > 0.5) sl.px = Math.min(1, Math.max(0, drag.px - ((ev.clientX-drag.x)*k)/ox));
     if(oy > 0.5) sl.py = Math.min(1, Math.max(0, drag.py - ((ev.clientY-drag.y)*k)/oy));
-    etPintarPreview(i);
+    jfPintarPreview(i);
   };
   cv.onpointerup = cv.onpointercancel = ()=>{ drag = null; cv.style.cursor='grab'; };
 }
+function jfZoom(i, v){ _jfSlots[i].zoom = parseFloat(v)||1; jfPintarPreview(i); }
+function jfToggleEnc(i){ _jfSlots[i].enc = !_jfSlots[i].enc; jfRenderSlots(); }
 
-function etZoom(i, v){ _etSlots[i].zoom = parseFloat(v)||1; etPintarPreview(i); }
-function etToggleEnc(i){ _etSlots[i].enc = !_etSlots[i].enc; etRenderSlots(); }
-
-function etRenderSlots(){
-  const cont = document.getElementById('et-slots'); if(!cont) return;
-  if(!_etSlots.length) _etSlots = etNuevosSlots();
-  const inp = document.getElementById('et-titulo');
-  if(inp && !inp.value.trim()) inp.value = etTituloDefault(etTipoActual());
-  const n = etN(), nTot = etNSlots();
-  const r = etRectFoto(etTipoActual(), etTemaActual());
+function jfRenderSlots(){
+  const cont = document.getElementById('jf-slots'); if(!cont) return;
+  if(!_jfSlots.length) _jfSlots = jfNuevosSlots();
+  const tipo = jfTipoActual(), n = jfN();
+  const r = jfRectFoto(tipo);
   const maxPrev = (r.h / r.w) > 1.2 ? 200 : 320;
-  let html = `<datalist id="et-pos-datalist"><option value="ARQ"><option value="DEF"><option value="MED"><option value="DEL"></datalist>`;
-  for(let i=0;i<nTot;i++){
-    const sl = _etSlots[i];
-    const esDT = i >= n;
+  const hint = tipo==='ganador' ? 'Chips con datos, separados por coma (ej: 3 goles, Hat-trick)' : 'Dato destacado (ej: 2 goles · figura)';
+  let html = '';
+  for(let i=0;i<n;i++){
+    const sl = _jfSlots[i];
     const thumb = sl.foto
       ? `<img src="${sl.foto}" alt="" style="width:100%;height:100%;object-fit:cover;object-position:${Math.round(sl.px*100)}% ${Math.round(sl.py*100)}%">`
       : `<span style="font-size:20px;opacity:.7">📷</span>`;
-    const camposClub = esDT
-      ? `<input type="text" list="et-clubes-datalist" placeholder="Club (opcional)" value="${etEsc(sl.club)}" oninput="_etSlots[${i}].club=this.value">`
-      : `<div style="display:grid;grid-template-columns:1fr 74px;gap:6px">
-            <input type="text" list="et-clubes-datalist" placeholder="Club" value="${etEsc(sl.club)}" oninput="_etSlots[${i}].club=this.value">
-            <input type="text" list="et-pos-datalist" maxlength="4" placeholder="Pos." value="${etEsc(sl.pos)}" oninput="_etSlots[${i}].pos=this.value.toUpperCase()" style="text-transform:uppercase;text-align:center">
-          </div>`;
     html += `<div style="margin-bottom:12px">
-      ${esDT ? '<p style="font-size:11px;color:var(--dorado);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 6px">Director técnico (opcional)</p>' : ''}
       <div style="display:grid;grid-template-columns:56px 1fr 30px 30px;gap:8px;align-items:center">
         <label style="position:relative;width:56px;height:56px;border-radius:8px;border:1px dashed rgba(201,162,39,.55);overflow:hidden;cursor:pointer;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.04)">
           ${thumb}
-          <input type="file" accept="image/*" style="display:none" onchange="etFoto(${i},this)">
+          <input type="file" accept="image/*" style="display:none" onchange="jfFoto(${i},this)">
         </label>
         <div style="display:grid;gap:6px">
-          <input type="text" placeholder="${esDT ? 'DT · Nombre y apellido' : (i+1)+'. Nombre y apellido'}" value="${etEsc(sl.nombre)}" oninput="_etSlots[${i}].nombre=this.value">
-          ${camposClub}
+          <input type="text" placeholder="${tipo==='ganador' ? 'Nombre y apellido del ganador' : (i+1)+'. Nombre y apellido'}" value="${jfEsc(sl.nombre)}" oninput="_jfSlots[${i}].nombre=this.value">
+          <input type="text" list="jf-clubes-datalist" placeholder="Club" value="${jfEsc(sl.club)}" oninput="_jfSlots[${i}].club=this.value">
+          <input type="text" placeholder="${hint}" value="${jfEsc(sl.dato)}" oninput="_jfSlots[${i}].dato=this.value">
         </div>
-        ${sl.foto ? `<button type="button" class="btn-edit" style="padding:4px 0;font-size:13px" title="Encuadrar foto" onclick="etToggleEnc(${i})">✂</button>` : '<span></span>'}
-        ${sl.foto ? `<button type="button" class="btn-danger" style="padding:4px 0;font-size:11px" title="Quitar foto" onclick="etQuitarFoto(${i})">✕</button>` : '<span></span>'}
+        ${sl.foto ? `<button type="button" class="btn-edit" style="padding:4px 0;font-size:13px" title="Encuadrar foto" onclick="jfToggleEnc(${i})">✂</button>` : '<span></span>'}
+        ${sl.foto ? `<button type="button" class="btn-danger" style="padding:4px 0;font-size:11px" title="Quitar foto" onclick="jfQuitarFoto(${i})">✕</button>` : '<span></span>'}
       </div>
       ${sl.foto && sl.enc ? `<div style="margin:8px 0 0 64px">
-        <canvas id="et-prev-${i}" width="${Math.round(r.w)}" height="${Math.round(r.h)}" style="width:100%;max-width:${maxPrev}px;border-radius:6px;border:1px solid rgba(201,162,39,.5);touch-action:none;cursor:grab;display:block"></canvas>
-        <div style="display:flex;align-items:center;gap:8px;margin-top:6px;max-width:${maxPrev}px"><span style="font-size:11px;color:var(--gris)">Zoom</span><input type="range" min="1" max="3" step="0.05" value="${sl.zoom}" oninput="etZoom(${i},this.value)" style="flex:1"></div>
-        <p style="font-size:10px;color:var(--gris);margin-top:4px">Arrastrá la foto para centrar la cara. La zona oscura queda tapada por la etiqueta o barra del nombre.</p>
+        <canvas id="jf-prev-${i}" width="${r.w}" height="${r.h}" style="width:100%;max-width:${maxPrev}px;border-radius:6px;border:1px solid rgba(201,162,39,.5);touch-action:none;cursor:grab;display:block"></canvas>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:6px;max-width:${maxPrev}px"><span style="font-size:11px;color:var(--gris)">Zoom</span><input type="range" min="1" max="3" step="0.05" value="${sl.zoom}" oninput="jfZoom(${i},this.value)" style="flex:1"></div>
+        <p style="font-size:10px;color:var(--gris);margin-top:4px">Arrastrá la foto para centrar la cara.${tipo==='ganador' ? ' En el post 4:5 y en la historia 9:16 se usa el mismo encuadre.' : ''}</p>
       </div>` : ''}
     </div>`;
   }
   cont.innerHTML = html;
-  for(let i=0;i<nTot;i++){ if(_etSlots[i].foto && _etSlots[i].enc){ etBindPreview(i); etPintarPreview(i); } }
+  for(let i=0;i<n;i++){ if(_jfSlots[i].foto && _jfSlots[i].enc){ jfBindPreview(i); jfPintarPreview(i); } }
 }
 
-function etFoto(i, input){
+function jfFoto(i, input){
   const file = input.files[0]; if(!file) return;
-  comprimirABase64(file, 900, 0.82).then(d=>{
-    const sl = _etSlots[i];
+  jfComprimirFoto(file, 1100).then(d=>{
+    const sl = _jfSlots[i];
     sl.foto = d; sl.nueva = true; sl.zoom = 1; sl.px = 0.5; sl.py = 0.2; sl.enc = true; sl._img = null;
-    etRenderSlots();
+    jfRenderSlots();
   }).catch(()=>alert('No se pudo leer la imagen.'));
 }
-function etQuitarFoto(i){ const sl=_etSlots[i]; sl.foto=''; sl.nueva=false; sl.enc=false; sl._img=null; etRenderSlots(); }
+function jfQuitarFoto(i){ const sl=_jfSlots[i]; sl.foto=''; sl.nueva=false; sl.enc=false; sl._img=null; jfRenderSlots(); }
 
-function etLimpiarForm(){
-  _etEditId = null;
-  _etSlots = etNuevosSlots();
-  document.getElementById('et-tipo').value = 'xi';
-  document.getElementById('et-tema').value = 'claro';
-  document.getElementById('et-titulo').value = etTituloDefault('xi');
-  document.getElementById('et-anio').value = '';
-  document.getElementById('et-sub').value = '';
-  document.getElementById('et-guardar-btn').textContent = 'Guardar';
-  etRenderSlots();
+function jfLimpiarForm(){
+  _jfEditId = null;
+  _jfSlots = jfNuevosSlots();
+  document.getElementById('jf-tipo').value = 'votacion';
+  ['jf-fecha','jf-sub','jf-cta','jf-cierre','jf-elegido','jf-pct'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('jf-guardar-btn').textContent = 'Guardar';
+  jfCambiarTipo();
 }
 
-function etGuardar(){
-  const tipo = etTipoActual();
-  const n = etN(), nTot = etNSlots();
+function jfGuardar(){
+  const tipo = jfTipoActual(), n = jfN();
   const r3 = v=>Math.round((+v)*1000)/1000;
   const jugadores = [];
-  for(let i=0;i<nTot;i++){
-    const sl = _etSlots[i];
-    jugadores.push({ nombre:(sl.nombre||'').trim(), club:(sl.club||'').trim(), pos:(sl.pos||'').trim(), zoom:r3(sl.zoom||1), px:r3(sl.px), py:r3(sl.py) });
+  for(let i=0;i<n;i++){
+    const sl = _jfSlots[i];
+    jugadores.push({ nombre:(sl.nombre||'').trim(), club:(sl.club||'').trim(), dato:(sl.dato||'').trim(), zoom:r3(sl.zoom||1), px:r3(sl.px), py:r3(sl.py) });
   }
-  if(!jugadores.slice(0,n).some(j=>j.nombre)){ alert('Cargá al menos un jugador.'); return; }
-
+  const cargados = jugadores.filter(j=>j.nombre).length;
+  if(tipo==='votacion' && cargados<2){ alert('Cargá al menos 2 nominados.'); return; }
+  if(tipo==='ganador' && cargados<1){ alert('Cargá el nombre del ganador.'); return; }
+  const val = id=>{ const el=document.getElementById(id); return el ? el.value.trim() : ''; };
   const obj = {
-    id: _etEditId || ('etm_'+Date.now()),
+    id: _jfEditId || ('jfm_'+Date.now()),
     tipo,
-    tema: document.getElementById('et-tema').value,
-    titulo: document.getElementById('et-titulo').value.trim() || etTituloDefault(tipo),
-    anio: document.getElementById('et-anio').value.trim(),
-    sub: document.getElementById('et-sub').value.trim(),
+    fecha: val('jf-fecha'), sub: val('jf-sub'),
+    cta: val('jf-cta'), cierre: val('jf-cierre'),
+    elegido: val('jf-elegido'), pct: val('jf-pct'),
     jugadores
   };
-  if(!data.equiposTemporada) data.equiposTemporada = [];
-  const idx = data.equiposTemporada.findIndex(x=>x.id===obj.id);
-  if(idx>-1) data.equiposTemporada[idx] = obj; else data.equiposTemporada.push(obj);
+  if(!data.jugadoresFecha) data.jugadoresFecha = [];
+  const idx = data.jugadoresFecha.findIndex(x=>x.id===obj.id);
+  if(idx>-1) data.jugadoresFecha[idx] = obj; else data.jugadoresFecha.push(obj);
   saveData(data);
 
-  // Las fotos van aparte (un documento por foto), igual que las de Alineaciones,
-  // para no inflar el documento principal ni pasarse del límite de 1MB de Firestore.
   if(!window._alinFotosCache) window._alinFotosCache = {};
-  for(let i=0;i<ET_MAX;i++){
-    const key = etFotoKey(obj.id, i);
-    const sl = _etSlots[i];
-    if(i<nTot && sl.foto){
+  for(let i=0;i<JF_MAX;i++){
+    const key = jfFotoKey(obj.id, i);
+    const sl = _jfSlots[i];
+    if(i<n && sl.foto){
       if(sl.nueva){
         if(window._fb) window._fb.setAlinFoto(key, sl.foto);
         window._alinFotosCache[key] = sl.foto;
@@ -21258,388 +21241,81 @@ function etGuardar(){
       delete window._alinFotosCache[key];
     }
   }
-  etLimpiarForm();
-  etRenderLista();
+  jfLimpiarForm();
+  jfRenderLista();
 }
 
-function etEditar(id){
-  const e = (data.equiposTemporada||[]).find(x=>x.id===id); if(!e) return;
-  _etEditId = id;
-  document.getElementById('et-tipo').value = e.tipo || 'xi';
-  document.getElementById('et-tema').value = e.tema || 'oscuro';
-  document.getElementById('et-titulo').value = e.titulo || etTituloDefault(e.tipo);
-  document.getElementById('et-anio').value = e.anio || '';
-  document.getElementById('et-sub').value = e.sub || '';
-  _etSlots = etNuevosSlots();
+function jfEditar(id){
+  const e = (data.jugadoresFecha||[]).find(x=>x.id===id); if(!e) return;
+  _jfEditId = id;
+  document.getElementById('jf-tipo').value = e.tipo || 'votacion';
+  const set = (k,v)=>{ const el=document.getElementById(k); if(el) el.value = v||''; };
+  set('jf-fecha', e.fecha); set('jf-sub', e.sub); set('jf-cta', e.cta); set('jf-cierre', e.cierre); set('jf-elegido', e.elegido); set('jf-pct', e.pct);
+  _jfSlots = jfNuevosSlots();
   (e.jugadores||[]).forEach((j,i)=>{
-    const sl = _etSlots[i]; if(!sl) return;
-    sl.nombre = j.nombre||''; sl.club = j.club||''; sl.pos = j.pos||'';
+    const sl = _jfSlots[i]; if(!sl) return;
+    sl.nombre = j.nombre||''; sl.club = j.club||''; sl.dato = j.dato||'';
     sl.zoom = j.zoom||1; sl.px = (j.px==null?0.5:j.px); sl.py = (j.py==null?0.2:j.py);
-    sl.foto = (window._alinFotosCache && window._alinFotosCache[etFotoKey(id,i)]) || '';
+    sl.foto = (window._alinFotosCache && window._alinFotosCache[jfFotoKey(id,i)]) || '';
     sl.nueva = false; sl.enc = false;
   });
-  document.getElementById('et-guardar-btn').textContent = 'Guardar cambios';
-  etRenderSlots();
+  document.getElementById('jf-guardar-btn').textContent = 'Guardar cambios';
+  jfCambiarTipo();
 }
 
-function etEliminar(id){
-  pedirConfirmacion('¿Eliminar esta imagen de temporada?', function(){
-    data.equiposTemporada = (data.equiposTemporada||[]).filter(x=>x.id!==id);
+function jfEliminar(id){
+  pedirConfirmacion('¿Eliminar esta placa de Jugador de la Fecha?', function(){
+    data.jugadoresFecha = (data.jugadoresFecha||[]).filter(x=>x.id!==id);
     saveData(data);
-    for(let i=0;i<ET_MAX;i++){
-      const key = etFotoKey(id, i);
+    for(let i=0;i<JF_MAX;i++){
+      const key = jfFotoKey(id, i);
       if(window._alinFotosCache && window._alinFotosCache[key]){
         if(window._fb) window._fb.delAlinFoto(key);
         delete window._alinFotosCache[key];
       }
     }
-    if(_etEditId===id) etLimpiarForm();
-    etRenderLista();
+    if(_jfEditId===id) jfLimpiarForm();
+    jfRenderLista();
   });
 }
 
-function etRenderLista(){
-  const cont = document.getElementById('et-lista'); if(!cont) return;
-  const items = [...(data.equiposTemporada||[])].reverse();
-  if(!items.length){ cont.innerHTML = '<p class="admin-empty">Todavía no armaste ningún equipo de la temporada.</p>'; return; }
+function jfRenderLista(){
+  const cont = document.getElementById('jf-lista'); if(!cont) return;
+  const items = [...(data.jugadoresFecha||[])].reverse();
+  if(!items.length){ cont.innerHTML = '<p class="admin-empty">Todavía no armaste ninguna placa de Jugador de la Fecha.</p>'; return; }
   cont.innerHTML = items.map(e=>`
     <div class="admin-list-item">
-      <span>${etEsc(e.titulo||'')}${e.anio?' · '+etEsc(e.anio):''} · ${etNombreTipo(e.tipo)}</span>
-      <button class="btn-edit" onclick="abrirShare(()=>generarImagenEquipoTemporada('${e.id}'))">🖼️ Imagen</button>
-      <button class="btn-edit" onclick="etEditar('${e.id}')">✏ Editar</button>
-      <button class="btn-danger" onclick="etEliminar('${e.id}')">✕ Eliminar</button>
+      <span>${jfEsc(e.fecha||'Fecha')}${e.sub?' · '+jfEsc(e.sub):''} · ${jfNombreTipo(e.tipo)}</span>
+      <button class="btn-edit" onclick="abrirShare(()=>generarImagenJugadorFecha('${e.id}','post'))">🖼️ Post 4:5</button>
+      <button class="btn-edit" onclick="abrirShare(()=>generarImagenJugadorFecha('${e.id}','historia'))">📱 Historia 9:16</button>
+      <button class="btn-edit" onclick="jfEditar('${e.id}')">✏ Editar</button>
+      <button class="btn-danger" onclick="jfEliminar('${e.id}')">✕ Eliminar</button>
     </div>
   `).join('');
 }
 
-// ── Imagen para compartir ────────────────────────────────────
+// ── Utilidades de dibujo ─────────────────────────────────────
 
-// Achica la fuente hasta que el texto entre en maxW. Devuelve el tamaño usado.
-function etAjustarFuente(ctx, texto, plantilla, maxW, px, minPx){
-  let sz = px;
-  ctx.font = plantilla.replace('{s}', sz);
-  while(ctx.measureText(texto).width > maxW && sz > minPx){ sz -= 1; ctx.font = plantilla.replace('{s}', sz); }
-  return sz;
+function jfMezcla(a, b, t){ return [Math.round(a[0]+(b[0]-a[0])*t), Math.round(a[1]+(b[1]-a[1])*t), Math.round(a[2]+(b[2]-a[2])*t)]; }
+function jfRgb(c, a){ return `rgba(${c[0]},${c[1]},${c[2]},${a==null?1:a})`; }
+function jfOro(ctx, x0, y0, x1, y1){
+  const g = ctx.createLinearGradient(x0, y0, x1, y1);
+  g.addColorStop(0, '#f7d56a'); g.addColorStop(0.55, '#c9a227'); g.addColorStop(1, '#8a6d0f');
+  return g;
 }
-
-async function etDibujarLogo(ctx, identidad, cx, y, size, T){
-  // Halo suave detrás del logo
-  ctx.save();
-  const halo = ctx.createRadialGradient(cx, y+size/2, size*0.4, cx, y+size/2, size*0.95);
-  halo.addColorStop(0, T.halo); halo.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = halo; ctx.fillRect(cx-size, y-size/2, size*2, size*2);
-  ctx.restore();
-
-  const ok = await cvDrawLogo(ctx, identidad.logo, cx-size/2, y, size);
-  if(!ok){
-    ctx.save();
-    ctx.beginPath(); ctx.arc(cx, y+size/2, size/2, 0, Math.PI*2);
-    ctx.fillStyle = T.logoFill; ctx.fill();
-    ctx.fillStyle = T.logoText;
-    ctx.font = `${Math.round(size*0.42)}px "Bebas Neue", Arial, sans-serif`;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText((identidad.nombre||'DM').substr(0,2).toUpperCase(), cx, y+size/2+2);
-    ctx.restore();
-  }
-  ctx.save();
-  ctx.strokeStyle = T.logoRing; ctx.lineWidth = 3;
-  ctx.beginPath(); ctx.arc(cx, y+size/2, size/2, 0, Math.PI*2); ctx.stroke();
-  ctx.restore();
-  ctx.textBaseline = 'alphabetic';
+function jfEscudoSrc(club){
+  if(!club) return '';
+  const entry = escudos[club] || escudos[normalizar(club)];
+  if(!entry) return '';
+  return (typeof entry === 'object') ? (entry.img || '') : String(entry);
 }
-
-// Texto centrado con líneas finas a los costados (ornamento de encabezado/pie)
-function etTextoConLineas(ctx, texto, cx, y, W, mX, color, lineColor){
-  const tw = ctx.measureText(texto).width;
-  ctx.textAlign = 'center'; ctx.fillStyle = color;
-  ctx.fillText(texto, cx, y);
-  const gap = 26, ly = y - 9;
-  ctx.strokeStyle = lineColor; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(mX, ly); ctx.lineTo(cx - tw/2 - gap, ly); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx + tw/2 + gap, ly); ctx.lineTo(W - mX, ly); ctx.stroke();
-}
-
-async function etDibujarCelda(ctx, j, x, y, g, T, fotoSrc){
-  const w = g.cellW, h = g.cellH, labelH = g.labelH, skew = g.skew, photoH = g.photoH, visH = g.visH;
-  const grande = h > 330;
-
-  // Sombra de la tarjeta
-  ctx.save();
-  ctx.shadowColor = T.sombra; ctx.shadowBlur = 24; ctx.shadowOffsetY = 9;
-  ctx.fillStyle = '#000'; ctx.fillRect(x, y, w, h);
-  ctx.restore();
-
-  // Foto
-  ctx.save();
-  ctx.beginPath(); ctx.rect(x, y, w, visH); ctx.clip();
-  const bgp = ctx.createLinearGradient(0, y, 0, y+visH);
-  bgp.addColorStop(0, T.photoBg0); bgp.addColorStop(1, T.photoBg1);
-  ctx.fillStyle = bgp; ctx.fillRect(x, y, w, visH);
-  let dibujada = false;
-  if(fotoSrc){
-    await new Promise(res=>{
-      const img = new Image();
-      img.onload = ()=>{ etPintarFoto(ctx, img, x, y, w, visH, j.zoom, j.px, j.py); dibujada = true; res(); };
-      img.onerror = ()=>res();
-      img.src = fotoSrc;
-    });
-  }
-  if(!dibujada){
-    // Sin foto: escudo del club grande y translúcido; si no hay, iniciales
-    const tieneEscudo = !!(j.club && (escudos[j.club] || escudos[normalizar(j.club)]));
-    if(tieneEscudo){
-      const sz = Math.round(Math.min(w, visH) * 0.62);
-      ctx.globalAlpha = 0.32;
-      await cvDrawEscudo(ctx, j.club, x + (w-sz)/2, y + (visH-sz)/2 - 6, sz);
-      ctx.globalAlpha = 1;
-    } else {
-      const ini = (j.nombre||'?').split(/\s+/).filter(Boolean).slice(0,2).map(p=>p[0]).join('').toUpperCase();
-      ctx.fillStyle = 'rgba(255,255,255,.13)';
-      ctx.font = `${Math.round(visH*0.5)}px "Bebas Neue", Arial, sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.fillText(ini, x+w/2, y+visH*0.68);
-    }
-  }
-  // Degradé inferior para fundir la foto con la etiqueta
-  const sh = ctx.createLinearGradient(0, y+visH*0.5, 0, y+visH);
-  sh.addColorStop(0, 'rgba(0,0,0,0)'); sh.addColorStop(1, 'rgba(0,0,0,.5)');
-  ctx.fillStyle = sh; ctx.fillRect(x, y+visH*0.5, w, visH*0.5);
-  ctx.restore();
-
-  // Posición (ARQ / DEF / MED / DEL)
-  if(j.pos){
-    ctx.save();
-    const fs = grande ? 24 : 19;
-    ctx.font = `800 ${fs}px "Rajdhani", Arial, sans-serif`;
-    if('letterSpacing' in ctx) ctx.letterSpacing = '2px';
-    const tw = ctx.measureText(j.pos).width;
-    const bw = tw + 22, bh = fs + 14, bx = x + 12, by = y + 12;
-    ctx.fillStyle = 'rgba(8,8,8,.8)'; cvRoundRect(ctx, bx, by, bw, bh, bh/2); ctx.fill();
-    ctx.strokeStyle = 'rgba(201,162,39,.85)'; ctx.lineWidth = 1.5; cvRoundRect(ctx, bx, by, bw, bh, bh/2); ctx.stroke();
-    ctx.fillStyle = '#f0c040'; ctx.textAlign = 'left';
-    ctx.fillText(j.pos, bx + 12, by + bh/2 + fs*0.34);
-    if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
-    ctx.restore();
-  }
-
-  // Etiqueta con borde superior en diagonal
-  const lg = ctx.createLinearGradient(x, 0, x+w, 0);
-  lg.addColorStop(0, T.label0); lg.addColorStop(1, T.label1);
-  ctx.beginPath();
-  ctx.moveTo(x, y+photoH+skew); ctx.lineTo(x+w, y+photoH); ctx.lineTo(x+w, y+h); ctx.lineTo(x, y+h); ctx.closePath();
-  ctx.fillStyle = lg; ctx.fill();
-  ctx.save(); ctx.clip();
-  const sheen = ctx.createLinearGradient(0, y+photoH, 0, y+h);
-  sheen.addColorStop(0, 'rgba(255,255,255,.20)'); sheen.addColorStop(0.6, 'rgba(255,255,255,0)');
-  ctx.fillStyle = sheen; ctx.fillRect(x, y+photoH, w, labelH+skew);
-  ctx.restore();
-  // Costura brillante sobre el corte diagonal
-  ctx.save();
-  ctx.strokeStyle = T.seam; ctx.lineWidth = 3;
-  ctx.shadowColor = T.seam; ctx.shadowBlur = 8;
-  ctx.beginPath(); ctx.moveTo(x, y+photoH+skew); ctx.lineTo(x+w, y+photoH); ctx.stroke();
-  ctx.restore();
-
-  // Textos de la etiqueta
-  const avail = labelH - skew;
-  const top = y + photoH + skew;
-  const pad = 18;
-  const maxW = w - pad*2;
-  const partes = (j.nombre||'').trim().split(/\s+/).filter(Boolean);
-  const apellido = partes.length ? partes[partes.length-1] : '';
-  const nombre = partes.slice(0,-1).join(' ');
-
-  ctx.textAlign = 'left';
-  if(nombre){
-    ctx.fillStyle = T.first;
-    ctx.font = `700 ${Math.round(avail*0.21)}px "Rajdhani", Arial, sans-serif`;
-    cvFillTextTrunc(ctx, nombre.toUpperCase(), x+pad, top+avail*0.25, maxW);
-  }
-  ctx.fillStyle = T.last;
-  etAjustarFuente(ctx, apellido.toUpperCase(), `{s}px "Bebas Neue", Arial, sans-serif`, maxW, Math.round(avail*0.46), 18);
-  cvFillTextTrunc(ctx, apellido.toUpperCase(), x+pad, top+avail*0.65, maxW);
-
-  if(j.club){
-    const fs3 = Math.round(avail*0.19);
-    const base = top + avail*0.92;
-    let tx = x + pad;
-    const tieneEscudo = !!(escudos[j.club] || escudos[normalizar(j.club)]);
-    if(tieneEscudo){
-      const sz = Math.round(fs3*1.5);
-      await cvDrawEscudo(ctx, j.club, tx, base - sz*0.82, sz);
-      tx += sz + 8;
-    }
-    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-    ctx.fillStyle = T.club;
-    ctx.font = `600 ${fs3}px "DM Sans", Arial, sans-serif`;
-    cvFillTextTrunc(ctx, j.club, tx, base, x + w - pad - tx);
-  }
-}
-
-async function generarImagenEquipoTemporada(id){
-  const e = (data.equiposTemporada||[]).find(x=>x.id===id);
-  if(!e) return null;
-  if(e.tema === 'claro') return etGenerarClaro(e);
-  if(e.tema === 'completo') return etGenerarCompleto(e);
-  await document.fonts.ready;
-  const identidad = getIdentidad();
-  const top6 = e.tipo !== 'xi';
-  const g = etGeomClasico(e.tipo);
-  const W = g.W, H = g.H, mX = g.mX;
-  const canvas = document.createElement('canvas');
-  canvas.width = W; canvas.height = H;
-  const ctx = canvas.getContext('2d');
-  ctx.textBaseline = 'alphabetic';
-
-  const dorado = e.tema === 'dorado';
-  const T = dorado ? {
-    bg0:'#ebc955', bg1:'#b08717', title:'#17171d', soft:'rgba(23,23,29,.74)', accent:'#232330', linea:'rgba(23,23,29,.45)',
-    label0:'#262633', label1:'#17171d', first:'rgba(255,255,255,.72)', last:'#ffffff', club:'#f0c040', seam:'#f0c040',
-    photoBg0:'#4a4a55', photoBg1:'#25252d', brandName:'#17171d', brandYear:'#232330', sombra:'rgba(40,28,0,.5)',
-    logoFill:'#232330', logoText:'#f0c040', logoRing:'#232330', halo:'rgba(255,255,255,.35)'
-  } : {
-    bg0:'#181820', bg1:'#09090c', title:'#f5f5f5', soft:'rgba(201,162,39,.92)', accent:'#c9a227', linea:'rgba(201,162,39,.5)',
-    label0:'#e8be40', label1:'#c9a227', first:'rgba(17,17,17,.72)', last:'#111111', club:'rgba(17,17,17,.74)', seam:'#ffe58a',
-    photoBg0:'#3a3a40', photoBg1:'#18181c', brandName:'#f5f5f5', brandYear:'#c9a227', sombra:'rgba(0,0,0,.7)',
-    logoFill:'#c9a227', logoText:'#080808', logoRing:'rgba(201,162,39,.85)', halo:'rgba(201,162,39,.28)'
-  };
-
-  // Fondo con degradé, rayas diagonales muy sutiles y viñeta
-  const bg = ctx.createLinearGradient(0, 0, 0, H);
-  bg.addColorStop(0, T.bg0); bg.addColorStop(1, T.bg1);
-  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
-  ctx.save();
-  ctx.translate(W/2, H/2); ctx.rotate(-28*Math.PI/180);
-  ctx.strokeStyle = dorado ? 'rgba(0,0,0,.045)' : 'rgba(255,255,255,.028)'; ctx.lineWidth = 14;
-  for(let k=-1800; k<1800; k+=46){ ctx.beginPath(); ctx.moveTo(k, -1800); ctx.lineTo(k, 1800); ctx.stroke(); }
-  ctx.restore();
-  if(dorado){
-    const lite = ctx.createRadialGradient(W*0.3, 0, 0, W*0.3, 0, 900);
-    lite.addColorStop(0, 'rgba(255,245,200,.35)'); lite.addColorStop(1, 'rgba(255,245,200,0)');
-    ctx.fillStyle = lite; ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = T.accent;
-    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(70,0); ctx.lineTo(0,190); ctx.closePath(); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(W,H); ctx.lineTo(W-70,H); ctx.lineTo(W,H-190); ctx.closePath(); ctx.fill();
-  } else {
-    const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, 760);
-    glow.addColorStop(0, 'rgba(201,162,39,.20)'); glow.addColorStop(1, 'rgba(201,162,39,0)');
-    ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
-    const vg = ctx.createRadialGradient(W/2, H/2, H*0.35, W/2, H/2, H*0.85);
-    vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.45)');
-    ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
-    // Marco dorado fino
-    ctx.strokeStyle = 'rgba(201,162,39,.28)'; ctx.lineWidth = 2;
-    ctx.strokeRect(22, 22, W-44, H-44);
-  }
-
-  const liga = (identidad.nombre||'DEPORTEMAS').toUpperCase();
-  const anio = (e.anio||'').trim();
-  const titulo = (e.titulo || etTituloDefault(e.tipo)).toUpperCase();
-  const jug = (e.jugadores||[]).map((j,i)=>Object.assign({i}, j)).filter(j=>(j.nombre||'').trim()).slice(0, etNTipo(e.tipo));
-
-  ctx.textAlign = 'left';
-  if(!top6){
-    // Encabezado a la izquierda
-    ctx.fillStyle = T.soft;
-    ctx.font = '700 26px "Rajdhani", Arial, sans-serif';
-    if('letterSpacing' in ctx) ctx.letterSpacing = '5px';
-    cvFillTextTrunc(ctx, liga + (anio ? '  ·  ' + anio : ''), mX, 90, W - mX*2);
-    if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
-    ctx.save();
-    ctx.shadowColor = dorado ? 'rgba(0,0,0,.25)' : 'rgba(0,0,0,.6)'; ctx.shadowBlur = 14; ctx.shadowOffsetY = 4;
-    ctx.fillStyle = T.title;
-    etAjustarFuente(ctx, titulo, '{s}px "Bebas Neue", Arial, sans-serif', W - mX*2, 100, 44);
-    ctx.fillText(titulo, mX, 178);
-    ctx.restore();
-    if(e.sub){
-      ctx.fillStyle = T.accent; ctx.fillRect(mX, 198, 6, 28);
-      ctx.fillStyle = T.soft;
-      ctx.font = '600 24px "Rajdhani", Arial, sans-serif';
-      cvFillTextTrunc(ctx, e.sub.toUpperCase(), mX+18, 222, W - mX*2 - 18);
-    }
-  } else {
-    // Encabezado centrado: logo + liga/temporada con líneas laterales
-    await etDibujarLogo(ctx, identidad, W/2, 48, 130, T);
-    ctx.font = '700 28px "Rajdhani", Arial, sans-serif';
-    if('letterSpacing' in ctx) ctx.letterSpacing = '5px';
-    etTextoConLineas(ctx, liga + (anio ? '  ·  ' + anio : ''), W/2, 232, W, mX, T.soft, T.linea);
-    if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
-    ctx.textAlign = 'left';
-  }
-
-  // Celdas (solo jugadores cargados, sin casilleros vacíos)
-  for(let k=0;k<jug.length;k++){
-    const col = k % g.cols, row = Math.floor(k / g.cols);
-    const enFila = Math.min(g.cols, jug.length - row*g.cols);
-    const desp = top6 ? (g.cols - enFila)*(g.cellW + g.gapX)/2 : 0;   // centra la última fila incompleta
-    const x = mX + desp + col*(g.cellW + g.gapX);
-    const y = g.gridTop + row*(g.cellH + g.gapY);
-    const fotoSrc = (window._alinFotosCache && window._alinFotosCache[etFotoKey(e.id, jug[k].i)]) || '';
-    await etDibujarCelda(ctx, jug[k], x, y, g, T, fotoSrc);
-  }
-
-  if(!top6){
-    // Celda 12: sello con logo + liga + temporada
-    const x = mX + 2*(g.cellW + g.gapX);
-    const y = g.gridTop + 3*(g.cellH + g.gapY);
-    const logoSz = Math.min(124, Math.round(g.cellH*0.5));
-    await etDibujarLogo(ctx, identidad, x + g.cellW/2, y + g.cellH*0.04, logoSz, T);
-    ctx.textAlign = 'center';
-    ctx.fillStyle = T.brandName;
-    etAjustarFuente(ctx, liga, '800 {s}px "Rajdhani", Arial, sans-serif', g.cellW - 20, 28, 14);
-    ctx.fillText(liga, x + g.cellW/2, y + g.cellH*0.78);
-    if(anio){
-      ctx.fillStyle = T.brandYear;
-      ctx.font = '54px "Bebas Neue", Arial, sans-serif';
-      ctx.fillText(anio, x + g.cellW/2, y + g.cellH*0.98);
-    }
-    ctx.textAlign = 'left';
-  } else {
-    // Pie centrado: título grande + subtítulo con líneas laterales
-    ctx.textAlign = 'center';
-    ctx.save();
-    ctx.shadowColor = dorado ? 'rgba(0,0,0,.2)' : 'rgba(0,0,0,.6)'; ctx.shadowBlur = 14; ctx.shadowOffsetY = 4;
-    ctx.fillStyle = T.title;
-    etAjustarFuente(ctx, titulo, '{s}px "Bebas Neue", Arial, sans-serif', W - mX*2, 74, 36);
-    ctx.fillText(titulo, W/2, H - 100);
-    ctx.restore();
-    if(e.sub){
-      ctx.font = '600 24px "Rajdhani", Arial, sans-serif';
-      if('letterSpacing' in ctx) ctx.letterSpacing = '4px';
-      etTextoConLineas(ctx, e.sub.toUpperCase(), W/2, H - 54, W, mX, T.soft, T.linea);
-      if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
-    }
-    ctx.textAlign = 'left';
-  }
-  return canvas;
-}
-
-// ============================================================
-// ESTILOS CLAROS: "Nominados" (tarjetas de color) y "Equipo completo"
-// (fotos a pantalla completa). El color de cada tarjeta sale del escudo
-// del club; si no hay escudo se usa un color por defecto.
-// ============================================================
-const _etColCache = {};
-
-function etRgb(c, a){ return `rgba(${c[0]},${c[1]},${c[2]},${a==null?1:a})`; }
-function etMezcla(a, b, t){ return [Math.round(a[0]+(b[0]-a[0])*t), Math.round(a[1]+(b[1]-a[1])*t), Math.round(a[2]+(b[2]-a[2])*t)]; }
-function etRR(ctx, x, y, w, h, r){
-  ctx.beginPath();
-  ctx.moveTo(x+r, y);
-  ctx.arcTo(x+w, y, x+w, y+h, r); ctx.arcTo(x+w, y+h, x, y+h, r);
-  ctx.arcTo(x, y+h, x, y, r);     ctx.arcTo(x, y, x+w, y, r);
-  ctx.closePath();
-}
-function etTieneEscudo(club){ return !!(club && (escudos[club] || escudos[normalizar(club)])); }
-
 // Color dominante (el más saturado) del escudo del club
-async function etColorClub(club){
+async function jfColorClub(club){
   if(!club) return null;
-  if(_etColCache[club] !== undefined) return _etColCache[club];
+  if(_jfColCache[club] !== undefined) return _jfColCache[club];
   let res = null;
   try{
-    const entry = escudos[club] || escudos[normalizar(club)];
-    const src = entry && typeof entry === 'object' ? entry.img : entry;
+    const src = jfEscudoSrc(club);
     const img = src ? await cargarImagenAsync(src) : null;
     if(img){
       const c = document.createElement('canvas'); c.width = 32; c.height = 32;
@@ -21651,7 +21327,7 @@ async function etColorClub(club){
         if(d[i+3] < 128) continue;
         const R=d[i], G=d[i+1], B=d[i+2];
         const mx = Math.max(R,G,B), mn = Math.min(R,G,B);
-        if(mx < 45 || mn > 215) continue;           // casi negro / casi blanco
+        if(mx < 45 || mn > 215) continue;
         const sat = (mx-mn)/mx;
         const w = sat*sat + 0.02;
         r += R*w; g += G*w; b += B*w; ws += w;
@@ -21659,366 +21335,376 @@ async function etColorClub(club){
       if(ws > 0) res = [Math.round(r/ws), Math.round(g/ws), Math.round(b/ws)];
     }
   }catch(err){ res = null; }
-  _etColCache[club] = res;
+  _jfColCache[club] = res;
   return res;
 }
-
-function etDividirTitulo(t){
-  if(t.length <= 16 || t.indexOf(' ') < 0) return [t];
-  const p = t.split(' ');
-  let best = 1, diff = 1e9;
-  for(let k=1;k<p.length;k++){
-    const d = Math.abs(p.slice(0,k).join(' ').length - p.slice(k).join(' ').length);
-    if(d < diff){ diff = d; best = k; }
-  }
-  return [p.slice(0,best).join(' '), p.slice(best).join(' ')];
-}
-
-function etPillPos(ctx, txt, x, y, fs, bg, borde, color){
-  ctx.save();
-  ctx.font = `800 ${fs}px "Rajdhani", Arial, sans-serif`;
-  if('letterSpacing' in ctx) ctx.letterSpacing = '2px';
-  const tw = ctx.measureText(txt).width;
-  const bw = tw + 20, bh = fs + 12;
-  ctx.fillStyle = bg; etRR(ctx, x, y, bw, bh, bh/2); ctx.fill();
-  if(borde){ ctx.strokeStyle = borde; ctx.lineWidth = 1.5; etRR(ctx, x, y, bw, bh, bh/2); ctx.stroke(); }
-  ctx.fillStyle = color; ctx.textAlign = 'left';
-  ctx.fillText(txt, x + 10, y + bh/2 + fs*0.34);
-  if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
-  ctx.restore();
-}
-
-function etPosCelda(g, k, total, centrar){
-  const col = k % g.cols, row = Math.floor(k / g.cols);
-  let desp = 0;
-  if(centrar){ const enFila = Math.min(g.cols, total - row*g.cols); desp = (g.cols - enFila)*(g.cellW + g.gapX)/2; }
-  return { x: g.mX + desp + col*(g.cellW + g.gapX), y: g.gridTop + row*(g.cellH + g.gapY) };
-}
-
-function etJugadoresDe(e){
-  const n = etNTipo(e.tipo);
-  const jug = (e.jugadores||[]).slice(0, n).map((j,i)=>Object.assign({i}, j)).filter(j=>(j.nombre||'').trim());
-  const d = (e.tipo==='xi') ? (e.jugadores||[])[11] : null;
-  const dt = (d && (d.nombre||'').trim()) ? Object.assign({i:11, pos:'DT'}, d) : null;
-  return { jug, dt };
-}
-
-function etFotoDe(e, j){ return (window._alinFotosCache && window._alinFotosCache[etFotoKey(e.id, j.i)]) || ''; }
-
-// ── Estilo "Nominados claro" ─────────────────────────────────
-function etGeomClaro(tipo){
-  const W = CV_W, H = CV_H;
-  const cols = tipo==='top6' ? 3 : 4;
-  const slots = tipo==='xi' ? 12 : etNTipo(tipo);
-  const rows = Math.ceil(slots/cols);
-  const mX = 48, gapX = 18, gapY = 20;
-  const cellW = (W - mX*2 - gapX*(cols-1)) / cols;
-  const gridTop = tipo==='xi' ? 318 : 340;
-  const gridBottom = 78;
-  const cellH = (H - gridTop - gridBottom - gapY*(rows-1)) / rows;
-  const barH = Math.round(Math.min(cellH*0.21, 86));
-  return {W, H, cols, rows, mX, gapX, gapY, cellW, cellH, gridTop, gridBottom, barH, photoH: cellH - barH};
-}
-
-async function etCartaClaro(ctx, j, x, y, g, fotoSrc, colRgb){
-  const w = g.cellW, h = g.cellH, barH = g.barH, ph = g.photoH, r = 18;
-  const base = colRgb || [118, 68, 214];
-  const top = etMezcla(base, [255,255,255], 0.38), bot = etMezcla(base, [0,0,0], 0.5);
-
-  // Sombra
-  ctx.save();
-  ctx.shadowColor = 'rgba(40,20,90,.32)'; ctx.shadowBlur = 20; ctx.shadowOffsetY = 9;
-  etRR(ctx, x, y, w, h, r); ctx.fillStyle = etRgb(base); ctx.fill();
-  ctx.restore();
-
-  ctx.save();
-  etRR(ctx, x, y, w, h, r); ctx.clip();
-  const gr = ctx.createLinearGradient(0, y, 0, y+h);
-  gr.addColorStop(0, etRgb(top)); gr.addColorStop(0.55, etRgb(base)); gr.addColorStop(1, etRgb(bot));
-  ctx.fillStyle = gr; ctx.fillRect(x, y, w, h);
-  const rg = ctx.createRadialGradient(x+w/2, y+ph*0.35, 0, x+w/2, y+ph*0.35, w*0.85);
-  rg.addColorStop(0, 'rgba(255,255,255,.34)'); rg.addColorStop(1, 'rgba(255,255,255,0)');
-  ctx.fillStyle = rg; ctx.fillRect(x, y, w, ph);
-
-  let dibujada = false;
-  if(fotoSrc){
-    const img = await cargarImagenAsync(fotoSrc);
-    if(img){
-      ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, ph); ctx.clip();
-      etPintarFoto(ctx, img, x, y, w, ph, j.zoom, j.px, j.py);
-      ctx.restore(); dibujada = true;
-    }
-  }
-  if(!dibujada){
-    const ini = (j.nombre||'?').split(/\s+/).filter(Boolean).slice(0,2).map(p=>p[0]).join('').toUpperCase();
-    ctx.fillStyle = 'rgba(255,255,255,.28)';
-    ctx.font = `${Math.round(ph*0.5)}px "Bebas Neue", Arial, sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.fillText(ini, x+w/2, y+ph*0.62);
-  }
-  // Baño de color del club sobre la foto (más fuerte hacia abajo) para que el color se note aunque la foto sea completa
-  ctx.fillStyle = etRgb(base, 0.14); ctx.fillRect(x, y, w, ph);
-  const sh = ctx.createLinearGradient(0, y+ph*0.42, 0, y+ph);
-  sh.addColorStop(0, etRgb(bot, 0)); sh.addColorStop(1, etRgb(bot, 0.88));
-  ctx.fillStyle = sh; ctx.fillRect(x, y+ph*0.42, w, ph*0.58);
-
-
-  // Barra del nombre
-  const bg = ctx.createLinearGradient(0, y+ph, 0, y+h);
-  bg.addColorStop(0, '#2a1248'); bg.addColorStop(1, '#150a26');
-  ctx.fillStyle = bg; ctx.fillRect(x, y+ph, w, barH);
-  ctx.fillStyle = 'rgba(255,255,255,.28)'; ctx.fillRect(x, y+ph, w, 2);
-  ctx.restore();
-
-  // Borde claro del color del club
-  ctx.save();
-  etRR(ctx, x, y, w, h, r); ctx.lineWidth = 4; ctx.strokeStyle = etRgb(etMezcla(base, [255,255,255], 0.35));
-  ctx.stroke(); ctx.restore();
-
-  // Escudo apoyado sobre la barra
-  if(etTieneEscudo(j.club)){
-    const sz = Math.round(Math.min(72, w*0.3));
-    ctx.save();
-    ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 12; ctx.shadowOffsetY = 4;
-    await cvDrawEscudoCompleto(ctx, j.club, x + (w-sz)/2, y + ph - sz - 10, sz);
-    ctx.restore();
-  }
-  if(j.pos) etPillPos(ctx, j.pos, x+10, y+10, Math.round(Math.min(20, w*0.08)), 'rgba(20,8,40,.72)', 'rgba(255,255,255,.35)', '#ffffff');
-
-  // Textos
-  const partes = (j.nombre||'').trim().split(/\s+/).filter(Boolean);
-  const ape = partes.length ? partes[partes.length-1] : '';
-  const nom = partes.slice(0,-1).join(' ');
-  const cx = x + w/2, by = y + ph, maxW = w - 22;
-  ctx.textAlign = 'center';
-  if(nom){
-    ctx.fillStyle = 'rgba(255,255,255,.82)';
-    ctx.font = `600 ${Math.round(barH*0.25)}px "Rajdhani", Arial, sans-serif`;
-    cvFillTextTrunc(ctx, nom.toUpperCase(), cx, by + barH*0.36, maxW);
-  }
-  ctx.fillStyle = '#ffffff';
-  etAjustarFuente(ctx, ape.toUpperCase(), '{s}px "Bebas Neue", Arial, sans-serif', maxW, Math.round(barH*0.52), 16);
-  cvFillTextTrunc(ctx, ape.toUpperCase(), cx, by + barH*(nom ? 0.84 : 0.68), maxW);
-}
-
-async function etGenerarClaro(e){
-  await document.fonts.ready;
-  const identidad = getIdentidad();
-  const g = etGeomClaro(e.tipo);
-  const W = g.W, H = g.H, mX = g.mX;
-  const canvas = document.createElement('canvas'); canvas.width = W; canvas.height = H;
-  const ctx = canvas.getContext('2d'); ctx.textBaseline = 'alphabetic';
-  const TL = { halo:'rgba(140,80,230,.22)', logoFill:'#4b1d8f', logoText:'#ffffff', logoRing:'#7b3fe4' };
-
-  // Fondo claro con cuadrícula y franjas diagonales
-  ctx.fillStyle = '#f2f1f8'; ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = 'rgba(255,255,255,.8)';
-  ctx.beginPath(); ctx.moveTo(W*0.5,0); ctx.lineTo(W*0.78,0); ctx.lineTo(W*0.22,H); ctx.lineTo(0,H); ctx.closePath(); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(W*0.9,0); ctx.lineTo(W,0); ctx.lineTo(W,H*0.35); ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = 'rgba(95,70,170,.08)'; ctx.lineWidth = 1.5;
-  for(let x=0;x<=W;x+=54){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
-  for(let y=0;y<=H;y+=54){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
-
-  const liga = (identidad.nombre||'DEPORTEMAS').toUpperCase();
-  const anio = (e.anio||'').trim();
-  const titulo = (e.titulo || etTituloDefault(e.tipo)).toUpperCase();
-
-  // Encabezado: logo + título con degradé + etiqueta
-  await etDibujarLogo(ctx, identidad, mX+62, 62, 124, TL);
-  const tx = mX + 170, tw = W - mX - tx;
-  const lineas = etDividirTitulo(titulo), dos = lineas.length > 1;
-  let sz = dos ? 96 : 120;
-  lineas.forEach(l=>{ sz = Math.min(sz, etAjustarFuente(ctx, l, '{s}px "Bebas Neue", Arial, sans-serif', tw, sz, 36)); });
-  const gt = ctx.createLinearGradient(tx, 0, tx+tw, 0);
-  gt.addColorStop(0, '#10c2ea'); gt.addColorStop(0.55, '#7d4df3'); gt.addColorStop(1, '#c43fe0');
-  ctx.fillStyle = gt; ctx.font = `${sz}px "Bebas Neue", Arial, sans-serif`; ctx.textAlign = 'left';
-  const y0 = (dos ? 66 : 80) + sz*0.9;
-  lineas.forEach((l,k)=>ctx.fillText(l, tx, y0 + k*sz*0.92));
-  const yEnd = y0 + (lineas.length-1)*sz*0.92;
-  const pillTxt = (e.sub||'').trim().toUpperCase() || (liga + (anio ? '  ·  ' + anio : ''));
-  ctx.font = '700 24px "Rajdhani", Arial, sans-serif';
-  if('letterSpacing' in ctx) ctx.letterSpacing = '3px';
-  const pw = Math.min(tw, ctx.measureText(pillTxt).width + 60), ph = 44, py = yEnd + 20;
-  const gp = ctx.createLinearGradient(tx, 0, tx+pw, 0);
-  gp.addColorStop(0, '#8a4df5'); gp.addColorStop(1, '#d048d8');
-  ctx.fillStyle = gp; etRR(ctx, tx, py, pw, ph, ph/2); ctx.fill();
-  ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center';
-  cvFillTextTrunc(ctx, pillTxt, tx + pw/2, py + ph/2 + 8, pw - 36);
-  if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
-
-  // Tarjetas
-  const { jug, dt } = etJugadoresDe(e);
-  const centrar = e.tipo !== 'xi';
-  for(let k=0;k<jug.length;k++){
-    const p = etPosCelda(g, k, jug.length, centrar);
-    const col = await etColorClub(jug[k].club);
-    await etCartaClaro(ctx, jug[k], p.x, p.y, g, etFotoDe(e, jug[k]), col);
-  }
-  if(e.tipo === 'xi'){
-    const p = etPosCelda(g, 11, 12, false);
-    if(dt){
-      const col = await etColorClub(dt.club);
-      await etCartaClaro(ctx, dt, p.x, p.y, g, etFotoDe(e, dt), col);
-    } else {
-      // Sello de la liga en el casillero libre
-      const lsz = Math.min(150, Math.round(g.cellW*0.66));
-      await etDibujarLogo(ctx, identidad, p.x + g.cellW/2, p.y + g.cellH*0.1, lsz, TL);
-      ctx.textAlign = 'center'; ctx.fillStyle = '#2a1248';
-      etAjustarFuente(ctx, liga, '800 {s}px "Rajdhani", Arial, sans-serif', g.cellW - 16, 28, 14);
-      ctx.fillText(liga, p.x + g.cellW/2, p.y + g.cellH*0.78);
-      if(anio){
-        const gy = ctx.createLinearGradient(p.x, 0, p.x+g.cellW, 0);
-        gy.addColorStop(0, '#7d4df3'); gy.addColorStop(1, '#c43fe0');
-        ctx.fillStyle = gy; ctx.font = '60px "Bebas Neue", Arial, sans-serif';
-        ctx.fillText(anio, p.x + g.cellW/2, p.y + g.cellH*0.98);
+// Comprime la foto del jugador. Si tiene transparencia se guarda como PNG (limitando su peso).
+function jfComprimirFoto(file, maxW){
+  return new Promise((resolve, reject)=>{
+    const objUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = ()=>{
+      URL.revokeObjectURL(objUrl);
+      const hacer = sc=>{
+        const c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round(img.naturalWidth*sc)); c.height = Math.max(1, Math.round(img.naturalHeight*sc));
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        return c;
+      };
+      let sc = Math.min(1, maxW/img.naturalWidth);
+      let c = hacer(sc);
+      let alpha = false;
+      try{
+        const t = document.createElement('canvas'); t.width = 40; t.height = 40;
+        const tx = t.getContext('2d'); tx.drawImage(img, 0, 0, 40, 40);
+        const d = tx.getImageData(0, 0, 40, 40).data;
+        for(let i=3;i<d.length;i+=4){ if(d[i] < 250){ alpha = true; break; } }
+      }catch(err){ alpha = false; }
+      if(alpha){
+        let url = c.toDataURL('image/png');
+        while(url.length > 700000 && sc > 0.25){ sc *= 0.85; c = hacer(sc); url = c.toDataURL('image/png'); }
+        resolve(url);
+      } else {
+        resolve(c.toDataURL('image/jpeg', 0.82));
       }
-    }
-  }
-
-  // Pie: LIGA ——— AÑO ——— LIGA
-  ctx.font = '700 20px "Rajdhani", Arial, sans-serif';
-  if('letterSpacing' in ctx) ctx.letterSpacing = '3px';
-  const fy = H - 34, col = 'rgba(60,30,110,.6)';
-  const wl = ctx.measureText(liga).width, wc = anio ? ctx.measureText(anio).width : 0;
-  ctx.fillStyle = col; ctx.textAlign = 'left'; ctx.fillText(liga, mX, fy);
-  ctx.textAlign = 'right'; ctx.fillText(liga, W - mX, fy);
-  if(anio){ ctx.textAlign = 'center'; ctx.fillText(anio, W/2, fy); }
-  ctx.strokeStyle = 'rgba(60,30,110,.35)'; ctx.lineWidth = 1.5;
-  const ly = fy - 7;
-  ctx.beginPath(); ctx.moveTo(mX + wl + 22, ly); ctx.lineTo(W/2 - (wc/2) - 22, ly); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(W/2 + (wc/2) + 22, ly); ctx.lineTo(W - mX - wl - 22, ly); ctx.stroke();
-  if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
-  ctx.textAlign = 'left';
-  return canvas;
+    };
+    img.onerror = ()=>{ URL.revokeObjectURL(objUrl); reject(new Error('No se pudo leer la imagen')); };
+    img.src = objUrl;
+  });
 }
 
-// ── Estilo "Equipo completo" (fotos a pantalla completa) ─────
-function etGeomCompleto(tipo){
-  const W = CV_W, H = CV_H;
-  const cols = tipo==='top6' ? 3 : 4;
-  const slots = tipo==='xi' ? 12 : etNTipo(tipo);
-  const rows = Math.ceil(slots/cols);
-  const gap = 3, gridTop = 250;
-  const cellW = (W - gap*(cols-1)) / cols;
-  const cellH = (H - gridTop - gap*(rows-1)) / rows;
-  const barH = tipo==='xi' ? 56 : 66;
-  return {W, H, cols, rows, mX:0, gapX:gap, gapY:gap, cellW, cellH, gridTop, barH, photoH: cellH};
+// Texto con separación entre letras (no depende de ctx.letterSpacing)
+function jfAncho(ctx, txt, sp){ let w=0; for(const ch of txt) w += ctx.measureText(ch).width + sp; return Math.max(0, w - sp); }
+function jfTxt(ctx, txt, x, y, sp, align){
+  align = align || 'left';
+  if(!sp){ const o=ctx.textAlign; ctx.textAlign=align; ctx.fillText(txt, x, y); ctx.textAlign=o; return ctx.measureText(txt).width; }
+  const w = jfAncho(ctx, txt, sp);
+  let cx = align==='center' ? x-w/2 : (align==='right' ? x-w : x);
+  const o = ctx.textAlign; ctx.textAlign = 'left';
+  for(const ch of txt){ ctx.fillText(ch, cx, y); cx += ctx.measureText(ch).width + sp; }
+  ctx.textAlign = o;
+  return w;
 }
+function jfFit(ctx, txt, fontFn, maxW, px, minPx, sp){
+  let sz = px; sp = sp||0; ctx.font = fontFn(sz);
+  while(sz > minPx && (ctx.measureText(txt).width + sp*Math.max(0,txt.length-1)) > maxW){ sz--; ctx.font = fontFn(sz); }
+  return sz;
+}
+// "Nombre Apellido" → {n, a}. El apellido es la última palabra; con "/" se separa a mano (Juan / De la Cruz)
+function jfDividirNombre(nombre){
+  const t = String(nombre||'').trim();
+  if(t.includes('/')){ const p = t.split('/'); return { n:p[0].trim(), a:p.slice(1).join(' ').trim() }; }
+  const w = t.split(/\s+/);
+  if(w.length<2) return { n:'', a:t };
+  return { n:w.slice(0,-1).join(' '), a:w[w.length-1] };
+}
+function jfPoligono(ctx, pts){ ctx.beginPath(); pts.forEach((p,k)=>k?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.closePath(); }
 
-async function etTileCompleto(ctx, j, x, y, g, fotoSrc, colRgb, esDT){
-  const w = g.cellW, h = g.cellH, barH = g.barH;
-  const base = colRgb || [70, 60, 100];
+function jfFondo(ctx, W, H){
+  ctx.fillStyle = '#080808'; ctx.fillRect(0,0,W,H);
+  const g = ctx.createRadialGradient(W/2, 0, 0, W/2, 0, Math.max(W,H)*0.62);
+  g.addColorStop(0, 'rgba(201,162,39,.24)'); g.addColorStop(1, 'rgba(201,162,39,0)');
+  ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
   ctx.save();
-  ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
-  const gr = ctx.createLinearGradient(0, y, 0, y+h);
-  gr.addColorStop(0, etRgb(etMezcla(base, [255,255,255], 0.22))); gr.addColorStop(1, etRgb(etMezcla(base, [0,0,0], 0.5)));
-  ctx.fillStyle = gr; ctx.fillRect(x, y, w, h);
-  let dibujada = false;
-  if(fotoSrc){
-    const img = await cargarImagenAsync(fotoSrc);
-    if(img){ etPintarFoto(ctx, img, x, y, w, h, j.zoom, j.px, j.py); dibujada = true; }
-  }
-  if(!dibujada){
-    if(etTieneEscudo(j.club)){
-      const sz = Math.round(Math.min(w, h) * 0.6);
-      ctx.globalAlpha = 0.4;
-      await cvDrawEscudoCompleto(ctx, j.club, x + (w-sz)/2, y + (h-barH-sz)/2, sz);
-      ctx.globalAlpha = 1;
-    } else {
-      const ini = (j.nombre||'?').split(/\s+/).filter(Boolean).slice(0,2).map(p=>p[0]).join('').toUpperCase();
-      ctx.fillStyle = 'rgba(255,255,255,.25)';
-      ctx.font = `${Math.round(h*0.34)}px "Bebas Neue", Arial, sans-serif`;
-      ctx.textAlign = 'center'; ctx.fillText(ini, x+w/2, y+h*0.5);
-    }
-  }
-  const sh = ctx.createLinearGradient(0, y+h*0.6, 0, y+h);
-  sh.addColorStop(0, 'rgba(0,0,0,0)'); sh.addColorStop(1, 'rgba(0,0,0,.5)');
-  ctx.fillStyle = sh; ctx.fillRect(x, y+h*0.6, w, h*0.4);
-  // Barra con el nombre
-  ctx.fillStyle = '#17171d'; ctx.fillRect(x, y+h-barH, w, barH);
-  ctx.fillStyle = etRgb(etMezcla(base, [255,255,255], 0.2)); ctx.fillRect(x, y+h-barH, w, 4);
+  ctx.strokeStyle = 'rgba(255,255,255,.028)'; ctx.lineWidth = 2;
+  const dx = H*0.47;
+  for(let x=-dx; x<W+dx; x+=38){ ctx.beginPath(); ctx.moveTo(x+dx, 0); ctx.lineTo(x, H); ctx.stroke(); }
   ctx.restore();
+}
+// Fondo de la foto con el color del club (se ve si no hay foto o si es un recorte)
+function jfFondoFoto(ctx, x, y, w, h, col){
+  const base = col || [74,58,6];
+  const g = ctx.createLinearGradient(x, y, x+w, y+h);
+  g.addColorStop(0, jfRgb(jfMezcla(base,[255,255,255],0.12)));
+  g.addColorStop(1, jfRgb(jfMezcla(base,[0,0,0],0.68)));
+  ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
+  const r = ctx.createRadialGradient(x+w*0.5, y+h*0.35, 0, x+w*0.5, y+h*0.35, Math.max(w,h)*0.6);
+  r.addColorStop(0, 'rgba(255,255,255,.28)'); r.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = r; ctx.fillRect(x, y, w, h);
+}
 
-  if(etTieneEscudo(j.club)){
-    const sz = Math.round(Math.min(58, w*0.22));
-    ctx.save();
-    ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 3;
-    await cvDrawEscudoCompleto(ctx, j.club, x + w - sz - 10, y + 10, sz);
+// Logo + marca arriba a la izquierda. Devuelve el ancho ocupado.
+async function jfEncabezado(ctx, y, id, sub){
+  let x = 56;
+  const logoSize = 62;
+  if(id && id.logo){
+    const ok = await cvDrawLogo(ctx, id.logo, x, y+4, logoSize);
+    if(ok) x += logoSize + 16;
+  }
+  ctx.fillStyle = '#f0c040'; ctx.font = JF_BEBAS(30); ctx.textBaseline = 'alphabetic';
+  jfTxt(ctx, 'DEPORTEMAS', x, y+28, 4);
+  const liga = (id && id.nombre && id.nombre.toUpperCase()!=='DEPORTEMAS') ? id.nombre : 'Liga Regional Riotercerense';
+  ctx.fillStyle = '#bbbbbb'; ctx.font = JF_RAJ(19);
+  const linea = (liga + (sub ? ' · ' + sub : '')).toUpperCase();
+  const maxW = 1080 - 56 - x - 20;
+  const sz = jfFit(ctx, linea, JF_RAJ, maxW, 19, 13, 3);
+  ctx.font = JF_RAJ(sz);
+  jfTxt(ctx, linea, x, y+54, 3);
+}
+
+function jfPie(ctx, W, H){
+  ctx.fillStyle = '#bbbbbb'; ctx.font = JF_RAJ(21, 600);
+  jfTxt(ctx, 'deportemas.pages.dev', 56, H-26, 2);
+  jfTxt(ctx, 'LV26 FM 101.9', W-56, H-26, 2, 'right');
+}
+
+function jfEstrella(ctx, cx, cy, R){
+  ctx.beginPath();
+  for(let k=0;k<10;k++){
+    const a = -Math.PI/2 + k*Math.PI/5, r = k%2 ? R*0.42 : R;
+    const px = cx + Math.cos(a)*r, py = cy + Math.sin(a)*r;
+    k ? ctx.lineTo(px,py) : ctx.moveTo(px,py);
+  }
+  ctx.closePath();
+}
+
+// ── Placa de VOTACIÓN ────────────────────────────────────────
+
+async function jfCartaVotacion(ctx, num, it, img, col, x, y, w, h){
+  const plateH = it.dato ? 106 : 84;
+  const photoH = h - 103;
+  // fondo con sombra + borde fino dorado
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,.65)'; ctx.shadowBlur = 40; ctx.shadowOffsetY = 18;
+  ctx.fillStyle = '#191920'; ctx.fillRect(x, y, w, h);
+  ctx.restore();
+  ctx.strokeStyle = 'rgba(201,162,39,.34)'; ctx.lineWidth = 2; ctx.strokeRect(x+1, y+1, w-2, h-2);
+  // foto con borde inferior en diagonal
+  ctx.save();
+  jfPoligono(ctx, [[x,y],[x+w,y],[x+w,y+photoH],[x,y+photoH-26]]); ctx.clip();
+  jfFondoFoto(ctx, x, y, w, photoH, col);
+  if(img) jfPintarFoto(ctx, img, x, y, w, photoH, it.zoom, it.px, it.py);
+  else { ctx.globalAlpha = 0.35; await cvDrawEscudoCompleto(ctx, it.club||it.nombre, x+w/2-photoH*0.32, y+photoH*0.14, photoH*0.64); ctx.globalAlpha = 1; }
+  const sh = ctx.createLinearGradient(0, y+photoH*0.55, 0, y+photoH);
+  sh.addColorStop(0, 'rgba(0,0,0,0)'); sh.addColorStop(1, 'rgba(0,0,0,.66)');
+  ctx.fillStyle = sh; ctx.fillRect(x, y, w, photoH);
+  ctx.restore();
+  // número de opción
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 14; ctx.shadowOffsetY = 6;
+  jfPoligono(ctx, [[x,y],[x+92,y],[x+66,y+84],[x,y+84]]);
+  ctx.fillStyle = jfOro(ctx, x, y, x+92, y+84); ctx.fill();
+  ctx.restore();
+  ctx.fillStyle = '#080808'; ctx.font = JF_BEBAS(76); ctx.textAlign = 'center';
+  ctx.fillText(String(num), x+38, y+68); ctx.textAlign = 'left';
+  // escudo arriba a la derecha
+  if(it.club){
+    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.65)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 4;
+    await cvDrawEscudoCompleto(ctx, it.club, x+w-14-72, y+12, 78);
     ctx.restore();
   }
-  if(j.pos && !esDT) etPillPos(ctx, j.pos, x+10, y+10, Math.round(Math.min(20, w*0.08)), 'rgba(8,8,8,.8)', 'rgba(201,162,39,.85)', '#f0c040');
-  if(esDT){
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '800 17px "Rajdhani", Arial, sans-serif';
-    if('letterSpacing' in ctx) ctx.letterSpacing = '2px';
-    const tw = ctx.measureText('DT').width + 30;
-    ctx.fillRect(x + (w-tw)/2, y+h-barH-24, tw, 24);
-    ctx.fillStyle = '#17171d'; ctx.textAlign = 'center';
-    ctx.fillText('DT', x + w/2, y+h-barH-7);
-    if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+  // placa blanca con el nombre
+  const px = x+14, pw = w-28, py = y+h-12-plateH;
+  ctx.fillStyle = '#f5f5f5'; ctx.fillRect(px, py, pw, plateH);
+  ctx.fillStyle = '#c9a227'; ctx.fillRect(px, py, 10, plateH);
+  const tx = px+26, maxW = pw-26-16;
+  const nm = jfDividirNombre(it.nombre);
+  const completo = (nm.n ? nm.n.toUpperCase()+' ' : '') + nm.a.toUpperCase();
+  const sz = jfFit(ctx, completo, JF_BEBAS, maxW, 46, 28, 1);
+  ctx.font = JF_BEBAS(sz);
+  let cx = tx;
+  if(nm.n){ ctx.fillStyle = '#555'; cx += jfTxt(ctx, nm.n.toUpperCase()+' ', tx, py+46, 1) + 1; }
+  ctx.fillStyle = '#111'; jfTxt(ctx, nm.a.toUpperCase(), cx, py+46, 1);
+  if(it.club){
+    ctx.fillStyle = '#8a6d0f'; ctx.font = JF_RAJ(20);
+    const s2 = jfFit(ctx, it.club.toUpperCase(), JF_RAJ, maxW, 20, 13, 1.5);
+    ctx.font = JF_RAJ(s2); jfTxt(ctx, it.club.toUpperCase(), tx, py+71, 1.5);
   }
-  // Nombre completo centrado
-  ctx.textAlign = 'center'; ctx.fillStyle = '#ffffff';
-  const nombre = (j.nombre||'').trim();
-  etAjustarFuente(ctx, nombre, '700 {s}px "Rajdhani", Arial, sans-serif', w - 20, Math.round(barH*0.5), 14);
-  cvFillTextTrunc(ctx, nombre, x + w/2, y + h - barH/2 + barH*0.16, w - 20);
+  if(it.dato){
+    ctx.fillStyle = '#333'; ctx.font = JF_DM(15);
+    const s3 = jfFit(ctx, it.dato, JF_DM, maxW, 15, 11, 0);
+    ctx.font = JF_DM(s3); ctx.fillText(it.dato, tx, py+94);
+  }
 }
 
-async function etGenerarCompleto(e){
+async function jfGenerarVotacion(ctx, W, H, story, e, items, imgs, cols, id){
+  const dy = story ? 170 : 0;
+  jfFondo(ctx, W, H);
+  await jfEncabezado(ctx, 44+dy, id, '');
+  // chip "FECHA · DIVISIÓN"
+  const chip = [e.fecha, e.sub].filter(Boolean).join(' · ').toUpperCase();
+  if(chip){
+    ctx.font = JF_RAJ(22);
+    const sz = jfFit(ctx, chip, JF_RAJ, 430, 22, 14, 3); ctx.font = JF_RAJ(sz);
+    const cw = jfAncho(ctx, chip, 3) + 52, ch = 44, cx = W-56-cw, cy = 52+dy;
+    jfPoligono(ctx, [[cx+14,cy],[cx+cw,cy],[cx+cw,cy+ch],[cx,cy+ch]]);
+    const g = ctx.createLinearGradient(cx, 0, cx+cw, 0); g.addColorStop(0,'#f0c040'); g.addColorStop(1,'#c9a227');
+    ctx.fillStyle = g; ctx.fill();
+    ctx.fillStyle = '#080808'; jfTxt(ctx, chip, cx+30, cy+30, 3);
+  }
+  // kicker + título
+  const ky = 137+dy;
+  ctx.fillStyle = '#f0c040'; ctx.fillRect(56, ky-11, 54, 4);
+  ctx.font = JF_RAJ(26); jfTxt(ctx, 'VOTACIÓN ABIERTA', 124, ky, 6);
+  ctx.fillStyle = '#ffffff'; ctx.font = JF_BEBAS(122); ctx.fillText('¿QUIÉN FUE EL', 56, 245+dy);
+  const t2 = 'JUGADOR DE LA FECHA?';
+  const s2 = jfFit(ctx, t2, JF_BEBAS, W-112, 119, 80, 0);
+  ctx.font = JF_BEBAS(s2); ctx.fillStyle = jfOro(ctx, 0, 347+dy-s2*0.7, 0, 347+dy);
+  ctx.fillText(t2, 56, 347+dy);
+  // banda inferior
+  const ctaTop = story ? 1540 : 1140, ctaH = 132;
+  // tarjetas
+  const n = items.length, gap = 26, colW = (W-112-gap)/2;
+  const areaTop = 392+dy, areaBot = ctaTop+8, areaH = areaBot-areaTop;
+  const rows = Math.ceil(n/2);
+  let h = rows===1 ? Math.min(areaH, 620) : (areaH-gap*(rows-1))/rows;
+  const top = areaTop + (rows===1 ? (areaH-h)/2 : 0);
+  for(let k=0;k<n;k++){
+    const r = Math.floor(k/2), c = k%2;
+    const solo = (k===n-1 && n%2===1);
+    const x = solo ? (W-colW)/2 : 56 + c*(colW+gap);
+    await jfCartaVotacion(ctx, k+1, items[k], imgs[k], cols[k], x, top + r*(h+gap), colW, h);
+  }
+  // CTA
+  jfPoligono(ctx, [[0,ctaTop+22],[W,ctaTop],[W,ctaTop+ctaH-22],[0,ctaTop+ctaH]]);
+  const gc = ctx.createLinearGradient(0,0,W,0); gc.addColorStop(0,'#8a6d0f'); gc.addColorStop(0.45,'#f0c040'); gc.addColorStop(1,'#c9a227');
+  ctx.fillStyle = gc; ctx.fill();
+  const cta = (e.cta || JF_TXT_CTA_DEF).toUpperCase();
+  const cierre = (e.cierre || JF_TXT_CIERRE_DEF).toUpperCase();
+  ctx.fillStyle = '#080808';
+  const sc = jfFit(ctx, cta, JF_BEBAS, W-90, 62, 34, 2); ctx.font = JF_BEBAS(sc);
+  jfTxt(ctx, cta, W/2, ctaTop+70, 2, 'center');
+  const sb = jfFit(ctx, cierre, JF_RAJ, W-110, 23, 14, 2); ctx.font = JF_RAJ(sb);
+  jfTxt(ctx, cierre, W/2, ctaTop+104, 2, 'center');
+  jfPie(ctx, W, H);
+}
+
+// ── Placa del GANADOR ────────────────────────────────────────
+
+async function jfGenerarGanador(ctx, W, H, story, e, it, img, col, id){
+  const dyT = story ? 170 : 0;           // baja los textos de arriba (zona segura de historias)
+  const dyB = story ? 170 : 12;           // sube los textos de abajo
+  const PH = story ? 1560 : 1060;        // alto del panel de foto
+  const xr = y => 440 - 0.2*y;           // borde diagonal (cae hacia la izquierda)
+  jfFondo(ctx, W, H);
+  // bandas diagonales: dorada + blanca + foto
+  jfPoligono(ctx, [[400,0],[W,0],[W,PH],[400-0.2*PH,PH]]);
+  ctx.fillStyle = jfOro(ctx, 0, 0, W, PH); ctx.fill();
+  jfPoligono(ctx, [[428,0],[W,0],[W,PH],[428-0.2*PH,PH]]);
+  ctx.fillStyle = '#f5f5f5'; ctx.fill();
+  // foto (con desvanecido hacia abajo)
+  const oc = document.createElement('canvas'); oc.width = W; oc.height = PH;
+  const o = oc.getContext('2d');
+  jfFondoFoto(o, 0, 0, W, PH, col);
+  const fx = 200, fw = W-fx;
+  if(img) jfPintarFoto(o, img, fx, 0, fw, PH, it.zoom, it.px, it.py);
+  else { o.globalAlpha = 0.3; await cvDrawEscudoCompleto(o, it.club||it.nombre, 560, PH*0.18, 460); o.globalAlpha = 1; }
+  const lg = o.createLinearGradient(0, 0, 420, 0); lg.addColorStop(0,'rgba(0,0,0,.55)'); lg.addColorStop(1,'rgba(0,0,0,0)');
+  o.fillStyle = lg; o.fillRect(0,0,420,PH);
+  o.globalCompositeOperation = 'destination-in';
+  const mg = o.createLinearGradient(0,0,0,PH);
+  mg.addColorStop(0,'rgba(0,0,0,1)'); mg.addColorStop(0.66,'rgba(0,0,0,1)'); mg.addColorStop(0.94,'rgba(0,0,0,0)');
+  o.fillStyle = mg; o.fillRect(0,0,W,PH);
+  ctx.save();
+  jfPoligono(ctx, [[440,0],[W,0],[W,PH],[440-0.2*PH,PH]]); ctx.clip();
+  ctx.drawImage(oc, 0, 0);
+  ctx.restore();
+  // degradé inferior para leer el texto
+  const bh = story ? 800 : 560;
+  const bg = ctx.createLinearGradient(0, H-bh, 0, H);
+  bg.addColorStop(0, 'rgba(8,8,8,0)'); bg.addColorStop(0.34, '#080808'); bg.addColorStop(1, '#080808');
+  ctx.fillStyle = bg; ctx.fillRect(0, H-bh, W, bh);
+  // encabezado y título
+  await jfEncabezado(ctx, 44+dyT, id, '');
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,.7)'; ctx.shadowBlur = 24; ctx.shadowOffsetY = 6;
+  if(e.fecha){
+    ctx.shadowColor = 'transparent';
+    ctx.fillStyle = '#f0c040'; ctx.font = JF_RAJ(26); jfTxt(ctx, e.fecha.toUpperCase(), 56, 169+dyT, 6);
+    ctx.shadowColor = 'rgba(0,0,0,.7)';
+  }
+  ctx.fillStyle = '#ffffff'; ctx.font = JF_BEBAS(150); ctx.fillText('JUGADOR', 56, 298+dyT);
+  ctx.font = JF_BEBAS(96); ctx.fillText('DE LA FECHA', 56, 391+dyT);
+  ctx.restore();
+  // sello "GANADOR"
+  const scx = W-70-95, scy = 165+dyT;
+  ctx.save();
+  ctx.translate(scx, scy); ctx.rotate(8*Math.PI/180);
+  ctx.shadowColor = 'rgba(0,0,0,.65)'; ctx.shadowBlur = 34; ctx.shadowOffsetY = 14;
+  const sg = ctx.createRadialGradient(-33,-38,0,0,0,95);
+  sg.addColorStop(0,'#fff2b0'); sg.addColorStop(0.4,'#f0c040'); sg.addColorStop(1,'#8a6d0f');
+  ctx.beginPath(); ctx.arc(0,0,95,0,Math.PI*2); ctx.fillStyle = sg; ctx.fill();
+  ctx.shadowColor = 'transparent';
+  ctx.beginPath(); ctx.arc(0,0,87,0,Math.PI*2); ctx.strokeStyle = 'rgba(0,0,0,.22)'; ctx.lineWidth = 8; ctx.stroke();
+  ctx.fillStyle = '#080808'; jfEstrella(ctx, 0, -50, 21); ctx.fill();
+  ctx.font = JF_BEBAS(54); jfTxt(ctx, 'GANADOR', 0, 14, 2, 'center');
+  ctx.font = JF_RAJ(19); jfTxt(ctx, 'VOTO POPULAR', 0, 46, 3, 'center');
+  ctx.restore();
+  // nombre
+  const sBase = H-258-dyB;
+  const nm = jfDividirNombre(it.nombre);
+  let tx = 56;
+  if(it.club){ await cvDrawEscudoCompleto(ctx, it.club, 56, sBase-162, 170); tx = 56+170+26; }
+  const apellido = nm.a.toUpperCase();
+  const asz = jfFit(ctx, apellido, JF_BEBAS, W-56-tx, 200, 90, 2);
+  ctx.font = JF_BEBAS(asz); ctx.fillStyle = jfOro(ctx, 0, sBase-asz*0.7, 0, sBase);
+  jfTxt(ctx, apellido, tx, sBase, 2);
+  if(nm.n){
+    const nsz = jfFit(ctx, nm.n.toUpperCase(), JF_BEBAS, W-56-tx, 74, 40, 3);
+    ctx.font = JF_BEBAS(nsz); ctx.fillStyle = '#ffffff';
+    jfTxt(ctx, nm.n.toUpperCase(), tx, sBase - asz*0.7 - 16, 3);
+  }
+  if(it.club){
+    ctx.fillStyle = '#f0c040';
+    const lineaClub = (it.club + (e.sub ? ' · ' + e.sub : '')).toUpperCase();
+    const csz = jfFit(ctx, lineaClub, JF_RAJ, W-112, 28, 16, 4); ctx.font = JF_RAJ(csz);
+    jfTxt(ctx, lineaClub, 56, H-214-dyB, 4);
+  }
+  // chips con los datos
+  const chips = String(it.dato||'').split(',').map(s=>s.trim()).filter(Boolean).slice(0,3);
+  let chx = 56; const chy = H-180-dyB;
+  ctx.font = JF_BEBAS(34);
+  for(const c of chips){
+    const t = c.toUpperCase(), cw = jfAncho(ctx, t, 1.5) + 40 + 8;
+    if(chx + cw > W-56) break;
+    ctx.fillStyle = '#f5f5f5'; ctx.fillRect(chx, chy, cw, 52);
+    ctx.fillStyle = '#c9a227'; ctx.fillRect(chx, chy, 8, 52);
+    ctx.fillStyle = '#111'; jfTxt(ctx, t, chx+28, chy+39, 1.5);
+    chx += cw + 12;
+  }
+  // resultado de la votación
+  const pctN = parseFloat(String(e.pct||'').replace(',','.'));
+  const tieneP = !isNaN(pctN);
+  const eleg = (e.elegido || JF_TXT_ELEGIDO_DEF).toUpperCase();
+  const vy = H-72-dyB;
+  ctx.fillStyle = '#dddddd'; ctx.font = JF_RAJ(22);
+  jfTxt(ctx, eleg, 56, vy-16, 2.5);
+  if(tieneP){
+    const p = Math.max(0, Math.min(100, pctN));
+    jfTxt(ctx, (Math.round(p*10)/10).toString().replace('.',',')+'% DE LOS VOTOS', W-56, vy-16, 2.5, 'right');
+    const bw = W-112;
+    ctx.save();
+    jfPoligono(ctx, [[56+10,vy],[56+bw,vy],[56+bw-10,vy+16],[56,vy+16]]); ctx.clip();
+    ctx.fillStyle = 'rgba(255,255,255,.11)'; ctx.fillRect(56, vy, bw, 16);
+    const gb = ctx.createLinearGradient(56,0,56+bw,0); gb.addColorStop(0,'#8a6d0f'); gb.addColorStop(1,'#f0c040');
+    ctx.fillStyle = gb; ctx.fillRect(56, vy, bw*p/100, 16);
+    ctx.restore();
+  }
+  jfPie(ctx, W, H);
+}
+
+// ── Punto de entrada ─────────────────────────────────────────
+// formato: 'post' (1080×1350) o 'historia' (1080×1920)
+async function generarImagenJugadorFecha(id, formato){
+  const e = (data.jugadoresFecha||[]).find(x=>x.id===id);
+  if(!e) return null;
   await document.fonts.ready;
+  const story = formato === 'historia';
+  const W = 1080, H = story ? 1920 : 1350;
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.textBaseline = 'alphabetic';
+  const max = e.tipo==='ganador' ? 1 : JF_MAX;
+  const items = [];
+  (e.jugadores||[]).slice(0,max).forEach((j,i)=>{ if(j && j.nombre) items.push(Object.assign({i}, j)); });
+  if(!items.length) return null;
+  const imgs = await Promise.all(items.map(it=>cargarImagenAsync((window._alinFotosCache||{})[jfFotoKey(e.id, it.i)])));
+  const cols = await Promise.all(items.map(it=>jfColorClub(it.club)));
   const identidad = getIdentidad();
-  const g = etGeomCompleto(e.tipo);
-  const W = g.W, H = g.H;
-  const canvas = document.createElement('canvas'); canvas.width = W; canvas.height = H;
-  const ctx = canvas.getContext('2d'); ctx.textBaseline = 'alphabetic';
-  const TC = { halo:'rgba(255,255,255,0)', logoFill:'#17171d', logoText:'#f0c040', logoRing:'#17171d' };
-
-  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
-  const liga = (identidad.nombre||'DEPORTEMAS').toUpperCase();
-  const anio = (e.anio||'').trim();
-  const titulo = (e.titulo || etTituloDefault(e.tipo));
-
-  // Pestaña dorada con el logo + título oscuro
-  const tab = ctx.createLinearGradient(0, 0, 160, 0);
-  tab.addColorStop(0, '#e8be40'); tab.addColorStop(1, '#c9a227');
-  ctx.fillStyle = tab; etRR(ctx, -40, 40, 200, 150, 24); ctx.fill();
-  await etDibujarLogo(ctx, identidad, 72, 40 + 75 - 46, 92, TC);
-  const tx = 196, tw = W - tx - 48;
-  const lineas = etDividirTitulo(titulo), dos = lineas.length > 1;
-  let sz = dos ? 90 : 112;
-  lineas.forEach(l=>{ sz = Math.min(sz, etAjustarFuente(ctx, l, '{s}px "Bebas Neue", Arial, sans-serif', tw, sz, 36)); });
-  ctx.fillStyle = '#14121c'; ctx.font = `${sz}px "Bebas Neue", Arial, sans-serif`; ctx.textAlign = 'left';
-  const y0 = 46 + sz*0.86;
-  lineas.forEach((l,k)=>ctx.fillText(l, tx, y0 + k*sz*0.9));
-  const yEnd = y0 + (lineas.length-1)*sz*0.9;
-  const subTxt = [ (e.sub||'').trim(), anio ].filter(Boolean).join('  ·  ');
-  if(subTxt){
-    ctx.fillStyle = '#6b6b78'; ctx.font = '600 28px "Rajdhani", Arial, sans-serif';
-    cvFillTextTrunc(ctx, subTxt, tx, yEnd + 36, tw);
-  }
-
-  const { jug, dt } = etJugadoresDe(e);
-  const centrar = false;
-  for(let k=0;k<jug.length;k++){
-    const p = etPosCelda(g, k, jug.length, centrar);
-    const col = await etColorClub(jug[k].club);
-    await etTileCompleto(ctx, jug[k], p.x, p.y, g, etFotoDe(e, jug[k]), col, false);
-  }
-  if(e.tipo === 'xi'){
-    const p = etPosCelda(g, 11, 12, false);
-    if(dt){
-      const col = await etColorClub(dt.club);
-      await etTileCompleto(ctx, dt, p.x, p.y, g, etFotoDe(e, dt), col, true);
-    } else {
-      const lsz = Math.min(150, Math.round(g.cellW*0.6));
-      await etDibujarLogo(ctx, identidad, p.x + g.cellW/2, p.y + g.cellH*0.22, lsz, TC);
-      ctx.textAlign = 'center'; ctx.fillStyle = '#14121c';
-      etAjustarFuente(ctx, liga, '800 {s}px "Rajdhani", Arial, sans-serif', g.cellW - 16, 28, 14);
-      ctx.fillText(liga, p.x + g.cellW/2, p.y + g.cellH*0.22 + lsz + 44);
-      if(anio){ ctx.fillStyle = '#c9a227'; ctx.font = '60px "Bebas Neue", Arial, sans-serif'; ctx.fillText(anio, p.x + g.cellW/2, p.y + g.cellH*0.22 + lsz + 104); }
-    }
-  }
-  ctx.textAlign = 'left';
+  if(e.tipo==='ganador') await jfGenerarGanador(ctx, W, H, story, e, items[0], imgs[0], cols[0], identidad);
+  else await jfGenerarVotacion(ctx, W, H, story, e, items, imgs, cols, identidad);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   return canvas;
 }
 </script>
