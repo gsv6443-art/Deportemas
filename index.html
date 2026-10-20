@@ -15974,62 +15974,62 @@ async function generarImagenPromoRacha(p){
 
   // ── Panel oscuro translúcido con título y filas ──
   const n = p.filas.length;
-  const panelW = 780, panelX = (W - panelW)/2;
-  const rowH = Math.min(132, Math.floor(640/n));
-  const maxTW = panelW - 90;
-  let tS = 96;
+  const panelW = 660, panelX = (W - panelW)/2;
+  const rowH = Math.min(96, Math.floor(520/n));
+  const maxTW = panelW - 60;
+  let tS = 72;
   const fT = sz => { ctx.font = `400 ${sz}px ${FB}`; setLS('3px'); };
   fT(tS);
   while(tS > 48 && ctx.measureText(p.titulo).width > maxTW){ tS -= 2; fT(tS); }
-  const subS = 30;
-  const tBase = 46 + tS*0.74;
-  const subBase = tBase + 22 + subS*0.74;
-  const rowsOff = (p.sub ? subBase + 30 : tBase + 30);
-  const panelH = rowsOff + n*rowH + 14;
-  const panelBottom = barY - 56;
+  const subS = 26;
+  const tBase = 36 + tS*0.74;
+  const subBase = tBase + 16 + subS*0.74;
+  const rowsOff = (p.sub ? subBase + 22 : tBase + 22);
+  const panelH = rowsOff + n*rowH + 10;
+  const panelBottom = barY - 44;
   const panelTop = panelBottom - panelH;
 
-  ctx.fillStyle = 'rgba(8,8,8,.80)';
+  ctx.fillStyle = 'rgba(8,8,8,.62)';
   ctx.fillRect(panelX, panelTop, panelW, panelH);
   ctx.fillStyle = C.DORADO;
-  ctx.fillRect(panelX, panelTop, panelW, 7);
+  ctx.fillRect(panelX, panelTop, panelW, 5);
 
   ctx.textAlign = 'center';
   ctx.fillStyle = '#ffffff'; fT(tS);
   cvFillTextTrunc(ctx, p.titulo, CX, panelTop + tBase, maxTW);
   setLS('0px');
   if(p.sub){
-    ctx.font = `700 ${subS}px ${FR}`; setLS('5px');
+    ctx.font = `700 ${subS}px ${FR}`; setLS('4px');
     ctx.fillStyle = C.DORADO2;
     cvFillTextTrunc(ctx, p.sub, CX, panelTop + subBase, maxTW);
     setLS('0px');
   }
 
   // ── Filas: [local] marcador [visitante], el equipo resaltado en dorado ──
-  const cs = Math.min(88, rowH - 34);
-  const numS = Math.min(96, Math.round(rowH*0.74));
+  const cs = Math.min(70, rowH - 26);
+  const numS = Math.min(78, Math.round(rowH*0.72));
   const rowsTop = panelTop + rowsOff;
   for(let i = 0; i < n; i++){
     const f = p.filas[i];
     const y0 = rowsTop + i*rowH, cy = y0 + rowH/2;
     ctx.fillStyle = 'rgba(255,255,255,.14)';
-    ctx.fillRect(panelX + 50, y0, panelW - 100, 2);
+    ctx.fillRect(panelX + 36, y0, panelW - 72, 2);
     const nomL = f.local ? p.equipo : f.rival;
     const nomV = f.local ? f.rival : p.equipo;
-    const xL = CX - 250 - cs/2, xR = CX + 250 - cs/2;
+    const xL = CX - 205 - cs/2, xR = CX + 205 - cs/2;
     await cvDrawEscudoCompleto(ctx, nomL, xL, cy - cs/2, cs);
     await cvDrawEscudoCompleto(ctx, nomV, xR, cy - cs/2, cs);
     ctx.fillStyle = C.DORADO;
-    ctx.fillRect(f.local ? xL : xR, cy + cs/2 + 6, cs, 5);
+    ctx.fillRect(f.local ? xL : xR, cy + cs/2 + 5, cs, 4);
     const gL = f.local ? f.ge : f.gr, gV = f.local ? f.gr : f.ge;
     ctx.font = `400 ${numS}px ${FB}`; setLS('2px');
     const base = cy + numS*0.36;
     ctx.textAlign = 'right';
     ctx.fillStyle = f.local ? C.DORADO2 : '#ffffff';
-    ctx.fillText(String(gL), CX - 38, base);
+    ctx.fillText(String(gL), CX - 30, base);
     ctx.textAlign = 'left';
     ctx.fillStyle = f.local ? '#ffffff' : C.DORADO2;
-    ctx.fillText(String(gV), CX + 38, base);
+    ctx.fillText(String(gV), CX + 30, base);
     ctx.textAlign = 'center';
     ctx.fillStyle = 'rgba(255,255,255,.75)';
     ctx.fillText('-', CX, base);
