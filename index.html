@@ -5149,6 +5149,7 @@ table.posiciones td:nth-child(8){
             <option value="uno">Un partido</option>
             <option value="tabla">Partido con título y tabla de posiciones (top 4)</option>
             <option value="campeon">Campeón y ascenso (club campeón con foto)</option>
+            <option value="racha">Racha de un equipo (últimos partidos)</option>
           </select>
         </div>
 
@@ -5280,6 +5281,68 @@ table.posiciones td:nth-child(8){
           </div>
           <p style="font-size:10px;color:var(--gris);margin-top:-4px;margin-bottom:14px;font-family:'Rajdhani',sans-serif">
             Muestra el partido con su título y, debajo, los primeros 4 puestos de la tabla elegida. Si elegís un partido guardado, la tabla se selecciona sola según su división y torneo. La foto es opcional y tiene corte diagonal.
+          </p>
+        </div>
+
+        <div id="promo-racha-wrap" style="display:none">
+          <div class="form-group">
+            <label>Equipo</label>
+            <input type="text" id="promo5-equipo" list="promo-equipos-datalist" placeholder="Nombre exacto del equipo"/>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Título (opcional)</label>
+              <input type="text" id="promo5-titulo" placeholder="Ej: 5 VICTORIAS SEGUIDAS"/>
+            </div>
+            <div class="form-group"><label>Subtítulo (opcional)</label>
+              <input type="text" id="promo5-sub" placeholder="Ej: ÚLTIMOS 5 DE VISITANTE"/>
+            </div>
+          </div>
+          <p style="font-size:10px;color:var(--gris);margin-top:-6px;margin-bottom:12px;font-family:'Rajdhani',sans-serif">
+            Si dejás el título vacío se arma solo (&quot;N VICTORIAS SEGUIDAS&quot;, &quot;INVICTO EN LOS ÚLTIMOS N&quot; o &quot;ÚLTIMOS N PARTIDOS&quot; según los resultados). Si dejás el subtítulo vacío se usa el nombre del equipo.
+          </p>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+            <select id="promo5-n" style="width:auto"><option>3</option><option>4</option><option selected>5</option><option>6</option></select>
+            <button type="button" class="btn-edit" onclick="promoRachaAutocompletar()">⚡ Autocompletar con los últimos partidos jugados</button>
+          </div>
+          <label style="display:block;margin-bottom:6px">Partidos (el primero va arriba; dejá el rival vacío para omitir una fila)</label>
+          <div style="display:grid;grid-template-columns:2fr 1.2fr .8fr .8fr;gap:6px;margin-bottom:6px">
+            <input type="text" id="promo5-r1" list="promo-equipos-datalist" placeholder="Rival 1"/>
+            <select id="promo5-c1"><option value="L">Local</option><option value="V">Visitante</option></select>
+            <input type="number" min="0" id="promo5-ge1" placeholder="Goles equipo"/>
+            <input type="number" min="0" id="promo5-gr1" placeholder="Goles rival"/>
+          </div>
+          <div style="display:grid;grid-template-columns:2fr 1.2fr .8fr .8fr;gap:6px;margin-bottom:6px">
+            <input type="text" id="promo5-r2" list="promo-equipos-datalist" placeholder="Rival 2"/>
+            <select id="promo5-c2"><option value="L">Local</option><option value="V">Visitante</option></select>
+            <input type="number" min="0" id="promo5-ge2" placeholder="Goles equipo"/>
+            <input type="number" min="0" id="promo5-gr2" placeholder="Goles rival"/>
+          </div>
+          <div style="display:grid;grid-template-columns:2fr 1.2fr .8fr .8fr;gap:6px;margin-bottom:6px">
+            <input type="text" id="promo5-r3" list="promo-equipos-datalist" placeholder="Rival 3"/>
+            <select id="promo5-c3"><option value="L">Local</option><option value="V">Visitante</option></select>
+            <input type="number" min="0" id="promo5-ge3" placeholder="Goles equipo"/>
+            <input type="number" min="0" id="promo5-gr3" placeholder="Goles rival"/>
+          </div>
+          <div style="display:grid;grid-template-columns:2fr 1.2fr .8fr .8fr;gap:6px;margin-bottom:6px">
+            <input type="text" id="promo5-r4" list="promo-equipos-datalist" placeholder="Rival 4"/>
+            <select id="promo5-c4"><option value="L">Local</option><option value="V">Visitante</option></select>
+            <input type="number" min="0" id="promo5-ge4" placeholder="Goles equipo"/>
+            <input type="number" min="0" id="promo5-gr4" placeholder="Goles rival"/>
+          </div>
+          <div style="display:grid;grid-template-columns:2fr 1.2fr .8fr .8fr;gap:6px;margin-bottom:6px">
+            <input type="text" id="promo5-r5" list="promo-equipos-datalist" placeholder="Rival 5"/>
+            <select id="promo5-c5"><option value="L">Local</option><option value="V">Visitante</option></select>
+            <input type="number" min="0" id="promo5-ge5" placeholder="Goles equipo"/>
+            <input type="number" min="0" id="promo5-gr5" placeholder="Goles rival"/>
+          </div>
+          <div style="display:grid;grid-template-columns:2fr 1.2fr .8fr .8fr;gap:6px;margin-bottom:6px">
+            <input type="text" id="promo5-r6" list="promo-equipos-datalist" placeholder="Rival 6"/>
+            <select id="promo5-c6"><option value="L">Local</option><option value="V">Visitante</option></select>
+            <input type="number" min="0" id="promo5-ge6" placeholder="Goles equipo"/>
+            <input type="number" min="0" id="promo5-gr6" placeholder="Goles rival"/>
+          </div>
+          <p style="font-size:10px;color:var(--gris);margin-top:2px;margin-bottom:14px;font-family:'Rajdhani',sans-serif">
+            El autocompletado toma los partidos jugados del equipo (sin Reserva), del más reciente al más viejo, y podés corregir cualquier fila a mano. En la imagen el local va a la izquierda y el visitante a la derecha; el marcador del equipo se resalta en dorado.
           </p>
         </div>
 
@@ -15000,6 +15063,8 @@ function promoCambiarModo(){
   if(u) u.style.display = modo === 'uno' ? '' : 'none';
   if(t) t.style.display = modo === 'tabla' ? '' : 'none';
   if(c) c.style.display = modo === 'campeon' ? '' : 'none';
+  const r5 = document.getElementById('promo-racha-wrap');
+  if(r5) r5.style.display = modo === 'racha' ? '' : 'none';
 }
 
 function promoCargarPartido3(){
@@ -15059,6 +15124,7 @@ function promoLimpiarForm(){
   const l3 = document.getElementById('promo3-lado'); if(l3) l3.value = 'izq';
   const defs4 = {'promo4-club':'','promo4-titulo':'CAMPEÓN','promo4-etiqueta':'Y ASCENSO','promo4-tag':'HISTÓRICO','promo4-sello':'B → A','promo4-subtitulo':'ASCIENDE A PRIMERA · 2026'};
   Object.keys(defs4).forEach(k=>{ const el = document.getElementById(k); if(el) el.value = defs4[k]; });
+  promoRachaLimpiar();
   promoQuitarFoto();
   promoQuitarLogoTorneo();
 }
@@ -15175,7 +15241,72 @@ function promoGenerarCampeon(){
   abrirShare(() => generarImagenPromoCampeon(p));
 }
 
+function promoRachaLimpiar(){
+  ['promo5-equipo','promo5-titulo','promo5-sub'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  for(let i=1;i<=6;i++){
+    ['promo5-r'+i,'promo5-ge'+i,'promo5-gr'+i].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+    const c=document.getElementById('promo5-c'+i); if(c) c.value='L';
+  }
+  const n=document.getElementById('promo5-n'); if(n) n.value='5';
+}
+
+function promoRachaAutocompletar(){
+  const equipo=(document.getElementById('promo5-equipo').value||'').trim();
+  if(!equipo){ alert('Elegí primero el equipo.'); return; }
+  const k=normalizar(equipo);
+  const n=Math.min(6, Math.max(1, parseInt(document.getElementById('promo5-n').value)||5));
+  const jugados=(data.partidos||[]).filter(p=>
+    p.estado==='jugado' && !p.esReserva && parsearResultado(p.resultado) &&
+    (normalizar(p.local)===k || normalizar(p.visit)===k)
+  ).sort((a,b)=> String(b.fecha||'').localeCompare(String(a.fecha||'')) || String(b.id||'').localeCompare(String(a.id||'')));
+  if(!jugados.length){ alert('No hay partidos jugados cargados para ese equipo.'); return; }
+  const sel=jugados.slice(0,n);
+  for(let i=1;i<=6;i++){
+    const p=sel[i-1];
+    const r=document.getElementById('promo5-r'+i), c=document.getElementById('promo5-c'+i);
+    const ge=document.getElementById('promo5-ge'+i), gr=document.getElementById('promo5-gr'+i);
+    if(!p){ r.value=''; c.value='L'; ge.value=''; gr.value=''; continue; }
+    const res=parsearResultado(p.resultado);
+    const esLocal=normalizar(p.local)===k;
+    r.value = esLocal ? p.visit : p.local;
+    c.value = esLocal ? 'L' : 'V';
+    ge.value = esLocal ? res.golesLocal : res.golesVisit;
+    gr.value = esLocal ? res.golesVisit : res.golesLocal;
+  }
+}
+
+function promoGenerarRacha(){
+  const val = id => (document.getElementById(id)||{value:''}).value.trim();
+  const equipo = val('promo5-equipo');
+  if(!equipo){ alert('Completá el equipo.'); return; }
+  const filas=[];
+  for(let i=1;i<=6;i++){
+    const rival=val('promo5-r'+i);
+    if(!rival) continue;
+    const ge=val('promo5-ge'+i), gr=val('promo5-gr'+i);
+    if(ge==='' || gr==='' || isNaN(Number(ge)) || isNaN(Number(gr))){
+      alert('Completá los goles del partido '+i+' (o dejá el rival vacío para omitir la fila).');
+      return;
+    }
+    filas.push({ rival, local: val('promo5-c'+i)!=='V', ge:Number(ge), gr:Number(gr) });
+  }
+  if(!filas.length){ alert('Cargá al menos un partido.'); return; }
+  const n=filas.length;
+  let titulo=val('promo5-titulo').toUpperCase();
+  if(!titulo){
+    if(n>1 && filas.every(f=>f.ge>f.gr))       titulo = n+' VICTORIAS SEGUIDAS';
+    else if(n>1 && filas.every(f=>f.ge>=f.gr)) titulo = 'INVICTO EN LOS ÚLTIMOS '+n;
+    else titulo = n>1 ? 'ÚLTIMOS '+n+' PARTIDOS' : 'ÚLTIMO PARTIDO';
+  }
+  const p={ equipo, titulo, sub:(val('promo5-sub')||equipo).toUpperCase(), filas, foto:_promoFoto||'' };
+  abrirShare(() => generarImagenPromoRacha(p));
+}
+
 function promoGenerar(){
+  if(document.getElementById('promo-modo') && document.getElementById('promo-modo').value === 'racha'){
+    promoGenerarRacha();
+    return;
+  }
   if(document.getElementById('promo-modo') && document.getElementById('promo-modo').value === 'campeon'){
     promoGenerarCampeon();
     return;
@@ -15774,6 +15905,138 @@ async function generarImagenPromoCampeon(p){
   }
 
   // ── Línea de color al pie + footer ──────────────────────────────
+  ctx.fillStyle = C.DORADO; ctx.fillRect(0, barY, W, 8);
+  cvFooter(ctx, W, footerTop, liga);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  return canvas;
+}
+
+async function generarImagenPromoRacha(p){
+  await document.fonts.ready;
+  const id   = getIdentidad();
+  const liga = id.nombre || 'DEPORTEMAS';
+  const W = CV_W, H = CV_H, CX = W/2;
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.textBaseline = 'alphabetic';
+  const FB = '"Bebas Neue", Arial, sans-serif';
+  const FR = '"Rajdhani", Arial, sans-serif';
+  const setLS = v => { if('letterSpacing' in ctx) ctx.letterSpacing = v; };
+
+  const [foto, logoImg] = await Promise.all([cargarImagenAsync(p.foto), cvImgAsync(id.logo)]);
+
+  // ── Fondo: foto a pantalla completa (o fondo oscuro con brillo dorado) ──
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#2c2c32'); bg.addColorStop(1, '#0c0c0e');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  if(foto){
+    const iw = foto.naturalWidth || foto.width || 1, ih = foto.naturalHeight || foto.height || 1;
+    const sc = Math.max(W/iw, H/ih);
+    const dw = iw*sc, dh = ih*sc;
+    ctx.drawImage(foto, (W-dw)/2, (H-dh)*0.3, dw, dh);
+  } else {
+    const rg = ctx.createRadialGradient(CX, H*0.32, 40, CX, H*0.32, 700);
+    rg.addColorStop(0, 'rgba(201,162,39,0.28)'); rg.addColorStop(1, 'rgba(201,162,39,0)');
+    ctx.fillStyle = rg; ctx.fillRect(0, 0, W, H);
+    if(logoImg){
+      const WS = 560;
+      ctx.save(); ctx.globalAlpha = 0.07;
+      ctx.beginPath(); ctx.arc(CX, H*0.3, WS/2, 0, Math.PI*2); ctx.clip();
+      cvDrawEscudoImg(ctx, logoImg, CX-WS/2, H*0.3-WS/2, WS); ctx.restore();
+    }
+  }
+  ctx.fillStyle = 'rgba(0,0,0,.14)'; ctx.fillRect(0, 0, W, H);
+  const gT = ctx.createLinearGradient(0, 0, 0, 260);
+  gT.addColorStop(0, 'rgba(0,0,0,.75)'); gT.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = gT; ctx.fillRect(0, 0, W, 260);
+
+  const footH = s(40), footerTop = H - footH;
+  const barY = footerTop - 8;
+
+  // ── Logo + nombre de la liga (arriba a la izquierda) ──
+  {
+    const lx = 60, ly = 60, ls = 92;
+    let tx = lx;
+    if(logoImg){
+      ctx.save(); ctx.beginPath(); ctx.arc(lx+ls/2, ly+ls/2, ls/2, 0, Math.PI*2); ctx.clip();
+      cvDrawEscudoImg(ctx, logoImg, lx, ly, ls); ctx.restore();
+      ctx.lineWidth = 3; ctx.strokeStyle = C.DORADO;
+      ctx.beginPath(); ctx.arc(lx+ls/2, ly+ls/2, ls/2+1, 0, Math.PI*2); ctx.stroke();
+      tx = lx + ls + 24;
+    }
+    ctx.font = `400 42px ${FB}`; setLS('4px');
+    ctx.fillStyle = '#ffffff'; ctx.textAlign = 'left';
+    ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 14; ctx.shadowOffsetY = 3;
+    cvFillTextTrunc(ctx, liga.toUpperCase(), tx, ly + ls/2 + 15, W - tx - 60);
+    ctx.shadowBlur = 0; ctx.shadowOffsetY = 0; setLS('0px');
+  }
+
+  // ── Panel oscuro translúcido con título y filas ──
+  const n = p.filas.length;
+  const panelW = 780, panelX = (W - panelW)/2;
+  const rowH = Math.min(132, Math.floor(640/n));
+  const maxTW = panelW - 90;
+  let tS = 96;
+  const fT = sz => { ctx.font = `400 ${sz}px ${FB}`; setLS('3px'); };
+  fT(tS);
+  while(tS > 48 && ctx.measureText(p.titulo).width > maxTW){ tS -= 2; fT(tS); }
+  const subS = 30;
+  const tBase = 46 + tS*0.74;
+  const subBase = tBase + 22 + subS*0.74;
+  const rowsOff = (p.sub ? subBase + 30 : tBase + 30);
+  const panelH = rowsOff + n*rowH + 14;
+  const panelBottom = barY - 56;
+  const panelTop = panelBottom - panelH;
+
+  ctx.fillStyle = 'rgba(8,8,8,.80)';
+  ctx.fillRect(panelX, panelTop, panelW, panelH);
+  ctx.fillStyle = C.DORADO;
+  ctx.fillRect(panelX, panelTop, panelW, 7);
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#ffffff'; fT(tS);
+  cvFillTextTrunc(ctx, p.titulo, CX, panelTop + tBase, maxTW);
+  setLS('0px');
+  if(p.sub){
+    ctx.font = `700 ${subS}px ${FR}`; setLS('5px');
+    ctx.fillStyle = C.DORADO2;
+    cvFillTextTrunc(ctx, p.sub, CX, panelTop + subBase, maxTW);
+    setLS('0px');
+  }
+
+  // ── Filas: [local] marcador [visitante], el equipo resaltado en dorado ──
+  const cs = Math.min(88, rowH - 34);
+  const numS = Math.min(96, Math.round(rowH*0.74));
+  const rowsTop = panelTop + rowsOff;
+  for(let i = 0; i < n; i++){
+    const f = p.filas[i];
+    const y0 = rowsTop + i*rowH, cy = y0 + rowH/2;
+    ctx.fillStyle = 'rgba(255,255,255,.14)';
+    ctx.fillRect(panelX + 50, y0, panelW - 100, 2);
+    const nomL = f.local ? p.equipo : f.rival;
+    const nomV = f.local ? f.rival : p.equipo;
+    const xL = CX - 250 - cs/2, xR = CX + 250 - cs/2;
+    await cvDrawEscudoCompleto(ctx, nomL, xL, cy - cs/2, cs);
+    await cvDrawEscudoCompleto(ctx, nomV, xR, cy - cs/2, cs);
+    ctx.fillStyle = C.DORADO;
+    ctx.fillRect(f.local ? xL : xR, cy + cs/2 + 6, cs, 5);
+    const gL = f.local ? f.ge : f.gr, gV = f.local ? f.gr : f.ge;
+    ctx.font = `400 ${numS}px ${FB}`; setLS('2px');
+    const base = cy + numS*0.36;
+    ctx.textAlign = 'right';
+    ctx.fillStyle = f.local ? C.DORADO2 : '#ffffff';
+    ctx.fillText(String(gL), CX - 38, base);
+    ctx.textAlign = 'left';
+    ctx.fillStyle = f.local ? '#ffffff' : C.DORADO2;
+    ctx.fillText(String(gV), CX + 38, base);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(255,255,255,.75)';
+    ctx.fillText('-', CX, base);
+    setLS('0px');
+  }
+
+  // ── Línea dorada al pie + footer ──
   ctx.fillStyle = C.DORADO; ctx.fillRect(0, barY, W, 8);
   cvFooter(ctx, W, footerTop, liga);
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
