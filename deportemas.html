@@ -5301,7 +5301,7 @@ table.posiciones td:nth-child(8){
             Si dejás el título vacío se arma solo (&quot;N VICTORIAS SEGUIDAS&quot;, &quot;INVICTO EN LOS ÚLTIMOS N&quot; o &quot;ÚLTIMOS N PARTIDOS&quot; según los resultados). Si dejás el subtítulo vacío se usa el nombre del equipo.
           </p>
           <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
-            <select id="promo5-n" style="width:auto"><option>3</option><option>4</option><option selected>5</option><option>6</option></select>
+            <select id="promo5-n" style="width:auto"><option>3</option><option>4</option><option selected>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option></select>
             <button type="button" class="btn-edit" onclick="promoRachaAutocompletar()">⚡ Autocompletar con los últimos partidos jugados</button>
           </div>
           <label style="display:block;margin-bottom:6px">Partidos (el primero va arriba; dejá el rival vacío para omitir una fila)</label>
@@ -5340,6 +5340,30 @@ table.posiciones td:nth-child(8){
             <select id="promo5-c6"><option value="L">Local</option><option value="V">Visitante</option></select>
             <input type="number" min="0" id="promo5-ge6" placeholder="Goles equipo"/>
             <input type="number" min="0" id="promo5-gr6" placeholder="Goles rival"/>
+          </div>
+          <div style="display:grid;grid-template-columns:2fr 1.2fr .8fr .8fr;gap:6px;margin-bottom:6px">
+            <input type="text" id="promo5-r7" list="promo-equipos-datalist" placeholder="Rival 7"/>
+            <select id="promo5-c7"><option value="L">Local</option><option value="V">Visitante</option></select>
+            <input type="number" min="0" id="promo5-ge7" placeholder="Goles equipo"/>
+            <input type="number" min="0" id="promo5-gr7" placeholder="Goles rival"/>
+          </div>
+          <div style="display:grid;grid-template-columns:2fr 1.2fr .8fr .8fr;gap:6px;margin-bottom:6px">
+            <input type="text" id="promo5-r8" list="promo-equipos-datalist" placeholder="Rival 8"/>
+            <select id="promo5-c8"><option value="L">Local</option><option value="V">Visitante</option></select>
+            <input type="number" min="0" id="promo5-ge8" placeholder="Goles equipo"/>
+            <input type="number" min="0" id="promo5-gr8" placeholder="Goles rival"/>
+          </div>
+          <div style="display:grid;grid-template-columns:2fr 1.2fr .8fr .8fr;gap:6px;margin-bottom:6px">
+            <input type="text" id="promo5-r9" list="promo-equipos-datalist" placeholder="Rival 9"/>
+            <select id="promo5-c9"><option value="L">Local</option><option value="V">Visitante</option></select>
+            <input type="number" min="0" id="promo5-ge9" placeholder="Goles equipo"/>
+            <input type="number" min="0" id="promo5-gr9" placeholder="Goles rival"/>
+          </div>
+          <div style="display:grid;grid-template-columns:2fr 1.2fr .8fr .8fr;gap:6px;margin-bottom:6px">
+            <input type="text" id="promo5-r10" list="promo-equipos-datalist" placeholder="Rival 10"/>
+            <select id="promo5-c10"><option value="L">Local</option><option value="V">Visitante</option></select>
+            <input type="number" min="0" id="promo5-ge10" placeholder="Goles equipo"/>
+            <input type="number" min="0" id="promo5-gr10" placeholder="Goles rival"/>
           </div>
           <p style="font-size:10px;color:var(--gris);margin-top:2px;margin-bottom:14px;font-family:'Rajdhani',sans-serif">
             El autocompletado toma los partidos jugados del equipo (sin Reserva), del más reciente al más viejo, y podés corregir cualquier fila a mano. En la imagen el local va a la izquierda y el visitante a la derecha; el marcador del equipo se resalta en dorado.
@@ -15243,7 +15267,7 @@ function promoGenerarCampeon(){
 
 function promoRachaLimpiar(){
   ['promo5-equipo','promo5-titulo','promo5-sub'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
-  for(let i=1;i<=6;i++){
+  for(let i=1;i<=10;i++){
     ['promo5-r'+i,'promo5-ge'+i,'promo5-gr'+i].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
     const c=document.getElementById('promo5-c'+i); if(c) c.value='L';
   }
@@ -15254,14 +15278,14 @@ function promoRachaAutocompletar(){
   const equipo=(document.getElementById('promo5-equipo').value||'').trim();
   if(!equipo){ alert('Elegí primero el equipo.'); return; }
   const k=normalizar(equipo);
-  const n=Math.min(6, Math.max(1, parseInt(document.getElementById('promo5-n').value)||5));
+  const n=Math.min(10, Math.max(1, parseInt(document.getElementById('promo5-n').value)||5));
   const jugados=(data.partidos||[]).filter(p=>
     p.estado==='jugado' && !p.esReserva && parsearResultado(p.resultado) &&
     (normalizar(p.local)===k || normalizar(p.visit)===k)
   ).sort((a,b)=> String(b.fecha||'').localeCompare(String(a.fecha||'')) || String(b.id||'').localeCompare(String(a.id||'')));
   if(!jugados.length){ alert('No hay partidos jugados cargados para ese equipo.'); return; }
   const sel=jugados.slice(0,n);
-  for(let i=1;i<=6;i++){
+  for(let i=1;i<=10;i++){
     const p=sel[i-1];
     const r=document.getElementById('promo5-r'+i), c=document.getElementById('promo5-c'+i);
     const ge=document.getElementById('promo5-ge'+i), gr=document.getElementById('promo5-gr'+i);
@@ -15280,7 +15304,7 @@ function promoGenerarRacha(){
   const equipo = val('promo5-equipo');
   if(!equipo){ alert('Completá el equipo.'); return; }
   const filas=[];
-  for(let i=1;i<=6;i++){
+  for(let i=1;i<=10;i++){
     const rival=val('promo5-r'+i);
     if(!rival) continue;
     const ge=val('promo5-ge'+i), gr=val('promo5-gr'+i);
@@ -15911,6 +15935,38 @@ async function generarImagenPromoCampeon(p){
   return canvas;
 }
 
+function cvFooterRacha(ctx, W, top, hgt, liga, logoImg){
+  const FB = '"Bebas Neue", Arial, sans-serif';
+  const FR = '"Rajdhani", Arial, sans-serif';
+  const setLS = v => { if('letterSpacing' in ctx) ctx.letterSpacing = v; };
+  const g = ctx.createLinearGradient(0, top, 0, top + hgt);
+  g.addColorStop(0, '#15151c'); g.addColorStop(1, '#08080b');
+  ctx.fillStyle = g; ctx.fillRect(0, top, W, hgt);
+  ctx.fillStyle = C.DORADO; ctx.fillRect(0, top, W, 5);
+  const cy = top + 5 + (hgt - 5)/2;
+  let x = 60;
+  if(logoImg){
+    const ls = 56;
+    ctx.save(); ctx.beginPath(); ctx.arc(x + ls/2, cy, ls/2, 0, Math.PI*2); ctx.clip();
+    cvDrawEscudoImg(ctx, logoImg, x, cy - ls/2, ls); ctx.restore();
+    ctx.lineWidth = 2; ctx.strokeStyle = C.DORADO;
+    ctx.beginPath(); ctx.arc(x + ls/2, cy, ls/2 + 1, 0, Math.PI*2); ctx.stroke();
+    x += ls + 20;
+  }
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.font = `400 46px ${FB}`; setLS('5px');
+  ctx.fillStyle = '#ffffff';
+  cvFillTextTrunc(ctx, String(liga || 'DEPORTEMAS').toUpperCase(), x, cy + 17, 420);
+  ctx.textAlign = 'right';
+  ctx.font = `700 19px ${FR}`; setLS('4px');
+  ctx.fillStyle = 'rgba(255,255,255,.62)';
+  ctx.fillText('SEGUÍ TODA LA LIGA EN', W - 60, cy - 8);
+  ctx.font = `700 33px ${FR}`; setLS('1px');
+  ctx.fillStyle = C.DORADO2;
+  ctx.fillText('deportemas.pages.dev', W - 60, cy + 28);
+  setLS('0px'); ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+}
+
 async function generarImagenPromoRacha(p){
   await document.fonts.ready;
   const id   = getIdentidad();
@@ -15951,8 +16007,8 @@ async function generarImagenPromoRacha(p){
   gT.addColorStop(0, 'rgba(0,0,0,.75)'); gT.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = gT; ctx.fillRect(0, 0, W, 260);
 
-  const footH = s(40), footerTop = H - footH;
-  const barY = footerTop - 8;
+  const footH = 96, footerTop = H - footH;
+  const barY = footerTop;
 
   // ── Logo + nombre de la liga (arriba a la izquierda) ──
   {
@@ -15975,18 +16031,18 @@ async function generarImagenPromoRacha(p){
   // ── Panel oscuro translúcido con título y filas ──
   const n = p.filas.length;
   const panelW = 660, panelX = (W - panelW)/2;
-  const rowH = Math.min(96, Math.floor(520/n));
+  const rowH = n <= 6 ? Math.min(96, Math.floor(520/n)) : Math.min(86, Math.floor(640/n));
   const maxTW = panelW - 60;
   let tS = 72;
   const fT = sz => { ctx.font = `400 ${sz}px ${FB}`; setLS('3px'); };
   fT(tS);
-  while(tS > 48 && ctx.measureText(p.titulo).width > maxTW){ tS -= 2; fT(tS); }
+  while(tS > 36 && ctx.measureText(p.titulo).width > maxTW){ tS -= 2; fT(tS); }
   const subS = 26;
   const tBase = 36 + tS*0.74;
   const subBase = tBase + 16 + subS*0.74;
   const rowsOff = (p.sub ? subBase + 22 : tBase + 22);
   const panelH = rowsOff + n*rowH + 10;
-  const panelBottom = barY - 44;
+  const panelBottom = footerTop - 44;
   const panelTop = panelBottom - panelH;
 
   ctx.fillStyle = 'rgba(8,8,8,.62)';
@@ -16006,7 +16062,7 @@ async function generarImagenPromoRacha(p){
   }
 
   // ── Filas: [local] marcador [visitante], el equipo resaltado en dorado ──
-  const cs = Math.min(70, rowH - 26);
+  const cs = Math.min(70, rowH - 20);
   const numS = Math.min(78, Math.round(rowH*0.72));
   const rowsTop = panelTop + rowsOff;
   for(let i = 0; i < n; i++){
@@ -16037,8 +16093,7 @@ async function generarImagenPromoRacha(p){
   }
 
   // ── Línea dorada al pie + footer ──
-  ctx.fillStyle = C.DORADO; ctx.fillRect(0, barY, W, 8);
-  cvFooter(ctx, W, footerTop, liga);
+  cvFooterRacha(ctx, W, footerTop, footH, liga, logoImg);
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   return canvas;
 }
