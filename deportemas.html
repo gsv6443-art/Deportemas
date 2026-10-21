@@ -15996,9 +15996,9 @@ async function generarImagenPromoRacha(p){
 
   // ── Panel oscuro translúcido con título y filas ──
   const n = p.filas.length;
-  const panelW = 660, panelX = (W - panelW)/2;
+  const panelW = 540, panelX = (W - panelW)/2;
   const rowH = n <= 6 ? Math.min(96, Math.floor(520/n)) : Math.min(86, Math.floor(640/n));
-  const maxTW = panelW - 60;
+  const maxTW = panelW - 50;
   let tS = 72;
   const fT = sz => { ctx.font = `400 ${sz}px ${FB}`; setLS('3px'); };
   fT(tS);
@@ -16035,10 +16035,10 @@ async function generarImagenPromoRacha(p){
     const f = p.filas[i];
     const y0 = rowsTop + i*rowH, cy = y0 + rowH/2;
     ctx.fillStyle = 'rgba(255,255,255,.14)';
-    ctx.fillRect(panelX + 36, y0, panelW - 72, 2);
+    ctx.fillRect(panelX + 28, y0, panelW - 56, 2);
     const nomL = f.local ? p.equipo : f.rival;
     const nomV = f.local ? f.rival : p.equipo;
-    const xL = CX - 205 - cs/2, xR = CX + 205 - cs/2;
+    const xL = CX - 160 - cs/2, xR = CX + 160 - cs/2;
     await cvDrawEscudoCompleto(ctx, nomL, xL, cy - cs/2, cs);
     await cvDrawEscudoCompleto(ctx, nomV, xR, cy - cs/2, cs);
     ctx.fillStyle = C.DORADO;
