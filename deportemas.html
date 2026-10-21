@@ -8288,7 +8288,7 @@ function renderPosicionesSegunda(){
       return (p.zona||'')===(zona||'');
     })];
     const parts=data.partidos.filter(p=>{
-      if(p.div!=='segunda'||p.estado!=='jugado') return false;
+      if(p.div!=='segunda'||p.estado!=='jugado'||p.esReserva||p.esPlayoff) return false;
       if(zona===null) return (p.faseRes||p.fase||'fase1')===fase;
       if(!zona) return (p.faseRes||p.fase||'fase1')===fase;
       return (p.faseRes||p.fase||'fase1')===fase && (p.zona||'')===(zona||'');
@@ -10305,8 +10305,8 @@ function updateAdminPartidoDiv(){
   const esReservaSegunda = esReserva && efectivo==='segunda';
   document.getElementById('p-torneo-wrap').style.display=esPrimera?'':'none';
   document.getElementById('p-torneo-extra-wrap').style.display=esExtra?'':'none';
-  document.getElementById('p-playoff-wrap').style.display=esPrimera?'':'none';
-  if(!esPrimera){
+  document.getElementById('p-playoff-wrap').style.display=esExtra?'none':'';
+  if(esExtra){
     const chk=document.getElementById('p-es-playoff'); if(chk) chk.checked=false;
   }
   updateAdminPenalesVis('p');
@@ -10360,8 +10360,8 @@ function edUpdateDivVis(){
   const torneoExtraWrap=document.getElementById('ed-torneo-extra-wrap');
   if(torneoExtraWrap) torneoExtraWrap.style.display = esExtra ? '' : 'none';
   const playoffWrap=document.getElementById('ed-playoff-wrap');
-  if(playoffWrap) playoffWrap.style.display = esPrimera ? '' : 'none';
-  if(!esPrimera){
+  if(playoffWrap) playoffWrap.style.display = esExtra ? 'none' : '';
+  if(esExtra){
     const chk=document.getElementById('ed-es-playoff'); if(chk) chk.checked=false;
   }
   updateAdminPenalesVis('ed');
@@ -10442,6 +10442,11 @@ function agregarPartido(){
     d.faseRes=document.getElementById('p-fase-res').value;
     if(d.faseRes==='fase1'||d.faseRes==='fase2') d.zona=document.getElementById('p-zona').value||'';
     else d.zona='';
+  }
+  if(div==='segunda'){
+    d.esPlayoff=document.getElementById('p-es-playoff').checked;
+    d.tienePenales = d.esPlayoff ? document.getElementById('p-tiene-penales').checked : false;
+    d.penales = d.tienePenales ? document.getElementById('p-penales').value.trim() : '';
   }
   if(!d.local||!d.visit){alert('Completá local y visitante');return;}
   data.partidos.push(d);
@@ -11068,13 +11073,13 @@ function abrirModalEdicion(tipo,id,objOverride){
           </div>
         </div>
       </div>
-      <div class="form-group" ${esPrimera?'':'style="display:none"'} id="ed-playoff-wrap">
+      <div class="form-group" ${!esExtraObj?'':'style="display:none"'} id="ed-playoff-wrap">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
           <input type="checkbox" id="ed-es-playoff" ${obj.esPlayoff?'checked':''} onchange="updateAdminPenalesVis('ed')" style="width:16px;height:16px;accent-color:var(--dorado)"/>
           <span>Partido de Play Off <span style="color:var(--gris);font-size:11px">(no suma en tabla de posiciones, sí en goleadores)</span></span>
         </label>
       </div>
-      <div class="form-group" ${(esPrimera&&obj.esPlayoff)?'':'style="display:none"'} id="ed-penales-wrap">
+      <div class="form-group" ${(!esExtraObj&&obj.esPlayoff)?'':'style="display:none"'} id="ed-penales-wrap">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
           <input type="checkbox" id="ed-tiene-penales" ${obj.tienePenales?'checked':''} onchange="togglePenalesInput('ed')" style="width:16px;height:16px;accent-color:var(--dorado)"/>
           <span>Se definió por penales</span>
@@ -11609,6 +11614,13 @@ function guardarEdicion(tipo,id){
       else delete updated.zona;
       delete updated.torneo;delete updated.torneoExtra;delete updated.logoExtra;
       delete updated.esProvincial;delete updated.provincialCategoria;delete updated.provincialZona;
+    }
+    if(divVal==='segunda'){
+      const chkS=document.getElementById('ed-es-playoff');
+      updated.esPlayoff=chkS?chkS.checked:false;
+      const chkPenS=document.getElementById('ed-tiene-penales');
+      updated.tienePenales = updated.esPlayoff ? (chkPenS?chkPenS.checked:false) : false;
+      updated.penales = updated.tienePenales ? val('ed-penales').trim() : '';
     }
     updated.esReserva=esReserva;
     updated.torneoReserva=null;
@@ -12795,7 +12807,7 @@ function s3BloqueLabel(b){return b==='po'?'Play Off Repechaje':'Cuadro principal
 function s3Posiciones(zona){
   const faseDe=p=>(p.faseRes||p.fase||'fase1');
   const registros=(data.posiciones||[]).filter(p=>p.div==='segunda'&&p.fase==='fase2'&&(p.zona||'')===zona);
-  const parts=(data.partidos||[]).filter(p=>p.div==='segunda'&&p.estado==='jugado'&&faseDe(p)==='fase2'&&(p.zona||'')===zona);
+  const parts=(data.partidos||[]).filter(p=>p.div==='segunda'&&p.estado==='jugado'&&!p.esReserva&&!p.esPlayoff&&faseDe(p)==='fase2'&&(p.zona||'')===zona);
   return ordenarConDesempate(registros,parts);
 }
 
@@ -15226,7 +15238,7 @@ function _promoPosiciones3(clave){
       return true;
     });
     const partsSeg = (data.partidos||[]).filter(p=>{
-      if(p.div!=='segunda' || p.estado!=='jugado') return false;
+      if(p.div!=='segunda' || p.estado!=='jugado' || p.esReserva || p.esPlayoff) return false;
       const faseP = p.faseRes || p.fase || 'fase1';
       if(zona) return faseP===fase && (p.zona||'')===zona;
       return faseP===fase;
@@ -16916,7 +16928,7 @@ async function generarImagenPosiciones(){
       return true;
     })];
     const partsSeg = data.partidos.filter(p=>{
-      if(p.div!=='segunda'||p.estado!=='jugado') return false;
+      if(p.div!=='segunda'||p.estado!=='jugado'||p.esReserva||p.esPlayoff) return false;
       const faseP = p.faseRes||p.fase||'fase1';
       if(zona) return faseP===fase && (p.zona||'')===(zona||'');
       return faseP===fase;
