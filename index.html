@@ -7888,7 +7888,7 @@ function renderPosiciones(){
         Object.values(map).map(p=>({...p, dg:(p.gf-p.gc>=0?'+':'')+(p.gf-p.gc)})),
         'primera'
       ),
-      data.partidos.filter(p=>p.div==='primera')
+      data.partidos.filter(p=>p.div==='primera'&&!p.esReserva&&!p.esPlayoff)
     );
 
     if(!gen.length){
@@ -7939,7 +7939,7 @@ function renderPosiciones(){
   }
 
   // ---- PRIMERA DIVISIÓN: por torneo ----
-  const partsTorneo = data.partidos.filter(p=>p.div===div&&(p.torneo||'apertura')===torneo&&p.estado==='jugado');
+  const partsTorneo = data.partidos.filter(p=>p.div===div&&(p.torneo||'apertura')===torneo&&p.estado==='jugado'&&!p.esReserva&&!p.esPlayoff);
   const pos = ordenarConDesempate(
     completarConEquiposSinPartidos(
       [...data.posiciones.filter(p=>p.div===div&&(p.torneo||'apertura')===torneo)],
@@ -15246,12 +15246,12 @@ function _promoPosiciones3(clave){
     });
     pos = ordenarConDesempate(
       completarConEquiposSinPartidos(Object.values(map), 'primera'),
-      (data.partidos||[]).filter(p=>p.div==='primera')
+      (data.partidos||[]).filter(p=>p.div==='primera'&&!p.esReserva&&!p.esPlayoff)
     );
     subtitulo = 'Tabla General · Primera División';
   } else {
     const torneo = a || 'apertura';
-    const partsTorneo = (data.partidos||[]).filter(p=>p.div==='primera' && (p.torneo||'apertura')===torneo && p.estado==='jugado');
+    const partsTorneo = (data.partidos||[]).filter(p=>p.div==='primera' && (p.torneo||'apertura')===torneo && p.estado==='jugado' && !p.esReserva && !p.esPlayoff);
     pos = ordenarConDesempate(
       completarConEquiposSinPartidos(
         [...(data.posiciones||[]).filter(p=>p.div==='primera' && (p.torneo||'apertura')===torneo)],
@@ -16941,12 +16941,12 @@ async function generarImagenPosiciones(){
         Object.values(map).map(p=>({...p, dg:(p.gf-p.gc>=0?'+':'')+(p.gf-p.gc)})),
         'primera'
       ),
-      data.partidos.filter(p=>p.div==='primera')
+      data.partidos.filter(p=>p.div==='primera'&&!p.esReserva&&!p.esPlayoff)
     );
     tituloPosiciones='Tabla General';
     subtitulo='Primera División';
   } else {
-    const partsTorneo = data.partidos.filter(p=>p.div===div&&(p.torneo||'apertura')===torneo&&p.estado==='jugado');
+    const partsTorneo = data.partidos.filter(p=>p.div===div&&(p.torneo||'apertura')===torneo&&p.estado==='jugado'&&!p.esReserva&&!p.esPlayoff);
     pos = ordenarConDesempate(
       completarConEquiposSinPartidos(
         [...data.posiciones.filter(p=>p.div===div&&(p.torneo||'apertura')===torneo)],
