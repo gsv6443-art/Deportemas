@@ -5447,7 +5447,7 @@ table.posiciones td:nth-child(8){
           <div class="form-group"><label>Diseño</label>
             <select id="promo7-diseno" onchange="promoRadioCambiarDiseno()">
               <option value="partido">Un partido (titular + escudos + dial de la radio)</option>
-              <option value="cartelera">Cartelera de partidos (hasta 4, con la radio arriba)</option>
+              <option value="cartelera">Cartelera de partidos (hasta 8, con la radio arriba)</option>
             </select>
           </div>
           <div class="form-row">
@@ -5471,7 +5471,15 @@ table.posiciones td:nth-child(8){
             <div class="form-group"><label>Título · renglón de color</label><input type="text" id="promo7-t2" placeholder="Ej: CLÁSICO"/></div>
           </div>
           <datalist id="promo7-estadios-dl"></datalist>
+          <div class="form-group" id="promo7-dia-wrap"><label>⚡ Cargar todos los partidos de un día</label>
+            <select id="promo7-dia-sel" onchange="promoRadioCargarDia()"><option value="">— Elegí la fecha / día —</option></select>
+          </div>
+          <div class="form-group"><label>Estadio para todos (se usa si un partido no tiene el suyo)</label>
+            <input type="text" id="promo7-est-todos" list="promo7-estadios-dl" placeholder="Ej: Estadio Municipal"/>
+          </div>
+          <div class="form-group" id="promo7-orden-wrap"><label><input type="checkbox" id="promo7-orden" checked style="width:auto;margin-right:6px;vertical-align:middle"/>Mostrar primero los partidos con relato</label></div>
           <div id="promo7-slots"></div>
+          <button type="button" class="btn-edit" id="promo7-mas" onclick="promoRadioMasPartidos()" style="margin-bottom:12px">➕ Agregar otro partido</button>
           <div class="form-group">
             <label>Foto de fondo (opcional)</label>
             <input type="file" accept="image/*" id="promo7-foto-file" onchange="promoRadioPreviewFoto(this)"/>
@@ -15117,8 +15125,8 @@ function hgGenerarImagenEvento(evento){
 // Imagen para anunciar la cobertura de la radio de uno o varios partidos de la liga.
 // Dos diseños: "partido" (titular + escudos + dial de la radio) y "cartelera" (hasta 4 partidos).
 const PROMO7_THEMES = {
-  dorado:  { acc:'#f0c040', bar:'#ffffff', base:'#080808', rgb:'8,8,8',   glow:'rgba(201,162,39,0.30)', sub:'#d9d9d9' },
-  celeste: { acc:'#74ACDF', bar:'#F6B40E', base:'#061A33', rgb:'6,26,51', glow:'rgba(116,172,223,0.32)', sub:'#d7e8f7' },
+  dorado:  { acc:'#f0c040', accRgb:'240,192,64', bar:'#ffffff', base:'#080808', rgb:'8,8,8',   glow:'rgba(201,162,39,0.30)', sub:'#d9d9d9' },
+  celeste: { acc:'#74ACDF', accRgb:'116,172,223', bar:'#F6B40E', base:'#061A33', rgb:'6,26,51', glow:'rgba(116,172,223,0.32)', sub:'#d7e8f7' },
 };
 const PROMO7_LS = 'promo7_cfg';
 const PROMO7_LS_EST = 'promo7_estadios';
@@ -15143,7 +15151,7 @@ function promoRadioInit(){
   if(!box) return;
   if(!box.dataset.listo){
     let h = '';
-    for(let i=1;i<=4;i++){
+    for(let i=1;i<=8;i++){
       h += '<div class="promo7-slot" id="promo7-slot'+i+'" style="border:1px solid rgba(201,162,39,.18);border-radius:10px;padding:10px;margin-bottom:10px">'
         + '<label style="display:block;margin-bottom:6px">Partido '+i+'</label>'
         + '<select id="promo7-sel'+i+'" onchange="promoRadioCargarSlot('+i+')" style="margin-bottom:6px"><option value="">— Cargar datos manualmente —</option></select>'
@@ -15159,6 +15167,10 @@ function promoRadioInit(){
         +   '<div class="form-group"><label style="font-size:10px">Estadio / cancha</label><input type="text" id="promo7-e'+i+'" list="promo7-estadios-dl" placeholder="Ej: Estadio Municipal"/></div>'
         +   '<div class="form-group"><label style="font-size:10px">Nota (opcional)</label><input type="text" id="promo7-n'+i+'" placeholder="Ej: Clásico, Final"/></div>'
         + '</div>'
+        + '<div class="form-row">'
+        +   '<div class="form-group"><label style="font-size:10px"><input type="checkbox" id="promo7-r'+i+'" onchange="promoRadioDestacar('+i+')" style="width:auto;margin-right:6px;vertical-align:middle"/>🎙 Con relato (destacar)</label></div>'
+        +   '<div class="form-group"><label style="font-size:10px">Relator (opcional)</label><input type="text" id="promo7-rn'+i+'" placeholder="Ej: Juan Pérez"/></div>'
+        + '</div>'
         + '</div>';
     }
     box.innerHTML = h;
@@ -15173,12 +15185,21 @@ function _promoRadioPoblar(){
   const partidos = [...(data.partidos||[])].sort((a,b)=>String(b.fecha||'').localeCompare(String(a.fecha||'')));
   const opts = '<option value="">— Cargar datos manualmente —</option>' +
     partidos.map(p=>`<option value="${p.id}">${p.local} vs ${p.visit} — ${p.fecha||''}</option>`).join('');
-  for(let i=1;i<=4;i++){
+  for(let i=1;i<=8;i++){
     const sel = document.getElementById('promo7-sel'+i);
     if(!sel) continue;
     const act = sel.value;
     sel.innerHTML = opts;
     if(act && partidos.some(p=>String(p.id)===act)) sel.value = act;
+  }
+  const dsel = document.getElementById('promo7-dia-sel');
+  if(dsel){
+    const act = dsel.value;
+    dsel.innerHTML = '<option value="">— Elegí la fecha / día —</option>' + _promo7Grupos().map(g=>{
+      const lab = (g.fecha || 'Sin fecha') + (g.dia ? ' · ' + g.dia : '') + ' (' + g.ps.length + ' partido' + (g.ps.length===1?'':'s') + ')';
+      return `<option value="${String(g.k).replace(/"/g,'&quot;')}">${lab}</option>`;
+    }).join('');
+    if(act && [...dsel.options].some(o=>o.value===act)) dsel.value = act;
   }
   const dl = document.getElementById('promo7-estadios-dl');
   if(dl){
@@ -15186,6 +15207,72 @@ function _promoRadioPoblar(){
     try{ l = JSON.parse(localStorage.getItem(PROMO7_LS_EST)||'[]'); }catch(e){}
     dl.innerHTML = l.map(x=>`<option value="${String(x).replace(/"/g,'&quot;')}">`).join('');
   }
+}
+
+let _promo7N = 4;   // cantidad de partidos visibles en la cartelera (4 a 8)
+
+function _promo7Ultimo(){
+  let u = 0;
+  for(let i=1;i<=8;i++){
+    const l = document.getElementById('promo7-l'+i), v = document.getElementById('promo7-v'+i);
+    if((l && l.value.trim()) || (v && v.value.trim())) u = i;
+  }
+  return u;
+}
+function promoRadioMasPartidos(){
+  _promo7N = Math.min(8, Math.max(_promo7N, _promo7Ultimo()) + 1);
+  promoRadioCambiarDiseno();
+}
+
+// Partidos de la liga agrupados por fecha + día (sin reservas): primero los que tienen partidos pendientes
+function _promo7Grupos(){
+  const m = {};
+  (data.partidos||[]).filter(p=>!p.esReserva).forEach(p=>{
+    const k = (p.fecha||'') + '|' + (p.dia||'');
+    (m[k] = m[k] || { k, fecha:p.fecha||'', dia:p.dia||'', ps:[] }).ps.push(p);
+  });
+  return Object.values(m)
+    .map(g=>Object.assign(g, { pend: g.ps.some(p=>p.estado !== 'jugado') }))
+    .sort((a,b)=> (Number(b.pend)-Number(a.pend)) || String(b.fecha).localeCompare(String(a.fecha)));
+}
+
+// Carga de una sola vez todos los partidos de un día (hasta 8), ordenados por horario
+function promoRadioCargarDia(){
+  const sel = document.getElementById('promo7-dia-sel');
+  const k = sel ? sel.value : '';
+  if(!k) return;
+  const g = _promo7Grupos().find(x=>x.k === k);
+  if(!g) return;
+  const hk = p => (p.hora && /^\d/.test(p.hora)) ? p.hora : '99:99';
+  const ps = [...g.ps].sort((a,b)=>hk(a).localeCompare(hk(b)));
+  const usados = ps.slice(0,8);
+  for(let i=1;i<=8;i++){
+    const set = (id,v)=>{ const el = document.getElementById(id+i); if(el) el.value = v; };
+    const p = usados[i-1], s = document.getElementById('promo7-sel'+i);
+    if(p){
+      if(s) s.value = String(p.id);
+      set('promo7-l', p.local || ''); set('promo7-v', p.visit || '');
+      set('promo7-d', _promoDiaCorto(p.dia));
+      set('promo7-h', (p.hora && !/^[-\s:]+$/.test(p.hora)) ? p.hora : '');
+    } else {
+      if(s) s.value = '';
+      ['promo7-l','promo7-v','promo7-d','promo7-h'].forEach(x=>set(x,''));
+    }
+    set('promo7-n',''); set('promo7-rn','');
+    const rc = document.getElementById('promo7-r'+i); if(rc) rc.checked = false;
+  }
+  _promo7N = Math.max(4, usados.length);
+  const d = document.getElementById('promo7-diseno'); if(d) d.value = 'cartelera';
+  promoRadioCambiarDiseno();
+  if(ps.length > 8) alert('Ese día hay ' + ps.length + ' partidos y la imagen admite 8: se cargaron los primeros 8 por horario.');
+}
+
+function promoRadioDestacar(i){
+  const el = document.getElementById('promo7-r'+i);
+  if(!el || !el.checked) return;
+  let c = 0;
+  for(let j=1;j<=8;j++){ const e = document.getElementById('promo7-r'+j); if(e && e.checked) c++; }
+  if(c > 2){ el.checked = false; alert('Podés destacar hasta 2 partidos con relato.'); }
 }
 
 function promoRadioCargarSlot(i){
@@ -15203,13 +15290,15 @@ function promoRadioCargarSlot(i){
 
 function promoRadioCambiarDiseno(){
   const d = (document.getElementById('promo7-diseno')||{value:'partido'}).value;
-  for(let i=1;i<=4;i++){
+  const cart = d === 'cartelera';
+  const vis = cart ? Math.min(8, Math.max(_promo7N, _promo7Ultimo())) : 1;
+  for(let i=1;i<=8;i++){
     const el = document.getElementById('promo7-slot'+i);
-    if(el) el.style.display = (d==='cartelera' || i===1) ? '' : 'none';
+    if(el) el.style.display = i <= vis ? '' : 'none';
   }
-  const pre = document.getElementById('promo7-pre-wrap'), dial = document.getElementById('promo7-dial-wrap');
-  if(pre)  pre.style.display  = d==='cartelera' ? '' : 'none';
-  if(dial) dial.style.display = d==='cartelera' ? 'none' : '';
+  const show = (id, on) => { const el = document.getElementById(id); if(el) el.style.display = on ? '' : 'none'; };
+  show('promo7-orden-wrap', cart); show('promo7-pre-wrap', cart); show('promo7-dial-wrap', !cart); show('promo7-dia-wrap', cart);
+  show('promo7-mas', cart && vis < 8);
 }
 
 function promoRadioGuardarCfg(){
@@ -15245,22 +15334,26 @@ function promoRadioQuitarFoto(){
 }
 
 function promoRadioLimpiar(){
-  for(let i=1;i<=4;i++){
-    ['promo7-sel','promo7-l','promo7-v','promo7-d','promo7-h','promo7-e','promo7-n'].forEach(k=>{
+  for(let i=1;i<=8;i++){
+    ['promo7-sel','promo7-l','promo7-v','promo7-d','promo7-h','promo7-e','promo7-n','promo7-rn'].forEach(k=>{
       const el = document.getElementById(k+i); if(el) el.value = '';
     });
+    const rc = document.getElementById('promo7-r'+i); if(rc) rc.checked = false;
   }
-  ['promo7-t1','promo7-t2'].forEach(id=>{ const el = document.getElementById(id); if(el) el.value = ''; });
+  _promo7N = 4;
+  ['promo7-t1','promo7-t2','promo7-est-todos','promo7-dia-sel'].forEach(id=>{ const el = document.getElementById(id); if(el) el.value = ''; });
   const z = document.getElementById('promo7-zoom'), x = document.getElementById('promo7-px'), y = document.getElementById('promo7-py');
   if(z) z.value = 100; if(x) x.value = 50; if(y) y.value = 30;
   promoRadioQuitarFoto();
+  promoRadioCambiarDiseno();
 }
 
 function promoGenerarRadio(){
   const val = id => (document.getElementById(id)||{value:''}).value.trim();
   const num = (id,def) => { const el = document.getElementById(id); const n = el ? Number(el.value) : NaN; return isNaN(n) ? def : n; };
   const diseno = val('promo7-diseno') === 'cartelera' ? 'cartelera' : 'partido';
-  const max = diseno === 'cartelera' ? 4 : 1;
+  const max = diseno === 'cartelera' ? 8 : 1;
+  const estTodos = val('promo7-est-todos');
   const partidos = [];
   for(let i=1;i<=max;i++){
     const local = val('promo7-l'+i), visit = val('promo7-v'+i);
@@ -15269,7 +15362,8 @@ function promoGenerarRadio(){
       alert('Completá local y visitante del partido '+i+' (o dejá los dos vacíos para omitirlo).');
       return;
     }
-    partidos.push({ local, visit, dia:val('promo7-d'+i), hora:val('promo7-h'+i), estadio:val('promo7-e'+i), nota:val('promo7-n'+i) });
+    partidos.push({ local, visit, dia:val('promo7-d'+i), hora:val('promo7-h'+i), estadio:val('promo7-e'+i) || estTodos, nota:val('promo7-n'+i),
+      relato: !!(document.getElementById('promo7-r'+i)||{}).checked, relator: val('promo7-rn'+i) });
   }
   if(!partidos.length){ alert('Cargá al menos un partido.'); return; }
   promoRadioGuardarCfg();
@@ -15286,6 +15380,7 @@ function promoGenerarRadio(){
     pre:   val('promo7-pre'),
     dialTxt: val('promo7-dial'),
     t1: val('promo7-t1'), t2: val('promo7-t2'),
+    relatoPrimero: !!(document.getElementById('promo7-orden')||{}).checked,
     foto: _promoFoto7 || '',
     zoom: num('promo7-zoom',100)/100, px: num('promo7-px',50)/100, py: num('promo7-py',30)/100,
   };
@@ -15326,6 +15421,21 @@ async function generarImagenPromoRadio(p){
     let t = txt;
     while(t.length > 1 && ctx.measureText(t + '…').width > maxW) t = t.slice(0, -1);
     return t.trim() + '…';
+  };
+  const rr = (x, y, w, h, r) => {
+    ctx.beginPath(); ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+  };
+  // Ícono de micrófono (cápsula + soporte + pie), centrado en (cx, cy)
+  const micro = (cx, cy, sz, col) => {
+    cy += sz*0.04;
+    ctx.save(); ctx.fillStyle = col; ctx.strokeStyle = col; ctx.lineCap = 'round'; ctx.lineWidth = Math.max(2, sz*0.085);
+    rr(cx - sz*0.19, cy - sz*0.5, sz*0.38, sz*0.6, sz*0.19); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx, cy - sz*0.1, sz*0.3, 0, Math.PI, false); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, cy + sz*0.2); ctx.lineTo(cx, cy + sz*0.42);
+    ctx.moveTo(cx - sz*0.16, cy + sz*0.42); ctx.lineTo(cx + sz*0.16, cy + sz*0.42); ctx.stroke();
+    ctx.restore();
   };
   // Parte un nombre en 1 o 2 renglones a un tamaño dado (2 renglones balanceados; si no entra, trunca)
   const lineasNombre = (nombre, sz, maxW) => {
@@ -15429,6 +15539,16 @@ async function generarImagenPromoRadio(p){
 
     // Escudos
     const cs = 250, cy = 1040, cL = CX - 290, cV = CX + 290;
+    if(m.relato){
+      const txt = m.relator ? ('RELATA ' + m.relator.toUpperCase()) : 'CON RELATO';
+      const bh = 54, bfs = 32;
+      ctx.font = `700 ${bfs}px ${FR}`; setLS('4px');
+      const tw = Math.min(ctx.measureText(txt).width, 720), bw = tw + bh*0.45 + bh*1.0, bx = CX - bw/2, by = cy - 80;
+      ctx.fillStyle = T.acc; rr(bx, by, bw, bh, bh/2); ctx.fill();
+      micro(bx + bh*0.5, by + bh/2, bh*0.72, T.base);
+      ctx.fillStyle = T.base; ctx.textAlign = 'left';
+      ctx.fillText(trunc(txt, 720), bx + bh*1.0, by + bh/2 + bfs*0.34); setLS('0px');
+    }
     await cvDrawEscudoCompleto(ctx, m.local, cL - cs/2, cy, cs);
     await cvDrawEscudoCompleto(ctx, m.visit, cV - cs/2, cy, cs);
     sombra(true);
@@ -15481,12 +15601,18 @@ async function generarImagenPromoRadio(p){
 
   } else {
     // ═══ DISEÑO "CARTELERA" ═══
-    const n = partidos.length, rowH = 176;
-    const listBottom = H - 70, listTop = listBottom - n*rowH;
+    let items = partidos.slice();
+    if(p.relatoPrimero) items = items.filter(m=>m.relato).concat(items.filter(m=>!m.relato));
+    const n = items.length, nf = items.filter(m=>m.relato).length;
+    let rowH = n <= 4 ? 176 : (n <= 6 ? 148 : 122), rowHf = Math.round(rowH*1.5);
+    let total = (n - nf)*rowH + nf*rowHf;
+    if(total > 1100){ const f = 1100/total; rowH = Math.round(rowH*f); rowHf = Math.round(rowHf*f); total = (n - nf)*rowH + nf*rowHf; }
+    const k = rowH/176, compacto = total > 720;
+    const listBottom = H - 70, listTop = listBottom - total;
 
     // Tamaños del titular (se mide primero para ubicarlo justo encima de la lista)
-    const s1 = t1 ? fitSz(t1, 940, 130, 60, FB, '1px') : 0;
-    const s2 = t2 ? fitSz(t2, 940, 215, 70, FB, '1px') : 0;
+    const s1 = t1 ? fitSz(t1, 940, compacto ? 100 : 130, 50, FB, '1px') : 0;
+    const s2 = t2 ? fitSz(t2, 940, compacto ? 150 : 215, 60, FB, '1px') : 0;
     const pitch1 = s1*0.9, pitch2 = s2*0.9;
     const titleH = pitch1 + pitch2;
     const titleTop = listTop - 36 - titleH;
@@ -15541,49 +15667,74 @@ async function generarImagenPromoRadio(p){
     }
     sombra(false); setLS('0px');
 
-    // Filas de partidos
-    const cs = 98, xR = 970, nameX = 70 + 2*cs + 52 + 26, nameMaxW = xR - 170 - nameX;
+    // Filas de partidos: las que tienen relato van más grandes, con fondo de color y etiqueta
+    const R = v => Math.round(v*k);
+    const xR0 = 970;
+    let yRow = listTop;
     for(let i = 0; i < n; i++){
-      const m = partidos[i], y0 = listTop + i*rowH, yC = y0 + 16;
-      ctx.fillStyle = i === 0 ? T.acc : 'rgba(255,255,255,.28)';
-      ctx.fillRect(70, y0, xR - 70, i === 0 ? 3 : 1);
+      const m = items[i], dest = !!m.relato, h = dest ? rowHf : rowH, y0 = yRow;
+      yRow += h;
+      const ix = dest ? 12 : 0, x0 = 70 + ix, xR = xR0 - ix, S = dest ? 1.2 : 1;
+      let yC, cs;
+      if(dest){
+        ctx.save();
+        rr(58, y0 + R(4), 924, h - R(8), 16); ctx.clip();
+        ctx.fillStyle = `rgba(${T.accRgb},0.17)`; ctx.fillRect(58, y0, 924, h);
+        ctx.fillStyle = T.acc; ctx.fillRect(58, y0, 8, h);
+        ctx.restore();
+        const bh = Math.max(28, R(40)), bfs = Math.max(20, R(26)), by = y0 + R(16);
+        const txt = m.relator ? ('RELATA ' + m.relator.toUpperCase()) : 'CON RELATO';
+        ctx.font = `700 ${bfs}px ${FR}`; setLS('3px');
+        const tw = Math.min(ctx.measureText(txt).width, 560), bw = tw + bh*0.45 + bh*1.0;
+        ctx.fillStyle = T.acc; rr(x0 + 8, by, bw, bh, bh/2); ctx.fill();
+        micro(x0 + 8 + bh*0.5, by + bh/2, bh*0.72, T.base);
+        ctx.fillStyle = T.base; ctx.textAlign = 'left';
+        ctx.fillText(trunc(txt, 560), x0 + 8 + bh*1.0, by + bh/2 + bfs*0.34); setLS('0px');
+        cs = R(127); yC = by + bh + R(10);
+      } else {
+        ctx.fillStyle = i === 0 ? T.acc : 'rgba(255,255,255,.28)';
+        ctx.fillRect(70, y0, xR0 - 70, i === 0 ? 3 : 1);
+        cs = R(98); yC = y0 + R(16);
+      }
+      const gapC = Math.round(52*k*S), cx0 = x0 + (dest ? 8 : 0);
+      const nameX = cx0 + 2*cs + gapC + Math.round(26*k*S), nameMaxW = xR - Math.round(170*S) - nameX;
 
-      await cvDrawEscudoCompleto(ctx, m.local, 70, yC, cs);
-      await cvDrawEscudoCompleto(ctx, m.visit, 70 + cs + 52, yC, cs);
-      ctx.font = `400 34px ${FB}`; setLS('0px'); ctx.fillStyle = '#ffffff';
-      itTxt('VS', 70 + cs + 26, yC + cs/2 + 12, 'center');
+      await cvDrawEscudoCompleto(ctx, m.local, cx0, yC, cs);
+      await cvDrawEscudoCompleto(ctx, m.visit, cx0 + cs + gapC, yC, cs);
+      ctx.font = `400 ${Math.max(22, Math.round(34*k*S))}px ${FB}`; setLS('0px'); ctx.fillStyle = '#ffffff';
+      itTxt('VS', cx0 + cs + gapC/2, yC + cs/2 + Math.round(12*k*S), 'center');
 
       const nL = (m.local || '').toUpperCase(), nV = (m.visit || '').toUpperCase();
-      ctx.font = `400 46px ${FB}`;
-      const nsz = Math.min(fitSz(nL, nameMaxW, 46, 26, FB, '1px'), fitSz(nV, nameMaxW, 46, 26, FB, '1px'));
+      const nmax = Math.max(30, Math.round(46*k*S));
+      const nsz = Math.min(fitSz(nL, nameMaxW, nmax, 24, FB, '1px'), fitSz(nV, nameMaxW, nmax, 24, FB, '1px'));
       ctx.font = `400 ${nsz}px ${FB}`; setLS('1px'); ctx.fillStyle = '#ffffff';
-      itTxt(trunc(nL, nameMaxW), nameX, yC + 42, 'left');
-      itTxt(trunc(nV, nameMaxW), nameX, yC + 90, 'left');
+      itTxt(trunc(nL, nameMaxW), nameX, yC + cs*0.43, 'left');
+      itTxt(trunc(nV, nameMaxW), nameX, yC + cs*0.92, 'left');
       setLS('0px');
 
       const dia = (m.dia || '').toUpperCase(), hora = _promoHoraTxt(m.hora);
-      ctx.fillStyle = '#ffffff'; ctx.font = `400 54px ${FB}`; setLS('1px');
-      if(dia) itTxt(dia, xR, yC + 46, 'right');
-      ctx.fillStyle = T.acc; ctx.font = `400 42px ${FB}`;
-      if(hora) itTxt(hora, xR, yC + 92, 'right');
+      ctx.fillStyle = '#ffffff'; ctx.font = `400 ${Math.max(34, Math.round(54*k*S))}px ${FB}`; setLS('1px');
+      if(dia) itTxt(dia, xR, yC + cs*0.47, 'right');
+      ctx.fillStyle = T.acc; ctx.font = `400 ${Math.max(28, Math.round(42*k*S))}px ${FB}`;
+      if(hora) itTxt(hora, xR, yC + cs*0.94, 'right');
       setLS('0px');
 
+      const yS = dest ? yC + cs + R(40) : y0 + R(152);
       let notaW = 0;
       if(m.nota){
-        ctx.font = `700 28px ${FR}`; setLS('2px'); ctx.fillStyle = T.acc; ctx.textAlign = 'right';
+        ctx.font = `700 ${Math.max(22, R(28))}px ${FR}`; setLS('2px'); ctx.fillStyle = T.acc; ctx.textAlign = 'right';
         const nt = m.nota.toUpperCase();
-        ctx.fillText(trunc(nt, 360), xR, y0 + 152); notaW = Math.min(ctx.measureText(nt).width, 360) + 30; setLS('0px');
+        ctx.fillText(trunc(nt, 360), xR, yS); notaW = Math.min(ctx.measureText(nt).width, 360) + 30; setLS('0px');
       }
       if(m.estadio){
-        ctx.font = `600 30px ${FR}`; setLS('1px'); ctx.fillStyle = T.sub; ctx.textAlign = 'left';
-        ctx.fillText(trunc(m.estadio, xR - 70 - notaW), 70, y0 + 152); setLS('0px');
+        ctx.font = `600 ${Math.max(24, Math.round(30*k*(dest ? 1.1 : 1)))}px ${FR}`; setLS('1px'); ctx.fillStyle = T.sub; ctx.textAlign = 'left';
+        ctx.fillText(trunc(m.estadio, xR - x0 - notaW), cx0, yS); setLS('0px');
       }
     }
   }
   ctx.textAlign = 'left';
   return canvas;
 }
-
 
 // ── Promoción de Partido — formulario del panel de admin ────────
 
