@@ -5151,6 +5151,7 @@ table.posiciones td:nth-child(8){
             <option value="campeon">Campeón y ascenso (club campeón con foto)</option>
             <option value="racha">Racha de un equipo (últimos partidos)</option>
             <option value="jugador">Jugador destacado (estadísticas)</option>
+            <option value="radio">Cobertura radial (historia / reel 1080×1920)</option>
           </select>
         </div>
 
@@ -5439,7 +5440,56 @@ table.posiciones td:nth-child(8){
           </p>
         </div>
 
-        <div class="form-group">
+        <div id="promo-radio-wrap" style="display:none">
+          <p style="font-size:10px;color:var(--gris);margin-bottom:12px;font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px">
+            Imagen vertical 1080×1920 para historias y reels, para anunciar la cobertura de la radio de uno o varios partidos de la liga.
+          </p>
+          <div class="form-group"><label>Diseño</label>
+            <select id="promo7-diseno" onchange="promoRadioCambiarDiseno()">
+              <option value="partido">Un partido (titular + escudos + dial de la radio)</option>
+              <option value="cartelera">Cartelera de partidos (hasta 4, con la radio arriba)</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Radio</label><input type="text" id="promo7-radio" value="LV26" placeholder="Ej: LV26"/></div>
+            <div class="form-group"><label>Frecuencia</label><input type="text" id="promo7-frec" value="FM 101.9" placeholder="Ej: FM 101.9"/></div>
+          </div>
+          <div class="form-group"><label>Paleta</label>
+            <select id="promo7-tema">
+              <option value="dorado">Dorado Clásico (DEPORTEMAS)</option>
+              <option value="celeste">Celeste y blanco (Selección)</option>
+            </select>
+          </div>
+          <div class="form-group" id="promo7-pre-wrap"><label>Texto sobre la radio (cartelera)</label>
+            <input type="text" id="promo7-pre" value="COBERTURA Y TRANSMISIÓN DE" placeholder="Ej: COBERTURA Y TRANSMISIÓN DE"/>
+          </div>
+          <div class="form-group" id="promo7-dial-wrap"><label>Texto sobre el dial (vacío = sin texto)</label>
+            <input type="text" id="promo7-dial" value="ESCUCHALO EN VIVO" placeholder="Ej: ESCUCHALO EN VIVO"/>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Título · renglón blanco</label><input type="text" id="promo7-t1" placeholder="Ej: LA PREVIA AL"/></div>
+            <div class="form-group"><label>Título · renglón de color</label><input type="text" id="promo7-t2" placeholder="Ej: CLÁSICO"/></div>
+          </div>
+          <datalist id="promo7-estadios-dl"></datalist>
+          <div id="promo7-slots"></div>
+          <div class="form-group">
+            <label>Foto de fondo (opcional)</label>
+            <input type="file" accept="image/*" id="promo7-foto-file" onchange="promoRadioPreviewFoto(this)"/>
+            <p style="font-size:10px;color:var(--gris);margin-top:4px;font-family:'Rajdhani',sans-serif">
+              Mejor una foto vertical. Se guarda en alta calidad para que no se vea borrosa en 1080×1920. Sin foto se usa un fondo oscuro con el logo de la liga.
+            </p>
+            <div class="preview-wrap" id="promo7-foto-wrap">
+              <img id="promo7-foto-preview" src="" alt="" style="max-height:140px;object-fit:cover;object-position:top"/>
+              <button type="button" class="btn-quitar-img" onclick="promoRadioQuitarFoto()">✕ Quitar</button>
+            </div>
+          </div>
+          <label style="display:block;margin-bottom:6px">Encuadre de la foto</label>
+          <div class="form-group"><label style="font-size:10px">Zoom</label><input type="range" id="promo7-zoom" min="100" max="250" value="100"/></div>
+          <div class="form-group"><label style="font-size:10px">Posición horizontal</label><input type="range" id="promo7-px" min="0" max="100" value="50"/></div>
+          <div class="form-group"><label style="font-size:10px">Posición vertical</label><input type="range" id="promo7-py" min="0" max="100" value="30"/></div>
+        </div>
+
+        <div class="form-group" id="promo-foto-comun">
           <label>Foto de fondo (opcional)</label>
           <input type="file" accept="image/*" id="promo-foto-file" onchange="promoPreviewFoto(this)"/>
           <p style="font-size:10px;color:var(--gris);margin-top:4px;font-family:'Rajdhani',sans-serif">
@@ -15063,6 +15113,478 @@ function hgGenerarImagenEvento(evento){
 }
 
 
+// ── Cobertura radial (historia / reel 1080×1920) ────────────────
+// Imagen para anunciar la cobertura de la radio de uno o varios partidos de la liga.
+// Dos diseños: "partido" (titular + escudos + dial de la radio) y "cartelera" (hasta 4 partidos).
+const PROMO7_THEMES = {
+  dorado:  { acc:'#f0c040', bar:'#ffffff', base:'#080808', rgb:'8,8,8',   glow:'rgba(201,162,39,0.30)', sub:'#d9d9d9' },
+  celeste: { acc:'#74ACDF', bar:'#F6B40E', base:'#061A33', rgb:'6,26,51', glow:'rgba(116,172,223,0.32)', sub:'#d7e8f7' },
+};
+const PROMO7_LS = 'promo7_cfg';
+const PROMO7_LS_EST = 'promo7_estadios';
+let _promoFoto7 = '';
+
+// "Sábado 14 de junio" → "SÁB 14"
+function _promoDiaCorto(t){
+  t = String(t||'').trim();
+  if(!t) return '';
+  const m = t.match(/^([A-Za-zÁÉÍÓÚÜáéíóúüÑñ]+)\.?\s+(\d{1,2})/);
+  if(m) return (m[1].slice(0,3) + ' ' + m[2]).toUpperCase();
+  return t.toUpperCase();
+}
+function _promoHoraTxt(h){
+  h = String(h||'').trim();
+  if(!h || /^[-\s:]+$/.test(h)) return '';
+  return /^\d{1,2}:\d{2}$/.test(h) ? h + ' HS' : h.toUpperCase();
+}
+
+function promoRadioInit(){
+  const box = document.getElementById('promo7-slots');
+  if(!box) return;
+  if(!box.dataset.listo){
+    let h = '';
+    for(let i=1;i<=4;i++){
+      h += '<div class="promo7-slot" id="promo7-slot'+i+'" style="border:1px solid rgba(201,162,39,.18);border-radius:10px;padding:10px;margin-bottom:10px">'
+        + '<label style="display:block;margin-bottom:6px">Partido '+i+'</label>'
+        + '<select id="promo7-sel'+i+'" onchange="promoRadioCargarSlot('+i+')" style="margin-bottom:6px"><option value="">— Cargar datos manualmente —</option></select>'
+        + '<div class="form-row">'
+        +   '<div class="form-group"><label style="font-size:10px">Local</label><input type="text" id="promo7-l'+i+'" list="promo-equipos-datalist" placeholder="Nombre exacto del equipo"/></div>'
+        +   '<div class="form-group"><label style="font-size:10px">Visitante</label><input type="text" id="promo7-v'+i+'" list="promo-equipos-datalist" placeholder="Nombre exacto del equipo"/></div>'
+        + '</div>'
+        + '<div class="form-row">'
+        +   '<div class="form-group"><label style="font-size:10px">Día</label><input type="text" id="promo7-d'+i+'" placeholder="Ej: SÁB 3"/></div>'
+        +   '<div class="form-group"><label style="font-size:10px">Hora</label><input type="text" id="promo7-h'+i+'" placeholder="Ej: 21:00"/></div>'
+        + '</div>'
+        + '<div class="form-row">'
+        +   '<div class="form-group"><label style="font-size:10px">Estadio / cancha</label><input type="text" id="promo7-e'+i+'" list="promo7-estadios-dl" placeholder="Ej: Estadio Municipal"/></div>'
+        +   '<div class="form-group"><label style="font-size:10px">Nota (opcional)</label><input type="text" id="promo7-n'+i+'" placeholder="Ej: Clásico, Final"/></div>'
+        + '</div>'
+        + '</div>';
+    }
+    box.innerHTML = h;
+    box.dataset.listo = '1';
+  }
+  promoRadioCargarCfg();
+  _promoRadioPoblar();
+  promoRadioCambiarDiseno();
+}
+
+function _promoRadioPoblar(){
+  const partidos = [...(data.partidos||[])].sort((a,b)=>String(b.fecha||'').localeCompare(String(a.fecha||'')));
+  const opts = '<option value="">— Cargar datos manualmente —</option>' +
+    partidos.map(p=>`<option value="${p.id}">${p.local} vs ${p.visit} — ${p.fecha||''}</option>`).join('');
+  for(let i=1;i<=4;i++){
+    const sel = document.getElementById('promo7-sel'+i);
+    if(!sel) continue;
+    const act = sel.value;
+    sel.innerHTML = opts;
+    if(act && partidos.some(p=>String(p.id)===act)) sel.value = act;
+  }
+  const dl = document.getElementById('promo7-estadios-dl');
+  if(dl){
+    let l = [];
+    try{ l = JSON.parse(localStorage.getItem(PROMO7_LS_EST)||'[]'); }catch(e){}
+    dl.innerHTML = l.map(x=>`<option value="${String(x).replace(/"/g,'&quot;')}">`).join('');
+  }
+}
+
+function promoRadioCargarSlot(i){
+  const sel = document.getElementById('promo7-sel'+i);
+  const id = sel ? sel.value : '';
+  if(!id) return;
+  const p = (data.partidos||[]).find(x=>String(x.id)===String(id));
+  if(!p) return;
+  const set = (k,v)=>{ const el = document.getElementById(k+i); if(el) el.value = v; };
+  set('promo7-l', p.local || '');
+  set('promo7-v', p.visit || '');
+  set('promo7-d', _promoDiaCorto(p.dia));
+  set('promo7-h', (p.hora && !/^[-\s:]+$/.test(p.hora)) ? p.hora : '');
+}
+
+function promoRadioCambiarDiseno(){
+  const d = (document.getElementById('promo7-diseno')||{value:'partido'}).value;
+  for(let i=1;i<=4;i++){
+    const el = document.getElementById('promo7-slot'+i);
+    if(el) el.style.display = (d==='cartelera' || i===1) ? '' : 'none';
+  }
+  const pre = document.getElementById('promo7-pre-wrap'), dial = document.getElementById('promo7-dial-wrap');
+  if(pre)  pre.style.display  = d==='cartelera' ? '' : 'none';
+  if(dial) dial.style.display = d==='cartelera' ? 'none' : '';
+}
+
+function promoRadioGuardarCfg(){
+  const v = id => (document.getElementById(id)||{value:''}).value;
+  try{
+    localStorage.setItem(PROMO7_LS, JSON.stringify({
+      radio:v('promo7-radio'), frec:v('promo7-frec'), pre:v('promo7-pre'), dial:v('promo7-dial'), tema:v('promo7-tema'), diseno:v('promo7-diseno')
+    }));
+  }catch(e){}
+}
+function promoRadioCargarCfg(){
+  let c = null;
+  try{ c = JSON.parse(localStorage.getItem(PROMO7_LS)||'null'); }catch(e){}
+  if(!c) return;
+  const set = (id,val)=>{ const el = document.getElementById(id); if(el && val!=null) el.value = val; };
+  set('promo7-radio',c.radio); set('promo7-frec',c.frec); set('promo7-pre',c.pre); set('promo7-dial',c.dial);
+  set('promo7-tema',c.tema); set('promo7-diseno',c.diseno);
+}
+
+function promoRadioPreviewFoto(input){
+  const file = input.files[0]; if(!file) return;
+  comprimirABase64(file, 1500, 0.86).then(dataUrl=>{
+    _promoFoto7 = dataUrl;
+    const p = document.getElementById('promo7-foto-preview'); if(p) p.src = dataUrl;
+    const w = document.getElementById('promo7-foto-wrap'); if(w) w.classList.add('visible');
+  });
+}
+function promoRadioQuitarFoto(){
+  _promoFoto7 = '';
+  const p = document.getElementById('promo7-foto-preview'); if(p) p.src = '';
+  const w = document.getElementById('promo7-foto-wrap'); if(w) w.classList.remove('visible');
+  const f = document.getElementById('promo7-foto-file'); if(f) f.value = '';
+}
+
+function promoRadioLimpiar(){
+  for(let i=1;i<=4;i++){
+    ['promo7-sel','promo7-l','promo7-v','promo7-d','promo7-h','promo7-e','promo7-n'].forEach(k=>{
+      const el = document.getElementById(k+i); if(el) el.value = '';
+    });
+  }
+  ['promo7-t1','promo7-t2'].forEach(id=>{ const el = document.getElementById(id); if(el) el.value = ''; });
+  const z = document.getElementById('promo7-zoom'), x = document.getElementById('promo7-px'), y = document.getElementById('promo7-py');
+  if(z) z.value = 100; if(x) x.value = 50; if(y) y.value = 30;
+  promoRadioQuitarFoto();
+}
+
+function promoGenerarRadio(){
+  const val = id => (document.getElementById(id)||{value:''}).value.trim();
+  const num = (id,def) => { const el = document.getElementById(id); const n = el ? Number(el.value) : NaN; return isNaN(n) ? def : n; };
+  const diseno = val('promo7-diseno') === 'cartelera' ? 'cartelera' : 'partido';
+  const max = diseno === 'cartelera' ? 4 : 1;
+  const partidos = [];
+  for(let i=1;i<=max;i++){
+    const local = val('promo7-l'+i), visit = val('promo7-v'+i);
+    if(!local && !visit) continue;
+    if(!local || !visit){
+      alert('Completá local y visitante del partido '+i+' (o dejá los dos vacíos para omitirlo).');
+      return;
+    }
+    partidos.push({ local, visit, dia:val('promo7-d'+i), hora:val('promo7-h'+i), estadio:val('promo7-e'+i), nota:val('promo7-n'+i) });
+  }
+  if(!partidos.length){ alert('Cargá al menos un partido.'); return; }
+  promoRadioGuardarCfg();
+  try{
+    const ya = JSON.parse(localStorage.getItem(PROMO7_LS_EST)||'[]');
+    partidos.forEach(m=>{ if(m.estadio && !ya.includes(m.estadio)) ya.unshift(m.estadio); });
+    localStorage.setItem(PROMO7_LS_EST, JSON.stringify(ya.slice(0,20)));
+  }catch(e){}
+  const p = {
+    diseno, partidos,
+    tema:  val('promo7-tema') === 'celeste' ? 'celeste' : 'dorado',
+    radio: val('promo7-radio') || 'LV26',
+    frec:  val('promo7-frec'),
+    pre:   val('promo7-pre'),
+    dialTxt: val('promo7-dial'),
+    t1: val('promo7-t1'), t2: val('promo7-t2'),
+    foto: _promoFoto7 || '',
+    zoom: num('promo7-zoom',100)/100, px: num('promo7-px',50)/100, py: num('promo7-py',30)/100,
+  };
+  abrirShare(() => generarImagenPromoRadio(p));
+}
+
+async function generarImagenPromoRadio(p){
+  await document.fonts.ready;
+  const W = 1080, H = 1920, CX = W/2;
+  const T  = PROMO7_THEMES[p.tema] || PROMO7_THEMES.dorado;
+  const FB = '"Bebas Neue", Arial, sans-serif';
+  const FR = '"Rajdhani", Arial, sans-serif';
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.textBaseline = 'alphabetic';
+
+  const IT = 0.2;
+  const setLS = v => { if('letterSpacing' in ctx) ctx.letterSpacing = v; };
+  const rgba  = a => `rgba(${T.rgb},${a})`;
+  const itTxt = (txt, x, y, align) => {
+    ctx.save(); ctx.translate(x, y); ctx.transform(1, 0, -IT, 1, 0, 0);
+    ctx.textAlign = align || 'left'; ctx.fillText(txt, 0, 0); ctx.restore();
+  };
+  const sombra = on => {
+    ctx.shadowColor = on ? 'rgba(0,0,0,.55)' : 'transparent';
+    ctx.shadowBlur = on ? 18 : 0; ctx.shadowOffsetY = on ? 3 : 0;
+  };
+  const fitSz = (txt, maxW, maxSz, minSz, fam, ls) => {
+    for(let sz = maxSz; sz >= minSz; sz -= 2){
+      ctx.font = `400 ${sz}px ${fam}`; setLS(ls || '0px');
+      if(ctx.measureText(txt).width <= maxW) return sz;
+    }
+    return minSz;
+  };
+  const trunc = (txt, maxW) => {
+    if(ctx.measureText(txt).width <= maxW) return txt;
+    let t = txt;
+    while(t.length > 1 && ctx.measureText(t + '…').width > maxW) t = t.slice(0, -1);
+    return t.trim() + '…';
+  };
+  // Parte un nombre en 1 o 2 renglones a un tamaño dado (2 renglones balanceados; si no entra, trunca)
+  const lineasNombre = (nombre, sz, maxW) => {
+    ctx.font = `400 ${sz}px ${FB}`; setLS('1px');
+    if(ctx.measureText(nombre).width <= maxW) return { lines:[nombre], ok:true };
+    const words = nombre.split(/\s+/).filter(Boolean);
+    let best = null;
+    for(let k = 1; k < words.length; k++){
+      const a = words.slice(0, k).join(' '), b = words.slice(k).join(' ');
+      const w = Math.max(ctx.measureText(a).width, ctx.measureText(b).width);
+      if(!best || w < best.w) best = { a, b, w };
+    }
+    if(best && best.w <= maxW) return { lines:[best.a, best.b], ok:true };
+    return { lines:[trunc(nombre, maxW)], ok:false };
+  };
+  const tamNombre = (nombre, maxW, maxSz, minSz) => {
+    for(let sz = maxSz; sz >= minSz; sz -= 2){
+      if(lineasNombre(nombre, sz, maxW).ok) return sz;
+    }
+    return minSz;
+  };
+
+  const partidos = p.partidos || [];
+  const [foto, logoImg] = await Promise.all([
+    cargarImagenAsync(p.foto),
+    cvImgAsync((typeof getIdentidad === 'function' ? getIdentidad() : {}).logo)
+  ]);
+
+  // ── Fondo: foto con encuadre propio, o fondo oscuro con brillo y logo de la liga ──
+  ctx.fillStyle = T.base; ctx.fillRect(0, 0, W, H);
+  if(foto){
+    const iw = foto.naturalWidth || foto.width || 1, ih = foto.naturalHeight || foto.height || 1;
+    const sc = Math.max(W/iw, H/ih) * Math.max(1, p.zoom || 1);
+    const dw = iw*sc, dh = ih*sc;
+    ctx.drawImage(foto, (W-dw)*(p.px == null ? 0.5 : p.px), (H-dh)*(p.py == null ? 0.3 : p.py), dw, dh);
+  } else {
+    const rg = ctx.createRadialGradient(CX, H*0.42, 40, CX, H*0.42, 780);
+    rg.addColorStop(0, T.glow); rg.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = rg; ctx.fillRect(0, 0, W, H);
+    if(logoImg){
+      const WS = 720;
+      ctx.save(); ctx.globalAlpha = 0.07;
+      ctx.beginPath(); ctx.arc(CX, H*0.42, WS/2, 0, Math.PI*2); ctx.clip();
+      cvDrawEscudoImg(ctx, logoImg, CX-WS/2, H*0.42-WS/2, WS); ctx.restore();
+    }
+  }
+
+  const t1 = (p.t1 || '').toUpperCase(), t2 = (p.t2 || '').toUpperCase();
+
+  // ── Dial de la radio: "ESCUCHALO EN VIVO" + RADIO | FRECUENCIA ──
+  const dibujarDial = (cx, topY, label, align) => {
+    let y = topY;
+    if(label){
+      ctx.font = `700 34px ${FR}`; setLS('6px'); ctx.fillStyle = T.sub; ctx.textAlign = align;
+      ctx.fillText(label.toUpperCase(), cx, y + 26); setLS('0px');
+      y += 26 + 16;
+    }
+    const radio = (p.radio || '').toUpperCase(), frec = (p.frec || '').toUpperCase();
+    let sz = 118; const gap = 28, barW = 7;
+    const medir = z => {
+      ctx.font = `400 ${z}px ${FB}`; setLS('0px');
+      const wR = ctx.measureText(radio).width, wF = frec ? ctx.measureText(frec).width : 0;
+      return { wR, wF, total: wR + (frec ? gap*2 + barW + wF : 0) };
+    };
+    let m = medir(sz);
+    if(m.total > 940){ sz = Math.floor(sz * 940 / m.total); m = medir(sz); }
+    const x = align === 'center' ? cx - m.total/2 : cx;
+    const base = y + sz*0.74 + 6;
+    ctx.fillStyle = '#ffffff'; itTxt(radio, x, base, 'left');
+    if(frec){
+      ctx.fillStyle = T.bar; ctx.fillRect(x + m.wR + gap, base - sz*0.72, barW, sz*0.72);
+      ctx.fillStyle = T.acc; itTxt(frec, x + m.wR + gap*2 + barW, base, 'left');
+    }
+    return base;
+  };
+
+  if(p.diseno !== 'cartelera'){
+    // ═══ DISEÑO "PARTIDO" ═══
+    const m = partidos[0];
+    const gT = ctx.createLinearGradient(0, 0, 0, 880);
+    gT.addColorStop(0, rgba(.94)); gT.addColorStop(.55, rgba(.6)); gT.addColorStop(1, rgba(0));
+    ctx.fillStyle = gT; ctx.fillRect(0, 0, W, 880);
+    const gB = ctx.createLinearGradient(0, 860, 0, H);
+    gB.addColorStop(0, rgba(0)); gB.addColorStop(.30, rgba(.82)); gB.addColorStop(.6, rgba(.95)); gB.addColorStop(1, rgba(1));
+    ctx.fillStyle = gB; ctx.fillRect(0, 860, W, H-860);
+
+    // Titular (2 renglones: blanco + color)
+    let y = 270;
+    sombra(true);
+    if(t1){
+      const sz = fitSz(t1, 940, 158, 64, FB, '1px');
+      ctx.font = `400 ${sz}px ${FB}`; setLS('1px'); ctx.fillStyle = '#ffffff';
+      itTxt(t1, 70, y + sz*0.74, 'left'); y += sz*0.9;
+    }
+    if(t2){
+      const sz = fitSz(t2, 940, 158, 64, FB, '1px');
+      ctx.font = `400 ${sz}px ${FB}`; setLS('1px'); ctx.fillStyle = T.acc;
+      itTxt(t2, 70, y + sz*0.74, 'left'); y += sz*0.9;
+    }
+    sombra(false); setLS('0px');
+
+    // Escudos
+    const cs = 250, cy = 1040, cL = CX - 290, cV = CX + 290;
+    await cvDrawEscudoCompleto(ctx, m.local, cL - cs/2, cy, cs);
+    await cvDrawEscudoCompleto(ctx, m.visit, cV - cs/2, cy, cs);
+    sombra(true);
+    ctx.font = `400 96px ${FB}`; setLS('0px'); ctx.fillStyle = '#ffffff';
+    itTxt('VS', CX, cy + cs/2 + 34, 'center');
+
+    // Nombres de los equipos (mismo tamaño para los dos)
+    const nL = (m.local || '').toUpperCase(), nV = (m.visit || '').toUpperCase();
+    const nMaxW = 420;
+    const nsz = Math.min(tamNombre(nL, nMaxW, 64, 36), tamNombre(nV, nMaxW, 64, 36));
+    const lL = lineasNombre(nL, nsz, nMaxW).lines, lV = lineasNombre(nV, nsz, nMaxW).lines;
+    const nPitch = nsz*0.92, nBase = cy + cs + 24 + nsz*0.74;
+    ctx.font = `400 ${nsz}px ${FB}`; setLS('1px'); ctx.fillStyle = '#ffffff';
+    lL.forEach((t, k) => itTxt(t, cL, nBase + k*nPitch, 'center'));
+    lV.forEach((t, k) => itTxt(t, cV, nBase + k*nPitch, 'center'));
+    const nEnd = nBase + (Math.max(lL.length, lV.length) - 1)*nPitch;
+    setLS('0px');
+
+    // Día + hora
+    const dia = (m.dia || '').toUpperCase(), hora = _promoHoraTxt(m.hora);
+    const dTxt = dia + (dia && hora ? ' · ' : '') + hora;
+    let dBase = nEnd + 50;
+    if(dTxt){
+      const dsz = fitSz(dTxt, 940, 112, 56, FB, '1px');
+      dBase = nEnd + 58 + dsz*0.74;
+      ctx.font = `400 ${dsz}px ${FB}`; setLS('1px');
+      const wD = ctx.measureText(dia).width, wS = ctx.measureText(dia && hora ? ' · ' : '').width, wH = ctx.measureText(hora).width;
+      let x = CX - (wD + wS + wH)/2 + dsz*IT*0.35;
+      ctx.fillStyle = '#ffffff'; itTxt(dia, x, dBase, 'left'); x += wD;
+      ctx.fillStyle = T.acc;     itTxt((dia && hora ? ' · ' : '') + hora, x, dBase, 'left');
+      setLS('0px');
+    }
+    sombra(false);
+
+    // Estadio + nota
+    let yy = dBase;
+    if(m.estadio){
+      yy += 18 + 34;
+      ctx.font = `600 36px ${FR}`; setLS('1px'); ctx.fillStyle = 'rgba(255,255,255,.94)'; ctx.textAlign = 'center';
+      ctx.fillText(trunc(m.estadio, 940), CX, yy); setLS('0px');
+    }
+    if(m.nota){
+      yy += 14 + 32;
+      ctx.font = `700 32px ${FR}`; setLS('4px'); ctx.fillStyle = T.acc; ctx.textAlign = 'center';
+      ctx.fillText(trunc(m.nota.toUpperCase(), 940), CX, yy); setLS('0px');
+    }
+
+    // Dial
+    dibujarDial(CX, yy + 56, (p.dialTxt === undefined ? 'Escuchalo en vivo' : p.dialTxt) || '', 'center');
+
+  } else {
+    // ═══ DISEÑO "CARTELERA" ═══
+    const n = partidos.length, rowH = 176;
+    const listBottom = H - 70, listTop = listBottom - n*rowH;
+
+    // Tamaños del titular (se mide primero para ubicarlo justo encima de la lista)
+    const s1 = t1 ? fitSz(t1, 940, 130, 60, FB, '1px') : 0;
+    const s2 = t2 ? fitSz(t2, 940, 215, 70, FB, '1px') : 0;
+    const pitch1 = s1*0.9, pitch2 = s2*0.9;
+    const titleH = pitch1 + pitch2;
+    const titleTop = listTop - 36 - titleH;
+
+    // Degradés
+    const gT = ctx.createLinearGradient(0, 0, 0, 560);
+    gT.addColorStop(0, rgba(.94)); gT.addColorStop(.46, rgba(.7)); gT.addColorStop(1, rgba(0));
+    ctx.fillStyle = gT; ctx.fillRect(0, 0, W, 560);
+    const gBy = Math.max(600, titleTop - 280);
+    const gB = ctx.createLinearGradient(0, gBy, 0, H);
+    gB.addColorStop(0, rgba(0)); gB.addColorStop(.30, rgba(.82)); gB.addColorStop(.6, rgba(.95)); gB.addColorStop(1, rgba(1));
+    ctx.fillStyle = gB; ctx.fillRect(0, gBy, W, H-gBy);
+
+    // Franja lateral de color
+    ctx.fillStyle = T.acc; ctx.fillRect(0, 0, 24, H);
+
+    // Bloque superior: texto + radio enorme + frecuencia
+    const pre = (p.pre || '').toUpperCase(), rad = (p.radio || '').toUpperCase(), frec = (p.frec || '').toUpperCase();
+    let ty = 56;
+    sombra(true);
+    if(pre){
+      ctx.font = `400 56px ${FB}`; setLS('1px'); ctx.fillStyle = T.acc; ctx.textAlign = 'left';
+      ctx.fillText(trunc(pre, 940), 70, ty + 44); setLS('0px');
+      ty += 44 + 22;
+    }
+    if(rad){
+      const rsz = fitSz(rad, 640, 250, 110, FB, '-3px');
+      ctx.font = `400 ${rsz}px ${FB}`; setLS('-3px'); ctx.fillStyle = '#ffffff';
+      const rBase = ty + rsz*0.74;
+      itTxt(rad, 66, rBase, 'left');
+      const wR = ctx.measureText(rad).width;
+      if(frec){
+        let fsz = Math.round(rsz*0.42);
+        ctx.font = `400 ${fsz}px ${FB}`; setLS('0px');
+        const wF = ctx.measureText(frec).width, libre = 1040 - (66 + wR + 34);
+        if(wF > libre && libre > 60){ fsz = Math.max(24, Math.floor(fsz*libre/wF)); ctx.font = `400 ${fsz}px ${FB}`; }
+        ctx.fillStyle = T.acc;
+        itTxt(frec, 66 + wR + 34, rBase, 'left');
+      }
+      setLS('0px');
+    }
+
+    // Titular
+    let y = titleTop;
+    if(t1){
+      ctx.font = `400 ${s1}px ${FB}`; setLS('1px'); ctx.fillStyle = '#ffffff';
+      itTxt(t1, 70, y + s1*0.74, 'left'); y += pitch1;
+    }
+    if(t2){
+      ctx.font = `400 ${s2}px ${FB}`; setLS('1px'); ctx.fillStyle = T.acc;
+      itTxt(t2, 70, y + s2*0.74, 'left'); y += pitch2;
+    }
+    sombra(false); setLS('0px');
+
+    // Filas de partidos
+    const cs = 98, xR = 970, nameX = 70 + 2*cs + 52 + 26, nameMaxW = xR - 170 - nameX;
+    for(let i = 0; i < n; i++){
+      const m = partidos[i], y0 = listTop + i*rowH, yC = y0 + 16;
+      ctx.fillStyle = i === 0 ? T.acc : 'rgba(255,255,255,.28)';
+      ctx.fillRect(70, y0, xR - 70, i === 0 ? 3 : 1);
+
+      await cvDrawEscudoCompleto(ctx, m.local, 70, yC, cs);
+      await cvDrawEscudoCompleto(ctx, m.visit, 70 + cs + 52, yC, cs);
+      ctx.font = `400 34px ${FB}`; setLS('0px'); ctx.fillStyle = '#ffffff';
+      itTxt('VS', 70 + cs + 26, yC + cs/2 + 12, 'center');
+
+      const nL = (m.local || '').toUpperCase(), nV = (m.visit || '').toUpperCase();
+      ctx.font = `400 46px ${FB}`;
+      const nsz = Math.min(fitSz(nL, nameMaxW, 46, 26, FB, '1px'), fitSz(nV, nameMaxW, 46, 26, FB, '1px'));
+      ctx.font = `400 ${nsz}px ${FB}`; setLS('1px'); ctx.fillStyle = '#ffffff';
+      itTxt(trunc(nL, nameMaxW), nameX, yC + 42, 'left');
+      itTxt(trunc(nV, nameMaxW), nameX, yC + 90, 'left');
+      setLS('0px');
+
+      const dia = (m.dia || '').toUpperCase(), hora = _promoHoraTxt(m.hora);
+      ctx.fillStyle = '#ffffff'; ctx.font = `400 54px ${FB}`; setLS('1px');
+      if(dia) itTxt(dia, xR, yC + 46, 'right');
+      ctx.fillStyle = T.acc; ctx.font = `400 42px ${FB}`;
+      if(hora) itTxt(hora, xR, yC + 92, 'right');
+      setLS('0px');
+
+      let notaW = 0;
+      if(m.nota){
+        ctx.font = `700 28px ${FR}`; setLS('2px'); ctx.fillStyle = T.acc; ctx.textAlign = 'right';
+        const nt = m.nota.toUpperCase();
+        ctx.fillText(trunc(nt, 360), xR, y0 + 152); notaW = Math.min(ctx.measureText(nt).width, 360) + 30; setLS('0px');
+      }
+      if(m.estadio){
+        ctx.font = `600 30px ${FR}`; setLS('1px'); ctx.fillStyle = T.sub; ctx.textAlign = 'left';
+        ctx.fillText(trunc(m.estadio, xR - 70 - notaW), 70, y0 + 152); setLS('0px');
+      }
+    }
+  }
+  ctx.textAlign = 'left';
+  return canvas;
+}
+
+
 // ── Promoción de Partido — formulario del panel de admin ────────
 
 function promoPoblarEquipos(){
@@ -15104,6 +15626,7 @@ function _promoPoblarSelects3(){
 
 function promoPoblarPartidos(){
   _promoPoblarSelects3();
+  if(typeof _promoRadioPoblar === 'function') _promoRadioPoblar();
   const sel = document.getElementById('promo-partido-sel');
   if(!sel || !data.partidos) return;
   const actual = sel.value;
@@ -15144,6 +15667,11 @@ function promoCambiarModo(){
   const r6 = document.getElementById('promo-jugador-wrap');
   if(r6) r6.style.display = modo === 'jugador' ? '' : 'none';
   if(modo === 'jugador') promoPoblarJugadores();
+  const r7 = document.getElementById('promo-radio-wrap');
+  if(r7) r7.style.display = modo === 'radio' ? '' : 'none';
+  const fc = document.getElementById('promo-foto-comun');
+  if(fc) fc.style.display = modo === 'radio' ? 'none' : '';
+  if(modo === 'radio') promoRadioInit();
 }
 
 function promoCargarPartido3(){
@@ -15205,6 +15733,7 @@ function promoLimpiarForm(){
   Object.keys(defs4).forEach(k=>{ const el = document.getElementById(k); if(el) el.value = defs4[k]; });
   promoRachaLimpiar();
   promoJugadorLimpiar();
+  if(typeof promoRadioLimpiar === 'function') promoRadioLimpiar();
   promoQuitarFoto();
   promoQuitarLogoTorneo();
 }
@@ -15438,6 +15967,10 @@ function promoGenerarJugador(){
 }
 
 function promoGenerar(){
+  if(document.getElementById('promo-modo') && document.getElementById('promo-modo').value === 'radio'){
+    promoGenerarRadio();
+    return;
+  }
   if(document.getElementById('promo-modo') && document.getElementById('promo-modo').value === 'jugador'){
     promoGenerarJugador();
     return;
