@@ -5477,6 +5477,7 @@ table.posiciones td:nth-child(8){
           <div class="form-group"><label>Estadio para todos (se usa si un partido no tiene el suyo)</label>
             <input type="text" id="promo7-est-todos" list="promo7-estadios-dl" placeholder="Ej: Estadio Municipal"/>
           </div>
+          <div class="form-group"><label><input type="checkbox" id="promo7-safe" style="width:auto;margin-right:6px;vertical-align:middle"/>Dejar margen abajo para la interfaz de Instagram (sube todo ~150 px)</label></div>
           <div class="form-group" id="promo7-orden-wrap"><label><input type="checkbox" id="promo7-orden" checked style="width:auto;margin-right:6px;vertical-align:middle"/>Mostrar primero los partidos con relato</label></div>
           <div id="promo7-slots"></div>
           <button type="button" class="btn-edit" id="promo7-mas" onclick="promoRadioMasPartidos()" style="margin-bottom:12px">➕ Agregar otro partido</button>
@@ -15381,6 +15382,7 @@ function promoGenerarRadio(){
     dialTxt: val('promo7-dial'),
     t1: val('promo7-t1'), t2: val('promo7-t2'),
     relatoPrimero: !!(document.getElementById('promo7-orden')||{}).checked,
+    margen: !!(document.getElementById('promo7-safe')||{}).checked,
     foto: _promoFoto7 || '',
     zoom: num('promo7-zoom',100)/100, px: num('promo7-px',50)/100, py: num('promo7-py',30)/100,
   };
@@ -15538,7 +15540,8 @@ async function generarImagenPromoRadio(p){
     sombra(false); setLS('0px');
 
     // Escudos
-    const cs = 250, cy = 1040, cL = CX - 290, cV = CX + 290;
+    const lift = p.margen ? 150 : 0;
+    const cs = 250, cy = 1040 - lift, cL = CX - 290, cV = CX + 290;
     if(m.relato){
       const txt = m.relator ? ('RELATA ' + m.relator.toUpperCase()) : 'CON RELATO';
       const bh = 54, bfs = 32;
@@ -15604,26 +15607,35 @@ async function generarImagenPromoRadio(p){
     let items = partidos.slice();
     if(p.relatoPrimero) items = items.filter(m=>m.relato).concat(items.filter(m=>!m.relato));
     const n = items.length, nf = items.filter(m=>m.relato).length;
-    let rowH = n <= 4 ? 176 : (n <= 6 ? 148 : 122), rowHf = Math.round(rowH*1.5);
+    // Si el día o el estadio es igual en todos los partidos, se muestra una sola vez arriba de la lista
+    const unico = key => n >= 2 && items.every(m=>m[key]) && new Set(items.map(m=>m[key])).size === 1;
+    const unifDia = unico('dia'), unifEst = unico('estadio');
+    const hdr = (unifDia || unifEst) ? 70 : 0;
+    const lift = p.margen ? 150 : 0;                       // margen inferior para la interfaz de Instagram
+    const listBottom = H - 70 - lift;
+    const base = (n <= 4 ? 176 : (n <= 6 ? 148 : 122)) * (unifEst ? 1.14 : 1);   // sin estadio por fila, el contenido crece
+    const filaH = base * (unifEst ? 0.82 : 1);
+    let rowH = Math.round(filaH), rowHf = Math.round(filaH*1.5), kk = base/176;
     let total = (n - nf)*rowH + nf*rowHf;
-    if(total > 1100){ const f = 1100/total; rowH = Math.round(rowH*f); rowHf = Math.round(rowHf*f); total = (n - nf)*rowH + nf*rowHf; }
-    const k = rowH/176, compacto = total > 720;
-    const listBottom = H - 70, listTop = listBottom - total;
+    const cap = Math.min(1100, listBottom - 340 - hdr - 36 - ((t1 || t2) ? 230 : 0));
+    if(total > cap){ const f = cap/total; rowH = Math.round(rowH*f); rowHf = Math.round(rowHf*f); kk *= f; total = (n - nf)*rowH + nf*rowHf; }
+    const k = kk, compacto = total > 720;
+    const listTop = listBottom - total;
 
     // Tamaños del titular (se mide primero para ubicarlo justo encima de la lista)
     const s1 = t1 ? fitSz(t1, 940, compacto ? 100 : 130, 50, FB, '1px') : 0;
     const s2 = t2 ? fitSz(t2, 940, compacto ? 150 : 215, 60, FB, '1px') : 0;
     const pitch1 = s1*0.9, pitch2 = s2*0.9;
     const titleH = pitch1 + pitch2;
-    const titleTop = listTop - 36 - titleH;
+    const titleTop = listTop - hdr - 36 - titleH;
 
     // Degradés
     const gT = ctx.createLinearGradient(0, 0, 0, 560);
     gT.addColorStop(0, rgba(.94)); gT.addColorStop(.46, rgba(.7)); gT.addColorStop(1, rgba(0));
     ctx.fillStyle = gT; ctx.fillRect(0, 0, W, 560);
-    const gBy = Math.max(600, titleTop - 280);
+    const gBy = Math.max(400, titleTop - 140);
     const gB = ctx.createLinearGradient(0, gBy, 0, H);
-    gB.addColorStop(0, rgba(0)); gB.addColorStop(.30, rgba(.82)); gB.addColorStop(.6, rgba(.95)); gB.addColorStop(1, rgba(1));
+    gB.addColorStop(0, rgba(0)); gB.addColorStop(.2, rgba(.8)); gB.addColorStop(.5, rgba(.94)); gB.addColorStop(1, rgba(1));
     ctx.fillStyle = gB; ctx.fillRect(0, gBy, W, H-gBy);
 
     // Franja lateral de color
@@ -15667,37 +15679,77 @@ async function generarImagenPromoRadio(p){
     }
     sombra(false); setLS('0px');
 
+    if(hdr){
+      const baseY = listTop - 22;
+      let hx = 70;
+      sombra(true);
+      if(unifDia){
+        const dTxt = items[0].dia.toUpperCase();
+        ctx.font = `400 56px ${FB}`; setLS('1px'); ctx.fillStyle = '#ffffff';
+        itTxt(dTxt, hx, baseY, 'left'); hx += ctx.measureText(dTxt).width + 26;
+      }
+      if(unifEst){
+        if(unifDia){ ctx.fillStyle = T.acc; ctx.fillRect(hx - 6, baseY - 34, 5, 34); hx += 18; }
+        ctx.font = `600 34px ${FR}`; setLS('1px'); ctx.fillStyle = T.sub; ctx.textAlign = 'left';
+        ctx.fillText(trunc(items[0].estadio, 970 - hx), hx, baseY - 2);
+      }
+      sombra(false); setLS('0px');
+    }
+
     // Filas de partidos: las que tienen relato van más grandes, con fondo de color y etiqueta
     const R = v => Math.round(v*k);
     const xR0 = 970;
+    const normales = items.filter(m=>!m.relato), destacados = items.filter(m=>m.relato);
+
+    // Medidas comunes: columna de día/hora y tamaño de letra de los nombres (igual en todas las filas del mismo tipo)
+    const dFsN = unifDia ? Math.max(38, R(56)) : Math.max(34, R(54)), hFsN = Math.max(28, R(42));
+    ctx.font = `400 ${dFsN}px ${FB}`; setLS('1px');
+    const wDiaN = unifDia ? 0 : Math.max(0, ...normales.map(m=>ctx.measureText((m.dia || '').toUpperCase()).width));
+    ctx.font = `400 ${unifDia ? dFsN : hFsN}px ${FB}`;
+    const wHoraN = Math.max(0, ...normales.map(m=>ctx.measureText(_promoHoraTxt(m.hora)).width));
+    setLS('0px');
+    const colWN = Math.max(wDiaN, wHoraN) + 36;
+    const csN = R(98), gapN = R(52), nameXN = 70 + 2*csN + gapN + R(26), maxWN = xR0 - colWN - nameXN;
+    const csF = R(127), gapF = Math.round(52*k*1.2), nameXF = 90 + 2*csF + gapF + Math.round(26*k*1.2), maxWF = (xR0 - 12) - nameXF;
+    const nmaxN = Math.max(30, R(46)), nmaxF = Math.max(34, Math.round(46*k*1.2));
     let yRow = listTop;
     for(let i = 0; i < n; i++){
       const m = items[i], dest = !!m.relato, h = dest ? rowHf : rowH, y0 = yRow;
       yRow += h;
       const ix = dest ? 12 : 0, x0 = 70 + ix, xR = xR0 - ix, S = dest ? 1.2 : 1;
+      const dia = (m.dia || '').toUpperCase(), hora = _promoHoraTxt(m.hora);
       let yC, cs;
       if(dest){
         ctx.save();
         rr(58, y0 + R(4), 924, h - R(8), 16); ctx.clip();
-        ctx.fillStyle = `rgba(${T.accRgb},0.17)`; ctx.fillRect(58, y0, 924, h);
+        ctx.fillStyle = rgba(.5); ctx.fillRect(58, y0, 924, h);
+        ctx.fillStyle = `rgba(${T.accRgb},0.2)`; ctx.fillRect(58, y0, 924, h);
         ctx.fillStyle = T.acc; ctx.fillRect(58, y0, 8, h);
         ctx.restore();
         const bh = Math.max(28, R(40)), bfs = Math.max(20, R(26)), by = y0 + R(16);
         const txt = m.relator ? ('RELATA ' + m.relator.toUpperCase()) : 'CON RELATO';
         ctx.font = `700 ${bfs}px ${FR}`; setLS('3px');
-        const tw = Math.min(ctx.measureText(txt).width, 560), bw = tw + bh*0.45 + bh*1.0;
+        const tw = Math.min(ctx.measureText(txt).width, 520), bw = tw + bh*0.45 + bh*1.0;
         ctx.fillStyle = T.acc; rr(x0 + 8, by, bw, bh, bh/2); ctx.fill();
         micro(x0 + 8 + bh*0.5, by + bh/2, bh*0.72, T.base);
         ctx.fillStyle = T.base; ctx.textAlign = 'left';
-        ctx.fillText(trunc(txt, 560), x0 + 8 + bh*1.0, by + bh/2 + bfs*0.34); setLS('0px');
-        cs = R(127); yC = by + bh + R(10);
+        ctx.fillText(trunc(txt, 520), x0 + 8 + bh*1.0, by + bh/2 + bfs*0.34); setLS('0px');
+        // día y hora arriba a la derecha, en la misma línea que la etiqueta
+        const fs = Math.max(34, R(52));
+        ctx.font = `400 ${fs}px ${FB}`; setLS('1px');
+        const yT = by + bh/2 + fs*0.36, wH2 = hora ? ctx.measureText(hora).width : 0;
+        ctx.fillStyle = T.acc; if(hora) itTxt(hora, xR, yT, 'right');
+        if(dia && !unifDia){ ctx.fillStyle = '#ffffff'; itTxt(dia + (hora ? ' · ' : ''), xR - wH2, yT, 'right'); }
+        setLS('0px');
+        cs = csF; yC = by + bh + R(10);
       } else {
         ctx.fillStyle = i === 0 ? T.acc : 'rgba(255,255,255,.28)';
         ctx.fillRect(70, y0, xR0 - 70, i === 0 ? 3 : 1);
-        cs = R(98); yC = y0 + R(16);
+        cs = csN; yC = y0 + R(16);
       }
-      const gapC = Math.round(52*k*S), cx0 = x0 + (dest ? 8 : 0);
-      const nameX = cx0 + 2*cs + gapC + Math.round(26*k*S), nameMaxW = xR - Math.round(170*S) - nameX;
+      const gapC = dest ? gapF : gapN, cx0 = x0 + (dest ? 8 : 0);
+      const nameX = dest ? nameXF : nameXN, nameMaxW = dest ? maxWF : maxWN, nmax = dest ? nmaxF : nmaxN;
+      const nsz = Math.max(Math.round(nmax*0.7), Math.min(fitSz((m.local || '').toUpperCase(), nameMaxW, nmax, 24, FB, '1px'), fitSz((m.visit || '').toUpperCase(), nameMaxW, nmax, 24, FB, '1px')));
 
       await cvDrawEscudoCompleto(ctx, m.local, cx0, yC, cs);
       await cvDrawEscudoCompleto(ctx, m.visit, cx0 + cs + gapC, yC, cs);
@@ -15705,28 +15757,32 @@ async function generarImagenPromoRadio(p){
       itTxt('VS', cx0 + cs + gapC/2, yC + cs/2 + Math.round(12*k*S), 'center');
 
       const nL = (m.local || '').toUpperCase(), nV = (m.visit || '').toUpperCase();
-      const nmax = Math.max(30, Math.round(46*k*S));
-      const nsz = Math.min(fitSz(nL, nameMaxW, nmax, 24, FB, '1px'), fitSz(nV, nameMaxW, nmax, 24, FB, '1px'));
       ctx.font = `400 ${nsz}px ${FB}`; setLS('1px'); ctx.fillStyle = '#ffffff';
       itTxt(trunc(nL, nameMaxW), nameX, yC + cs*0.43, 'left');
       itTxt(trunc(nV, nameMaxW), nameX, yC + cs*0.92, 'left');
       setLS('0px');
 
-      const dia = (m.dia || '').toUpperCase(), hora = _promoHoraTxt(m.hora);
-      ctx.fillStyle = '#ffffff'; ctx.font = `400 ${Math.max(34, Math.round(54*k*S))}px ${FB}`; setLS('1px');
-      if(dia) itTxt(dia, xR, yC + cs*0.47, 'right');
-      ctx.fillStyle = T.acc; ctx.font = `400 ${Math.max(28, Math.round(42*k*S))}px ${FB}`;
-      if(hora) itTxt(hora, xR, yC + cs*0.94, 'right');
-      setLS('0px');
+      if(!dest){
+        if(unifDia){
+          ctx.fillStyle = T.acc; ctx.font = `400 ${dFsN}px ${FB}`; setLS('1px');
+          if(hora) itTxt(hora, xR, yC + cs*0.66, 'right');
+        } else {
+          ctx.fillStyle = '#ffffff'; ctx.font = `400 ${dFsN}px ${FB}`; setLS('1px');
+          if(dia) itTxt(dia, xR, yC + cs*0.47, 'right');
+          ctx.fillStyle = T.acc; ctx.font = `400 ${hFsN}px ${FB}`;
+          if(hora) itTxt(hora, xR, yC + cs*0.94, 'right');
+        }
+        setLS('0px');
+      }
 
-      const yS = dest ? yC + cs + R(40) : y0 + R(152);
+      const yS = unifEst ? y0 + h - R(12) : (dest ? yC + cs + R(40) : y0 + R(152));
       let notaW = 0;
       if(m.nota){
         ctx.font = `700 ${Math.max(22, R(28))}px ${FR}`; setLS('2px'); ctx.fillStyle = T.acc; ctx.textAlign = 'right';
         const nt = m.nota.toUpperCase();
         ctx.fillText(trunc(nt, 360), xR, yS); notaW = Math.min(ctx.measureText(nt).width, 360) + 30; setLS('0px');
       }
-      if(m.estadio){
+      if(m.estadio && !unifEst){
         ctx.font = `600 ${Math.max(24, Math.round(30*k*(dest ? 1.1 : 1)))}px ${FR}`; setLS('1px'); ctx.fillStyle = T.sub; ctx.textAlign = 'left';
         ctx.fillText(trunc(m.estadio, xR - x0 - notaW), cx0, yS); setLS('0px');
       }
