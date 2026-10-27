@@ -5291,21 +5291,35 @@ table.posiciones td:nth-child(8){
           <p style="font-size:11px;color:var(--gris);margin-bottom:12px;font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px">
             Cargá los campeones de más viejo a más nuevo. En la imagen salen al revés (el más nuevo primero). Lo que cargues queda guardado en este navegador. Si dejás el club vacío, la casilla muestra una &quot;X&quot; (temporada sin campeón).
           </p>
-          <div class="form-row">
-            <div class="form-group"><label>Título</label>
-              <input type="text" id="promoA-titulo" placeholder="Vacío = nombre de la liga" oninput="_alboGuardar()"/>
-            </div>
-            <div class="form-group"><label>Subtítulo</label>
-              <input type="text" id="promoA-sub" placeholder="Ej: Campeones" oninput="_alboGuardar()"/>
-            </div>
-          </div>
-          <div class="form-group"><label>Tamaño de las casillas</label>
-            <select id="promoA-tam" onchange="_alboGuardar();_alboResumen()">
-              <option value="g">Grande (16 por imagen)</option>
-              <option value="m" selected>Mediano (25 por imagen)</option>
-              <option value="c">Chico (36 por imagen)</option>
+          <div class="form-group"><label>Qué imagen generar</label>
+            <select id="promoA-vista" onchange="_alboVista();_alboGuardar();_alboResumen()">
+              <option value="grilla" selected>Grilla de campeones por temporada</option>
+              <option value="ranking">Ranking de títulos por club</option>
             </select>
           </div>
+          <div class="form-group"><label>Título</label>
+            <input type="text" id="promoA-titulo" placeholder="Vacío = nombre de la liga" oninput="_alboGuardar()"/>
+          </div>
+          <div id="promoA-opts-grid">
+            <div class="form-group"><label>Subtítulo</label>
+              <input type="text" id="promoA-sub" placeholder="Ej: Campeones por temporada" oninput="_alboGuardar()"/>
+            </div>
+            <div class="form-group"><label>Tamaño de las casillas</label>
+              <select id="promoA-tam" onchange="_alboGuardar();_alboResumen()">
+                <option value="g">Grande</option>
+                <option value="m" selected>Mediano</option>
+                <option value="c">Chico</option>
+              </select>
+            </div>
+          </div>
+          <div id="promoA-opts-rank" style="display:none">
+            <div class="form-group"><label>Subtítulo del ranking</label>
+              <input type="text" id="promoA-sub2" placeholder="Ej: Títulos por club (vacío = &quot;Títulos por club&quot;)" oninput="_alboGuardar()"/>
+            </div>
+          </div>
+          <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:13px;cursor:pointer">
+            <input type="checkbox" id="promoA-nombres" onchange="_alboGuardar();_alboResumen()"/> Mostrar el nombre del club debajo del escudo (letra chica)
+          </label>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
             <button type="button" class="btn-edit" onclick="_alboAgregar('anio')">＋ Año (un campeón)</button>
             <button type="button" class="btn-edit" onclick="_alboAgregar('par')">＋ Apertura y Clausura</button>
@@ -16265,15 +16279,31 @@ function _alboEstado(){
     l: f.querySelector('.albo-l').value.trim(),
     c: f.querySelector('.albo-c').value.trim()
   }));
-  return { titulo: g('promoA-titulo').trim(), sub: g('promoA-sub').trim(), tam: g('promoA-tam') || 'm', filas };
+  const nm = document.getElementById('promoA-nombres');
+  return { titulo: g('promoA-titulo').trim(), sub: g('promoA-sub').trim(), tam: g('promoA-tam') || 'm', nombres: !!(nm && nm.checked), vista: g('promoA-vista') || 'grilla', sub2: g('promoA-sub2').trim(), filas };
 }
 function _alboGuardar(){
   try{ localStorage.setItem(ALBO_KEY, JSON.stringify(_alboEstado())); }catch(e){}
 }
+function _alboGrid(tam, nombres){
+  const t = nombres ? { g:[4,3], m:[5,4], c:[6,5] } : { g:[4,4], m:[5,5], c:[6,6] };
+  return t[tam] || t.m;
+}
+function _alboVista(){
+  const v = (document.getElementById('promoA-vista') || {}).value || 'grilla';
+  const g = document.getElementById('promoA-opts-grid'), rk = document.getElementById('promoA-opts-rank');
+  if(g) g.style.display = v === 'ranking' ? 'none' : '';
+  if(rk) rk.style.display = v === 'ranking' ? '' : 'none';
+}
 function _alboResumen(){
   const el = document.getElementById('promo-albo-resumen'); if(!el) return;
   const e = _alboEstado();
-  const per = e.tam === 'g' ? 16 : e.tam === 'c' ? 36 : 25;
+  if(e.vista === 'ranking'){
+    const cc = e.filas.filter(f => f.c), cl = new Set(cc.map(f => f.c.toLowerCase()));
+    el.textContent = cc.length ? (cc.length + ' título' + (cc.length!==1?'s':'') + ' de ' + cl.size + ' club' + (cl.size!==1?'es':'')) : 'Todavía no cargaste campeones.';
+    return;
+  }
+  const g = _alboGrid(e.tam, e.nombres), per = g[0] * g[1];
   const n = e.filas.filter(f => f.l).length;
   el.textContent = n ? (n + ' casilla' + (n!==1?'s':'') + ' → ' + Math.ceil(n/per) + ' imagen' + (Math.ceil(n/per)!==1?'es':'')) : 'Todavía no cargaste ninguna temporada.';
 }
@@ -16323,7 +16353,9 @@ function promoAlboInit(){
   let s = {};
   try{ s = JSON.parse(localStorage.getItem(ALBO_KEY)) || {}; }catch(e){}
   const set = (id, v) => { const el = document.getElementById(id); if(el && v != null) el.value = v; };
+  const nmEl = document.getElementById('promoA-nombres'); if(nmEl) nmEl.checked = !!s.nombres;
   set('promoA-titulo', s.titulo || ''); set('promoA-sub', s.sub || ''); set('promoA-tam', s.tam || 'm');
+  set('promoA-sub2', s.sub2 || ''); set('promoA-vista', s.vista || 'grilla'); _alboVista();
   (s.filas || []).forEach(f => lista.appendChild(_alboFila(f.l, f.c)));
   lista.dataset.listo = '1';
   _alboResumen();
@@ -16333,7 +16365,146 @@ function promoGenerarAlbo(){
   const filas = e.filas.filter(f => f.l);
   if(!filas.length){ alert('Cargá al menos una temporada.'); return; }
   _alboGuardar();
-  abrirShare(() => generarImagenAlbo({ titulo: e.titulo, sub: e.sub, tam: e.tam, filas }));
+  if(e.vista === 'ranking'){
+    if(!filas.some(f => f.c)){ alert('Cargá al menos un club campeón.'); return; }
+    abrirShare(() => generarImagenRanking({ titulo: e.titulo, sub: e.sub2, nombres: e.nombres, filas }));
+    return;
+  }
+  abrirShare(() => generarImagenAlbo({ titulo: e.titulo, sub: e.sub, tam: e.tam, nombres: e.nombres, filas }));
+}
+
+// Copa (silueta) para el ranking: x,y = esquina sup. izq.; s = ancho
+function _alboCopa(ctx, x, y, s){
+  const u = v => v * s;
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x + u(1), y);
+  ctx.quadraticCurveTo(x + u(0.95), y + u(0.42), x + u(0.58), y + u(0.5));
+  ctx.lineTo(x + u(0.56), y + u(0.78));
+  ctx.lineTo(x + u(0.80), y + u(0.84));
+  ctx.lineTo(x + u(0.84), y + u(1.12));
+  ctx.lineTo(x + u(0.16), y + u(1.12));
+  ctx.lineTo(x + u(0.20), y + u(0.84));
+  ctx.lineTo(x + u(0.44), y + u(0.78));
+  ctx.lineTo(x + u(0.42), y + u(0.5));
+  ctx.quadraticCurveTo(x + u(0.05), y + u(0.42), x, y);
+  ctx.closePath(); ctx.fill();
+}
+
+// Ranking de títulos por club (se calcula con los mismos campeones del albo)
+async function generarImagenRanking(cfg){
+  await document.fonts.ready;
+  const id = getIdentidad();
+  const W = CV_W, H = CV_H, M = 70;
+  const FB = '"Bebas Neue", Arial, sans-serif', FR = '"Rajdhani", Arial, sans-serif';
+  const logoImg = await cvImgAsync(id.logo);
+  const titulo = (cfg.titulo || id.nombre || 'DEPORTEMAS').toUpperCase();
+  const sub = cfg.sub || 'Títulos por club';
+
+  // Conteo por club (sin distinguir mayúsculas); desempate: el que ganó más recientemente va primero
+  const mapa = new Map();
+  cfg.filas.forEach((f, i) => {
+    if(!f.c) return;
+    const k = f.c.toLowerCase(), o = mapa.get(k) || { n: f.c, t: 0, u: 0 };
+    o.t++; o.u = i; mapa.set(k, o);
+  });
+  const clubes = [...mapa.values()].sort((a, b) => b.t - a.t || b.u - a.u);
+
+  // Medidas: copas lo más grandes posible sin que el líder pase de 3 renglones
+  const plateD = 72, gap = 14, extra = cfg.nombres ? 24 : 0;
+  const tx0 = M + 88 + plateD + 26, areaW = W - M - tx0;
+  const maxT = clubes[0].t;
+  let s = 20;
+  for(let c = 44; c >= 20; c -= 2){
+    const per0 = Math.floor(areaW / (c * 1.2));
+    if(Math.ceil(maxT / per0) <= 3){ s = c; break; }
+  }
+  const spacing = s * 1.2, per = Math.max(1, Math.floor(areaW / spacing));
+  const lineH = s * 1.12 + 10;
+  const altoFila = c => Math.max(plateD + extra, Math.ceil(c.t / per) * lineH);
+
+  // Paginado por alto disponible
+  const top0 = 296, bot = H - 100, paginas = [];
+  let act = [], usado = 0;
+  clubes.forEach(c => {
+    const h = altoFila(c) + gap;
+    if(act.length && usado + h > bot - top0){ paginas.push(act); act = []; usado = 0; }
+    act.push(c); usado += h;
+  });
+  if(act.length) paginas.push(act);
+  const libre = (bot - top0) - usado;                          // si entra en una sola imagen, repartir el aire sobrante
+  const gapUse = gap + (paginas.length === 1 ? Math.min(44, libre / Math.max(1, clubes.length)) : 0);
+
+  const out = [];
+  for(let p = 0; p < paginas.length; p++){
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    const ctx = cv.getContext('2d'); ctx.textBaseline = 'alphabetic';
+    const setLS = v => { if('letterSpacing' in ctx) ctx.letterSpacing = v; };
+
+    const bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, C.NEG3); bg.addColorStop(1, C.NEG);
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    const rg = ctx.createRadialGradient(W*0.8, 0, 20, W*0.8, 0, 760);
+    rg.addColorStop(0, 'rgba(201,162,39,0.22)'); rg.addColorStop(1, 'rgba(201,162,39,0)');
+    ctx.fillStyle = rg; ctx.fillRect(0, 0, W, 800);
+
+    // Encabezado (igual que la grilla)
+    const ls = 120, lx = W - M - ls, ly = 62;
+    let fs = 104;
+    ctx.font = `400 ${fs}px ${FB}`;
+    while(fs > 44 && ctx.measureText(titulo).width > lx - M - 30){ fs -= 4; ctx.font = `400 ${fs}px ${FB}`; }
+    ctx.fillStyle = C.BLANCO; ctx.textAlign = 'left'; ctx.fillText(titulo, M, 150);
+    ctx.font = `600 38px ${FR}`; ctx.fillStyle = C.DORADO; setLS('3px');
+    ctx.fillText(sub.toUpperCase(), M, 204); setLS('0px');
+    if(logoImg){
+      ctx.save(); ctx.beginPath(); ctx.arc(lx+ls/2, ly+ls/2, ls/2, 0, Math.PI*2); ctx.clip();
+      cvDrawEscudoImg(ctx, logoImg, lx, ly, ls); ctx.restore();
+      ctx.lineWidth = 3; ctx.strokeStyle = C.DORADO;
+      ctx.beginPath(); ctx.arc(lx+ls/2, ly+ls/2, ls/2+1, 0, Math.PI*2); ctx.stroke();
+    }
+    const lg = ctx.createLinearGradient(M, 0, W-M, 0);
+    lg.addColorStop(0, C.DORADO2); lg.addColorStop(1, 'rgba(201,162,39,0.15)');
+    ctx.fillStyle = lg; ctx.fillRect(M, 244, W - 2*M, 4);
+
+    // Filas: número · escudo · copas
+    let y = top0;
+    for(const c of paginas[p]){
+      const lineas = Math.ceil(c.t / per);
+      const h = altoFila(c);
+      const py = y + (h - (plateD + extra)) / 2;
+      const pcy = py + plateD / 2, pcx = M + 88 + plateD / 2;
+
+      ctx.font = `400 54px ${FB}`; ctx.fillStyle = C.DORADO; ctx.textAlign = 'left';
+      ctx.fillText(String(c.t), M, pcy + 19);
+
+      ctx.beginPath(); ctx.arc(pcx, pcy, plateD/2, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(255,255,255,0.07)'; ctx.fill();
+      ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(201,162,39,0.40)'; ctx.stroke();
+      const cs = plateD * 0.76;
+      await cvDrawEscudoCompleto(ctx, c.n, pcx - cs/2, pcy - cs/2, cs);
+      if(cfg.nombres){
+        let nf = 19; ctx.font = `600 ${nf}px ${FR}`;
+        while(nf > 12 && ctx.measureText(c.n).width > 150){ nf--; ctx.font = `600 ${nf}px ${FR}`; }
+        ctx.fillStyle = 'rgba(255,255,255,0.62)'; ctx.textAlign = 'center';
+        ctx.fillText(c.n, pcx, py + plateD + 19);
+      }
+
+      ctx.fillStyle = C.DORADO;
+      const ty = y + (h - lineas * lineH) / 2;
+      for(let k = 0; k < c.t; k++){
+        _alboCopa(ctx, tx0 + (k % per) * spacing, ty + Math.floor(k / per) * lineH, s);
+      }
+      y += h + gapUse;
+    }
+
+    ctx.font = `600 22px ${FR}`; ctx.fillStyle = 'rgba(255,255,255,0.45)';
+    ctx.textAlign = 'right'; setLS('1px'); ctx.fillText('deportemas.pages.dev', W - M, H - 50); setLS('0px');
+    if(paginas.length > 1){
+      ctx.textAlign = 'left'; ctx.fillStyle = C.DORADO; ctx.fillText((p+1) + ' / ' + paginas.length, M, H - 50);
+    }
+    out.push(cv);
+  }
+  return out.length === 1 ? out[0] : out;
 }
 
 async function generarImagenAlbo(cfg){
@@ -16343,14 +16514,17 @@ async function generarImagenAlbo(cfg){
   const FB = '"Bebas Neue", Arial, sans-serif', FR = '"Rajdhani", Arial, sans-serif';
   const logoImg = await cvImgAsync(id.logo);
   const items = cfg.filas.slice().reverse();                  // la más nueva primero
-  const [cols, rows] = cfg.tam === 'g' ? [4, 4] : cfg.tam === 'c' ? [6, 6] : [5, 5];
+  const [cols, rows] = _alboGrid(cfg.tam, cfg.nombres);
   const per = cols * rows, paginas = Math.ceil(items.length / per);
   const porPag = Math.ceil(items.length / paginas);          // reparto parejo entre imágenes
   const titulo = (cfg.titulo || id.nombre || 'DEPORTEMAS').toUpperCase();
   const sub = cfg.sub || 'Campeones';
   const gridTop = 290, gridBot = H - 100;
   const cellW = (W - 2*M) / cols, cellH = (gridBot - gridTop) / rows;
-  const cres = Math.min(cellW * 0.62, cellH - 96);
+  const extra = cfg.nombres ? 26 : 0;                          // línea del nombre del club
+  const cres = Math.min(cellW * 0.62, cellH - 96 - extra * 1.5);
+  const plateD = cres + 18;
+  const stepX = (W - 2*M - plateD) / (cols - 1);               // 1ª placa alineada al margen izq., última al der.
   const out = [];
 
   for(let p = 0; p < paginas; p++){
@@ -16390,9 +16564,9 @@ async function generarImagenAlbo(cfg){
     for(let i = 0; i < parte.length; i++){
       const it = parte[i];
       const col = i % cols, fila = Math.floor(i / cols);
-      const cx = M + cellW*col + cellW/2;
+      const cx = M + plateD/2 + stepX*col;
       const top = gridTop + cellH*fila;
-      const bloque = cres + 92;                                // placa + aire + etiqueta
+      const bloque = cres + 92 + extra;                                // placa + aire + etiqueta
       const y0 = top + Math.max(0, (cellH - bloque) / 2);
       const py = y0 + 9;                                       // y del escudo
       const pcx = cx, pcy = py + cres/2;
@@ -16401,7 +16575,8 @@ async function generarImagenAlbo(cfg){
         ctx.beginPath(); ctx.arc(pcx, pcy, cres/2 + 9, 0, Math.PI*2);
         ctx.fillStyle = 'rgba(255,255,255,0.07)'; ctx.fill();
         ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(201,162,39,0.40)'; ctx.stroke();
-        await cvDrawEscudoCompleto(ctx, it.c, cx - cres/2, py, cres);
+        const cs = cres * 0.76;                                  // escudo más chico que la placa: los rectangulares no se salen
+        await cvDrawEscudoCompleto(ctx, it.c, cx - cs/2, pcy - cs/2, cs);
       } else {
         ctx.font = `400 ${Math.round(cres*0.62)}px ${FB}`;
         ctx.fillStyle = 'rgba(201,162,39,0.85)'; ctx.textAlign = 'center';
@@ -16422,6 +16597,10 @@ async function generarImagenAlbo(cfg){
         ctx.fillText(m[2].toUpperCase(), cx, ly0 + 28); setLS('0px');
       } else {
         fit(it.l, 30, cellW - 12, 700); ctx.fillStyle = C.BLANCO; ctx.fillText(it.l, cx, ly0);
+      }
+      if(cfg.nombres && it.c){
+        fit(it.c, 20, stepX - 10, 600); ctx.fillStyle = 'rgba(255,255,255,0.62)';
+        ctx.fillText(it.c, cx, ly0 + (m ? 54 : 28));
       }
     }
 
