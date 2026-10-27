@@ -16373,22 +16373,34 @@ function promoGenerarAlbo(){
   abrirShare(() => generarImagenAlbo({ titulo: e.titulo, sub: e.sub, tam: e.tam, nombres: e.nombres, filas }));
 }
 
-// Copa (silueta) para el ranking: x,y = esquina sup. izq.; s = ancho
+// Copa de campeón para el ranking: x,y = esquina sup. izq.; s = ancho y alto aprox.
 function _alboCopa(ctx, x, y, s){
   const u = v => v * s;
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  // asas
+  ctx.lineWidth = u(0.075); ctx.strokeStyle = ctx.fillStyle;
   ctx.beginPath();
-  ctx.moveTo(x, y);
-  ctx.lineTo(x + u(1), y);
-  ctx.quadraticCurveTo(x + u(0.95), y + u(0.42), x + u(0.58), y + u(0.5));
-  ctx.lineTo(x + u(0.56), y + u(0.78));
-  ctx.lineTo(x + u(0.80), y + u(0.84));
-  ctx.lineTo(x + u(0.84), y + u(1.12));
-  ctx.lineTo(x + u(0.16), y + u(1.12));
-  ctx.lineTo(x + u(0.20), y + u(0.84));
-  ctx.lineTo(x + u(0.44), y + u(0.78));
-  ctx.lineTo(x + u(0.42), y + u(0.5));
-  ctx.quadraticCurveTo(x + u(0.05), y + u(0.42), x, y);
+  ctx.moveTo(x + u(0.23), y + u(0.10));
+  ctx.bezierCurveTo(x + u(-0.04), y + u(0.06), x + u(0.02), y + u(0.46), x + u(0.31), y + u(0.40));
+  ctx.moveTo(x + u(0.77), y + u(0.10));
+  ctx.bezierCurveTo(x + u(1.04), y + u(0.06), x + u(0.98), y + u(0.46), x + u(0.69), y + u(0.40));
+  ctx.stroke();
+  // copa (cuenco)
+  ctx.beginPath();
+  ctx.moveTo(x + u(0.18), y);
+  ctx.lineTo(x + u(0.82), y);
+  ctx.bezierCurveTo(x + u(0.82), y + u(0.36), x + u(0.70), y + u(0.54), x + u(0.56), y + u(0.58));
+  ctx.lineTo(x + u(0.44), y + u(0.58));
+  ctx.bezierCurveTo(x + u(0.30), y + u(0.54), x + u(0.18), y + u(0.36), x + u(0.18), y);
   ctx.closePath(); ctx.fill();
+  // pie y base
+  ctx.fillRect(x + u(0.45), y + u(0.56), u(0.10), u(0.24));
+  ctx.beginPath();
+  ctx.moveTo(x + u(0.32), y + u(0.78)); ctx.lineTo(x + u(0.68), y + u(0.78));
+  ctx.lineTo(x + u(0.72), y + u(0.86)); ctx.lineTo(x + u(0.28), y + u(0.86)); ctx.closePath(); ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(x + u(0.22), y + u(0.86)); ctx.lineTo(x + u(0.78), y + u(0.86));
+  ctx.lineTo(x + u(0.78), y + u(1.0)); ctx.lineTo(x + u(0.22), y + u(1.0)); ctx.closePath(); ctx.fill();
 }
 
 // Ranking de títulos por club (se calcula con los mismos campeones del albo)
@@ -16412,10 +16424,10 @@ async function generarImagenRanking(cfg){
 
   // Medidas: copas lo más grandes posible sin que el líder pase de 3 renglones
   const plateD = 72, gap = 14, extra = cfg.nombres ? 24 : 0;
-  const tx0 = M + 88 + plateD + 26, areaW = W - M - tx0;
+  const tx0 = M + 116 + plateD + 26, areaW = W - M - tx0;
   const maxT = clubes[0].t;
   let s = 20;
-  for(let c = 44; c >= 20; c -= 2){
+  for(let c = 40; c >= 20; c -= 2){
     const per0 = Math.floor(areaW / (c * 1.2));
     if(Math.ceil(maxT / per0) <= 3){ s = c; break; }
   }
@@ -16472,10 +16484,13 @@ async function generarImagenRanking(cfg){
       const lineas = Math.ceil(c.t / per);
       const h = altoFila(c);
       const py = y + (h - (plateD + extra)) / 2;
-      const pcy = py + plateD / 2, pcx = M + 88 + plateD / 2;
+      const pcy = py + plateD / 2, pcx = M + 116 + plateD / 2;
 
-      ctx.font = `400 54px ${FB}`; ctx.fillStyle = C.DORADO; ctx.textAlign = 'left';
-      ctx.fillText(String(c.t), M, pcy + 19);
+      // Cantidad de títulos: alineada a la derecha, pegada al escudo, para que 1 / 12 / 30 queden prolijos
+      let nf = 88; ctx.font = `700 ${nf}px ${FR}`;
+      while(nf > 36 && ctx.measureText(String(c.t)).width > 104){ nf -= 2; ctx.font = `700 ${nf}px ${FR}`; }
+      ctx.fillStyle = C.BLANCO; ctx.textAlign = 'right';
+      ctx.fillText(String(c.t), M + 104, pcy + nf * 0.32);
 
       ctx.beginPath(); ctx.arc(pcx, pcy, plateD/2, 0, Math.PI*2);
       ctx.fillStyle = 'rgba(255,255,255,0.07)'; ctx.fill();
@@ -16491,8 +16506,10 @@ async function generarImagenRanking(cfg){
 
       ctx.fillStyle = C.DORADO;
       const ty = y + (h - lineas * lineH) / 2;
+      // Si el último renglón quedaría con una sola copa, se reparten parejo entre renglones
+      const perC = (lineas > 1 && c.t % per === 1) ? Math.ceil(c.t / lineas) : per;
       for(let k = 0; k < c.t; k++){
-        _alboCopa(ctx, tx0 + (k % per) * spacing, ty + Math.floor(k / per) * lineH, s);
+        _alboCopa(ctx, tx0 + (k % perC) * spacing, ty + Math.floor(k / perC) * lineH, s);
       }
       y += h + gapUse;
     }
