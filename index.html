@@ -16439,6 +16439,28 @@ function promoGenerarRadial(){
   abrirShare(() => generarImagenRadial({ titulo: g('promoR-titulo').trim(), sub: g('promoR-sub').trim(), clubes }));
 }
 
+// "INDEPENDIENTE RÍO III" → "Independiente Río III" (solo si viene todo en mayúsculas); respeta siglas, números romanos y (T)/(HDO)
+function _alboTitulo(txt){
+  if(txt !== txt.toUpperCase()) return txt;
+  const chicas = new Set(['de', 'del', 'la', 'el', 'los', 'las', 'y']);
+  return txt.split(' ').map((w, i) => {
+    if(/^[IVX]+$/.test(w) || w.includes('(') || w.includes(')')) return w;       // III, (T), (HDO)
+    if((w.match(/\./g) || []).length >= 2) return w;                              // V.G.B., C.A.A.
+    const l = w.toLowerCase();
+    if(i > 0 && chicas.has(l)) return l;
+    if(w.length <= 2 && /^[A-ZÁÉÍÓÚÑ]+$/.test(w)) return w;                       // FC, CD
+    return l.charAt(0).toUpperCase() + l.slice(1);
+  }).join(' ');
+}
+// Si el color del escudo es muy claro (amarillo, celeste), se oscurece para que se lea sobre el fondo crema
+function _alboOscurecer(rgb){
+  const m = /rgb\((\d+),(\d+),(\d+)\)/.exec(rgb); if(!m) return rgb;
+  const r = +m[1], g = +m[2], b = +m[3];
+  const L = (0.2126*r + 0.7152*g + 0.0722*b) / 255;
+  const f = L > 0.52 ? 0.52 / L : 1;
+  return 'rgb(' + Math.round(r*f) + ',' + Math.round(g*f) + ',' + Math.round(b*f) + ')';
+}
+
 async function generarImagenRadial(cfg){
   await document.fonts.ready;
   const id = getIdentidad();
@@ -16471,25 +16493,29 @@ async function generarImagenRadial(cfg){
   const CX = W / 2, CY = 706;
   const RC = 436;                                              // radio al centro de cada escudo
   const crest = Math.round(Math.min(92, (2 * Math.PI * RC / n) * 0.56));
-  const r1 = 124;                                              // dónde empieza cada rayo
+  const r1 = 140;                                              // dónde empieza cada rayo
   const r2 = RC - crest / 2 - 12;                              // dónde termina (antes del escudo)
-  const nf = Math.round(Math.max(15, Math.min(24, 2 * Math.PI * (r2 - 40) / n * 0.34)));  // tamaño del nombre
+  // Un solo tamaño de nombre para todos: el más grande (hasta 20 px) con el que el nombre más largo entra en el rayo
+  const rotulos = clubes.map(_alboTitulo);
+  let nf = Math.round(Math.max(13, Math.min(20, 2 * Math.PI * (r2 - 170) / n * 0.30)));
+  ctx.font = `600 ${nf}px ${FS}`;
+  while(nf > 13 && Math.max(...rotulos.map(t => ctx.measureText(t).width)) > (r2 - r1 - 28)){ nf--; ctx.font = `600 ${nf}px ${FS}`; }
 
   // Trofeo oficial al centro
   if(trofeo){
-    const th = 216, tw = th * (trofeo.naturalWidth / trofeo.naturalHeight);
+    const th = 212, tw = th * (trofeo.naturalWidth / trofeo.naturalHeight);
     ctx.drawImage(trofeo, Math.round(CX - tw/2), Math.round(CY - th/2), Math.round(tw), th);
   }
 
   for(let i = 0; i < n; i++){
-    const nombre = clubes[i];
+    const nombre = clubes[i], rotulo = rotulos[i];
     const th = -Math.PI/2 + (2 * Math.PI / n) * (i + 0.5);       // empieza arriba a la derecha, sentido horario
     const ux = Math.cos(th), uy = Math.sin(th);
-    const color = await _alboColorEscudo(nombre);
+    const color = _alboOscurecer(await _alboColorEscudo(nombre));
 
     // Rayo: cuña fina (más ancha cerca del trofeo)
     const nx = -uy, ny = ux;
-    const w1 = 2.6, w2 = 0.7;
+    const w1 = 1.6, w2 = 0.5;
     ctx.beginPath();
     ctx.moveTo(CX + ux*r1 + nx*w1, CY + uy*r1 + ny*w1);
     ctx.lineTo(CX + ux*r2 + nx*w2, CY + uy*r2 + ny*w2);
@@ -16503,9 +16529,9 @@ async function generarImagenRadial(cfg){
     ctx.save();
     ctx.translate(CX + ux*(r2 - 8), CY + uy*(r2 - 8));
     ctx.rotate(volt ? th + Math.PI : th);
-    ctx.font = `700 ${nf}px ${FS}`; ctx.fillStyle = color;
-    if(volt){ ctx.textAlign = 'left'; ctx.fillText(nombre, 0, nf * 0.72 + 5); }
-    else    { ctx.textAlign = 'right'; ctx.fillText(nombre, 0, -5); }
+    ctx.font = `600 ${nf}px ${FS}`; ctx.fillStyle = color;
+    if(volt){ ctx.textAlign = 'left'; ctx.fillText(rotulo, 0, nf * 0.72 + 4); }
+    else    { ctx.textAlign = 'right'; ctx.fillText(rotulo, 0, -4); }
     ctx.restore();
 
     // Escudo suelto al final del rayo
@@ -16566,13 +16592,14 @@ async function _alboColorEscudo(nombre){
       const r = d[i], g = d[i+1], b = d[i+2];
       const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
       if(mn > 225) continue;                                   // blanco
-      if(mx === 0 || (mx - mn) / mx < 0.28) continue;          // gris / negro
+      if(mx === 0 || (mx - mn) / mx < 0.45) continue;          // gris / negro / bordes suavizados (rosados, celestes lavados)
       const k = (r>>5) + ',' + (g>>5) + ',' + (b>>5);
-      const o = bk.get(k) || { n: 0, r: 0, g: 0, b: 0 };
-      o.n++; o.r += r; o.g += g; o.b += b; bk.set(k, o);
+      const sa = (mx - mn) / mx, wt = sa * sa * sa;               // los píxeles más vivos pesan más que los lavados
+      const o = bk.get(k) || { n: 0, c: 0, r: 0, g: 0, b: 0 };
+      o.n += wt; o.c++; o.r += r * wt; o.g += g * wt; o.b += b * wt; bk.set(k, o);
     }
     let best = null; bk.forEach(o => { if(!best || o.n > best.n) best = o; });
-    if(best && best.n >= 12) return 'rgb(' + Math.round(best.r/best.n) + ',' + Math.round(best.g/best.n) + ',' + Math.round(best.b/best.n) + ')';
+    if(best && best.c >= 8) return 'rgb(' + Math.round(best.r/best.n) + ',' + Math.round(best.g/best.n) + ',' + Math.round(best.b/best.n) + ')';
   }catch(e){}
   return '#2a2a2a';
 }
