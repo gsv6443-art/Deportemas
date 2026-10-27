@@ -16286,7 +16286,7 @@ function _alboGuardar(){
   try{ localStorage.setItem(ALBO_KEY, JSON.stringify(_alboEstado())); }catch(e){}
 }
 function _alboGrid(tam, nombres){
-  const t = nombres ? { g:[4,3], m:[5,4], c:[6,5] } : { g:[4,4], m:[5,5], c:[6,6] };
+  const t = { g:[5,4], m:[8,5], c:[10,6] };   // mediano = 8×5 como la referencia
   return t[tam] || t.m;
 }
 function _alboVista(){
@@ -16373,44 +16373,55 @@ function promoGenerarAlbo(){
   abrirShare(() => generarImagenAlbo({ titulo: e.titulo, sub: e.sub, tam: e.tam, nombres: e.nombres, filas }));
 }
 
-// Copa de campeón para el ranking: x,y = esquina sup. izq.; s = ancho y alto aprox.
+// Copa (embudo con pie) para el ranking: x,y = esquina sup. izq.; s = ancho (alto = 1.38 × ancho)
 function _alboCopa(ctx, x, y, s){
-  const u = v => v * s;
-  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-  // asas
-  ctx.lineWidth = u(0.075); ctx.strokeStyle = ctx.fillStyle;
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s * 1.38);
   ctx.beginPath();
-  ctx.moveTo(x + u(0.23), y + u(0.10));
-  ctx.bezierCurveTo(x + u(-0.04), y + u(0.06), x + u(0.02), y + u(0.46), x + u(0.31), y + u(0.40));
-  ctx.moveTo(x + u(0.77), y + u(0.10));
-  ctx.bezierCurveTo(x + u(1.04), y + u(0.06), x + u(0.98), y + u(0.46), x + u(0.69), y + u(0.40));
-  ctx.stroke();
-  // copa (cuenco)
-  ctx.beginPath();
-  ctx.moveTo(x + u(0.18), y);
-  ctx.lineTo(x + u(0.82), y);
-  ctx.bezierCurveTo(x + u(0.82), y + u(0.36), x + u(0.70), y + u(0.54), x + u(0.56), y + u(0.58));
-  ctx.lineTo(x + u(0.44), y + u(0.58));
-  ctx.bezierCurveTo(x + u(0.30), y + u(0.54), x + u(0.18), y + u(0.36), x + u(0.18), y);
+  ctx.moveTo(0, 0); ctx.lineTo(1, 0);
+  ctx.quadraticCurveTo(0.66, 0.20, 0.56, 0.52);
+  ctx.lineTo(0.56, 0.74);
+  ctx.quadraticCurveTo(0.80, 0.76, 0.80, 0.92);
+  ctx.lineTo(0.80, 1); ctx.lineTo(0.20, 1); ctx.lineTo(0.20, 0.92);
+  ctx.quadraticCurveTo(0.20, 0.76, 0.44, 0.74);
+  ctx.lineTo(0.44, 0.52);
+  ctx.quadraticCurveTo(0.34, 0.20, 0, 0);
   ctx.closePath(); ctx.fill();
-  // pie y base
-  ctx.fillRect(x + u(0.45), y + u(0.56), u(0.10), u(0.24));
-  ctx.beginPath();
-  ctx.moveTo(x + u(0.32), y + u(0.78)); ctx.lineTo(x + u(0.68), y + u(0.78));
-  ctx.lineTo(x + u(0.72), y + u(0.86)); ctx.lineTo(x + u(0.28), y + u(0.86)); ctx.closePath(); ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(x + u(0.22), y + u(0.86)); ctx.lineTo(x + u(0.78), y + u(0.86));
-  ctx.lineTo(x + u(0.78), y + u(1.0)); ctx.lineTo(x + u(0.22), y + u(1.0)); ctx.closePath(); ctx.fill();
+  ctx.restore();
 }
 
-// Ranking de títulos por club (se calcula con los mismos campeones del albo)
+// Color dominante del escudo (para pintar el número como en la referencia)
+async function _alboColorEscudo(nombre){
+  try{
+    const cv = document.createElement('canvas'); cv.width = cv.height = 40;
+    const cx = cv.getContext('2d');
+    await cvDrawEscudoCompleto(cx, nombre, 0, 0, 40);
+    const d = cx.getImageData(0, 0, 40, 40).data;
+    const bk = new Map();
+    for(let i = 0; i < d.length; i += 4){
+      if(d[i+3] < 140) continue;
+      const r = d[i], g = d[i+1], b = d[i+2];
+      const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+      if(mn > 225) continue;                                   // blanco
+      if(mx === 0 || (mx - mn) / mx < 0.28) continue;          // gris / negro
+      const k = (r>>5) + ',' + (g>>5) + ',' + (b>>5);
+      const o = bk.get(k) || { n: 0, r: 0, g: 0, b: 0 };
+      o.n++; o.r += r; o.g += g; o.b += b; bk.set(k, o);
+    }
+    let best = null; bk.forEach(o => { if(!best || o.n > best.n) best = o; });
+    if(best && best.n >= 12) return 'rgb(' + Math.round(best.r/best.n) + ',' + Math.round(best.g/best.n) + ',' + Math.round(best.b/best.n) + ')';
+  }catch(e){}
+  return '#2a2a2a';
+}
+
+// Ranking de títulos por club — estilo "Campioni" (fondo claro, copas oscuras, número del color del escudo)
 async function generarImagenRanking(cfg){
   await document.fonts.ready;
   const id = getIdentidad();
   const W = CV_W, H = CV_H, M = 70;
-  const FB = '"Bebas Neue", Arial, sans-serif', FR = '"Rajdhani", Arial, sans-serif';
+  const FS = '"Helvetica Neue", Helvetica, Arial, sans-serif';
+  const INK = '#2a2a2a', BG = '#f5f2eb';
   const logoImg = await cvImgAsync(id.logo);
-  const titulo = (cfg.titulo || id.nombre || 'DEPORTEMAS').toUpperCase();
+  const titulo = cfg.titulo || id.nombre || 'DEPORTEMAS';
   const sub = cfg.sub || 'Títulos por club';
 
   // Conteo por club (sin distinguir mayúsculas); desempate: el que ganó más recientemente va primero
@@ -16421,103 +16432,80 @@ async function generarImagenRanking(cfg){
     o.t++; o.u = i; mapa.set(k, o);
   });
   const clubes = [...mapa.values()].sort((a, b) => b.t - a.t || b.u - a.u);
+  for(const c of clubes) c.color = await _alboColorEscudo(c.n);
 
-  // Medidas: copas lo más grandes posible sin que el líder pase de 3 renglones
-  const plateD = 72, gap = 14, extra = cfg.nombres ? 24 : 0;
-  const tx0 = M + 116 + plateD + 26, areaW = W - M - tx0;
-  const maxT = clubes[0].t;
-  let s = 20;
-  for(let c = 40; c >= 20; c -= 2){
-    const per0 = Math.floor(areaW / (c * 1.2));
-    if(Math.ceil(maxT / per0) <= 3){ s = c; break; }
+  // Medidas base (k = 1) y escala k: se usa la más grande que entre en una sola imagen (máx. 1.6)
+  const B = { crest: 66, num: 30, step: 40, s: 33, lineH: 51, gap: 30, numW: 44, pad: 14, tpad: 24 };
+  const top0 = 204, bot = H - 90, avail = bot - top0;
+  const medir = k => {
+    const crest = B.crest * k, crestL = M + (B.numW + B.pad) * k, tx0 = crestL + crest + B.tpad * k;
+    const per = Math.max(1, Math.floor((W - M - tx0) / (B.step * k)));
+    const extra = cfg.nombres ? 22 * k : 0;
+    const alto = c => Math.max(crest + extra, Math.ceil(c.t / per) * B.lineH * k) + B.gap * k;
+    return { k, crest, crestL, tx0, per, extra, alto };
+  };
+  let m = null;
+  for(let k = 1.6; k >= 1; k -= 0.05){
+    const t = medir(k);
+    if(clubes.reduce((a, c) => a + t.alto(c), 0) - B.gap * k <= avail){ m = t; break; }
   }
-  const spacing = s * 1.2, per = Math.max(1, Math.floor(areaW / spacing));
-  const lineH = s * 1.12 + 10;
-  const altoFila = c => Math.max(plateD + extra, Math.ceil(c.t / per) * lineH);
+  if(!m) m = medir(1);
+  const k = m.k;
 
-  // Paginado por alto disponible
-  const top0 = 296, bot = H - 100, paginas = [];
-  let act = [], usado = 0;
+  // Paginado (solo si ni con k = 1 entran todos los clubes)
+  const paginas = []; let act = [], usado = 0;
   clubes.forEach(c => {
-    const h = altoFila(c) + gap;
-    if(act.length && usado + h > bot - top0){ paginas.push(act); act = []; usado = 0; }
+    const h = m.alto(c);
+    if(act.length && usado + h - B.gap * k > avail){ paginas.push(act); act = []; usado = 0; }
     act.push(c); usado += h;
   });
   if(act.length) paginas.push(act);
-  const libre = (bot - top0) - usado;                          // si entra en una sola imagen, repartir el aire sobrante
-  const gapUse = gap + (paginas.length === 1 ? Math.min(44, libre / Math.max(1, clubes.length)) : 0);
 
   const out = [];
   for(let p = 0; p < paginas.length; p++){
     const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
     const ctx = cv.getContext('2d'); ctx.textBaseline = 'alphabetic';
-    const setLS = v => { if('letterSpacing' in ctx) ctx.letterSpacing = v; };
+    ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);
 
-    const bg = ctx.createLinearGradient(0, 0, 0, H);
-    bg.addColorStop(0, C.NEG3); bg.addColorStop(1, C.NEG);
-    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
-    const rg = ctx.createRadialGradient(W*0.8, 0, 20, W*0.8, 0, 760);
-    rg.addColorStop(0, 'rgba(201,162,39,0.22)'); rg.addColorStop(1, 'rgba(201,162,39,0)');
-    ctx.fillStyle = rg; ctx.fillRect(0, 0, W, 800);
-
-    // Encabezado (igual que la grilla)
-    const ls = 120, lx = W - M - ls, ly = 62;
-    let fs = 104;
-    ctx.font = `400 ${fs}px ${FB}`;
-    while(fs > 44 && ctx.measureText(titulo).width > lx - M - 30){ fs -= 4; ctx.font = `400 ${fs}px ${FB}`; }
-    ctx.fillStyle = C.BLANCO; ctx.textAlign = 'left'; ctx.fillText(titulo, M, 150);
-    ctx.font = `600 38px ${FR}`; ctx.fillStyle = C.DORADO; setLS('3px');
-    ctx.fillText(sub.toUpperCase(), M, 204); setLS('0px');
+    // Encabezado: título en negrita + subtítulo, logo a la derecha, línea fina
+    const ls = 78, lx = W - M - ls;
+    let fs = 60; ctx.font = `700 ${fs}px ${FS}`;
+    while(fs > 30 && ctx.measureText(titulo).width > lx - M - 24){ fs -= 2; ctx.font = `700 ${fs}px ${FS}`; }
+    ctx.fillStyle = INK; ctx.textAlign = 'left'; ctx.fillText(titulo, M, 98);
+    ctx.font = `400 30px ${FS}`; ctx.fillText(sub, M, 142);
     if(logoImg){
-      ctx.save(); ctx.beginPath(); ctx.arc(lx+ls/2, ly+ls/2, ls/2, 0, Math.PI*2); ctx.clip();
-      cvDrawEscudoImg(ctx, logoImg, lx, ly, ls); ctx.restore();
-      ctx.lineWidth = 3; ctx.strokeStyle = C.DORADO;
-      ctx.beginPath(); ctx.arc(lx+ls/2, ly+ls/2, ls/2+1, 0, Math.PI*2); ctx.stroke();
+      ctx.save(); ctx.beginPath(); ctx.arc(lx + ls/2, 62 + ls/2 - 12, ls/2, 0, Math.PI*2); ctx.clip();
+      cvDrawEscudoImg(ctx, logoImg, lx, 62 - 12, ls); ctx.restore();
     }
-    const lg = ctx.createLinearGradient(M, 0, W-M, 0);
-    lg.addColorStop(0, C.DORADO2); lg.addColorStop(1, 'rgba(201,162,39,0.15)');
-    ctx.fillStyle = lg; ctx.fillRect(M, 244, W - 2*M, 4);
+    ctx.fillStyle = INK; ctx.fillRect(M, 166, W - 2*M, 2);
 
-    // Filas: número · escudo · copas
+    // Filas: número (color del escudo) · escudo · copas
     let y = top0;
+    const trH = B.s * 1.38 * k;
     for(const c of paginas[p]){
-      const lineas = Math.ceil(c.t / per);
-      const h = altoFila(c);
-      const py = y + (h - (plateD + extra)) / 2;
-      const pcy = py + plateD / 2, pcx = M + 116 + plateD / 2;
+      ctx.font = `700 ${B.num * k}px ${FS}`; ctx.fillStyle = c.color; ctx.textAlign = 'right';
+      ctx.fillText(String(c.t), M + B.numW * k, y + B.num * k * 0.80);
 
-      // Cantidad de títulos: alineada a la derecha, pegada al escudo, para que 1 / 12 / 30 queden prolijos
-      let nf = 88; ctx.font = `700 ${nf}px ${FR}`;
-      while(nf > 36 && ctx.measureText(String(c.t)).width > 104){ nf -= 2; ctx.font = `700 ${nf}px ${FR}`; }
-      ctx.fillStyle = C.BLANCO; ctx.textAlign = 'right';
-      ctx.fillText(String(c.t), M + 104, pcy + nf * 0.32);
-
-      ctx.beginPath(); ctx.arc(pcx, pcy, plateD/2, 0, Math.PI*2);
-      ctx.fillStyle = 'rgba(255,255,255,0.07)'; ctx.fill();
-      ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(201,162,39,0.40)'; ctx.stroke();
-      const cs = plateD * 0.76;
-      await cvDrawEscudoCompleto(ctx, c.n, pcx - cs/2, pcy - cs/2, cs);
+      await cvDrawEscudoCompleto(ctx, c.n, m.crestL, y, m.crest);
       if(cfg.nombres){
-        let nf = 19; ctx.font = `600 ${nf}px ${FR}`;
-        while(nf > 12 && ctx.measureText(c.n).width > 150){ nf--; ctx.font = `600 ${nf}px ${FR}`; }
-        ctx.fillStyle = 'rgba(255,255,255,0.62)'; ctx.textAlign = 'center';
-        ctx.fillText(c.n, pcx, py + plateD + 19);
+        let nf = 15 * k; ctx.font = `600 ${nf}px ${FS}`;
+        while(nf > 10 && ctx.measureText(c.n).width > m.crest + 40){ nf -= 1; ctx.font = `600 ${nf}px ${FS}`; }
+        ctx.fillStyle = 'rgba(42,42,42,0.7)'; ctx.textAlign = 'center';
+        ctx.fillText(c.n, m.crestL + m.crest / 2, y + m.crest + 17 * k);
       }
 
-      ctx.fillStyle = C.DORADO;
-      const ty = y + (h - lineas * lineH) / 2;
-      // Si el último renglón quedaría con una sola copa, se reparten parejo entre renglones
-      const perC = (lineas > 1 && c.t % per === 1) ? Math.ceil(c.t / lineas) : per;
-      for(let k = 0; k < c.t; k++){
-        _alboCopa(ctx, tx0 + (k % perC) * spacing, ty + Math.floor(k / perC) * lineH, s);
+      ctx.fillStyle = INK;
+      const off = Math.max(0, (m.crest - trH) / 2);
+      for(let i = 0; i < c.t; i++){
+        _alboCopa(ctx, m.tx0 + (i % m.per) * B.step * k, y + off + Math.floor(i / m.per) * B.lineH * k, B.s * k);
       }
-      y += h + gapUse;
+      y += m.alto(c);
     }
 
-    ctx.font = `600 22px ${FR}`; ctx.fillStyle = 'rgba(255,255,255,0.45)';
-    ctx.textAlign = 'right'; setLS('1px'); ctx.fillText('deportemas.pages.dev', W - M, H - 50); setLS('0px');
+    ctx.font = `600 20px ${FS}`; ctx.fillStyle = 'rgba(42,42,42,0.55)';
+    ctx.textAlign = 'right'; ctx.fillText('deportemas.pages.dev', W - M, H - 44);
     if(paginas.length > 1){
-      ctx.textAlign = 'left'; ctx.fillStyle = C.DORADO; ctx.fillText((p+1) + ' / ' + paginas.length, M, H - 50);
+      ctx.textAlign = 'left'; ctx.fillStyle = INK; ctx.fillText((p+1) + ' / ' + paginas.length, M, H - 44);
     }
     out.push(cv);
   }
@@ -16528,105 +16516,80 @@ async function generarImagenAlbo(cfg){
   await document.fonts.ready;
   const id = getIdentidad();
   const W = CV_W, H = CV_H, M = 70;
-  const FB = '"Bebas Neue", Arial, sans-serif', FR = '"Rajdhani", Arial, sans-serif';
+  const FS = '"Helvetica Neue", Helvetica, Arial, sans-serif';
+  const INK = '#2a2a2a', BG = '#f5f2eb';
   const logoImg = await cvImgAsync(id.logo);
   const items = cfg.filas.slice().reverse();                  // la más nueva primero
   const [cols, rows] = _alboGrid(cfg.tam, cfg.nombres);
   const per = cols * rows, paginas = Math.ceil(items.length / per);
-  const porPag = Math.ceil(items.length / paginas);          // reparto parejo entre imágenes
-  const titulo = (cfg.titulo || id.nombre || 'DEPORTEMAS').toUpperCase();
+  const porPag = Math.ceil(items.length / paginas);           // reparto parejo entre imágenes
+  const titulo = cfg.titulo || id.nombre || 'DEPORTEMAS';
   const sub = cfg.sub || 'Campeones';
-  const gridTop = 290, gridBot = H - 100;
-  const cellW = (W - 2*M) / cols, cellH = (gridBot - gridTop) / rows;
-  const extra = cfg.nombres ? 26 : 0;                          // línea del nombre del club
-  const cres = Math.min(cellW * 0.62, cellH - 96 - extra * 1.5);
-  const plateD = cres + 18;
-  const stepX = (W - 2*M - plateD) / (cols - 1);               // 1ª placa alineada al margen izq., última al der.
+  const gridTop = 214, gridBot = H - 96;
+  const cellH0 = (gridBot - gridTop) / rows;
+  const crest = Math.min(cfg.tam === 'c' ? 60 : cfg.tam === 'g' ? 96 : 78, cellH0 - 74 - (cfg.nombres ? 18 : 0));
+  const rowsUsed = Math.ceil(porPag / cols);                   // si sobran filas, se estiran para llenar la hoja
+  const cellH = Math.min((gridBot - gridTop) / rowsUsed, cellH0 * 1.4);
+  const stepX = (W - 2*M - crest) / (cols - 1);               // 1ª columna al margen izq., última al der.
+  const yf = Math.round(crest * 0.27);                         // tamaño del año
   const out = [];
 
   for(let p = 0; p < paginas; p++){
     const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
     const ctx = cv.getContext('2d'); ctx.textBaseline = 'alphabetic';
-    const setLS = v => { if('letterSpacing' in ctx) ctx.letterSpacing = v; };
+    ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);
 
-    const bg = ctx.createLinearGradient(0, 0, 0, H);
-    bg.addColorStop(0, C.NEG3); bg.addColorStop(1, C.NEG);
-    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
-    const rg = ctx.createRadialGradient(W*0.8, 0, 20, W*0.8, 0, 760);
-    rg.addColorStop(0, 'rgba(201,162,39,0.22)'); rg.addColorStop(1, 'rgba(201,162,39,0)');
-    ctx.fillStyle = rg; ctx.fillRect(0, 0, W, 800);
-
-    // Encabezado: título + subtítulo a la izquierda, logo de la liga a la derecha
-    const ls = 120, lx = W - M - ls, ly = 62;
-    const maxT = lx - M - 30;
-    let fs = 104;
-    ctx.font = `400 ${fs}px ${FB}`;
-    while(fs > 44 && ctx.measureText(titulo).width > maxT){ fs -= 4; ctx.font = `400 ${fs}px ${FB}`; }
-    ctx.fillStyle = C.BLANCO; ctx.textAlign = 'left';
-    ctx.fillText(titulo, M, 150);
-    ctx.font = `600 38px ${FR}`; ctx.fillStyle = C.DORADO; setLS('3px');
-    ctx.fillText(sub.toUpperCase(), M, 204); setLS('0px');
+    // Encabezado: título en negrita + subtítulo, logo a la derecha, línea fina
+    const ls = 78, lx = W - M - ls;
+    let fs = 60; ctx.font = `700 ${fs}px ${FS}`;
+    while(fs > 30 && ctx.measureText(titulo).width > lx - M - 24){ fs -= 2; ctx.font = `700 ${fs}px ${FS}`; }
+    ctx.fillStyle = INK; ctx.textAlign = 'left'; ctx.fillText(titulo, M, 98);
+    ctx.font = `400 30px ${FS}`; ctx.fillText(sub, M, 142);
     if(logoImg){
-      ctx.save(); ctx.beginPath(); ctx.arc(lx+ls/2, ly+ls/2, ls/2, 0, Math.PI*2); ctx.clip();
-      cvDrawEscudoImg(ctx, logoImg, lx, ly, ls); ctx.restore();
-      ctx.lineWidth = 3; ctx.strokeStyle = C.DORADO;
-      ctx.beginPath(); ctx.arc(lx+ls/2, ly+ls/2, ls/2+1, 0, Math.PI*2); ctx.stroke();
+      ctx.save(); ctx.beginPath(); ctx.arc(lx + ls/2, 62 + ls/2 - 12, ls/2, 0, Math.PI*2); ctx.clip();
+      cvDrawEscudoImg(ctx, logoImg, lx, 62 - 12, ls); ctx.restore();
     }
-    const lg = ctx.createLinearGradient(M, 0, W-M, 0);
-    lg.addColorStop(0, C.DORADO2); lg.addColorStop(1, 'rgba(201,162,39,0.15)');
-    ctx.fillStyle = lg; ctx.fillRect(M, 244, W - 2*M, 4);
+    ctx.fillStyle = INK; ctx.fillRect(M, 166, W - 2*M, 2);
 
-    // Grilla de casillas
+    // Grilla: escudo suelto + año debajo (o "x" si no hubo campeón)
     const parte = items.slice(p*porPag, (p+1)*porPag);
+    const fit = (txt, size, w, wt) => {
+      let s = size; ctx.font = `${wt} ${s}px ${FS}`;
+      while(s > 10 && ctx.measureText(txt).width > w){ s -= 1; ctx.font = `${wt} ${s}px ${FS}`; }
+    };
     for(let i = 0; i < parte.length; i++){
       const it = parte[i];
-      const col = i % cols, fila = Math.floor(i / cols);
-      const cx = M + plateD/2 + stepX*col;
-      const top = gridTop + cellH*fila;
-      const bloque = cres + 92 + extra;                                // placa + aire + etiqueta
-      const y0 = top + Math.max(0, (cellH - bloque) / 2);
-      const py = y0 + 9;                                       // y del escudo
-      const pcx = cx, pcy = py + cres/2;
-
-      if(it.c){
-        ctx.beginPath(); ctx.arc(pcx, pcy, cres/2 + 9, 0, Math.PI*2);
-        ctx.fillStyle = 'rgba(255,255,255,0.07)'; ctx.fill();
-        ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(201,162,39,0.40)'; ctx.stroke();
-        const cs = cres * 0.76;                                  // escudo más chico que la placa: los rectangulares no se salen
-        await cvDrawEscudoCompleto(ctx, it.c, cx - cs/2, pcy - cs/2, cs);
-      } else {
-        ctx.font = `400 ${Math.round(cres*0.62)}px ${FB}`;
-        ctx.fillStyle = 'rgba(201,162,39,0.85)'; ctx.textAlign = 'center';
-        ctx.fillText('X', pcx, pcy + cres*0.22);
-      }
-
-      // Etiqueta: "2026 Apertura" → año grande + torneo chico; si no, una sola línea
-      const ly0 = py + cres + 41;
-      const m = it.l.match(/^((?:19|20)\d{2}(?:\/\d{2,4})?)\s+(.+)$/);
+      const cx = M + crest/2 + stepX * (i % cols);
+      const top = gridTop + cellH * Math.floor(i / cols);
       ctx.textAlign = 'center';
-      const fit = (txt, size, w, wt) => {
-        let s = size; ctx.font = `${wt} ${s}px ${FR}`;
-        while(s > 14 && ctx.measureText(txt).width > w){ s -= 1; ctx.font = `${wt} ${s}px ${FR}`; }
-      };
-      if(m){
-        fit(m[1], 30, cellW - 12, 700); ctx.fillStyle = C.BLANCO; ctx.fillText(m[1], cx, ly0);
-        fit(m[2].toUpperCase(), 21, cellW - 12, 600); ctx.fillStyle = C.DORADO; setLS('1px');
-        ctx.fillText(m[2].toUpperCase(), cx, ly0 + 28); setLS('0px');
+      if(it.c){
+        await cvDrawEscudoCompleto(ctx, it.c, cx - crest/2, top, crest);
       } else {
-        fit(it.l, 30, cellW - 12, 700); ctx.fillStyle = C.BLANCO; ctx.fillText(it.l, cx, ly0);
+        ctx.font = `700 ${Math.round(crest * 0.5)}px ${FS}`; ctx.fillStyle = INK;
+        ctx.fillText('x', cx, top + crest/2 + crest * 0.17);
+      }
+      // Etiqueta: "2026 Apertura" → año + torneo; si no, una sola línea
+      const lw = Math.max(60, stepX - 8);
+      let ly = top + crest + yf + 12;
+      const m = it.l.match(/^((?:19|20)\d{2}(?:\/\d{2,4})?)\s+(.+)$/);
+      ctx.fillStyle = INK;
+      if(m){
+        fit(m[1], yf, lw, 400); ctx.fillText(m[1], cx, ly);
+        ly += yf * 1.05;
+        fit(m[2], yf * 0.85, lw, 400); ctx.fillText(m[2], cx, ly);
+      } else {
+        fit(it.l, yf, lw, 400); ctx.fillText(it.l, cx, ly);
       }
       if(cfg.nombres && it.c){
-        fit(it.c, 20, stepX - 10, 600); ctx.fillStyle = 'rgba(255,255,255,0.62)';
-        ctx.fillText(it.c, cx, ly0 + (m ? 54 : 28));
+        ly += yf * 0.95;
+        fit(it.c, yf * 0.72, lw, 400); ctx.fillStyle = 'rgba(42,42,42,0.6)'; ctx.fillText(it.c, cx, ly);
       }
     }
 
-    // Pie discreto
-    ctx.font = `600 22px ${FR}`; ctx.fillStyle = 'rgba(255,255,255,0.45)';
-    ctx.textAlign = 'right'; setLS('1px'); ctx.fillText('deportemas.pages.dev', W - M, H - 50); setLS('0px');
+    ctx.font = `600 20px ${FS}`; ctx.fillStyle = 'rgba(42,42,42,0.55)';
+    ctx.textAlign = 'right'; ctx.fillText('deportemas.pages.dev', W - M, H - 44);
     if(paginas > 1){
-      ctx.textAlign = 'left'; ctx.fillStyle = C.DORADO;
-      ctx.fillText((p+1) + ' / ' + paginas, M, H - 50);
+      ctx.textAlign = 'left'; ctx.fillStyle = INK; ctx.fillText((p+1) + ' / ' + paginas, M, H - 44);
     }
     out.push(cv);
   }
