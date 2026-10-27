@@ -5153,6 +5153,7 @@ table.posiciones td:nth-child(8){
             <option value="jugador">Jugador destacado (estadísticas)</option>
             <option value="radio">Cobertura radial (historia / reel 1080×1920)</option>
             <option value="albo">Albo de oro (campeones por temporada)</option>
+            <option value="radial">Presentación de equipos (radial con el trofeo)</option>
           </select>
         </div>
 
@@ -5285,6 +5286,31 @@ table.posiciones td:nth-child(8){
           <p style="font-size:10px;color:var(--gris);margin-top:-4px;margin-bottom:14px;font-family:'Rajdhani',sans-serif">
             Muestra el partido con su título y, debajo, los primeros 4 puestos de la tabla elegida. Si elegís un partido guardado, la tabla se selecciona sola según su división y torneo. La foto es opcional y tiene corte diagonal.
           </p>
+        </div>
+
+        <div id="promo-radial-wrap" style="display:none">
+          <p style="font-size:11px;color:var(--gris);margin-bottom:12px;font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px">
+            Presenta a los equipos de la temporada alrededor del trofeo de la liga. Elegí la división y destildá los clubes que no participen.
+          </p>
+          <div class="form-group"><label>División</label>
+            <select id="promoR-div" onchange="_radialClubes()">
+              <option value="primera">Primera</option>
+              <option value="segunda">Segunda</option>
+              <option value="extraliga">Extraliga</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Título</label>
+              <input type="text" id="promoR-titulo" placeholder="Vacío = nombre de la liga"/>
+            </div>
+            <div class="form-group"><label>Subtítulo</label>
+              <input type="text" id="promoR-sub" placeholder="Ej: Temporada 2027"/>
+            </div>
+          </div>
+          <div class="form-group"><label>Clubes participantes</label>
+            <div id="promoR-clubes" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px"></div>
+            <p id="promoR-resumen" style="font-size:11px;color:var(--gris);margin-top:8px;font-family:'Rajdhani',sans-serif"></p>
+          </div>
         </div>
 
         <div id="promo-albo-wrap" style="display:none">
@@ -15926,6 +15952,10 @@ function promoCambiarModo(){
   if(ra) ra.style.display = modo === 'albo' ? '' : 'none';
   if(fc && modo === 'albo') fc.style.display = 'none';
   if(modo === 'albo') promoAlboInit();
+  const rr = document.getElementById('promo-radial-wrap');
+  if(rr) rr.style.display = modo === 'radial' ? '' : 'none';
+  if(fc && modo === 'radial') fc.style.display = 'none';
+  if(modo === 'radial') _radialClubes();
 }
 
 function promoCargarPartido3(){
@@ -16225,6 +16255,10 @@ function promoGenerar(){
     promoGenerarAlbo();
     return;
   }
+  if(document.getElementById('promo-modo') && document.getElementById('promo-modo').value === 'radial'){
+    promoGenerarRadial();
+    return;
+  }
   if(document.getElementById('promo-modo') && document.getElementById('promo-modo').value === 'radio'){
     promoGenerarRadio();
     return;
@@ -16373,6 +16407,136 @@ function promoGenerarAlbo(){
   abrirShare(() => generarImagenAlbo({ titulo: e.titulo, sub: e.sub, tam: e.tam, nombres: e.nombres, filas }));
 }
 
+
+// ── Presentación de equipos (radial con el trofeo de la liga) ────
+function _radialClubes(){
+  const cont = document.getElementById('promoR-clubes'); if(!cont) return;
+  const div = (document.getElementById('promoR-div') || {}).value || 'primera';
+  const previos = new Set([...cont.querySelectorAll('input:checked')].map(i => i.value));
+  const eqs = (data.equipos || []).filter(e => e.div === div).sort((a, b) => (a.nombre||'').localeCompare(b.nombre||'', 'es'));
+  cont.innerHTML = '';
+  if(!eqs.length){ cont.innerHTML = '<span style="font-size:12px;color:var(--gris)">No hay equipos cargados en esta división.</span>'; _radialResumen(); return; }
+  eqs.forEach(e => {
+    const lab = document.createElement('label');
+    lab.className = 'clubes-check-item';
+    const inp = document.createElement('input');
+    inp.type = 'checkbox'; inp.value = e.nombre; inp.checked = true;
+    inp.addEventListener('change', _radialResumen);
+    lab.append(inp, ' ' + e.nombre);
+    cont.appendChild(lab);
+  });
+  _radialResumen();
+}
+function _radialResumen(){
+  const el = document.getElementById('promoR-resumen'); if(!el) return;
+  const n = document.querySelectorAll('#promoR-clubes input:checked').length;
+  el.textContent = n + ' club' + (n !== 1 ? 'es' : '') + ' seleccionado' + (n !== 1 ? 's' : '');
+}
+function promoGenerarRadial(){
+  const clubes = [...document.querySelectorAll('#promoR-clubes input:checked')].map(i => i.value);
+  if(clubes.length < 3){ alert('Elegí al menos 3 clubes.'); return; }
+  const g = id => (document.getElementById(id) || {}).value || '';
+  abrirShare(() => generarImagenRadial({ titulo: g('promoR-titulo').trim(), sub: g('promoR-sub').trim(), clubes }));
+}
+
+async function generarImagenRadial(cfg){
+  await document.fonts.ready;
+  const id = getIdentidad();
+  const W = CV_W, H = CV_H, M = 70;
+  const FS = '"Helvetica Neue", Helvetica, Arial, sans-serif';
+  const INK = '#2a2a2a', BG = '#f5f2eb';
+  const logoImg = await cvImgAsync(id.logo);
+  const trofeo = await cvImgAsync(TROFEO_CAMPEON_B64);
+  const titulo = cfg.titulo || id.nombre || 'DEPORTEMAS';
+  const sub = cfg.sub || '';
+  const clubes = cfg.clubes.slice().sort((a, b) => a.localeCompare(b, 'es'));
+  const n = clubes.length;
+
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d'); ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);
+
+  // Encabezado (sin línea, como la referencia)
+  const ls = 78, lx = W - M - ls;
+  let fs = 60; ctx.font = `700 ${fs}px ${FS}`;
+  while(fs > 30 && ctx.measureText(titulo).width > lx - M - 24){ fs -= 2; ctx.font = `700 ${fs}px ${FS}`; }
+  ctx.fillStyle = INK; ctx.textAlign = 'left'; ctx.fillText(titulo, M, 98);
+  if(sub){ ctx.font = `400 30px ${FS}`; ctx.fillText(sub, M, 142); }
+  if(logoImg){
+    ctx.save(); ctx.beginPath(); ctx.arc(lx + ls/2, 62 + ls/2 - 12, ls/2, 0, Math.PI*2); ctx.clip();
+    cvDrawEscudoImg(ctx, logoImg, lx, 62 - 12, ls); ctx.restore();
+  }
+
+  // Geometría
+  const CX = W / 2, CY = 706;
+  const RC = 436;                                              // radio al centro de cada escudo
+  const crest = Math.round(Math.min(92, (2 * Math.PI * RC / n) * 0.56));
+  const r1 = 124;                                              // dónde empieza cada rayo
+  const r2 = RC - crest / 2 - 12;                              // dónde termina (antes del escudo)
+  const nf = Math.round(Math.max(15, Math.min(24, 2 * Math.PI * (r2 - 40) / n * 0.34)));  // tamaño del nombre
+
+  // Trofeo oficial al centro
+  if(trofeo){
+    const th = 216, tw = th * (trofeo.naturalWidth / trofeo.naturalHeight);
+    ctx.drawImage(trofeo, Math.round(CX - tw/2), Math.round(CY - th/2), Math.round(tw), th);
+  }
+
+  for(let i = 0; i < n; i++){
+    const nombre = clubes[i];
+    const th = -Math.PI/2 + (2 * Math.PI / n) * (i + 0.5);       // empieza arriba a la derecha, sentido horario
+    const ux = Math.cos(th), uy = Math.sin(th);
+    const color = await _alboColorEscudo(nombre);
+
+    // Rayo: cuña fina (más ancha cerca del trofeo)
+    const nx = -uy, ny = ux;
+    const w1 = 2.6, w2 = 0.7;
+    ctx.beginPath();
+    ctx.moveTo(CX + ux*r1 + nx*w1, CY + uy*r1 + ny*w1);
+    ctx.lineTo(CX + ux*r2 + nx*w2, CY + uy*r2 + ny*w2);
+    ctx.lineTo(CX + ux*r2 - nx*w2, CY + uy*r2 - ny*w2);
+    ctx.lineTo(CX + ux*r1 - nx*w1, CY + uy*r1 - ny*w1);
+    ctx.closePath(); ctx.fillStyle = color; ctx.fill();
+
+    // Nombre a lo largo del rayo, del lado izquierdo de la marcha, terminando cerca del escudo.
+    // En la mitad izquierda se da vuelta para que se lea derecho.
+    const volt = ux < -0.001;
+    ctx.save();
+    ctx.translate(CX + ux*(r2 - 8), CY + uy*(r2 - 8));
+    ctx.rotate(volt ? th + Math.PI : th);
+    ctx.font = `700 ${nf}px ${FS}`; ctx.fillStyle = color;
+    if(volt){ ctx.textAlign = 'left'; ctx.fillText(nombre, 0, nf * 0.72 + 5); }
+    else    { ctx.textAlign = 'right'; ctx.fillText(nombre, 0, -5); }
+    ctx.restore();
+
+    // Escudo suelto al final del rayo
+    const cx = CX + ux * RC, cy = CY + uy * RC;
+    await cvDrawEscudoCompleto(ctx, nombre, Math.round(cx - crest/2), Math.round(cy - crest/2), crest);
+  }
+
+  ctx.font = `600 20px ${FS}`; ctx.fillStyle = 'rgba(42,42,42,0.55)';
+  ctx.textAlign = 'right'; ctx.fillText('deportemas.pages.dev', W - M, H - 44);
+  return cv;
+}
+
+// Nombre del club en 1 o 2 renglones (corta por espacio si no entra) y con tamaño entero: se ve nítido
+function _alboNombre(ctx, txt, size, w, wt, FS){
+  const med = t => ctx.measureText(t).width;
+  for(let s = Math.round(size); s >= 11; s--){
+    ctx.font = `${wt} ${s}px ${FS}`;
+    if(med(txt) <= w) return { lineas: [txt], s };
+    const pal = txt.split(' ');
+    let mejor = null;
+    for(let i = 1; i < pal.length; i++){
+      const a = pal.slice(0, i).join(' '), b = pal.slice(i).join(' ');
+      const ww = Math.max(med(a), med(b));
+      if(!mejor || ww < mejor.w) mejor = { w: ww, l: [a, b] };
+    }
+    if(mejor && mejor.w <= w) return { lineas: mejor.l, s };
+  }
+  ctx.font = `${wt} 11px ${FS}`;
+  return { lineas: [txt], s: 11 };
+}
+
 // Copa (embudo con pie) para el ranking: x,y = esquina sup. izq.; s = ancho (alto = 1.38 × ancho)
 function _alboCopa(ctx, x, y, s){
   ctx.save(); ctx.translate(x, y); ctx.scale(s, s * 1.38);
@@ -16438,9 +16602,9 @@ async function generarImagenRanking(cfg){
   const B = { crest: 66, num: 30, step: 40, s: 33, lineH: 51, gap: 30, numW: 44, pad: 14, tpad: 24 };
   const top0 = 204, bot = H - 90, avail = bot - top0;
   const medir = k => {
-    const crest = B.crest * k, crestL = M + (B.numW + B.pad) * k, tx0 = crestL + crest + B.tpad * k;
+    const crest = Math.round(B.crest * k), crestL = Math.round(M + (B.numW + B.pad) * k), tx0 = crestL + crest + B.tpad * k;
     const per = Math.max(1, Math.floor((W - M - tx0) / (B.step * k)));
-    const extra = cfg.nombres ? 22 * k : 0;
+    const extra = cfg.nombres ? 42 * k : 0;                      // lugar para el nombre (hasta 2 renglones)
     const alto = c => Math.max(crest + extra, Math.ceil(c.t / per) * B.lineH * k) + B.gap * k;
     return { k, crest, crestL, tx0, per, extra, alto };
   };
@@ -16481,17 +16645,18 @@ async function generarImagenRanking(cfg){
 
     // Filas: número (color del escudo) · escudo · copas
     let y = top0;
+    let nsz = Math.round(16 * k);                                 // un solo tamaño de nombre para todos los clubes
+    if(cfg.nombres) clubes.forEach(q => { nsz = Math.min(nsz, _alboNombre(ctx, q.n, nsz, m.crest + 40 * k, 700, FS).s); });
     const trH = B.s * 1.38 * k;
     for(const c of paginas[p]){
       ctx.font = `700 ${B.num * k}px ${FS}`; ctx.fillStyle = c.color; ctx.textAlign = 'right';
-      ctx.fillText(String(c.t), M + B.numW * k, y + B.num * k * 0.80);
+      ctx.fillText(String(c.t), Math.round(M + B.numW * k), Math.round(y + B.num * k * 0.80));
 
-      await cvDrawEscudoCompleto(ctx, c.n, m.crestL, y, m.crest);
+      await cvDrawEscudoCompleto(ctx, c.n, m.crestL, Math.round(y), m.crest);
       if(cfg.nombres){
-        let nf = 15 * k; ctx.font = `600 ${nf}px ${FS}`;
-        while(nf > 10 && ctx.measureText(c.n).width > m.crest + 40){ nf -= 1; ctx.font = `600 ${nf}px ${FS}`; }
-        ctx.fillStyle = 'rgba(42,42,42,0.7)'; ctx.textAlign = 'center';
-        ctx.fillText(c.n, m.crestL + m.crest / 2, y + m.crest + 17 * k);
+        const nn = _alboNombre(ctx, c.n, nsz, m.crest + 40 * k, 700, FS);
+        ctx.font = `700 ${nn.s}px ${FS}`; ctx.fillStyle = INK; ctx.textAlign = 'center';
+        nn.lineas.forEach((t, q) => ctx.fillText(t, Math.round(m.crestL + m.crest / 2), Math.round(y + m.crest + 19 * k + q * nn.s * 1.15)));
       }
 
       ctx.fillStyle = INK;
@@ -16527,7 +16692,7 @@ async function generarImagenAlbo(cfg){
   const sub = cfg.sub || 'Campeones';
   const gridTop = 214, gridBot = H - 96;
   const cellH0 = (gridBot - gridTop) / rows;
-  const crest = Math.min(cfg.tam === 'c' ? 60 : cfg.tam === 'g' ? 96 : 78, cellH0 - 74 - (cfg.nombres ? 18 : 0));
+  const crest = Math.round(Math.min(cfg.tam === 'c' ? 60 : cfg.tam === 'g' ? 96 : 78, cellH0 - 74 - (cfg.nombres ? 34 : 0)));
   const rowsUsed = Math.ceil(porPag / cols);                   // si sobran filas, se estiran para llenar la hoja
   const cellH = Math.min((gridBot - gridTop) / rowsUsed, cellH0 * 1.4);
   const stepX = (W - 2*M - crest) / (cols - 1);               // 1ª columna al margen izq., última al der.
@@ -16553,6 +16718,9 @@ async function generarImagenAlbo(cfg){
 
     // Grilla: escudo suelto + año debajo (o "x" si no hubo campeón)
     const parte = items.slice(p*porPag, (p+1)*porPag);
+    const lwAll = Math.max(60, stepX - 8);
+    let nsz = Math.round(yf * 0.80);                              // un solo tamaño de nombre para todas las casillas
+    if(cfg.nombres) items.forEach(q => { if(q.c) nsz = Math.min(nsz, _alboNombre(ctx, q.c, nsz, lwAll, 600, FS).s); });
     const fit = (txt, size, w, wt) => {
       let s = size; ctx.font = `${wt} ${s}px ${FS}`;
       while(s > 10 && ctx.measureText(txt).width > w){ s -= 1; ctx.font = `${wt} ${s}px ${FS}`; }
@@ -16563,10 +16731,10 @@ async function generarImagenAlbo(cfg){
       const top = gridTop + cellH * Math.floor(i / cols);
       ctx.textAlign = 'center';
       if(it.c){
-        await cvDrawEscudoCompleto(ctx, it.c, cx - crest/2, top, crest);
+        await cvDrawEscudoCompleto(ctx, it.c, Math.round(cx - crest/2), Math.round(top), crest);
       } else {
         ctx.font = `700 ${Math.round(crest * 0.5)}px ${FS}`; ctx.fillStyle = INK;
-        ctx.fillText('x', cx, top + crest/2 + crest * 0.17);
+        ctx.fillText('x', Math.round(cx), Math.round(top + crest/2 + crest * 0.17));
       }
       // Etiqueta: "2026 Apertura" → año + torneo; si no, una sola línea
       const lw = Math.max(60, stepX - 8);
@@ -16574,15 +16742,18 @@ async function generarImagenAlbo(cfg){
       const m = it.l.match(/^((?:19|20)\d{2}(?:\/\d{2,4})?)\s+(.+)$/);
       ctx.fillStyle = INK;
       if(m){
-        fit(m[1], yf, lw, 400); ctx.fillText(m[1], cx, ly);
+        fit(m[1], yf, lw, 400); ctx.fillText(m[1], Math.round(cx), Math.round(ly));
         ly += yf * 1.05;
-        fit(m[2], yf * 0.85, lw, 400); ctx.fillText(m[2], cx, ly);
+        fit(m[2], yf * 0.85, lw, 400); ctx.fillText(m[2], Math.round(cx), Math.round(ly));
       } else {
-        fit(it.l, yf, lw, 400); ctx.fillText(it.l, cx, ly);
+        fit(it.l, yf, lw, 400); ctx.fillText(it.l, Math.round(cx), Math.round(ly));
       }
       if(cfg.nombres && it.c){
-        ly += yf * 0.95;
-        fit(it.c, yf * 0.72, lw, 400); ctx.fillStyle = 'rgba(42,42,42,0.6)'; ctx.fillText(it.c, cx, ly);
+        // nombre: oscuro, más grueso y más grande; si no entra en una línea, se parte en dos
+        const nn = _alboNombre(ctx, it.c, nsz, lw, 600, FS);
+        ctx.font = `600 ${nn.s}px ${FS}`; ctx.fillStyle = INK;
+        ly += yf * 1.0;
+        nn.lineas.forEach((t, q) => ctx.fillText(t, Math.round(cx), Math.round(ly + q * nn.s * 1.15)));
       }
     }
 
