@@ -5152,6 +5152,7 @@ table.posiciones td:nth-child(8){
             <option value="racha">Racha de un equipo (últimos partidos)</option>
             <option value="jugador">Jugador destacado (estadísticas)</option>
             <option value="radio">Cobertura radial (historia / reel 1080×1920)</option>
+            <option value="albo">Albo de oro (campeones por temporada)</option>
           </select>
         </div>
 
@@ -5284,6 +5285,34 @@ table.posiciones td:nth-child(8){
           <p style="font-size:10px;color:var(--gris);margin-top:-4px;margin-bottom:14px;font-family:'Rajdhani',sans-serif">
             Muestra el partido con su título y, debajo, los primeros 4 puestos de la tabla elegida. Si elegís un partido guardado, la tabla se selecciona sola según su división y torneo. La foto es opcional y tiene corte diagonal.
           </p>
+        </div>
+
+        <div id="promo-albo-wrap" style="display:none">
+          <p style="font-size:11px;color:var(--gris);margin-bottom:12px;font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px">
+            Cargá los campeones de más viejo a más nuevo. En la imagen salen al revés (el más nuevo primero). Lo que cargues queda guardado en este navegador. Si dejás el club vacío, la casilla muestra una &quot;X&quot; (temporada sin campeón).
+          </p>
+          <div class="form-row">
+            <div class="form-group"><label>Título</label>
+              <input type="text" id="promoA-titulo" placeholder="Vacío = nombre de la liga" oninput="_alboGuardar()"/>
+            </div>
+            <div class="form-group"><label>Subtítulo</label>
+              <input type="text" id="promoA-sub" placeholder="Ej: Campeones" oninput="_alboGuardar()"/>
+            </div>
+          </div>
+          <div class="form-group"><label>Tamaño de las casillas</label>
+            <select id="promoA-tam" onchange="_alboGuardar();_alboResumen()">
+              <option value="g">Grande (16 por imagen)</option>
+              <option value="m" selected>Mediano (25 por imagen)</option>
+              <option value="c">Chico (36 por imagen)</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+            <button type="button" class="btn-edit" onclick="_alboAgregar('anio')">＋ Año (un campeón)</button>
+            <button type="button" class="btn-edit" onclick="_alboAgregar('par')">＋ Apertura y Clausura</button>
+            <button type="button" class="btn-edit" onclick="_alboAgregar('x')">＋ Sin campeón (X)</button>
+          </div>
+          <div id="promo-albo-lista"></div>
+          <p id="promo-albo-resumen" style="font-size:11px;color:var(--gris);margin:8px 0 12px;font-family:'Rajdhani',sans-serif"></p>
         </div>
 
         <div id="promo-racha-wrap" style="display:none">
@@ -15879,6 +15908,10 @@ function promoCambiarModo(){
   const fc = document.getElementById('promo-foto-comun');
   if(fc) fc.style.display = modo === 'radio' ? 'none' : '';
   if(modo === 'radio') promoRadioInit();
+  const ra = document.getElementById('promo-albo-wrap');
+  if(ra) ra.style.display = modo === 'albo' ? '' : 'none';
+  if(fc && modo === 'albo') fc.style.display = 'none';
+  if(modo === 'albo') promoAlboInit();
 }
 
 function promoCargarPartido3(){
@@ -16174,6 +16207,10 @@ function promoGenerarJugador(){
 }
 
 function promoGenerar(){
+  if(document.getElementById('promo-modo') && document.getElementById('promo-modo').value === 'albo'){
+    promoGenerarAlbo();
+    return;
+  }
   if(document.getElementById('promo-modo') && document.getElementById('promo-modo').value === 'radio'){
     promoGenerarRadio();
     return;
@@ -16216,6 +16253,188 @@ function promoGenerar(){
   };
   const estilo = document.getElementById('promo-estilo').value;
   abrirShare(() => estilo==='split' ? generarImagenPromocionalSplit(p) : generarImagenPromocional(p));
+}
+
+
+// ── Albo de oro: campeones por temporada (Admin → Promoción) ─────
+const ALBO_KEY = 'dm_albo_v1';
+
+function _alboEstado(){
+  const g = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+  const filas = [...document.querySelectorAll('#promo-albo-lista .albo-fila')].map(f => ({
+    l: f.querySelector('.albo-l').value.trim(),
+    c: f.querySelector('.albo-c').value.trim()
+  }));
+  return { titulo: g('promoA-titulo').trim(), sub: g('promoA-sub').trim(), tam: g('promoA-tam') || 'm', filas };
+}
+function _alboGuardar(){
+  try{ localStorage.setItem(ALBO_KEY, JSON.stringify(_alboEstado())); }catch(e){}
+}
+function _alboResumen(){
+  const el = document.getElementById('promo-albo-resumen'); if(!el) return;
+  const e = _alboEstado();
+  const per = e.tam === 'g' ? 16 : e.tam === 'c' ? 36 : 25;
+  const n = e.filas.filter(f => f.l).length;
+  el.textContent = n ? (n + ' casilla' + (n!==1?'s':'') + ' → ' + Math.ceil(n/per) + ' imagen' + (Math.ceil(n/per)!==1?'es':'')) : 'Todavía no cargaste ninguna temporada.';
+}
+function _alboFila(l, c){
+  const f = document.createElement('div');
+  f.className = 'albo-fila';
+  f.style.cssText = 'display:grid;grid-template-columns:1.2fr 2fr auto auto auto;gap:6px;margin-bottom:6px;align-items:center';
+  const i1 = document.createElement('input');
+  i1.type = 'text'; i1.className = 'albo-l'; i1.placeholder = 'Ej: 2026 Apertura'; i1.value = l || '';
+  const i2 = document.createElement('input');
+  i2.type = 'text'; i2.className = 'albo-c'; i2.placeholder = 'Club campeón (vacío = X)'; i2.value = c || '';
+  i2.setAttribute('list', 'promo-equipos-datalist');
+  [i1, i2].forEach(i => i.addEventListener('input', () => { _alboGuardar(); _alboResumen(); }));
+  const mk = (txt, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'btn-edit'; b.textContent = txt; b.style.padding = '6px 9px'; b.onclick = fn; return b; };
+  f.append(i1, i2,
+    mk('↑', () => _alboMover(f, -1)),
+    mk('↓', () => _alboMover(f, 1)),
+    mk('✕', () => { f.remove(); _alboGuardar(); _alboResumen(); }));
+  return f;
+}
+function _alboMover(f, dir){
+  const l = f.parentNode;
+  if(dir < 0 && f.previousElementSibling) l.insertBefore(f, f.previousElementSibling);
+  else if(dir > 0 && f.nextElementSibling) l.insertBefore(f.nextElementSibling, f);
+  _alboGuardar();
+}
+function _alboAgregar(tipo){
+  const lista = document.getElementById('promo-albo-lista'); if(!lista) return;
+  const ult = [...lista.querySelectorAll('.albo-l')].map(i => i.value).filter(Boolean).pop() || '';
+  const m = ult.match(/(?:19|20)\d{2}/);
+  const y = m ? parseInt(m[0], 10) + 1 : new Date().getFullYear();
+  if(tipo === 'par'){
+    lista.appendChild(_alboFila(y + ' Apertura', ''));
+    lista.appendChild(_alboFila(y + ' Clausura', ''));
+  } else if(tipo === 'x'){
+    lista.appendChild(_alboFila(String(y), ''));
+  } else {
+    lista.appendChild(_alboFila(String(y), ''));
+  }
+  const ins = lista.querySelectorAll('.albo-c'); if(ins.length) ins[ins.length-1].focus();
+  _alboGuardar(); _alboResumen();
+}
+function promoAlboInit(){
+  promoPoblarEquipos();
+  const lista = document.getElementById('promo-albo-lista');
+  if(!lista || lista.dataset.listo) { _alboResumen(); return; }
+  let s = {};
+  try{ s = JSON.parse(localStorage.getItem(ALBO_KEY)) || {}; }catch(e){}
+  const set = (id, v) => { const el = document.getElementById(id); if(el && v != null) el.value = v; };
+  set('promoA-titulo', s.titulo || ''); set('promoA-sub', s.sub || ''); set('promoA-tam', s.tam || 'm');
+  (s.filas || []).forEach(f => lista.appendChild(_alboFila(f.l, f.c)));
+  lista.dataset.listo = '1';
+  _alboResumen();
+}
+function promoGenerarAlbo(){
+  const e = _alboEstado();
+  const filas = e.filas.filter(f => f.l);
+  if(!filas.length){ alert('Cargá al menos una temporada.'); return; }
+  _alboGuardar();
+  abrirShare(() => generarImagenAlbo({ titulo: e.titulo, sub: e.sub, tam: e.tam, filas }));
+}
+
+async function generarImagenAlbo(cfg){
+  await document.fonts.ready;
+  const id = getIdentidad();
+  const W = CV_W, H = CV_H, M = 70;
+  const FB = '"Bebas Neue", Arial, sans-serif', FR = '"Rajdhani", Arial, sans-serif';
+  const logoImg = await cvImgAsync(id.logo);
+  const items = cfg.filas.slice().reverse();                  // la más nueva primero
+  const [cols, rows] = cfg.tam === 'g' ? [4, 4] : cfg.tam === 'c' ? [6, 6] : [5, 5];
+  const per = cols * rows, paginas = Math.ceil(items.length / per);
+  const porPag = Math.ceil(items.length / paginas);          // reparto parejo entre imágenes
+  const titulo = (cfg.titulo || id.nombre || 'DEPORTEMAS').toUpperCase();
+  const sub = cfg.sub || 'Campeones';
+  const gridTop = 290, gridBot = H - 100;
+  const cellW = (W - 2*M) / cols, cellH = (gridBot - gridTop) / rows;
+  const cres = Math.min(cellW * 0.62, cellH - 96);
+  const out = [];
+
+  for(let p = 0; p < paginas; p++){
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    const ctx = cv.getContext('2d'); ctx.textBaseline = 'alphabetic';
+    const setLS = v => { if('letterSpacing' in ctx) ctx.letterSpacing = v; };
+
+    const bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, C.NEG3); bg.addColorStop(1, C.NEG);
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    const rg = ctx.createRadialGradient(W*0.8, 0, 20, W*0.8, 0, 760);
+    rg.addColorStop(0, 'rgba(201,162,39,0.22)'); rg.addColorStop(1, 'rgba(201,162,39,0)');
+    ctx.fillStyle = rg; ctx.fillRect(0, 0, W, 800);
+
+    // Encabezado: título + subtítulo a la izquierda, logo de la liga a la derecha
+    const ls = 120, lx = W - M - ls, ly = 62;
+    const maxT = lx - M - 30;
+    let fs = 104;
+    ctx.font = `400 ${fs}px ${FB}`;
+    while(fs > 44 && ctx.measureText(titulo).width > maxT){ fs -= 4; ctx.font = `400 ${fs}px ${FB}`; }
+    ctx.fillStyle = C.BLANCO; ctx.textAlign = 'left';
+    ctx.fillText(titulo, M, 150);
+    ctx.font = `600 38px ${FR}`; ctx.fillStyle = C.DORADO; setLS('3px');
+    ctx.fillText(sub.toUpperCase(), M, 204); setLS('0px');
+    if(logoImg){
+      ctx.save(); ctx.beginPath(); ctx.arc(lx+ls/2, ly+ls/2, ls/2, 0, Math.PI*2); ctx.clip();
+      cvDrawEscudoImg(ctx, logoImg, lx, ly, ls); ctx.restore();
+      ctx.lineWidth = 3; ctx.strokeStyle = C.DORADO;
+      ctx.beginPath(); ctx.arc(lx+ls/2, ly+ls/2, ls/2+1, 0, Math.PI*2); ctx.stroke();
+    }
+    const lg = ctx.createLinearGradient(M, 0, W-M, 0);
+    lg.addColorStop(0, C.DORADO2); lg.addColorStop(1, 'rgba(201,162,39,0.15)');
+    ctx.fillStyle = lg; ctx.fillRect(M, 244, W - 2*M, 4);
+
+    // Grilla de casillas
+    const parte = items.slice(p*porPag, (p+1)*porPag);
+    for(let i = 0; i < parte.length; i++){
+      const it = parte[i];
+      const col = i % cols, fila = Math.floor(i / cols);
+      const cx = M + cellW*col + cellW/2;
+      const top = gridTop + cellH*fila;
+      const bloque = cres + 92;                                // placa + aire + etiqueta
+      const y0 = top + Math.max(0, (cellH - bloque) / 2);
+      const py = y0 + 9;                                       // y del escudo
+      const pcx = cx, pcy = py + cres/2;
+
+      if(it.c){
+        ctx.beginPath(); ctx.arc(pcx, pcy, cres/2 + 9, 0, Math.PI*2);
+        ctx.fillStyle = 'rgba(255,255,255,0.07)'; ctx.fill();
+        ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(201,162,39,0.40)'; ctx.stroke();
+        await cvDrawEscudoCompleto(ctx, it.c, cx - cres/2, py, cres);
+      } else {
+        ctx.font = `400 ${Math.round(cres*0.62)}px ${FB}`;
+        ctx.fillStyle = 'rgba(201,162,39,0.85)'; ctx.textAlign = 'center';
+        ctx.fillText('X', pcx, pcy + cres*0.22);
+      }
+
+      // Etiqueta: "2026 Apertura" → año grande + torneo chico; si no, una sola línea
+      const ly0 = py + cres + 41;
+      const m = it.l.match(/^((?:19|20)\d{2}(?:\/\d{2,4})?)\s+(.+)$/);
+      ctx.textAlign = 'center';
+      const fit = (txt, size, w, wt) => {
+        let s = size; ctx.font = `${wt} ${s}px ${FR}`;
+        while(s > 14 && ctx.measureText(txt).width > w){ s -= 1; ctx.font = `${wt} ${s}px ${FR}`; }
+      };
+      if(m){
+        fit(m[1], 30, cellW - 12, 700); ctx.fillStyle = C.BLANCO; ctx.fillText(m[1], cx, ly0);
+        fit(m[2].toUpperCase(), 21, cellW - 12, 600); ctx.fillStyle = C.DORADO; setLS('1px');
+        ctx.fillText(m[2].toUpperCase(), cx, ly0 + 28); setLS('0px');
+      } else {
+        fit(it.l, 30, cellW - 12, 700); ctx.fillStyle = C.BLANCO; ctx.fillText(it.l, cx, ly0);
+      }
+    }
+
+    // Pie discreto
+    ctx.font = `600 22px ${FR}`; ctx.fillStyle = 'rgba(255,255,255,0.45)';
+    ctx.textAlign = 'right'; setLS('1px'); ctx.fillText('deportemas.pages.dev', W - M, H - 50); setLS('0px');
+    if(paginas > 1){
+      ctx.textAlign = 'left'; ctx.fillStyle = C.DORADO;
+      ctx.fillText((p+1) + ' / ' + paginas, M, H - 50);
+    }
+    out.push(cv);
+  }
+  return out.length === 1 ? out[0] : out;
 }
 
 // ── Dibuja el bloque "Historial entre ambos" (título + 3 columnas:
