@@ -20675,9 +20675,17 @@ async function generarImagenEtapaPlayoff(torneo, esReserva, etapa){
     }
 
   } else {
-    // ── Cuartos de Final / Semifinales: quién avanza, a quién eliminó y cómo ──
+    // ── Cuartos / Semifinales: cuadro de la etapa + cruces de la etapa siguiente ──
+    // Cuartos → resultados de Cuartos + cruces de Semifinales (si están cargados)
+    // Semis   → resultados de Semifinales + cruce de la Final (si está cargado)
+    const etapaSig  = etapa==='cuartos' ? 'semifinal' : 'final';
+    const crucesSig = todos.filter(c=>c.etapa===etapaSig).sort((a,b)=>a.cruce-b.cruce);
+    const haySig    = crucesSig.length>0;
+
     const label    = etapa==='cuartos' ? 'CUARTOS DE FINAL' : 'SEMIFINALES';
-    const subtitulo= etapa==='cuartos' ? 'Avanzan a Semifinales' : 'Finalistas del torneo';
+    const subtitulo= haySig
+      ? (etapa==='cuartos' ? 'Resultados y cruces de Semifinales' : 'Resultados y cruce de la Final')
+      : (etapa==='cuartos' ? 'Avanzan a Semifinales' : 'Finalistas del torneo');
 
     if(!(await cvTituloPlayoffLogo(ctx,W,{...id,logo:logoDiv},y,label,subtitulo+' · '+subLiga,30,38,58,'rgba(201,162,39,0.6)'))){
       ctx.fillStyle=C.DORADO;
@@ -20696,79 +20704,46 @@ async function generarImagenEtapaPlayoff(torneo, esReserva, etapa){
     ctx.fillStyle=dg; ctx.fillRect(0,y,W,1);
     y += s(20);
 
-    const crucesGan = cruces.filter(c=>c.ganador);
-    const hFooter  = s(40);
-    const hDisp    = CV_H - y - hFooter - s(10);
-    const ROW_H    = Math.max(s(110), Math.min(s(200), Math.floor(hDisp / crucesGan.length)));
-    const hContenido = crucesGan.length*ROW_H;
-    y += Math.max(0, Math.floor((hDisp - hContenido)/2));
+    const secs = [{ band:label, cruces, etiqueta:'CLASIFICA' }];
+    if(haySig) secs.push({
+      band: etapa==='cuartos' ? 'SEMIFINALES · CRUCES' : '🏆 LA FINAL',
+      cruces: crucesSig,
+      etiqueta: etapa==='cuartos' ? 'CLASIFICA' : 'CAMPEÓN'
+    });
 
-    const cardL = s(60), cardR = W-s(60);
-    crucesGan.forEach(c=>{
-      const nombre = c.ganador;
-      const rival  = normalizar(c.local||'')===normalizar(nombre) ? c.visit : c.local;
-      const sc     = cvScorePlayoffDe(c, nombre);
-      const ROW = ROW_H - s(16);
-      const fy  = y + ROW/2;
-      const ECSIZE = Math.min(s(84), Math.round(ROW*0.56));
+    const nRows   = secs.reduce((a,sc)=>a+sc.cruces.length, 0);
+    const hFooter = s(40);
+    const hBand=s(34), gapBand=s(10), gapRow=s(10), gapSec=s(14);
+    const hDisp   = CV_H - y - hFooter - s(10);
+    const hFijo   = secs.length*(hBand+gapBand) + (secs.length-1)*gapSec + (nRows-secs.length)*gapRow;
+    const maxRow  = nRows<=3 ? s(190) : s(150);
+    const ROW     = Math.max(s(84), Math.min(maxRow, Math.floor((hDisp-hFijo)/nRows)));
+    const hContenido = hFijo + nRows*ROW;
+    y += Math.max(0, Math.floor((hDisp-hContenido)/2));
 
-      cvRoundRect(ctx, cardL, y, cardR-cardL, ROW, s(14));
-      ctx.fillStyle='rgba(201,162,39,0.07)'; ctx.fill();
-      ctx.lineWidth=1; ctx.strokeStyle='rgba(201,162,39,0.3)'; ctx.stroke();
+    // Con pocas filas, escudos/marcador/nombres crecen para aprovechar el alto
+    const kE = nRows>=6 ? 1 : nRows===5 ? 1.05 : nRows===4 ? 1.2  : nRows===3 ? 1.4  : 1.5;
+    const kM = nRows>=6 ? 1 : nRows===5 ? 1.05 : nRows===4 ? 1.25 : nRows===3 ? 1.4  : 1.5;
+    const kN = nRows>=5 ? 1 : nRows===4 ? 1.05 : 1.1;
+    const ECSIZE=Math.round(s(50)*kE), fNom=Math.round(s(18)*kN);
+    const mH=Math.round(s(44)*kM), fMarc=Math.round(s(30)*kM);
 
-      // Marcador (a la derecha): el del ganador va primero
-      const mW = s(118), mH = Math.min(s(54), Math.round(ROW*0.36));
-      const mX = cardR - s(24) - mW, mY = fy - mH/2 - s(8);
-      const hayMarc = !!(sc.main || (!sc.main && sc.pen));
-      if(hayMarc){
-        cvRoundRect(ctx,mX,mY,mW,mH,s(9));
-        if((c.estado||'pendiente')==='jugado'){
-          const mg=ctx.createLinearGradient(mX,0,mX+mW,0);
-          mg.addColorStop(0,C.DORADO); mg.addColorStop(1,C.DORADO2);
-          ctx.fillStyle=mg; ctx.fill(); ctx.fillStyle=C.NEG;
-        } else {
-          ctx.fillStyle='rgba(255,255,255,0.06)'; ctx.fill();
-          ctx.strokeStyle='rgba(201,162,39,0.3)'; ctx.stroke();
-          ctx.fillStyle=C.DORADO;
-        }
-        ctx.font=`700 ${Math.round(mH*0.6)}px "Bebas Neue", Arial, sans-serif`;
-        ctx.textAlign='center'; ctx.textBaseline='middle';
-        ctx.fillText(sc.main || ('PEN. '+sc.pen), mX+mW/2, mY+mH/2+1);
-        ctx.textBaseline='alphabetic';
-      }
-      // Debajo del marcador: contra quién (y penales si hubo)
-      const capCX = mX+mW/2;
-      const capMax = Math.min(2*(cardR-s(14)-capCX), s(200));
-      ctx.fillStyle='rgba(255,255,255,0.55)';
-      ctx.font=`600 ${s(12)}px "DM Sans", Arial, sans-serif`;
-      ctx.textAlign='center';
-      const cap = (sc.main&&sc.pen ? 'PEN. '+sc.pen+' · ' : '') + (rival ? 'vs '+rival.toUpperCase() : '');
-      if(cap) cvFillTextTrunc(ctx, cap, capCX, hayMarc ? mY+mH+s(20) : fy, capMax);
-
-      // Ganador: escudo + nombre + "avanza"
-      const eImg = escudoImgs[nombre];
-      const ex = cardL + s(32), ey = fy-ECSIZE/2;
-      if(eImg){
-        ctx.save(); ctx.beginPath(); ctx.arc(ex+ECSIZE/2,ey+ECSIZE/2,ECSIZE/2,0,Math.PI*2); ctx.clip();
-        cvDrawEscudoImg(ctx,eImg, ex, ey, ECSIZE); ctx.restore();
-      } else {
-        cvEscudoFallback(ctx, nombre, ex, ey, ECSIZE);
-      }
-      ctx.lineWidth=s(2); ctx.strokeStyle=C.DORADO2;
-      ctx.beginPath(); ctx.arc(ex+ECSIZE/2,ey+ECSIZE/2,ECSIZE/2+s(2),0,Math.PI*2); ctx.stroke();
-
-      const tx = ex+ECSIZE+s(22);
-      ctx.fillStyle=C.BLANCO;
-      ctx.font=`${s(30)}px "Bebas Neue", Arial, sans-serif`;
-      ctx.textAlign='left'; ctx.textBaseline='middle';
-      cvFillTextTrunc(ctx, nombre.toUpperCase(), tx, fy-s(12), (hayMarc||cap ? mX : cardR) - tx - s(16));
-
-      ctx.fillStyle='rgba(201,162,39,0.8)';
-      ctx.font=`600 ${s(13)}px "DM Sans", Arial, sans-serif`;
-      ctx.fillText(etapa==='cuartos'?'✓ Avanza a Semifinales':'✓ Avanza a la Final', tx, fy+s(16));
+    secs.forEach((sc,si)=>{
+      // Banda con el nombre de la sección
+      ctx.fillStyle='rgba(201,162,39,0.10)';
+      ctx.fillRect(s(24),y,W-s(48),hBand);
+      ctx.fillStyle=C.DORADO;
+      ctx.font=`700 ${s(15)}px "Rajdhani", Arial, sans-serif`;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(sc.band, CX, y+hBand/2);
       ctx.textBaseline='alphabetic';
+      y += hBand+gapBand;
 
-      y += ROW_H;
+      sc.cruces.forEach((c,k)=>{
+        cvFilaCruceCC(ctx,c,CX,y,ROW,ECSIZE,escudoImgs,fNom,mH,fMarc,true,sc.etiqueta);
+        y += ROW + (k<sc.cruces.length-1 ? gapRow : 0);
+      });
+      if(si<secs.length-1) y += gapSec;
     });
   }
 
