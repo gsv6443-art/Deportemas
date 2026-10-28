@@ -5290,8 +5290,16 @@ table.posiciones td:nth-child(8){
 
         <div id="promo-radial-wrap" style="display:none">
           <p style="font-size:11px;color:var(--gris);margin-bottom:12px;font-family:'Rajdhani',sans-serif;text-transform:uppercase;letter-spacing:.5px">
-            Presenta a los equipos de la temporada alrededor del trofeo de la liga. Elegí la división y destildá los clubes que no participen.
+            Presenta a los equipos de la temporada con el trofeo de la liga. Elegí el diseño y la división, y destildá los clubes que no participen.
           </p>
+          <div class="form-group"><label>Diseño</label>
+            <select id="promoR-diseno" onchange="_radialDiseno()">
+              <option value="cuadro">Cuadro (trofeo arriba y escudos con nombre)</option>
+              <option value="cartelera">Cartelera (lista numerada en dos columnas)</option>
+              <option value="ronda">Ronda (círculo con el trofeo al centro)</option>
+              <option value="radial">Radial (rayos de color)</option>
+            </select>
+          </div>
           <div class="form-group"><label>División</label>
             <select id="promoR-div" onchange="_radialClubes()">
               <option value="primera">Primera</option>
@@ -16409,8 +16417,17 @@ function promoGenerarAlbo(){
 
 
 // ── Presentación de equipos (radial con el trofeo de la liga) ────
+function _radialDiseno(){
+  const s = document.getElementById('promoR-diseno');
+  try{ if(s) localStorage.setItem('dm_equipos_diseno', s.value); }catch(e){}
+}
 function _radialClubes(){
   const cont = document.getElementById('promoR-clubes'); if(!cont) return;
+  const sel = document.getElementById('promoR-diseno');
+  if(sel && !sel.dataset.listo){
+    try{ const v = localStorage.getItem('dm_equipos_diseno'); if(v && [...sel.options].some(o => o.value === v)) sel.value = v; }catch(e){}
+    sel.dataset.listo = '1';
+  }
   const div = (document.getElementById('promoR-div') || {}).value || 'primera';
   const previos = new Set([...cont.querySelectorAll('input:checked')].map(i => i.value));
   const eqs = (data.equipos || []).filter(e => e.div === div).sort((a, b) => (a.nombre||'').localeCompare(b.nombre||'', 'es'));
@@ -16436,7 +16453,7 @@ function promoGenerarRadial(){
   const clubes = [...document.querySelectorAll('#promoR-clubes input:checked')].map(i => i.value);
   if(clubes.length < 3){ alert('Elegí al menos 3 clubes.'); return; }
   const g = id => (document.getElementById(id) || {}).value || '';
-  abrirShare(() => generarImagenRadial({ titulo: g('promoR-titulo').trim(), sub: g('promoR-sub').trim(), clubes }));
+  abrirShare(() => generarImagenEquipos({ titulo: g('promoR-titulo').trim(), sub: g('promoR-sub').trim(), clubes, diseno: g('promoR-diseno') || 'cuadro' }));
 }
 
 // "INDEPENDIENTE RÍO III" → "Independiente Río III" (solo si viene todo en mayúsculas); respeta siglas, números romanos y (T)/(HDO)
@@ -16542,6 +16559,140 @@ async function generarImagenRadial(cfg){
   ctx.font = `600 20px ${FS}`; ctx.fillStyle = 'rgba(42,42,42,0.55)';
   ctx.textAlign = 'right'; ctx.fillText('deportemas.pages.dev', W - M, H - 44);
   return cv;
+}
+
+// ── Presentación de equipos: diseños Cuadro / Cartelera / Ronda (+ Radial) ──
+async function _equiposBase(cfg, reservaDer){
+  await document.fonts.ready;
+  const id = getIdentidad();
+  const W = CV_W, H = CV_H, M = 70;
+  const FS = '"Helvetica Neue", Helvetica, Arial, sans-serif';
+  const INK = '#2a2a2a', BG = '#f5f2eb';
+  const logoImg = await cvImgAsync(id.logo);
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d'); ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);
+  const titulo = cfg.titulo || id.nombre || 'DEPORTEMAS', sub = cfg.sub || '';
+  const ls = 78, lx = W - M - ls;
+  let fs = 60; ctx.font = `700 ${fs}px ${FS}`;
+  while(fs > 30 && ctx.measureText(titulo).width > lx - M - 24 - (reservaDer || 0)){ fs -= 2; ctx.font = `700 ${fs}px ${FS}`; }
+  ctx.fillStyle = INK; ctx.textAlign = 'left'; ctx.fillText(titulo, M, 98);
+  if(sub){ ctx.font = `400 30px ${FS}`; ctx.fillText(sub, M, 142); }
+  if(logoImg){
+    ctx.save(); ctx.beginPath(); ctx.arc(lx + ls/2, 62 + ls/2 - 12, ls/2, 0, Math.PI*2); ctx.clip();
+    cvDrawEscudoImg(ctx, logoImg, lx, 62 - 12, ls); ctx.restore();
+  }
+  ctx.font = `600 20px ${FS}`; ctx.fillStyle = 'rgba(42,42,42,0.55)';
+  ctx.textAlign = 'right'; ctx.fillText('deportemas.pages.dev', W - M, H - 44);
+
+  const clubes = cfg.clubes.slice().sort((a, b) => _alboTitulo(a).localeCompare(_alboTitulo(b), 'es'));
+  const colores = {};
+  for(const c of clubes) colores[c] = _alboOscurecer(await _alboColorEscudo(c));
+  const trofeo = await cvImgAsync(TROFEO_CAMPEON_B64);
+  const copa = (cx, cy, h) => {
+    if(!trofeo) return;
+    const tw = h * trofeo.naturalWidth / trofeo.naturalHeight;
+    ctx.drawImage(trofeo, Math.round(cx - tw/2), Math.round(cy - h/2), Math.round(tw), Math.round(h));
+  };
+  return { cv, ctx, W, H, M, FS, INK, BG, clubes, colores, copa };
+}
+
+// Cuadro: trofeo arriba + grilla de escudos grandes con el nombre debajo
+async function generarImagenCuadro(cfg){
+  const B = await _equiposBase(cfg, 0);
+  const { ctx, W, H, M, FS, INK, clubes, colores } = B;
+  const n = clubes.length, cols = n <= 9 ? 3 : n <= 16 ? 4 : 5, rows = Math.ceil(n / cols);
+  B.copa(W / 2, 292, 190);
+  ctx.fillStyle = INK; ctx.fillRect(M, 420, W - 2*M, 2);
+  const top = 446, bot = H - 96;
+  const cellH = Math.min((bot - top) / rows, 230);
+  const crest = Math.round(Math.min(104, cellH - 84, (W - 2*M) / cols * 0.62));
+  const stepX = (W - 2*M - crest) / (cols - 1);
+  const y0 = top + Math.max(0, ((bot - top) - rows * cellH) / 2) * 0.5;
+  let nsz = 20;
+  clubes.forEach(c => { nsz = Math.min(nsz, _alboNombre(ctx, _alboTitulo(c), 20, stepX - 14, 700, FS).s); });
+  for(let i = 0; i < n; i++){
+    const c = clubes[i];
+    const cx = M + crest/2 + stepX * (i % cols), y = Math.round(y0 + cellH * Math.floor(i / cols) + 8);
+    await cvDrawEscudoCompleto(ctx, c, Math.round(cx - crest/2), y, crest);
+    ctx.fillStyle = colores[c]; ctx.fillRect(Math.round(cx - 20), y + crest + 12, 40, 4);
+    const nn = _alboNombre(ctx, _alboTitulo(c), nsz, stepX - 14, 700, FS);
+    ctx.font = `700 ${nn.s}px ${FS}`; ctx.fillStyle = INK; ctx.textAlign = 'center';
+    nn.lineas.forEach((l, q) => ctx.fillText(l, Math.round(cx), Math.round(y + crest + 42 + q * nn.s * 1.15)));
+  }
+  return B.cv;
+}
+
+// Cartelera: lista numerada en dos columnas, escudo + nombre grande + barra del color del club
+async function generarImagenCartelera(cfg){
+  const B = await _equiposBase(cfg, 130);
+  const { ctx, W, H, M, FS, INK, clubes, colores } = B;
+  const n = clubes.length, rowsN = Math.ceil(n / 2);
+  B.copa(W - M - 78 - 18 - 57, 86, 112);
+  const top = 196;
+  const rowH = Math.min(132, (H - 110 - top) / rowsN), colW = (W - 2*M - 30) / 2;
+  const crest = Math.round(Math.min(72, rowH - 22));
+  const wNom = colW - 62 - crest - 22;
+  let nsz = 30;
+  clubes.forEach(c => { nsz = Math.min(nsz, _alboNombre(ctx, _alboTitulo(c), 30, wNom, 700, FS).s); });
+  for(let i = 0; i < n; i++){
+    const c = clubes[i], col = Math.floor(i / rowsN), fila = i % rowsN;
+    const x0 = M + col * (colW + 30), y0 = top + fila * rowH;
+    ctx.fillStyle = colores[c]; ctx.fillRect(Math.round(x0), Math.round(y0 + 10), 5, Math.round(rowH - 20));
+    ctx.fillStyle = 'rgba(42,42,42,0.45)'; ctx.font = `700 22px ${FS}`; ctx.textAlign = 'left';
+    ctx.fillText(String(i + 1).padStart(2, '0'), Math.round(x0 + 20), Math.round(y0 + rowH/2 + 8));
+    await cvDrawEscudoCompleto(ctx, c, Math.round(x0 + 62), Math.round(y0 + (rowH - crest) / 2), crest);
+    const nn = _alboNombre(ctx, _alboTitulo(c), nsz, wNom, 700, FS);
+    ctx.font = `700 ${nn.s}px ${FS}`; ctx.fillStyle = INK; ctx.textAlign = 'left';
+    nn.lineas.forEach((l, q) => ctx.fillText(l, Math.round(x0 + 62 + crest + 18),
+      Math.round(y0 + rowH/2 + nn.s * 0.35 - (nn.lineas.length - 1) * nn.s * 0.58 + q * nn.s * 1.15)));
+    ctx.fillStyle = 'rgba(42,42,42,0.15)'; ctx.fillRect(Math.round(x0), Math.round(y0 + rowH - 1), Math.round(colW), 1);
+  }
+  return B.cv;
+}
+
+// Ronda: escudos en círculo (aro del color del club) con el trofeo al centro y nombres horizontales
+async function generarImagenRonda(cfg){
+  const B = await _equiposBase(cfg, 0);
+  const { ctx, W, FS, INK, BG, clubes, colores } = B;
+  const n = clubes.length, CX = W / 2, CY = 720, R = 430;
+  const arco = 2 * Math.PI * R / n;
+  const crest = Math.round(Math.min(92, arco * 0.56));
+  ctx.strokeStyle = 'rgba(42,42,42,0.16)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(CX, CY, R, 0, Math.PI*2); ctx.stroke();
+  B.copa(CX, CY, 250);
+  const wNom = Math.min(150, arco * 0.9);                      // arriba y abajo
+  const wLado = 170;                                            // costados (hacia adentro)
+  let nsz = 17;
+  clubes.forEach(c => { nsz = Math.min(nsz, _alboNombre(ctx, _alboTitulo(c), 17, Math.min(wNom, wLado), 700, FS).s); });
+  for(let i = 0; i < n; i++){
+    const c = clubes[i], th = -Math.PI/2 + (2 * Math.PI / n) * (i + 0.5);
+    const cx = CX + Math.cos(th) * R, cy = CY + Math.sin(th) * R;
+    ctx.beginPath(); ctx.arc(cx, cy, crest/2 + 9, 0, Math.PI*2);
+    ctx.fillStyle = BG; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = colores[c]; ctx.stroke();
+    await cvDrawEscudoCompleto(ctx, c, Math.round(cx - crest/2 + 4), Math.round(cy - crest/2 + 4), crest - 8);
+    const lado = Math.abs(Math.cos(th)) > 0.55;
+    const nn = _alboNombre(ctx, _alboTitulo(c), nsz, lado ? wLado : wNom, 700, FS);
+    ctx.font = `700 ${nn.s}px ${FS}`; ctx.fillStyle = INK; ctx.textAlign = 'center';
+    if(Math.abs(Math.cos(th)) > 0.55){
+      // costados: el nombre va hacia adentro del círculo, en horizontal
+      const der = Math.cos(th) > 0;
+      ctx.textAlign = der ? 'right' : 'left';
+      const xT = der ? cx - crest/2 - 16 : cx + crest/2 + 16;
+      const yT = cy + nn.s * 0.35 - (nn.lineas.length - 1) * nn.s * 0.575 - Math.sin(th) * 14;   // se aleja del escudo vecino de arriba/abajo
+      nn.lineas.forEach((l, q) => ctx.fillText(l, Math.round(xT), Math.round(yT + q * nn.s * 1.15)));
+    } else {
+      const debajo = Math.sin(th) > 0;
+      const yTxt = debajo ? cy + crest/2 + 26 : cy - crest/2 - 14 - (nn.lineas.length - 1) * nn.s * 1.15;
+      nn.lineas.forEach((l, q) => ctx.fillText(l, Math.round(cx), Math.round(yTxt + q * nn.s * 1.15)));
+    }
+  }
+  return B.cv;
+}
+
+async function generarImagenEquipos(cfg){
+  const f = { cuadro: generarImagenCuadro, cartelera: generarImagenCartelera, ronda: generarImagenRonda, radial: generarImagenRadial }[cfg.diseno] || generarImagenCuadro;
+  return f(cfg);
 }
 
 // Nombre del club en 1 o 2 renglones (corta por espacio si no entra) y con tamaño entero: se ve nítido
