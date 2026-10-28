@@ -20267,7 +20267,7 @@ async function generarImagenTorneo(torneoId){
 // por etapa unida con conectores (mismo lenguaje que el cuadro de Copa Córdoba).
 // La Final se destaca con borde dorado y trofeo arriba; si ya hay ganador
 // aparece "CAMPEÓN" debajo del cruce.
-async function cvRenderBracketPlayoff(secciones, id, liga, torneo, esReserva){
+async function cvRenderBracketPlayoff(secciones, id, liga, torneo, esReserva, opts){
   const W=CV_W, H=CV_H, CX=W/2;
   const escudoImgs=await cvPrecargarEscudosCC(secciones.flatMap(sec=>sec.cruces));
   const trofeoImg=await new Promise(res=>{
@@ -20299,17 +20299,20 @@ async function cvRenderBracketPlayoff(secciones, id, liga, torneo, esReserva){
 
   // Header + título PLAY OFF (con el logo de la división) + divisor dorado
   let y=await cvHeader(ctx,W,id,0);
-  const subPO=torneoLabel(torneo)+(esReserva?' · Reserva':' · Primera División');
-  if(!(await cvTituloPlayoffLogo(ctx,W,{...id,logo:(torneo==='segunda'?id.logoSegunda:id.logoPrimera)},y,'PLAY OFF',subPO,28,34,52,'rgba(201,162,39,0.55)'))){
+  const subLigaPO=torneoLabel(torneo)+(esReserva?' · Reserva':' · Primera División');
+  const tTit=(opts&&opts.titulo)||'PLAY OFF';
+  const tSub=(opts&&opts.subtitulo)?(opts.subtitulo+' · '+subLigaPO):subLigaPO;
+  const [t1,t2,t3]=(opts&&opts.titulo)?[30,38,58]:[28,34,52];
+  if(!(await cvTituloPlayoffLogo(ctx,W,{...id,logo:(torneo==='segunda'?id.logoSegunda:id.logoPrimera)},y,tTit,tSub,t1,t2,t3,'rgba(201,162,39,0.55)'))){
     ctx.fillStyle=C.DORADO;
-    ctx.font=`${s(28)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.font=`${s(t1)}px "Bebas Neue", Arial, sans-serif`;
     ctx.textAlign='center';
-    ctx.fillText('PLAY OFF', CX, y+s(34));
+    ctx.fillText(tTit, CX, y+s(t2));
     ctx.fillStyle='rgba(201,162,39,0.55)';
     ctx.font=`600 ${s(14)}px "DM Sans", Arial, sans-serif`;
-    ctx.fillText(subPO, CX, y+s(52));
+    ctx.fillText(tSub, CX, y+s(t3));
   }
-  y+=s(56);
+  y+=s(t1===30?64:56);
   const dg=ctx.createLinearGradient(0,0,W,0);
   dg.addColorStop(0,'transparent'); dg.addColorStop(0.2,C.DORADO);
   dg.addColorStop(0.8,C.DORADO); dg.addColorStop(1,'transparent');
@@ -20463,6 +20466,21 @@ async function generarImagenEtapaPlayoff(torneo, esReserva, etapa){
 
   const ganadores = cruces.map(c=>c.ganador).filter(Boolean);
   if(!ganadores.length) return null;
+
+  // Cuartos / Semifinales: mismo formato que el cuadro completo, con dos
+  // columnas conectadas — la etapa y la siguiente (si ya está cargada).
+  if(etapa!=='final'){
+    const etapaSig  = etapa==='cuartos' ? 'semifinal' : 'final';
+    const crucesSig = todos.filter(c=>c.etapa===etapaSig).sort((a,b)=>a.cruce-b.cruce);
+    const haySig    = crucesSig.length>0;
+    const LABELS = { cuartos:'CUARTOS DE FINAL', semifinal:'SEMIFINALES', final:'FINAL' };
+    const secciones = [{ fase:{key:etapa, label:LABELS[etapa]}, cruces }];
+    if(haySig) secciones.push({ fase:{key:etapaSig, label:LABELS[etapaSig]}, cruces:crucesSig });
+    const subtitulo = haySig
+      ? (etapa==='cuartos' ? 'Resultados y cruces de Semifinales' : 'Resultados y cruce de la Final')
+      : (etapa==='cuartos' ? 'Avanzan a Semifinales' : 'Finalistas del torneo');
+    return cvRenderBracketPlayoff(secciones, id, liga, torneo, esReserva, { titulo:LABELS[etapa], subtitulo });
+  }
 
   // Escudos de todos los equipos del Play Off (ganadores y rivales)
   const escudoImgs={};
@@ -20674,77 +20692,6 @@ async function generarImagenEtapaPlayoff(torneo, esReserva, etapa){
       await cvDrawLogo(ctx,logoDiv,CX-LG/2,cy,LG);
     }
 
-  } else {
-    // ── Cuartos / Semifinales: cuadro de la etapa + cruces de la etapa siguiente ──
-    // Cuartos → resultados de Cuartos + cruces de Semifinales (si están cargados)
-    // Semis   → resultados de Semifinales + cruce de la Final (si está cargado)
-    const etapaSig  = etapa==='cuartos' ? 'semifinal' : 'final';
-    const crucesSig = todos.filter(c=>c.etapa===etapaSig).sort((a,b)=>a.cruce-b.cruce);
-    const haySig    = crucesSig.length>0;
-
-    const label    = etapa==='cuartos' ? 'CUARTOS DE FINAL' : 'SEMIFINALES';
-    const subtitulo= haySig
-      ? (etapa==='cuartos' ? 'Resultados y cruces de Semifinales' : 'Resultados y cruce de la Final')
-      : (etapa==='cuartos' ? 'Avanzan a Semifinales' : 'Finalistas del torneo');
-
-    if(!(await cvTituloPlayoffLogo(ctx,W,{...id,logo:logoDiv},y,label,subtitulo+' · '+subLiga,30,38,58,'rgba(201,162,39,0.6)'))){
-      ctx.fillStyle=C.DORADO;
-      ctx.font=`${s(30)}px "Bebas Neue", Arial, sans-serif`;
-      ctx.textAlign='center';
-      ctx.fillText(label, CX, y+s(38));
-      ctx.fillStyle='rgba(201,162,39,0.6)';
-      ctx.font=`600 ${s(14)}px "DM Sans", Arial, sans-serif`;
-      ctx.fillText(subtitulo+' · '+subLiga, CX, y+s(58));
-    }
-    y += s(64);
-
-    const dg=ctx.createLinearGradient(0,0,W,0);
-    dg.addColorStop(0,'transparent'); dg.addColorStop(0.2,C.DORADO);
-    dg.addColorStop(0.8,C.DORADO); dg.addColorStop(1,'transparent');
-    ctx.fillStyle=dg; ctx.fillRect(0,y,W,1);
-    y += s(20);
-
-    const secs = [{ band:label, cruces, etiqueta:'CLASIFICA' }];
-    if(haySig) secs.push({
-      band: etapa==='cuartos' ? 'SEMIFINALES · CRUCES' : '🏆 LA FINAL',
-      cruces: crucesSig,
-      etiqueta: etapa==='cuartos' ? 'CLASIFICA' : 'CAMPEÓN'
-    });
-
-    const nRows   = secs.reduce((a,sc)=>a+sc.cruces.length, 0);
-    const hFooter = s(40);
-    const hBand=s(34), gapBand=s(10), gapRow=s(10), gapSec=s(14);
-    const hDisp   = CV_H - y - hFooter - s(10);
-    const hFijo   = secs.length*(hBand+gapBand) + (secs.length-1)*gapSec + (nRows-secs.length)*gapRow;
-    const maxRow  = nRows<=3 ? s(190) : s(150);
-    const ROW     = Math.max(s(84), Math.min(maxRow, Math.floor((hDisp-hFijo)/nRows)));
-    const hContenido = hFijo + nRows*ROW;
-    y += Math.max(0, Math.floor((hDisp-hContenido)/2));
-
-    // Con pocas filas, escudos/marcador/nombres crecen para aprovechar el alto
-    const kE = nRows>=6 ? 1 : nRows===5 ? 1.05 : nRows===4 ? 1.2  : nRows===3 ? 1.4  : 1.5;
-    const kM = nRows>=6 ? 1 : nRows===5 ? 1.05 : nRows===4 ? 1.25 : nRows===3 ? 1.4  : 1.5;
-    const kN = nRows>=5 ? 1 : nRows===4 ? 1.05 : 1.1;
-    const ECSIZE=Math.round(s(50)*kE), fNom=Math.round(s(18)*kN);
-    const mH=Math.round(s(44)*kM), fMarc=Math.round(s(30)*kM);
-
-    secs.forEach((sc,si)=>{
-      // Banda con el nombre de la sección
-      ctx.fillStyle='rgba(201,162,39,0.10)';
-      ctx.fillRect(s(24),y,W-s(48),hBand);
-      ctx.fillStyle=C.DORADO;
-      ctx.font=`700 ${s(15)}px "Rajdhani", Arial, sans-serif`;
-      ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText(sc.band, CX, y+hBand/2);
-      ctx.textBaseline='alphabetic';
-      y += hBand+gapBand;
-
-      sc.cruces.forEach((c,k)=>{
-        cvFilaCruceCC(ctx,c,CX,y,ROW,ECSIZE,escudoImgs,fNom,mH,fMarc,true,sc.etiqueta);
-        y += ROW + (k<sc.cruces.length-1 ? gapRow : 0);
-      });
-      if(si<secs.length-1) y += gapSec;
-    });
   }
 
   cvFooter(ctx,W,CV_H - s(40),liga);
