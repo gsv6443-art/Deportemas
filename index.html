@@ -8291,8 +8291,15 @@ async function generarImagenPosicionesReserva(opts){
   y += S(48);
 
   // Columnas
-  const C1=S(8), C2=S(40), C3=S(80), EQMAX=S(220);
-  const numCols=[
+  const C1=S(8), C2=S(40), C3=S(80), EQMAX=hist?S(244):S(220);
+  // Historia: sin columnas G/E/P, el espacio sobrante va a nombre, PTS y el resto
+  const numCols=hist ? [
+    {l:'PTS',x:C3+EQMAX+S(4),   w:S(72)},
+    {l:'PJ', x:C3+EQMAX+S(80),  w:S(54)},
+    {l:'GF', x:C3+EQMAX+S(138), w:S(54)},
+    {l:'GC', x:C3+EQMAX+S(196), w:S(54)},
+    {l:'DG', x:C3+EQMAX+S(254), w:S(62)},
+  ] : [
     {l:'PTS',x:C3+EQMAX+S(4),   w:S(50)},
     {l:'PJ', x:C3+EQMAX+S(58),  w:S(38)},
     {l:'G',  x:C3+EQMAX+S(100), w:S(34)},
@@ -8306,7 +8313,7 @@ async function generarImagenPosicionesReserva(opts){
   // Header tabla
   ctx.fillStyle='rgba(201,162,39,0.13)'; ctx.fillRect(0,y,W,HDR_H);
   ctx.fillStyle=C.DORADO;
-  ctx.font=`700 ${S(11)}px "Rajdhani", Arial, sans-serif`;
+  ctx.font=`700 ${hist?S(13):S(11)}px "Rajdhani", Arial, sans-serif`;
   ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillText('#', C1+S(16), y+HDR_H/2);
   ctx.textAlign='left';
@@ -8354,20 +8361,20 @@ async function generarImagenPosicionesReserva(opts){
 
     // Nombre — DM Sans
     ctx.fillStyle=C.BLANCO;
-    ctx.font=`600 ${S(13)}px "DM Sans", Arial, sans-serif`;
+    ctx.font=`600 ${hist?S(17):S(13)}px "DM Sans", Arial, sans-serif`;
     ctx.textAlign='left'; ctx.textBaseline='middle';
     cvFillTextTrunc(ctx, p.equipo, C3, fy, EQMAX-S(4));
 
     // PTS — Bebas Neue
     ctx.fillStyle=C.DORADO;
-    ctx.font=`${S(19)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.font=`${hist?S(28):S(19)}px "Bebas Neue", Arial, sans-serif`;
     ctx.textAlign='center';
     ctx.fillText(p.pts, numCols[0].x+numCols[0].w/2, fy);
 
     // Stats — Rajdhani
     ctx.fillStyle='rgba(255,255,255,0.65)';
-    ctx.font=`600 ${S(12)}px "Rajdhani", Arial, sans-serif`;
-    [p.pj,p.g,p.e,p.p,p.gf,p.gc,p.dg].forEach((v,ci)=>{
+    ctx.font=`600 ${hist?S(16):S(12)}px "Rajdhani", Arial, sans-serif`;
+    (hist ? [p.pj,p.gf,p.gc,p.dg] : [p.pj,p.g,p.e,p.p,p.gf,p.gc,p.dg]).forEach((v,ci)=>{
       ctx.fillText(String(v??0), numCols[ci+1].x+numCols[ci+1].w/2, fy);
     });
 
@@ -18576,8 +18583,15 @@ async function generarImagenPosiciones(opts){
   y+=S(56);
 
   // Columnas
-  const C1=S(10), C2=S(42), C3=S(82), EQMAX=S(224);
-  const numCols=[
+  const C1=S(10), C2=S(42), C3=S(82), EQMAX=hist?S(244):S(224);
+  // Historia: sin columnas G/E/P, el espacio sobrante va a nombre, PTS y el resto
+  const numCols=hist ? [
+    {l:'PTS',x:C3+EQMAX+S(4),   w:S(72)},
+    {l:'PJ', x:C3+EQMAX+S(80),  w:S(54)},
+    {l:'GF', x:C3+EQMAX+S(138), w:S(54)},
+    {l:'GC', x:C3+EQMAX+S(196), w:S(54)},
+    {l:'DG', x:C3+EQMAX+S(254), w:S(62)},
+  ] : [
     {l:'PTS', x:C3+EQMAX+S(4),   w:S(52)},
     {l:'PJ',  x:C3+EQMAX+S(60),  w:S(38)},
     {l:'G',   x:C3+EQMAX+S(100), w:S(34)},
@@ -18591,7 +18605,7 @@ async function generarImagenPosiciones(opts){
   // Header tabla
   ctx.fillStyle='rgba(201,162,39,0.1)'; ctx.fillRect(0,y,W,HDR_H);
   ctx.fillStyle='rgba(201,162,39,0.8)';
-  ctx.font=`700 ${S(12)}px "Rajdhani", Arial, sans-serif`;
+  ctx.font=`700 ${hist?S(14):S(12)}px "Rajdhani", Arial, sans-serif`;
   ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillText('#', C1+S(16), y+HDR_H/2);
   ctx.textAlign='left';
@@ -18685,7 +18699,7 @@ async function generarImagenPosiciones(opts){
 
     // Nombre — DM Sans
     ctx.fillStyle=i===0?C.BLANCO:'rgba(255,255,255,0.85)';
-    ctx.font=`${i===0?'600':'500'} ${S(15)}px "DM Sans", Arial, sans-serif`;
+    ctx.font=`${i===0?'600':'500'} ${hist?S(18):S(15)}px "DM Sans", Arial, sans-serif`;
     ctx.textAlign='left'; ctx.textBaseline='middle';
     const condIcon=condicionInfo(div,condicionParaContexto(div,p.condicion, div==='primera'?(torneo==='general'?'general':'torneo'):null));
     const condIconW=condIcon?S(20):0;
@@ -18699,16 +18713,16 @@ async function generarImagenPosiciones(opts){
 
     // PTS — Bebas Neue grande
     ctx.fillStyle=C.DORADO;
-    ctx.font=`${S(22)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.font=`${hist?S(30):S(22)}px "Bebas Neue", Arial, sans-serif`;
     ctx.textAlign='center';
     ctx.fillText(p.pts!=null?p.pts:0, numCols[0].x+numCols[0].w/2, fy);
 
     // Stats — Rajdhani
     ctx.fillStyle='rgba(255,255,255,0.6)';
-    ctx.font=`600 ${S(13)}px "Rajdhani", Arial, sans-serif`;
+    ctx.font=`600 ${hist?S(17):S(13)}px "Rajdhani", Arial, sans-serif`;
     const dg=(p.gf||0)-(p.gc||0);
     const dgStr=dg>0?'+'+dg:String(dg);
-    [p.pj,p.g,p.e,p.p,p.gf||0,p.gc||0,dgStr].forEach((v,ci)=>{
+    (hist ? [p.pj,p.gf||0,p.gc||0,dgStr] : [p.pj,p.g,p.e,p.p,p.gf||0,p.gc||0,dgStr]).forEach((v,ci)=>{
       ctx.fillText(String(v), numCols[ci+1].x+numCols[ci+1].w/2, fy);
     });
 
