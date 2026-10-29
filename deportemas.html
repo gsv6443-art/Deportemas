@@ -3122,7 +3122,7 @@ table.posiciones td:nth-child(8){
 .share-img-nav{display:flex;align-items:center;justify-content:center;gap:14px;margin:0 16px 10px;}
 .share-img-nav button{background:rgba(201,162,39,.12);border:1px solid rgba(201,162,39,.3);color:var(--dorado,#c9a227);width:32px;height:32px;border-radius:50%;font-size:18px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;}
 .share-img-nav button:hover{background:rgba(201,162,39,.25);}
-.share-img-nav span{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:600;color:rgba(255,255,255,.55);letter-spacing:.4px;min-width:38px;text-align:center;}
+.share-img-nav span{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:600;color:rgba(255,255,255,.55);letter-spacing:.4px;min-width:38px;text-align:center;white-space:nowrap;}
 .share-card-row{display:flex;align-items:center;justify-content:flex-end;padding:6px 16px 2px;}
 
 /* ── PWA INSTALL BANNER ── */
@@ -8051,7 +8051,7 @@ function renderPosiciones(){
         <span>⭐ Tabla General – Primera División</span>
         <div style="display:flex;align-items:center;gap:8px">
           <span class="div-badge" style="background:rgba(201,162,39,.2);color:var(--dorado);border:1px solid var(--dorado-border)">Apertura + Clausura</span>
-          <button class="btn-share" onclick="abrirShare(generarImagenPosiciones)">${SVG_SHARE} Compartir</button>
+          <button class="btn-share" onclick="abrirShare(generarImagenPosicionesConHistoria)">${SVG_SHARE} Compartir</button>
         </div>
       </div>
       <div class="tabla-wrap"><table class="posiciones">
@@ -8106,7 +8106,7 @@ function renderPosiciones(){
   el.innerHTML=`<div class="card">
     <div class="card-header">
       <span>Posiciones – ${torneoLabel(torneo)} / ${div==='primera'?'Primera':'Segunda'}</span>
-      <button class="btn-share" onclick="abrirShare(generarImagenPosiciones)">${SVG_SHARE} Compartir</button>
+      <button class="btn-share" onclick="abrirShare(generarImagenPosicionesConHistoria)">${SVG_SHARE} Compartir</button>
     </div>
     <div class="tabla-wrap"><table class="posiciones">
       <thead><tr><th>#</th><th>Equipo</th><th>PTS</th><th>PJ</th><th>G</th><th>E</th><th>P</th><th>GF</th><th>GC</th><th>DG</th></tr></thead>
@@ -8199,7 +8199,7 @@ function posReservaTablaHTML(titulo, pos, divBadge, shareBtn, opts){
 }
 
 function renderPosicionesReserva(div, el){
-  const shareBtn = `<button class="btn-share" onclick="abrirShare(generarImagenPosicionesReserva)">${SVG_SHARE} Compartir</button>`;
+  const shareBtn = `<button class="btn-share" onclick="abrirShare(generarImagenPosicionesReservaConHistoria)">${SVG_SHARE} Compartir</button>`;
 
   // ---- SEGUNDA DIVISIÓN: tabla general única, sin fases ----
   if(div === 'segunda'){
@@ -8396,7 +8396,7 @@ function tablaHTML(titulo,pos,clasifican,leyendaExtra,clasificanLabel){
     </tr>`;
   }).join('');
   const html=`<div class="card" style="margin-bottom:.8rem">
-    <div class="card-header"><span>${titulo}</span><div style="display:flex;align-items:center;gap:8px"><span class="div-badge">2ª</span><button class="btn-share" onclick="abrirShare(generarImagenPosiciones)">${SVG_SHARE} Compartir</button></div></div>
+    <div class="card-header"><span>${titulo}</span><div style="display:flex;align-items:center;gap:8px"><span class="div-badge">2ª</span><button class="btn-share" onclick="abrirShare(generarImagenPosicionesConHistoria)">${SVG_SHARE} Compartir</button></div></div>
     <div class="tabla-wrap"><table class="posiciones">
       <thead><tr><th>#</th><th>Equipo</th><th>PTS</th><th>PJ</th><th>G</th><th>E</th><th>P</th><th>GF</th><th>GC</th><th>DG</th></tr></thead>
       <tbody>${rows}</tbody>
@@ -13990,7 +13990,7 @@ function renderCopaOroPlata(categoria, copa, el){
 // mismas clases CSS .posiciones / .pos-num / .pos-equipo que ya usa el
 // resto del sitio). 1° y 2° clasifican a Copa Oro, 3° y 4° a Copa Plata.
 function tablaProvincialHTML(titulo, pos, categoria, zonaKey){
-  const shareBtn=`<button class="btn-share" style="padding:3px 9px;font-size:10px" onclick="abrirShare(()=>generarImagenTablaProvincial('${categoria}','${zonaKey}'))" title="Compartir ${titulo}">${SVG_SHARE} Compartir</button>`;
+  const shareBtn=`<button class="btn-share" style="padding:3px 9px;font-size:10px" onclick="abrirShare(()=>generarImagenTablaProvincialConHistoria('${categoria}','${zonaKey}'))" title="Compartir ${titulo}">${SVG_SHARE} Compartir</button>`;
   if(!pos.length) return `<div class="card" style="margin-bottom:.8rem"><div class="card-header"><span>${titulo}</span><span class="div-badge">EXTRA LIGA</span></div><div class="empty-msg">No hay posiciones cargadas para esta zona todavía</div></div>`;
   const rows=pos.map((p,i)=>{
     const cls=i<2?'zona-clasificacion':(i<4?'tp-zona-plata':'');
@@ -15063,6 +15063,78 @@ async function generarImagenHistoriaPartido(p, opciones = {}){
   cvFooter(ctx, W, H - footH, liga);
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   return canvas;
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   HISTORIA DE INSTAGRAM — tablas de posiciones (1080×1920)
+   Toma la imagen de la tabla (1080×1350, la de siempre) y la arma
+   sobre el fondo de historia, centrada y dentro de la zona segura de
+   Instagram (la barra de arriba y la de respuesta abajo tapan ~250px).
+   Los generadores de tablas NO se tocan: lo que se publica en el feed
+   sigue siendo exactamente igual.
+   ══════════════════════════════════════════════════════════════ */
+async function cvTablaAHistoria(tabla){
+  await document.fonts.ready;
+  const W = CV_W_HIST, H = CV_H_HIST;
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  // Fondo de historia (el mismo de generarImagenHistoriaPartido)
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, C.NEG3); bg.addColorStop(1, C.NEG);
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  const v1 = ctx.createRadialGradient(W*0.15, H*0.06, 0, W*0.15, H*0.06, W*0.6);
+  v1.addColorStop(0, 'rgba(201,162,39,0.06)'); v1.addColorStop(1, 'transparent');
+  ctx.fillStyle = v1; ctx.fillRect(0, 0, W, H);
+  const v2 = ctx.createRadialGradient(W*0.85, H*0.92, 0, W*0.85, H*0.92, W*0.6);
+  v2.addColorStop(0, 'rgba(201,162,39,0.04)'); v2.addColorStop(1, 'transparent');
+  ctx.fillStyle = v2; ctx.fillRect(0, 0, W, H);
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0, H*0.5); ctx.lineTo(W, H*0.5); ctx.stroke();
+  ctx.beginPath(); ctx.arc(W/2, H*0.5, W*0.32, 0, Math.PI*2); ctx.stroke();
+  ctx.restore();
+
+  // Tabla centrada verticalmente (queda ~285px libres arriba y abajo)
+  const yT = Math.round((H - tabla.height) / 2);
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.65)'; ctx.shadowBlur = 50; ctx.shadowOffsetY = 0;
+  ctx.fillStyle = C.NEG; ctx.fillRect(0, yT, W, tabla.height);
+  ctx.restore();
+  ctx.drawImage(tabla, 0, yT);
+
+  // Filete dorado en los bordes de la tabla para que se integre con el fondo
+  ctx.fillStyle = 'rgba(201,162,39,0.55)';
+  ctx.fillRect(0, yT, W, 2);
+  ctx.fillRect(0, yT + tabla.height - 2, W, 2);
+
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  return canvas;
+}
+
+// Arma el par [publicación 1080×1350, historia 1080×1920] para el modal de compartir.
+// El modal ya navega arrays de canvas; las propiedades _etiquetas y _soloActual
+// hacen que muestre qué formato es cada uno y que "Descargar" baje solo el visible.
+async function cvConHistoria(tabla){
+  if(!tabla) return null;
+  const historia = await cvTablaAHistoria(tabla);
+  tabla._nombreArchivo    = 'deportemas-posiciones-publicacion';
+  historia._nombreArchivo = 'deportemas-posiciones-historia';
+  const res = [tabla, historia];
+  res._etiquetas  = ['Publicación · 1080×1350', 'Historia · 1080×1920'];
+  res._soloActual = true;
+  return res;
+}
+async function generarImagenPosicionesConHistoria(){
+  return cvConHistoria(await generarImagenPosiciones());
+}
+async function generarImagenPosicionesReservaConHistoria(){
+  return cvConHistoria(await generarImagenPosicionesReserva());
+}
+async function generarImagenTablaProvincialConHistoria(categoria, zonaKey){
+  return cvConHistoria(await generarImagenTablaProvincial(categoria, zonaKey));
 }
 
 
@@ -21801,6 +21873,9 @@ async function abrirShareCanvas(generadorFn){
         : esMovil
           ? 'Seleccioná una red para compartir. Si no funciona, descargá la imagen y adjuntala.'
           : 'En PC: se descarga la imagen automáticamente. Luego adjuntala en la red social.';
+      if(_shareCanvases && _shareCanvases._etiquetas){
+        noteEl.textContent = 'Usá ‹ › para elegir entre publicación e historia. ' + noteEl.textContent;
+      }
     } catch(e) {
       loadEl.textContent = 'Error al generar la imagen.';
       console.error(e);
@@ -21819,7 +21894,9 @@ function _shareMostrarImagen(){
   imgEl.src = _shareCanvas.toDataURL('image/png');
   if(_shareCanvases.length > 1 && navEl){
     navEl.style.display = 'flex';
-    if(cntEl) cntEl.textContent = (_shareIdx+1) + ' / ' + _shareCanvases.length;
+    if(cntEl) cntEl.textContent = (_shareCanvases._etiquetas && _shareCanvases._etiquetas[_shareIdx])
+      ? _shareCanvases._etiquetas[_shareIdx]
+      : (_shareIdx+1) + ' / ' + _shareCanvases.length;
   } else if(navEl){
     navEl.style.display = 'none';
   }
@@ -22605,7 +22682,7 @@ async function compartirImgEn(red){
     try{
       const res = await fetch(dataUrl);
       const blob = await res.blob();
-      const file = new File([blob], 'deportemas-resultado.png', {type:'image/png'});
+      const file = new File([blob], (_shareCanvas._nombreArchivo||'deportemas-resultado') + '.png', {type:'image/png'});
       if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
         await navigator.share({ files:[file], title: nombre, text: texto });
         return;
@@ -22637,7 +22714,7 @@ async function compartirImgEn(red){
 }
 
 function descargarImagen(){
-  if(_shareCanvases && _shareCanvases.length > 1){
+  if(_shareCanvases && _shareCanvases.length > 1 && !_shareCanvases._soloActual){
     _shareCanvases.forEach((cv,i)=>{
       const a = document.createElement('a');
       a.href     = cv.toDataURL('image/png');
@@ -22649,7 +22726,7 @@ function descargarImagen(){
   if(!_shareCanvas) return;
   const a = document.createElement('a');
   a.href     = _shareCanvas.toDataURL('image/png');
-  a.download = 'deportemas-' + Date.now() + '.png';
+  a.download = (_shareCanvas._nombreArchivo || 'deportemas') + '-' + Date.now() + '.png';
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 
