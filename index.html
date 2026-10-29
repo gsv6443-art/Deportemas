@@ -8228,7 +8228,12 @@ function renderPosicionesReserva(div, el){
 }
 
 // Generador de imagen para posiciones de reserva
-async function generarImagenPosicionesReserva(){
+async function generarImagenPosicionesReserva(opts){
+  const hist = !!(opts && opts.historia);
+  const H = hist ? CV_H_HIST : CV_H;
+  const S = hist ? (v=>Math.round(v*CV_S*1.08)) : s;   // en historia el contenido crece un 8% (el ancho no da para más)
+  const TOP = 130, BOT = 130;                            // margen para la barra de Instagram arriba y abajo
+
   await document.fonts.ready;
   const id   = getIdentidad();
   const liga = id.nombre||'DEPORTEMAS';
@@ -8248,54 +8253,62 @@ async function generarImagenPosicionesReserva(){
   }
   if(!pos.length) return null;
 
-  const ROW_H = s(40);
-  const HDR_H = s(29);
+  const ROW_H0 = S(40);
+  const HDR_H = S(29);
   const hHeader   = s(64);
-  const hTitulo   = s(48);
-  const hLeyenda  = esGeneralSegunda ? s(30) : 0;
+  const hTitulo   = S(48);
+  const hLeyenda  = esGeneralSegunda ? S(30) : 0;
   const hFooter   = s(40);
-  const hDisponible = CV_H - hHeader - hTitulo - HDR_H - hLeyenda - hFooter - s(12);
-  const maxRows   = Math.floor(hDisponible / ROW_H);
+  const hDisponible = (hist ? (H - TOP - BOT) : CV_H) - hHeader - hTitulo - HDR_H - hLeyenda - hFooter - S(12);
+  const maxRows   = Math.floor(hDisponible / ROW_H0);
   const rows      = Math.min(pos.length, maxRows);
+  const ROW_H     = hist ? Math.min(Math.floor(hDisponible / rows), S(72)) : ROW_H0;
+  // Historia: el bloque completo se centra dentro de la zona segura
+  const usadoH    = hHeader + hTitulo + HDR_H + rows*ROW_H + hLeyenda + hFooter + S(12);
+  const yTop      = hist ? TOP + Math.max(0, Math.floor((H - TOP - BOT - usadoH) / 2)) : 0;
+  const yFooter   = yTop + usadoH - hFooter;
 
   const canvas = document.createElement('canvas');
-  canvas.width = W; canvas.height = CV_H;
+  canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
   ctx.textBaseline = 'alphabetic';
 
   // Mismo fondo gradiente que las otras imágenes de posiciones
-  const bgGrad = ctx.createLinearGradient(0,0,0,CV_H);
-  bgGrad.addColorStop(0,C.NEG3); bgGrad.addColorStop(1,C.NEG);
-  ctx.fillStyle = bgGrad; ctx.fillRect(0,0,W,CV_H);
+  if(hist){ cvFondoHistoria(ctx,W,H); }
+  else {
+    const bgGrad = ctx.createLinearGradient(0,0,0,CV_H);
+    bgGrad.addColorStop(0,C.NEG3); bgGrad.addColorStop(1,C.NEG);
+    ctx.fillStyle = bgGrad; ctx.fillRect(0,0,W,CV_H);
+  }
 
-  let y = await cvHeader(ctx, W, id, 0);
+  let y = await cvHeader(ctx, W, id, yTop);
 
   // Título
   ctx.fillStyle = C.DORADO;
-  ctx.font = `${s(20)}px "Bebas Neue", Arial, sans-serif`;
+  ctx.font = `${S(20)}px "Bebas Neue", Arial, sans-serif`;
   ctx.textAlign = 'center';
-  ctx.fillText(tituloPosiciones, W/2, y+s(31));
-  y += s(48);
+  ctx.fillText(tituloPosiciones, W/2, y+S(31));
+  y += S(48);
 
   // Columnas
-  const C1=s(8), C2=s(40), C3=s(80), EQMAX=s(220);
+  const C1=S(8), C2=S(40), C3=S(80), EQMAX=S(220);
   const numCols=[
-    {l:'PTS',x:C3+EQMAX+s(4),   w:s(50)},
-    {l:'PJ', x:C3+EQMAX+s(58),  w:s(38)},
-    {l:'G',  x:C3+EQMAX+s(100), w:s(34)},
-    {l:'E',  x:C3+EQMAX+s(138), w:s(34)},
-    {l:'P',  x:C3+EQMAX+s(176), w:s(34)},
-    {l:'GF', x:C3+EQMAX+s(214), w:s(34)},
-    {l:'GC', x:C3+EQMAX+s(252), w:s(34)},
-    {l:'DG', x:C3+EQMAX+s(290), w:s(40)},
+    {l:'PTS',x:C3+EQMAX+S(4),   w:S(50)},
+    {l:'PJ', x:C3+EQMAX+S(58),  w:S(38)},
+    {l:'G',  x:C3+EQMAX+S(100), w:S(34)},
+    {l:'E',  x:C3+EQMAX+S(138), w:S(34)},
+    {l:'P',  x:C3+EQMAX+S(176), w:S(34)},
+    {l:'GF', x:C3+EQMAX+S(214), w:S(34)},
+    {l:'GC', x:C3+EQMAX+S(252), w:S(34)},
+    {l:'DG', x:C3+EQMAX+S(290), w:S(40)},
   ];
 
   // Header tabla
   ctx.fillStyle='rgba(201,162,39,0.13)'; ctx.fillRect(0,y,W,HDR_H);
   ctx.fillStyle=C.DORADO;
-  ctx.font=`700 ${s(11)}px "Rajdhani", Arial, sans-serif`;
+  ctx.font=`700 ${S(11)}px "Rajdhani", Arial, sans-serif`;
   ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText('#', C1+s(16), y+HDR_H/2);
+  ctx.fillText('#', C1+S(16), y+HDR_H/2);
   ctx.textAlign='left';
   ctx.fillText('EQUIPO', C3, y+HDR_H/2);
   numCols.forEach(c=>{ ctx.textAlign='center'; ctx.fillText(c.l, c.x+c.w/2, y+HDR_H/2); });
@@ -8321,17 +8334,17 @@ async function generarImagenPosicionesReserva(){
 
     // Borde de clasificación a semifinales (4 primeros) — solo Reserva Tabla General de Segunda
     if(esGeneralSegunda && i<4){
-      ctx.fillStyle=C.VERDE; ctx.fillRect(0,y,s(4),ROW_H);
+      ctx.fillStyle=C.VERDE; ctx.fillRect(0,y,S(4),ROW_H);
     }
 
     // Número
     ctx.fillStyle = i===0 ? C.DORADO : 'rgba(255,255,255,0.5)';
-    ctx.font = (i===0?'700':'500')+` ${s(13)}px "Rajdhani", Arial, sans-serif`;
+    ctx.font = (i===0?'700':'500')+` ${S(13)}px "Rajdhani", Arial, sans-serif`;
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(i+1, C1+s(16), fy);
+    ctx.fillText(i+1, C1+S(16), fy);
 
     // Escudo
-    const eSize=s(26), eX=C2+s(2), eY=y+(ROW_H-eSize)/2;
+    const eSize=hist?Math.min(Math.round(ROW_H*0.58),S(36)):S(26), eX=C2+S(2), eY=y+(ROW_H-eSize)/2;
     const eImg=escudoImgs[p.equipo];
     if(eImg){
       ctx.save(); ctx.beginPath();
@@ -8341,19 +8354,19 @@ async function generarImagenPosicionesReserva(){
 
     // Nombre — DM Sans
     ctx.fillStyle=C.BLANCO;
-    ctx.font=`600 ${s(13)}px "DM Sans", Arial, sans-serif`;
+    ctx.font=`600 ${S(13)}px "DM Sans", Arial, sans-serif`;
     ctx.textAlign='left'; ctx.textBaseline='middle';
-    cvFillTextTrunc(ctx, p.equipo, C3, fy, EQMAX-s(4));
+    cvFillTextTrunc(ctx, p.equipo, C3, fy, EQMAX-S(4));
 
     // PTS — Bebas Neue
     ctx.fillStyle=C.DORADO;
-    ctx.font=`${s(19)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.font=`${S(19)}px "Bebas Neue", Arial, sans-serif`;
     ctx.textAlign='center';
     ctx.fillText(p.pts, numCols[0].x+numCols[0].w/2, fy);
 
     // Stats — Rajdhani
     ctx.fillStyle='rgba(255,255,255,0.65)';
-    ctx.font=`600 ${s(12)}px "Rajdhani", Arial, sans-serif`;
+    ctx.font=`600 ${S(12)}px "Rajdhani", Arial, sans-serif`;
     [p.pj,p.g,p.e,p.p,p.gf,p.gc,p.dg].forEach((v,ci)=>{
       ctx.fillText(String(v??0), numCols[ci+1].x+numCols[ci+1].w/2, fy);
     });
@@ -8364,15 +8377,15 @@ async function generarImagenPosicionesReserva(){
   });
 
   if(esGeneralSegunda){
-    ctx.fillStyle=C.VERDE; ctx.fillRect(s(16), y+s(12), s(10), s(10));
+    ctx.fillStyle=C.VERDE; ctx.fillRect(S(16), y+S(12), S(10), S(10));
     ctx.fillStyle='rgba(255,255,255,0.6)';
-    ctx.font=`600 ${s(12)}px "Rajdhani", Arial, sans-serif`;
+    ctx.font=`600 ${S(12)}px "Rajdhani", Arial, sans-serif`;
     ctx.textAlign='left'; ctx.textBaseline='middle';
-    ctx.fillText('CLASIFICAN A SEMIFINALES (4 PRIMEROS)', s(34), y+s(17));
+    ctx.fillText('CLASIFICAN A SEMIFINALES (4 PRIMEROS)', S(34), y+S(17));
     ctx.textBaseline='alphabetic';
   }
 
-  cvFooter(ctx, W, CV_H - s(40), liga);
+  cvFooter(ctx, W, hist ? yFooter : CV_H - s(40), liga);
   ctx.textAlign='left'; ctx.textBaseline='alphabetic';
   return canvas;
 }
@@ -15068,20 +15081,13 @@ async function generarImagenHistoriaPartido(p, opciones = {}){
 
 /* ══════════════════════════════════════════════════════════════
    HISTORIA DE INSTAGRAM — tablas de posiciones (1080×1920)
-   Toma la imagen de la tabla (1080×1350, la de siempre) y la arma
-   sobre el fondo de historia, centrada y dentro de la zona segura de
-   Instagram (la barra de arriba y la de respuesta abajo tapan ~250px).
-   Los generadores de tablas NO se tocan: lo que se publica en el feed
-   sigue siendo exactamente igual.
+   Posiciones (Primera/Segunda) y Reserva se dibujan de nuevo a 1080×1920
+   (generadores con opts.historia): filas más altas y todo el alto usado.
+   Torneo Provincial arma la historia sobre su imagen 1080×1350.
+   La publicación del feed sigue siendo exactamente igual.
    ══════════════════════════════════════════════════════════════ */
-async function cvTablaAHistoria(tabla){
-  await document.fonts.ready;
-  const W = CV_W_HIST, H = CV_H_HIST;
-  const canvas = document.createElement('canvas');
-  canvas.width = W; canvas.height = H;
-  const ctx = canvas.getContext('2d');
-
-  // Fondo de historia (el mismo de generarImagenHistoriaPartido)
+// Fondo de las historias (el mismo de generarImagenHistoriaPartido)
+function cvFondoHistoria(ctx, W, H){
   const bg = ctx.createLinearGradient(0, 0, 0, H);
   bg.addColorStop(0, C.NEG3); bg.addColorStop(1, C.NEG);
   ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
@@ -15096,6 +15102,16 @@ async function cvTablaAHistoria(tabla){
   ctx.beginPath(); ctx.moveTo(0, H*0.5); ctx.lineTo(W, H*0.5); ctx.stroke();
   ctx.beginPath(); ctx.arc(W/2, H*0.5, W*0.32, 0, Math.PI*2); ctx.stroke();
   ctx.restore();
+}
+
+async function cvTablaAHistoria(tabla){
+  await document.fonts.ready;
+  const W = CV_W_HIST, H = CV_H_HIST;
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  cvFondoHistoria(ctx, W, H);
 
   // Tabla centrada verticalmente (queda ~285px libres arriba y abajo)
   const yT = Math.round((H - tabla.height) / 2);
@@ -15117,9 +15133,8 @@ async function cvTablaAHistoria(tabla){
 // Arma el par [publicación 1080×1350, historia 1080×1920] para el modal de compartir.
 // El modal ya navega arrays de canvas; las propiedades _etiquetas y _soloActual
 // hacen que muestre qué formato es cada uno y que "Descargar" baje solo el visible.
-async function cvConHistoria(tabla){
-  if(!tabla) return null;
-  const historia = await cvTablaAHistoria(tabla);
+function cvParPublicacionHistoria(tabla, historia){
+  if(!tabla || !historia) return null;
   tabla._nombreArchivo    = 'deportemas-posiciones-publicacion';
   historia._nombreArchivo = 'deportemas-posiciones-historia';
   const res = [tabla, historia];
@@ -15127,11 +15142,16 @@ async function cvConHistoria(tabla){
   res._soloActual = true;
   return res;
 }
+// Para tablas sin versión propia de historia: se arma sobre la imagen de siempre
+async function cvConHistoria(tabla){
+  if(!tabla) return null;
+  return cvParPublicacionHistoria(tabla, await cvTablaAHistoria(tabla));
+}
 async function generarImagenPosicionesConHistoria(){
-  return cvConHistoria(await generarImagenPosiciones());
+  return cvParPublicacionHistoria(await generarImagenPosiciones(), await generarImagenPosiciones({historia:true}));
 }
 async function generarImagenPosicionesReservaConHistoria(){
-  return cvConHistoria(await generarImagenPosicionesReserva());
+  return cvParPublicacionHistoria(await generarImagenPosicionesReserva(), await generarImagenPosicionesReserva({historia:true}));
 }
 async function generarImagenTablaProvincialConHistoria(categoria, zonaKey){
   return cvConHistoria(await generarImagenTablaProvincial(categoria, zonaKey));
@@ -18447,7 +18467,12 @@ async function generarImagenPromocionalSplit(p){
   return canvas;
 }
 
-async function generarImagenPosiciones(){
+async function generarImagenPosiciones(opts){
+  const hist = !!(opts && opts.historia);
+  const H = hist ? CV_H_HIST : CV_H;
+  const S = hist ? (v=>Math.round(v*CV_S*1.08)) : s;   // en historia el contenido crece un 8% (el ancho no da para más)
+  const TOP = 130, BOT = 130;                            // margen para la barra de Instagram arriba y abajo
+
   await document.fonts.ready;
   const id    = getIdentidad();
   const liga  = id.nombre||'DEPORTEMAS';
@@ -18512,55 +18537,63 @@ async function generarImagenPosiciones(){
 
   // Calcular ROW_H dinámico para llenar todo el espacio disponible
   const hHeader  = s(64);
-  const hTitulo  = s(56);
-  const HDR_H    = s(32);
-  const hLeyenda = s(42);  // leyenda de zonas al pie
+  const hTitulo  = S(56);
+  const HDR_H    = S(32);
+  const hLeyenda = hist ? S(54) : S(42);  // leyenda de zonas al pie
   const hFooter  = s(40);
-  const hDisp    = CV_H - hHeader - hTitulo - HDR_H - hLeyenda - hFooter;
+  const hDisp    = hist ? (H - TOP - BOT - hHeader - hTitulo - HDR_H - hLeyenda - hFooter)
+                        : (CV_H - hHeader - hTitulo - HDR_H - hLeyenda - hFooter);
   const rows     = Math.min(pos.length, 16);
-  const ROW_H    = Math.floor(hDisp / rows);
+  const ROW_H    = hist ? Math.min(Math.floor(hDisp / rows), S(72)) : Math.floor(hDisp / rows);
+  // Historia: el bloque completo se centra dentro de la zona segura
+  const usadoH   = hHeader + hTitulo + HDR_H + rows*ROW_H + hLeyenda + hFooter;
+  const yTop     = hist ? TOP + Math.max(0, Math.floor((H - TOP - BOT - usadoH) / 2)) : 0;
+  const yFooter  = yTop + usadoH - hFooter;
 
   const canvas = document.createElement('canvas');
-  canvas.width=W; canvas.height=CV_H;
+  canvas.width=W; canvas.height=H;
   const ctx=canvas.getContext('2d');
   ctx.textBaseline='alphabetic';
 
   // Fondo gradiente
-  const bgGrad = ctx.createLinearGradient(0,0,0,CV_H);
-  bgGrad.addColorStop(0, C.NEG3); bgGrad.addColorStop(1, C.NEG);
-  ctx.fillStyle=bgGrad; ctx.fillRect(0,0,W,CV_H);
+  if(hist){ cvFondoHistoria(ctx,W,H); }
+  else {
+    const bgGrad = ctx.createLinearGradient(0,0,0,CV_H);
+    bgGrad.addColorStop(0, C.NEG3); bgGrad.addColorStop(1, C.NEG);
+    ctx.fillStyle=bgGrad; ctx.fillRect(0,0,W,CV_H);
+  }
 
-  let y = await cvHeader(ctx,W,id,0);
+  let y = await cvHeader(ctx,W,id,yTop);
 
   // Título — Bebas Neue grande + subtítulo DM Sans
   ctx.fillStyle=C.DORADO;
-  ctx.font=`${s(28)}px "Bebas Neue", Arial, sans-serif`;
+  ctx.font=`${S(28)}px "Bebas Neue", Arial, sans-serif`;
   ctx.textAlign='center';
-  ctx.fillText(tituloPosiciones.toUpperCase(), W/2, y+s(34));
+  ctx.fillText(tituloPosiciones.toUpperCase(), W/2, y+S(34));
   ctx.fillStyle='rgba(201,162,39,0.55)';
-  ctx.font=`600 ${s(14)}px "DM Sans", Arial, sans-serif`;
-  ctx.fillText(subtitulo, W/2, y+s(52));
-  y+=s(56);
+  ctx.font=`600 ${S(14)}px "DM Sans", Arial, sans-serif`;
+  ctx.fillText(subtitulo, W/2, y+S(52));
+  y+=S(56);
 
   // Columnas
-  const C1=s(10), C2=s(42), C3=s(82), EQMAX=s(224);
+  const C1=S(10), C2=S(42), C3=S(82), EQMAX=S(224);
   const numCols=[
-    {l:'PTS', x:C3+EQMAX+s(4),   w:s(52)},
-    {l:'PJ',  x:C3+EQMAX+s(60),  w:s(38)},
-    {l:'G',   x:C3+EQMAX+s(100), w:s(34)},
-    {l:'E',   x:C3+EQMAX+s(136), w:s(34)},
-    {l:'P',   x:C3+EQMAX+s(172), w:s(34)},
-    {l:'GF',  x:C3+EQMAX+s(208), w:s(34)},
-    {l:'GC',  x:C3+EQMAX+s(244), w:s(34)},
-    {l:'DG',  x:C3+EQMAX+s(280), w:s(44)},
+    {l:'PTS', x:C3+EQMAX+S(4),   w:S(52)},
+    {l:'PJ',  x:C3+EQMAX+S(60),  w:S(38)},
+    {l:'G',   x:C3+EQMAX+S(100), w:S(34)},
+    {l:'E',   x:C3+EQMAX+S(136), w:S(34)},
+    {l:'P',   x:C3+EQMAX+S(172), w:S(34)},
+    {l:'GF',  x:C3+EQMAX+S(208), w:S(34)},
+    {l:'GC',  x:C3+EQMAX+S(244), w:S(34)},
+    {l:'DG',  x:C3+EQMAX+S(280), w:S(44)},
   ];
 
   // Header tabla
   ctx.fillStyle='rgba(201,162,39,0.1)'; ctx.fillRect(0,y,W,HDR_H);
   ctx.fillStyle='rgba(201,162,39,0.8)';
-  ctx.font=`700 ${s(12)}px "Rajdhani", Arial, sans-serif`;
+  ctx.font=`700 ${S(12)}px "Rajdhani", Arial, sans-serif`;
   ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText('#', C1+s(16), y+HDR_H/2);
+  ctx.fillText('#', C1+S(16), y+HDR_H/2);
   ctx.textAlign='left';
   ctx.fillText('EQUIPO', C3, y+HDR_H/2);
   numCols.forEach(c=>{ ctx.textAlign='center'; ctx.fillText(c.l, c.x+c.w/2, y+HDR_H/2); });
@@ -18624,25 +18657,25 @@ async function generarImagenPosiciones(){
         if(i<4) zc = C.VERDE;
       }
     }
-    if(zc){ ctx.fillStyle=zc; ctx.fillRect(0,y,s(4),ROW_H); }
+    if(zc){ ctx.fillStyle=zc; ctx.fillRect(0,y,S(4),ROW_H); }
 
     // Número / círculo dorado para el 1°
     ctx.textAlign='center'; ctx.textBaseline='middle';
     if(i===0){
-      ctx.shadowColor='rgba(201,162,39,0.5)'; ctx.shadowBlur=s(10);
-      ctx.beginPath(); ctx.arc(C1+s(16),fy,s(16),0,Math.PI*2);
+      ctx.shadowColor='rgba(201,162,39,0.5)'; ctx.shadowBlur=S(10);
+      ctx.beginPath(); ctx.arc(C1+S(16),fy,S(16),0,Math.PI*2);
       ctx.fillStyle=C.DORADO; ctx.fill();
       ctx.shadowBlur=0;
-      ctx.fillStyle=C.NEG; ctx.font=`700 ${s(14)}px "Rajdhani", Arial, sans-serif`;
-      ctx.fillText('1', C1+s(16), fy);
+      ctx.fillStyle=C.NEG; ctx.font=`700 ${S(14)}px "Rajdhani", Arial, sans-serif`;
+      ctx.fillText('1', C1+S(16), fy);
     } else {
       ctx.fillStyle='rgba(255,255,255,0.45)';
-      ctx.font=`600 ${s(14)}px "Rajdhani", Arial, sans-serif`;
-      ctx.fillText(i+1, C1+s(16), fy);
+      ctx.font=`600 ${S(14)}px "Rajdhani", Arial, sans-serif`;
+      ctx.fillText(i+1, C1+S(16), fy);
     }
 
     // Escudo
-    const eSize=s(28), eX=C2+s(2), eY=y+(ROW_H-eSize)/2;
+    const eSize=hist?Math.min(Math.round(ROW_H*0.58),S(38)):S(28), eX=C2+S(2), eY=y+(ROW_H-eSize)/2;
     const eImg=escudoImgs[p.equipo];
     if(eImg){
       ctx.save(); ctx.beginPath();
@@ -18652,27 +18685,27 @@ async function generarImagenPosiciones(){
 
     // Nombre — DM Sans
     ctx.fillStyle=i===0?C.BLANCO:'rgba(255,255,255,0.85)';
-    ctx.font=`${i===0?'600':'500'} ${s(15)}px "DM Sans", Arial, sans-serif`;
+    ctx.font=`${i===0?'600':'500'} ${S(15)}px "DM Sans", Arial, sans-serif`;
     ctx.textAlign='left'; ctx.textBaseline='middle';
     const condIcon=condicionInfo(div,condicionParaContexto(div,p.condicion, div==='primera'?(torneo==='general'?'general':'torneo'):null));
-    const condIconW=condIcon?s(20):0;
-    cvFillTextTrunc(ctx, p.equipo, C3, fy, EQMAX-s(4)-condIconW);
+    const condIconW=condIcon?S(20):0;
+    cvFillTextTrunc(ctx, p.equipo, C3, fy, EQMAX-S(4)-condIconW);
     if(condIcon){
-      ctx.font=`${s(13)}px "DM Sans", Arial, sans-serif`;
+      ctx.font=`${S(13)}px "DM Sans", Arial, sans-serif`;
       ctx.fillStyle=condIcon.color;
       ctx.textAlign='left';
-      ctx.fillText(condIcon.icon, C3+EQMAX-s(4)-condIconW+s(4), fy);
+      ctx.fillText(condIcon.icon, C3+EQMAX-S(4)-condIconW+S(4), fy);
     }
 
     // PTS — Bebas Neue grande
     ctx.fillStyle=C.DORADO;
-    ctx.font=`${s(22)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.font=`${S(22)}px "Bebas Neue", Arial, sans-serif`;
     ctx.textAlign='center';
     ctx.fillText(p.pts!=null?p.pts:0, numCols[0].x+numCols[0].w/2, fy);
 
     // Stats — Rajdhani
     ctx.fillStyle='rgba(255,255,255,0.6)';
-    ctx.font=`600 ${s(13)}px "Rajdhani", Arial, sans-serif`;
+    ctx.font=`600 ${S(13)}px "Rajdhani", Arial, sans-serif`;
     const dg=(p.gf||0)-(p.gc||0);
     const dgStr=dg>0?'+'+dg:String(dg);
     [p.pj,p.g,p.e,p.p,p.gf||0,p.gc||0,dgStr].forEach((v,ci)=>{
@@ -18685,10 +18718,10 @@ async function generarImagenPosiciones(){
   });
 
   // ── Leyenda de zonas ──────────────────────────────────────
-  y += s(8);
+  y += S(8);
   ctx.fillStyle='rgba(255,255,255,0.07)';
-  ctx.fillRect(s(40), y, W-s(80), 1);
-  y += s(12);
+  ctx.fillRect(S(40), y, W-S(80), 1);
+  y += S(12);
 
   let leyenda = [];
   if(div==='primera'){
@@ -18728,20 +18761,20 @@ async function generarImagenPosiciones(){
     }
   }
 
-  const leyW = (W - s(80)) / leyenda.length;
+  const leyW = (W - S(80)) / leyenda.length;
   leyenda.forEach((it, i) => {
-    const lx = s(40) + i * leyW + leyW/2;
-    const sqS = s(12);
-    cvRoundRect(ctx, lx - sqS/2, y, sqS, sqS, s(2));
+    const lx = S(40) + i * leyW + leyW/2;
+    const sqS = S(12);
+    cvRoundRect(ctx, lx - sqS/2, y, sqS, sqS, S(2));
     ctx.fillStyle = it.c; ctx.fill();
     ctx.fillStyle = 'rgba(255,255,255,0.45)';
-    ctx.font = `600 ${s(12)}px "Rajdhani", Arial, sans-serif`;
+    ctx.font = `600 ${S(12)}px "Rajdhani", Arial, sans-serif`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-    ctx.fillText(it.l.toUpperCase(), lx, y + sqS + s(4));
+    ctx.fillText(it.l.toUpperCase(), lx, y + sqS + S(4));
     ctx.textBaseline = 'alphabetic';
   });
 
-  cvFooter(ctx,W,CV_H - s(40),liga);
+  cvFooter(ctx,W,hist ? yFooter : CV_H - s(40),liga);
   ctx.textAlign='left'; ctx.textBaseline='alphabetic';
   return canvas;
 }
