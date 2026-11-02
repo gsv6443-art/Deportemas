@@ -12582,7 +12582,7 @@ function renderPlayoff(torneo,contenedorId,esReserva){
   const hayGanFinal   = !!(final.length && final[0].ganador);
 
   const btnEtapa = (etapa, hayGan, titulo) => hayGan
-    ? `<button class="btn-share" style="padding:3px 9px;font-size:10px" onclick="abrirShare(()=>generarImagenEtapaPlayoff('${torneo}',${esReserva},'${etapa}'))" title="Compartir ${titulo}">${SVG_SHARE} Compartir</button>`
+    ? `<button class="btn-share" style="padding:3px 9px;font-size:10px" onclick="abrirShare(()=>generarImagenEtapaPlayoffConHistoria('${torneo}',${esReserva},'${etapa}'))" title="Compartir ${titulo}">${SVG_SHARE} Compartir</button>`
     : '';
 
   const cont=document.getElementById(contenedorId);
@@ -12591,7 +12591,7 @@ function renderPlayoff(torneo,contenedorId,esReserva){
     <div class="playoff-section">
       <div class="playoff-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
         <span>🏆 Play Off${esReserva?' Reserva':''} – ${torneoLabel(torneo)}</span>
-        <button class="btn-share" onclick="abrirShare(()=>generarImagenPlayoff('${torneo}',${esReserva}))">${SVG_SHARE} Compartir</button>
+        <button class="btn-share" onclick="abrirShare(()=>generarImagenPlayoffConHistoria('${torneo}',${esReserva}))">${SVG_SHARE} Compartir</button>
       </div>
       ${torneo==='segunda'?'':`<div class="playoff-etapa">
         <div class="playoff-etapa-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
@@ -15087,9 +15087,10 @@ async function generarImagenHistoriaPartido(p, opciones = {}){
 
 
 /* ══════════════════════════════════════════════════════════════
-   HISTORIA DE INSTAGRAM — tablas de posiciones (1080×1920)
+   HISTORIA DE INSTAGRAM — tablas de posiciones y Play Off (1080×1920)
    Posiciones (Primera/Segunda) y Reserva se dibujan de nuevo a 1080×1920
    (generadores con opts.historia): filas más altas y todo el alto usado.
+   Play Off (cuadro, cuartos/semis y campeón) también se dibuja a 1080×1920.
    Torneo Provincial arma la historia sobre su imagen 1080×1350.
    La publicación del feed sigue siendo exactamente igual.
    ══════════════════════════════════════════════════════════════ */
@@ -15140,10 +15141,11 @@ async function cvTablaAHistoria(tabla){
 // Arma el par [publicación 1080×1350, historia 1080×1920] para el modal de compartir.
 // El modal ya navega arrays de canvas; las propiedades _etiquetas y _soloActual
 // hacen que muestre qué formato es cada uno y que "Descargar" baje solo el visible.
-function cvParPublicacionHistoria(tabla, historia){
+function cvParPublicacionHistoria(tabla, historia, nombre){
   if(!tabla || !historia) return null;
-  tabla._nombreArchivo    = 'deportemas-posiciones-publicacion';
-  historia._nombreArchivo = 'deportemas-posiciones-historia';
+  nombre = nombre || 'posiciones';
+  tabla._nombreArchivo    = 'deportemas-' + nombre + '-publicacion';
+  historia._nombreArchivo = 'deportemas-' + nombre + '-historia';
   const res = [tabla, historia];
   res._etiquetas  = ['Publicación · 1080×1350', 'Historia · 1080×1920'];
   res._soloActual = true;
@@ -15159,6 +15161,12 @@ async function generarImagenPosicionesConHistoria(){
 }
 async function generarImagenPosicionesReservaConHistoria(){
   return cvParPublicacionHistoria(await generarImagenPosicionesReserva(), await generarImagenPosicionesReserva({historia:true}));
+}
+async function generarImagenPlayoffConHistoria(torneo, esReserva){
+  return cvParPublicacionHistoria(await generarImagenPlayoff(torneo, esReserva), await generarImagenPlayoff(torneo, esReserva, {historia:true}), 'playoff');
+}
+async function generarImagenEtapaPlayoffConHistoria(torneo, esReserva, etapa){
+  return cvParPublicacionHistoria(await generarImagenEtapaPlayoff(torneo, esReserva, etapa), await generarImagenEtapaPlayoff(torneo, esReserva, etapa, {historia:true}), 'playoff-' + etapa);
 }
 async function generarImagenTablaProvincialConHistoria(categoria, zonaKey){
   return cvConHistoria(await generarImagenTablaProvincial(categoria, zonaKey));
@@ -20387,7 +20395,9 @@ async function generarImagenTorneo(torneoId){
 // La Final se destaca con borde dorado y trofeo arriba; si ya hay ganador
 // aparece "CAMPEÓN" debajo del cruce.
 async function cvRenderBracketPlayoff(secciones, id, liga, torneo, esReserva, opts){
-  const W=CV_W, H=CV_H, CX=W/2;
+  const hist=!!(opts&&opts.historia);                 // historia de Instagram 1080×1920
+  const W=CV_W, H=hist?CV_H_HIST:CV_H, CX=W/2;
+  const TOP=hist?130:0, BOT=hist?130:0;               // margen para la barra de Instagram
   const escudoImgs=await cvPrecargarEscudosCC(secciones.flatMap(sec=>sec.cruces));
   const trofeoImg=await new Promise(res=>{
     const im=new Image(); im.onload=()=>res(im); im.onerror=()=>res(null); im.src=TROFEO_CAMPEON_B64;
@@ -20402,7 +20412,7 @@ async function cvRenderBracketPlayoff(secciones, id, liga, torneo, esReserva, op
 
   const hColLabels=36, hFooter=s(40);
   const hHeaderEst=s(64)+s(56)+s(16);
-  const hDispEst=H-hHeaderEst-hColLabels-hFooter-s(10);
+  const hDispEst=H-TOP-BOT-hHeaderEst-hColLabels-hFooter-s(10);
   const maxCruces=Math.max(...secciones.map(sec=>sec.cruces.length));
   const miniGap=Math.max(10, Math.min(22, Math.floor(hDispEst/maxCruces*0.16)));
   const miniH=Math.max(72, Math.min(400, Math.floor((hDispEst-(maxCruces-1)*miniGap)/maxCruces)));
@@ -20412,12 +20422,15 @@ async function cvRenderBracketPlayoff(secciones, id, liga, torneo, esReserva, op
   canvas.width=W; canvas.height=H;
   const ctx=canvas.getContext('2d');
   ctx.textBaseline='alphabetic';
-  const bgGrad=ctx.createLinearGradient(0,0,0,H);
-  bgGrad.addColorStop(0,C.NEG3); bgGrad.addColorStop(1,C.NEG);
-  ctx.fillStyle=bgGrad; ctx.fillRect(0,0,W,H);
+  if(hist){ cvFondoHistoria(ctx,W,H); }
+  else {
+    const bgGrad=ctx.createLinearGradient(0,0,0,H);
+    bgGrad.addColorStop(0,C.NEG3); bgGrad.addColorStop(1,C.NEG);
+    ctx.fillStyle=bgGrad; ctx.fillRect(0,0,W,H);
+  }
 
   // Header + título PLAY OFF (con el logo de la división) + divisor dorado
-  let y=await cvHeader(ctx,W,id,0);
+  let y=await cvHeader(ctx,W,id,TOP);
   const subLigaPO=torneoLabel(torneo)+(esReserva?' · Reserva':' · Primera División');
   const tTit=(opts&&opts.titulo)||'PLAY OFF';
   const tSub=(opts&&opts.subtitulo)?(opts.subtitulo+' · '+subLigaPO):subLigaPO;
@@ -20438,7 +20451,7 @@ async function cvRenderBracketPlayoff(secciones, id, liga, torneo, esReserva, op
   ctx.fillStyle=dg; ctx.fillRect(0,y,W,1);
   y+=s(16);
 
-  const hDisp=H-y-hColLabels-hFooter-s(10);
+  const hDisp=H-BOT-y-hColLabels-hFooter-s(10);
   const offsetV=Math.max(0, Math.floor((hDisp-trackH)/2));
 
   // Resplandor dorado suave detrás de la columna de la Final
@@ -20481,7 +20494,7 @@ async function cvRenderBracketPlayoff(secciones, id, liga, torneo, esReserva, op
 
     sec.cruces.forEach((c,k)=>{
       const cy=centers[k]-miniH/2;
-      cvMiniCruceCC(ctx,c,x,cy,colW,miniH,escudoImgs);
+      cvMiniCruceCC(ctx,c,x,cy,colW,miniH,escudoImgs,hist);
       if(puedeAparear){
         const p1=prevCenters[2*k];
         const p2=(prevCenters[2*k+1]!==undefined)?prevCenters[2*k+1]:p1;
@@ -20526,12 +20539,12 @@ async function cvRenderBracketPlayoff(secciones, id, liga, torneo, esReserva, op
     prevCenters=centers; prevCount=n;
   });
 
-  cvFooter(ctx,W,H-s(40),liga);
+  cvFooter(ctx,W,H-BOT-s(40),liga);
   ctx.textAlign='left'; ctx.textBaseline='alphabetic';
   return canvas;
 }
 
-async function generarImagenPlayoff(torneo, esReserva){
+async function generarImagenPlayoff(torneo, esReserva, opts){
   esReserva = !!esReserva;
   await document.fonts.ready;
   const id   = getIdentidad();
@@ -20551,7 +20564,7 @@ async function generarImagenPlayoff(torneo, esReserva){
   })).filter(sec=>sec.cruces.length);
   if(!secciones.length) return null;
 
-  return cvRenderBracketPlayoff(secciones, id, liga, torneo, esReserva);
+  return cvRenderBracketPlayoff(secciones, id, liga, torneo, esReserva, opts);
 }
 
 // Resultado de un cruce visto desde la perspectiva de `nombre` (su marcador
@@ -20572,7 +20585,10 @@ function cvScorePlayoffDe(c, nombre){
 }
 
 // ── Generador: Felicitación por etapa de Play Off (Cuartos/Semis/Final) ──
-async function generarImagenEtapaPlayoff(torneo, esReserva, etapa){
+async function generarImagenEtapaPlayoff(torneo, esReserva, etapa, opts){
+  const hist = !!(opts && opts.historia);              // historia de Instagram 1080×1920
+  const H    = hist ? CV_H_HIST : CV_H;
+  const TOP  = hist ? 130 : 0, BOT = hist ? 130 : 0;   // margen para la barra de Instagram
   esReserva = !!esReserva;
   await document.fonts.ready;
   const id   = getIdentidad();
@@ -20598,7 +20614,7 @@ async function generarImagenEtapaPlayoff(torneo, esReserva, etapa){
     const subtitulo = haySig
       ? (etapa==='cuartos' ? 'Resultados y cruces de Semifinales' : 'Resultados y cruce de la Final')
       : (etapa==='cuartos' ? 'Avanzan a Semifinales' : 'Finalistas del torneo');
-    return cvRenderBracketPlayoff(secciones, id, liga, torneo, esReserva, { titulo:LABELS[etapa], subtitulo });
+    return cvRenderBracketPlayoff(secciones, id, liga, torneo, esReserva, { titulo:LABELS[etapa], subtitulo, historia:hist });
   }
 
   // Escudos de todos los equipos del Play Off (ganadores y rivales)
@@ -20613,13 +20629,16 @@ async function generarImagenEtapaPlayoff(torneo, esReserva, etapa){
   })));
 
   const canvas = document.createElement('canvas');
-  canvas.width=W; canvas.height=CV_H;
+  canvas.width=W; canvas.height=H;
   const ctx=canvas.getContext('2d');
   ctx.textBaseline='alphabetic';
 
-  const bgGrad = ctx.createLinearGradient(0,0,0,CV_H);
-  bgGrad.addColorStop(0,C.NEG3); bgGrad.addColorStop(1,C.NEG);
-  ctx.fillStyle=bgGrad; ctx.fillRect(0,0,W,CV_H);
+  if(hist){ cvFondoHistoria(ctx,W,H); }
+  else {
+    const bgGrad = ctx.createLinearGradient(0,0,0,CV_H);
+    bgGrad.addColorStop(0,C.NEG3); bgGrad.addColorStop(1,C.NEG);
+    ctx.fillStyle=bgGrad; ctx.fillRect(0,0,W,CV_H);
+  }
 
   // Foto de plantel del campeón de fondo (si el club tiene una cargada en su ficha)
   if(etapa==='final'){
@@ -20629,17 +20648,17 @@ async function generarImagenEtapaPlayoff(torneo, esReserva, etapa){
         const img=new Image();
         img.onload=()=>{
           const iW=img.naturalWidth, iH=img.naturalHeight;
-          const scale=Math.max(W/iW, CV_H/iH);
+          const scale=Math.max(W/iW, H/iH);
           const dw=iW*scale, dh=iH*scale;
-          const dx=(W-dw)/2, dy=(CV_H-dh)/2;
+          const dx=(W-dw)/2, dy=(H-dh)/2;
           ctx.globalAlpha=0.5;
           ctx.drawImage(img,dx,dy,dw,dh);
           ctx.globalAlpha=1;
-          const g2=ctx.createLinearGradient(0,0,0,CV_H);
+          const g2=ctx.createLinearGradient(0,0,0,H);
           g2.addColorStop(0,'rgba(8,8,8,.35)');
           g2.addColorStop(0.45,'rgba(8,8,8,.55)');
           g2.addColorStop(1,'rgba(8,8,8,.93)');
-          ctx.fillStyle=g2; ctx.fillRect(0,0,W,CV_H);
+          ctx.fillStyle=g2; ctx.fillRect(0,0,W,H);
           res();
         };
         img.onerror=()=>res();
@@ -20648,7 +20667,7 @@ async function generarImagenEtapaPlayoff(torneo, esReserva, etapa){
     }
   }
 
-  let y = await cvHeader(ctx,W,id,0);
+  let y = await cvHeader(ctx,W,id,TOP);
   const subLiga = torneoLabel(torneo)+(esReserva?' · Reserva':' · Primera División');
   const logoDiv = (torneo==='segunda'?id.logoSegunda:id.logoPrimera);
 
@@ -20656,7 +20675,7 @@ async function generarImagenEtapaPlayoff(torneo, esReserva, etapa){
     // ── Diseño especial de Campeón (con trofeo, camino al título y logo) ──
     const campeon = ganadores[0];
     const nCamp = normalizar(campeon);
-    const availH = CV_H - y - s(40) - s(10);
+    const availH = H - BOT - y - s(40) - s(10);
 
     // Camino al título: rival y resultado en cada etapa, desde la óptica del campeón
     const camino = ['cuartos','semifinal','final'].map(et=>{
@@ -20679,7 +20698,7 @@ async function generarImagenEtapaPlayoff(torneo, esReserva, etapa){
     const caminoH = camino.length ? (24+camino.length*36+14+16) : 0;
     const baseTotal = 24 + TR_W0*aspect + 304 + caminoH + (logoDiv?54:0) + 10;
     // Si el contenido no entra, todo el bloque se achica en proporción
-    const K = Math.min(1, availH/(baseTotal*CV_S));
+    const K = Math.min(hist?1.25:1, availH/(baseTotal*CV_S));   // en historia el bloque puede crecer hasta un 25%
     const S = v=>Math.round(v*CV_S*K);
 
     // Confeti decorativo (puntos dorados fijos, discretos)
@@ -20813,7 +20832,7 @@ async function generarImagenEtapaPlayoff(torneo, esReserva, etapa){
 
   }
 
-  cvFooter(ctx,W,CV_H - s(40),liga);
+  cvFooter(ctx,W,H - BOT - s(40),liga);
   ctx.textAlign='left'; ctx.textBaseline='alphabetic';
   return canvas;
 }
@@ -21282,7 +21301,7 @@ async function generarImagenFaseCopaCordoba(faseKey){
 // El tamaño de escudos y tipografía escala con el alto real de la
 // tarjeta — igual que en la grilla por fase — para aprovechar el espacio
 // cuando hay pocas fases/cruces en el grupo en vez de quedar siempre chico.
-function cvMiniCruceCC(ctx, c, x, y, w, h, escudoImgs){
+function cvMiniCruceCC(ctx, c, x, y, w, h, escudoImgs, hist){
   cvRoundRect(ctx,x,y,w,h,Math.min(16,h*0.07));
   ctx.fillStyle='rgba(255,255,255,0.045)'; ctx.fill();
   ctx.lineWidth=1; ctx.strokeStyle='rgba(201,162,39,0.22)'; ctx.stroke();
@@ -21293,8 +21312,10 @@ function cvMiniCruceCC(ctx, c, x, y, w, h, escudoImgs){
   const enVivo=estadoCls==='en-juego';
   const rowH=h/2;
 
-  const ES=Math.max(20, Math.min(92, h*0.30));
-  const fName=Math.max(12, Math.min(32, h*0.105));
+  // En historia las tarjetas son más altas pero igual de angostas: el escudo y el nombre
+  // se limitan por el ancho para que no se coman el espacio del nombre del equipo
+  const ES=Math.max(20, Math.min(92, h*0.30, hist?w*0.19:Infinity));
+  const fName=Math.max(12, Math.min(32, h*0.105, hist?w*0.075:Infinity));
   const fScoreLose=Math.max(12, Math.min(30, h*0.095));
   const fScoreWin=Math.max(fScoreLose, Math.min(35, fScoreLose*1.3));
   const pens=(c.tienePenales&&c.penales)?String(c.penales).split('-').map(q=>q.trim()):null;
