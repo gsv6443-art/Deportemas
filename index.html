@@ -22730,6 +22730,354 @@ function calAdminInstalar(){
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', calAdminInstalar); else calAdminInstalar();
 /* CAL-EQUIPO:FIN */
 
+/* CAL-TORNEO:INICIO — calendario de torneo (reemplazable). Reutiliza las utilidades de CAL-EQUIPO */
+// ============================================================
+// CALENDARIO DE TORNEO — imagen para compartir (1080×1350)
+// Se cargan a mano las FECHAS del torneo (Fecha 1, Cuartos de Final…) con el día en que se juegan y,
+// si se quiere, los partidos de cada una (Primera y/o Reserva). Admin → "🏆 Calendario torneo".
+// ============================================================
+const CT_LS = 'cal_torneo_borrador_v1';
+const CT = { HDR:108, ROW:62, GAP:18, PADB:12 };
+const CT_FASES = ['Cuartos de Final','Cuartos de Final · Ida','Cuartos de Final · Vuelta','Semifinal','Semifinal · Ida','Semifinal · Vuelta','Final','Octavos de Final','16avos de Final','32avos de Final','Reclasificación','Play Off'];
+
+// ── Datos ───────────────────────────────────────────────────
+function ctItems(cfg){
+  const arr = (cfg.jornadas||[]).map((j,i)=>{
+    const nombreRaw = String(j.nombre||'').trim();
+    if(!nombreRaw && !j.fecha) return null;
+    const iso = j.fecha||'', isoFin = j.fechaFin||'';
+    const ps = (j.partidos||[]).map((p,k)=>({k, div:p.div==='reserva'?'reserva':'primera', local:String(p.local||'').trim(), visita:String(p.visita||'').trim(),
+        hora:p.hora||'', fecha:p.fecha||'', d:calFechaISO(p.fecha)})).filter(p=>p.local||p.visita);
+    ps.sort((a,b)=>{
+      const fa = a.fecha||iso||'9999-99-99', fb = b.fecha||iso||'9999-99-99';
+      return (fa<fb?-1:fa>fb?1:0) || ((a.hora||'99:99')<(b.hora||'99:99')?-1:(a.hora||'99:99')>(b.hora||'99:99')?1:0)
+          || ((a.div==='primera'?0:1)-(b.div==='primera'?0:1)) || (a.k-b.k);
+    });
+    return {i, nombre:nombreRaw.toUpperCase(), iso, isoFin, d:calFechaISO(iso), d2:isoFin?calFechaISO(isoFin):null, detalle:String(j.detalle||'').trim(), partidos:ps};
+  }).filter(Boolean);
+  return arr.sort((a,b)=>{ const fa=a.iso||'9999-99-99', fb=b.iso||'9999-99-99'; return (fa<fb?-1:fa>fb?1:0) || (a.i-b.i); });
+}
+function ctProximo(items){
+  const t = new Date(), hoy = t.getFullYear()+'-'+calPad(t.getMonth()+1)+'-'+calPad(t.getDate());
+  return items.find(j=>j.iso && (j.isoFin||j.iso) >= hoy) || null;
+}
+const ctAltoCard = j => CT.HDR + (j.partidos.length ? j.partidos.length*CT.ROW + CT.PADB : 0);
+function ctPaginar(items, avail){
+  const maxRows = Math.max(1, Math.floor((avail - CT.HDR - CT.PADB)/CT.ROW)), bloques = [];
+  items.forEach(j=>{
+    if(j.partidos.length <= maxRows){ bloques.push(j); return; }
+    const gr = _repartirEnGruposParejos(j.partidos.map((_,i)=>i), maxRows);
+    gr.forEach((g,gi)=> bloques.push({...j, partidos:g.map(i=>j.partidos[i]), parte:gi+1, partes:gr.length}));
+  });
+  const pages = []; let cur = [], used = 0;
+  bloques.forEach(b=>{
+    const h = ctAltoCard(b);
+    if(cur.length && used + CT.GAP + h > avail){ pages.push(cur); cur = []; used = 0; }
+    used += (cur.length ? CT.GAP : 0) + h; cur.push(b);
+  });
+  if(cur.length) pages.push(cur);
+  return pages;
+}
+
+// ── Dibujo ──────────────────────────────────────────────────
+// Nombre de equipo: una línea si entra; si no, achica y, como último recurso, lo parte en dos renglones (sin "…")
+function ctNombreEq(ctx, txt, x, yc, maxW, align){
+  const sp = 0.4; let fs = 27; ctx.font = calT(fs,800);
+  while(fs > 20 && calW(ctx,txt,sp) > maxW){ fs--; ctx.font = calT(fs,800); }
+  if(calW(ctx,txt,sp) <= maxW){ calTxt(ctx, txt, x, yc + fs*0.35, sp, {align, maxW}); return; }
+  const words = txt.split(/\s+/).filter(Boolean); let best = null; fs = 21; ctx.font = calT(fs,800);
+  for(let cut=1; cut<words.length; cut++){
+    const a = words.slice(0,cut).join(' '), b = words.slice(cut).join(' '), m = Math.max(calW(ctx,a,sp), calW(ctx,b,sp));
+    if(!best || m < best.m) best = {a, b, m};
+  }
+  if(!best){ calTxt(ctx, txt, x, yc + 8, sp, {align, maxW}); return; }
+  while(fs > 15 && best.m > maxW){ fs--; ctx.font = calT(fs,800); best.m = Math.max(calW(ctx,best.a,sp), calW(ctx,best.b,sp)); }
+  calTxt(ctx, best.a, x, yc - 3, sp, {align, maxW}); calTxt(ctx, best.b, x, yc + fs + 1, sp, {align, maxW});
+}
+function ctDibujarCard(ctx, info, j, x0, y0, w, esNext){
+  const h = ctAltoCard(j), n = j.partidos.length;
+  ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 30; ctx.shadowOffsetY = 10;
+  calRoundRect(ctx, x0, y0, w, h, 22); ctx.fillStyle = 'rgba(24,26,34,.82)'; ctx.fill(); ctx.restore();
+  ctx.save(); calRoundRect(ctx, x0, y0, w, h, 22); ctx.clip();
+  ctx.fillStyle = 'rgba(255,255,255,.05)'; ctx.fillRect(x0, y0, w, CT.HDR);
+  ctx.fillStyle = info.acc; ctx.fillRect(x0, y0, 8, h); ctx.restore();
+  calRoundRect(ctx, x0, y0, w, h, 22); ctx.strokeStyle = esNext ? info.acc : 'rgba(255,255,255,.16)'; ctx.lineWidth = esNext ? 3.5 : 2; ctx.stroke();
+
+  // bloque de fecha (número grande + día de la semana + mes)
+  const yM = y0 + CT.HDR/2; let nameX = x0 + 270;
+  ctx.textAlign = 'left';
+  if(j.d.dia != null){
+    const num = String(j.d.dia); ctx.font = calT(78,800,true); ctx.fillStyle = esNext ? info.acc : '#ffffff';
+    const nw = ctx.measureText(num).width; ctx.fillText(num, x0+32, yM+28);
+    const dx = x0 + 32 + nw + 16, mes = CAL_MESES[j.d.mes];
+    ctx.font = calT(24,700); ctx.fillStyle = esNext ? info.acc : 'rgba(255,255,255,.92)'; const w1 = calTxt(ctx, j.d.dow, dx, yM-6, 3);
+    ctx.font = calT(22,600); ctx.fillStyle = 'rgba(255,255,255,.8)'; const w2 = calTxt(ctx, mes, dx, yM+24, 2);
+    nameX = Math.max(x0 + 270, dx + Math.max(w1,w2) + 34);
+  } else {
+    ctx.font = calT(22,800); ctx.fillStyle = info.acc; const w1 = calTxt(ctx, 'A CONFIRMAR', x0+32, yM+8, 2);
+    nameX = Math.max(x0 + 270, x0 + 32 + w1 + 34);
+  }
+  // nombre de la fecha/fase + línea secundaria (rango de días, detalle, parte)
+  const sub = [];
+  if(j.d2 && j.d2.dia != null && j.d.dia != null){
+    sub.push(j.d.mes===j.d2.mes ? `${j.d.dow} ${j.d.dia} AL ${j.d2.dow} ${j.d2.dia}` : `${j.d.dow} ${j.d.dia} ${CAL_MESES[j.d.mes].slice(0,3)} AL ${j.d2.dow} ${j.d2.dia} ${CAL_MESES[j.d2.mes].slice(0,3)}`);
+  }
+  if(j.detalle) sub.push(j.detalle.toUpperCase());
+  if(j.partes) sub.push(`PARTE ${j.parte}/${j.partes}`);
+  const maxN = x0 + w - 28 - nameX, nom = j.nombre || 'JORNADA';
+  const fs = calFitSize(ctx, nom, 800, false, 56, 28, maxN, 1);
+  ctx.fillStyle = '#ffffff';
+  if(sub.length){
+    calTxt(ctx, nom, nameX, y0+56, 1, {maxW:maxN});
+    ctx.font = calT(22,600); ctx.fillStyle = 'rgba(255,255,255,.78)'; calTxt(ctx, sub.join('  ·  '), nameX, y0+90, 1.2, {maxW:maxN});
+  } else calTxt(ctx, nom, nameX, yM + fs*0.35, 1, {maxW:maxN});
+
+  // partidos
+  if(!n) return h;
+  ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.fillRect(x0+24, y0+CT.HDR, w-48, 1.5);
+  const cx = x0 + 600;
+  j.partidos.forEach((p,k)=>{
+    const y = y0 + CT.HDR + 6 + k*CT.ROW, yc = y + CT.ROW/2 - 3;
+    if(k < n-1){ ctx.fillStyle = 'rgba(255,255,255,.07)'; ctx.fillRect(x0+24, y+CT.ROW-3, w-48, 1); }
+    // división (Primera / Reserva)
+    const prim = p.div==='primera';
+    calRoundRect(ctx, x0+32, yc-15, 104, 30, 15);
+    if(prim){ ctx.fillStyle = info.acc; ctx.fill(); } else { ctx.fillStyle = 'rgba(255,255,255,.10)'; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 1.5; ctx.stroke(); }
+    ctx.font = calT(15,800); ctx.fillStyle = prim ? '#0a0d17' : '#ffffff'; calTxt(ctx, prim?'PRIMERA':'RESERVA', x0+84, yc+5.5, 1.4, {align:'center'});
+    // hora (y día propio si juega otro día distinto al de la fecha)
+    const otro = p.fecha && p.fecha !== j.iso && p.d.dia != null;
+    if(otro){ ctx.font = calT(16,700); ctx.fillStyle = info.acc; calTxt(ctx, `${p.d.dow} ${p.d.dia}`, x0+198, yc-10, 1.5, {align:'center'}); }
+    if(p.hora){ ctx.font = calT(30,800); ctx.fillStyle = '#ffffff'; calTxt(ctx, p.hora, x0+198, yc+(otro?18:11), 1, {align:'center'}); }
+    else { ctx.font = calT(24,700); ctx.fillStyle = 'rgba(255,255,255,.35)'; calTxt(ctx, '--:--', x0+198, yc+(otro?18:9), 1, {align:'center'}); }
+    // local  [escudo]  VS  [escudo]  visitante
+    const es = CT.ROW - 16, maxW = 238, defL = !p.local, defV = !p.visita;
+    calEscudo(ctx, info, p.local, cx-34-es, yc-es/2, es, es*1.05, {def:defL, sombra:true});
+    calEscudo(ctx, info, p.visita, cx+34, yc-es/2, es, es*1.05, {def:defV, sombra:true});
+    ctx.font = calT(17,800); ctx.fillStyle = 'rgba(255,255,255,.5)'; calTxt(ctx, 'VS', cx, yc+6, 2, {align:'center'});
+    ctx.fillStyle = '#ffffff';
+    ctNombreEq(ctx, (p.local || 'A DEFINIR').toUpperCase(), cx-34-es-14, yc, maxW, 'right');
+    ctNombreEq(ctx, (p.visita || 'A DEFINIR').toUpperCase(), cx+34+es+14, yc, maxW, 'left');
+  });
+  return h;
+}
+async function _ctPagina(bloques, info, pi, pn, bodyY){
+  const c = calNuevoCanvas(), ctx = c.getContext('2d'), W = c.width, H = c.height, mx = 60;
+  ctx.textBaseline = 'alphabetic';
+  calFondoBase(ctx, W, H, info);
+  if(info.bg) calVelo(ctx, W, H, [[0,0.9],[0.3,0.6],[0.62,0.55],[1,0.88]]);
+  calWordmark(ctx, W-mx, 56, 30, 'right', info.acc);
+  // cabecera: logo del torneo (si hay) + nombre + subtítulo
+  let tx = mx;
+  if(info.logo){ const dw = calContain(ctx, info.logo, mx, 84, 130, 110); tx = mx + dw + 28; }
+  const T = calTituloAuto(ctx, info.titulo, W - tx - mx, 104, 60, 66, 46, 2), gapL = T.fs*0.98, yB = 190;
+  ctx.fillStyle = '#ffffff'; ctx.font = calT(T.fs,800);
+  T.lines.forEach((l,i)=> calTxt(ctx, l, tx, yB-(T.lines.length-1-i)*gapL, 0, {maxW:W-tx-mx}));
+  calSubtitulo(ctx, info.subt, tx, yB+48, 'left', info, 26);
+  // fechas
+  let y = bodyY;
+  bloques.forEach((b,k)=>{ y += ctDibujarCard(ctx, info, b, mx, y, W-mx*2, !!info.next && b.i===info.next.i) + CT.GAP; });
+  // pie
+  if(info.nota){ ctx.font = calT(22,500,true); ctx.fillStyle = 'rgba(255,255,255,.72)'; calTxt(ctx, info.nota, mx, H-66, 0, {maxW:W-mx*2}); }
+  ctx.font = calT(20,500); ctx.fillStyle = 'rgba(255,255,255,.45)'; calTxt(ctx, 'deportemas.pages.dev', mx, H-34, 3);
+  if(pn > 1){ ctx.font = calT(22,700); ctx.fillStyle = 'rgba(255,255,255,.7)'; calTxt(ctx, `${pi+1} / ${pn}`, W-mx, H-34, 2, {align:'right'}); }
+  c._nombreArchivo = 'calendario-torneo' + (pn>1 ? '-'+(pi+1) : '');
+  return c;
+}
+// API: 1 canvas, o un array si las fechas no entran en una sola imagen
+async function ctRender(cfg){
+  await calCargarFuentes();
+  const torneo = String(cfg.torneo||'').trim(), items = ctItems(cfg);
+  if(!torneo || !items.length) return null;
+  const nombres = []; items.forEach(j=>j.partidos.forEach(p=>nombres.push(p.local, p.visita)));
+  const escs = await calCargarImgs(nombres.filter(Boolean));
+  const lu = calLogoComp(torneo), logo = lu ? await cargarImagenAsync(lu) : null;
+  const bg = cfg.fondo ? await cargarImagenAsync(cfg.fondo) : null;
+  let acc = CAL_ORO; if(cfg.acento==='custom' && /^#[0-9a-f]{6}$/i.test(cfg.colorCustom||'')) acc = cfg.colorCustom;
+  const subt = (String(cfg.subt||'').trim() || ('CALENDARIO' + (String(cfg.anio||'').trim() ? ' ' + String(cfg.anio).trim() : ''))).toUpperCase();
+  const info = { escudos:escs, logo, bg, acc, titulo:torneo.toUpperCase(), subt, nota:String(cfg.nota||'').trim(), next:ctProximo(items), blancos:false, logos:{} };
+  const bodyY = 282, avail = (info.nota ? CV_H-96 : CV_H-70) - bodyY;
+  const pages = ctPaginar(items, avail), out = [];
+  for(let i=0;i<pages.length;i++) out.push(await _ctPagina(pages[i], info, i, pages.length, bodyY));
+  return out.length===1 ? out[0] : out;
+}
+
+// ============================================================
+// PANEL DE ADMINISTRACIÓN → pestaña "🏆 Calendario torneo" (se instala sola)
+// El borrador se guarda en este navegador (localStorage); la foto de fondo no.
+// ============================================================
+let CT_ADM = null, _ctAdmFondo = '';
+const ctPartidoVacio = div => ({div: div||'primera', local:'', visita:'', fecha:'', hora:''});
+const ctJornadaVacia = () => ({nombre:'', fecha:'', fechaFin:'', detalle:'', partidos:[]});
+const ctAdmBase = () => ({torneo:'', anio:'', subt:'', nota:'', acento:'oro', colorCustom:'#c9a227', jornadas:[ctJornadaVacia()]});
+function ctAdmCargar(){
+  try{ const s = JSON.parse(localStorage.getItem(CT_LS)||'null'); if(s && Array.isArray(s.jornadas) && s.jornadas.length) return {...ctAdmBase(), ...s}; }catch(e){}
+  return ctAdmBase();
+}
+function ctAdmGuardar(){ try{ localStorage.setItem(CT_LS, JSON.stringify(CT_ADM)); }catch(e){} }
+
+function ctAdmPartidosHTML(j, ji){
+  return j.partidos.map((p,pi)=>`
+    <div style="border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:10px;margin-bottom:8px;background:rgba(255,255,255,.02)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <select data-j="${ji}" data-p="${pi}" data-k="div" style="width:auto"><option value="primera" ${p.div!=='reserva'?'selected':''}>Primera</option><option value="reserva" ${p.div==='reserva'?'selected':''}>Reserva</option></select>
+        <span style="display:flex;gap:6px">
+          <button type="button" style="${CAL_MINI}" data-act="pdup" data-j="${ji}" data-p="${pi}" title="Duplicar como la otra división">⎘ ${p.div==='reserva'?'Primera':'Reserva'}</button>
+          <button type="button" style="${CAL_MINI}color:#e0584a" data-act="pdel" data-j="${ji}" data-p="${pi}" title="Eliminar">✕</button>
+        </span>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Local</label><input type="text" list="ct-dl-equipos" placeholder="Club local" data-j="${ji}" data-p="${pi}" data-k="local" value="${calEsc(p.local)}"/><div style="font-size:11px;margin-top:4px" data-h="${ji}-${pi}-local">${calHint(p.local)}</div></div>
+        <div class="form-group"><label>Visitante</label><input type="text" list="ct-dl-equipos" placeholder="Club visitante" data-j="${ji}" data-p="${pi}" data-k="visita" value="${calEsc(p.visita)}"/><div style="font-size:11px;margin-top:4px" data-h="${ji}-${pi}-visita">${calHint(p.visita)}</div></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Día (solo si es distinto al de la fecha)</label><input type="date" data-j="${ji}" data-p="${pi}" data-k="fecha" value="${calEsc(p.fecha)}"/></div>
+        <div class="form-group"><label>Hora (opcional)</label><input type="time" data-j="${ji}" data-p="${pi}" data-k="hora" value="${calEsc(p.hora)}"/></div>
+      </div>
+    </div>`).join('');
+}
+function ctAdmJornadasHTML(){
+  return CT_ADM.jornadas.map((j,i)=>`
+    <div style="border:1px solid var(--dorado-border);border-radius:var(--r-md);padding:12px;margin-bottom:12px;background:rgba(255,255,255,.02)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-family:'Rajdhani',sans-serif;font-weight:900;color:var(--dorado);letter-spacing:1px">FECHA / FASE ${i+1}</span>
+        <span style="display:flex;gap:6px">
+          <button type="button" style="${CAL_MINI}" data-act="jup" data-j="${i}" title="Subir">↑</button>
+          <button type="button" style="${CAL_MINI}" data-act="jdown" data-j="${i}" title="Bajar">↓</button>
+          <button type="button" style="${CAL_MINI}" data-act="jdup" data-j="${i}" title="Duplicar">⎘</button>
+          <button type="button" style="${CAL_MINI}color:#e0584a" data-act="jdel" data-j="${i}" title="Eliminar">✕</button>
+        </span>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Nombre</label><input type="text" list="ct-dl-fechas" placeholder="Ej: Fecha 1, Cuartos de Final" data-j="${i}" data-k="nombre" value="${calEsc(j.nombre)}"/></div>
+        <div class="form-group"><label>Se juega el</label><input type="date" data-j="${i}" data-k="fecha" value="${calEsc(j.fecha)}"/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Hasta el (si dura más de un día)</label><input type="date" data-j="${i}" data-k="fechaFin" value="${calEsc(j.fechaFin)}"/></div>
+        <div class="form-group"><label>Detalle (opcional)</label><input type="text" placeholder="Ej: Sábado Primera · Domingo Reserva" data-j="${i}" data-k="detalle" value="${calEsc(j.detalle)}"/></div>
+      </div>
+      <div style="font-family:'Rajdhani',sans-serif;font-weight:700;color:rgba(255,255,255,.55);letter-spacing:1px;font-size:12px;margin:6px 0">PARTIDOS DE ESTA FECHA (OPCIONAL)</div>
+      <div data-pl="${i}">${ctAdmPartidosHTML(j,i)}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button type="button" style="${CAL_MINI}padding:7px 14px" data-act="padd-primera" data-j="${i}">＋ Partido de Primera</button>
+        <button type="button" style="${CAL_MINI}padding:7px 14px" data-act="padd-reserva" data-j="${i}">＋ Partido de Reserva</button>
+      </div>
+    </div>`).join('');
+}
+function ctAdmRender(){
+  const root = document.getElementById('ct-adm-root'); if(!root) return;
+  if(!CT_ADM) CT_ADM = ctAdmCargar();
+  const c = CT_ADM;
+  const nombres = [...new Set((data.equipos||[]).map(e=>e.nombre).filter(Boolean))];
+  const torneos = [...new Set(['Apertura','Clausura','Copa Córdoba','Play Off', ...(data.torneos||[]).map(t=>t.nombre).filter(Boolean)])];
+  const fechas = [...Array.from({length:30},(_,i)=>'Fecha '+(i+1)), ...CT_FASES];
+  root.innerHTML = `
+    <datalist id="ct-dl-equipos">${nombres.map(n=>`<option value="${calEsc(n)}">`).join('')}</datalist>
+    <datalist id="ct-dl-torneos">${torneos.map(n=>`<option value="${calEsc(n)}">`).join('')}</datalist>
+    <datalist id="ct-dl-fechas">${fechas.map(n=>`<option value="${calEsc(n)}">`).join('')}</datalist>
+    <div class="form-row">
+      <div class="form-group"><label>Torneo</label><input type="text" list="ct-dl-torneos" placeholder="Ej: Clausura 2026" data-k="torneo" value="${calEsc(c.torneo)}"/><div style="font-size:11px;margin-top:4px" data-hlogo>${calHintComp(c.torneo)}</div></div>
+      <div class="form-group"><label>Año (opcional)</label><input type="number" placeholder="Ej: 2026" data-k="anio" value="${calEsc(c.anio)}"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Subtítulo (opcional)</label><input type="text" placeholder="Por defecto: CALENDARIO" data-k="subt" value="${calEsc(c.subt)}"/></div>
+      <div class="form-group"><label>Nota al pie (opcional)</label><input type="text" placeholder="Ej: Horarios sujetos a modificaciones" data-k="nota" value="${calEsc(c.nota)}"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Color de acento</label>
+        <select data-k="acento"><option value="oro" ${c.acento==='oro'?'selected':''}>Dorado (por defecto)</option><option value="custom" ${c.acento==='custom'?'selected':''}>Elegir color</option></select>
+        ${c.acento==='custom' ? `<input type="color" data-k="colorCustom" value="${calEsc(c.colorCustom)}" style="margin-top:6px;height:38px;padding:2px"/>` : ''}</div>
+      <div class="form-group"><label>Foto de fondo (opcional)</label>
+        ${calSubirBtn('ct-adm-filefondo','🏟 Subir fondo')}
+        <div class="preview-wrap ${_ctAdmFondo?'visible':''}"><img src="${_ctAdmFondo?calEsc(_ctAdmFondo):''}"/><button type="button" class="btn-quitar-img" data-act="quitarfondo">✕ Quitar</button></div>
+      </div>
+    </div>
+    <div class="admin-title" style="margin-top:18px">Fechas y fases</div>
+    <p style="font-family:'DM Sans',sans-serif;font-size:12px;color:rgba(255,255,255,.4);margin-bottom:10px;">Cargá cada fecha con el día en que se juega. Si querés, sumale los partidos (Primera y/o Reserva); si no, queda solo la fecha. El logo del torneo sale de Admin → Torneos y los escudos de Equipos.</p>
+    <div id="ct-adm-jornadas">${ctAdmJornadasHTML()}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+      <button type="button" style="${CAL_MINI}padding:9px 16px" data-act="jadd">＋ Agregar fecha / fase</button>
+      <button type="button" style="${CAL_MINI}padding:9px 16px" data-act="jordenar">↕ Ordenar por fecha</button>
+      <button type="button" style="${CAL_MINI}padding:9px 16px;color:#e0584a" data-act="limpiar">Limpiar todo</button>
+    </div>
+    <div id="ct-adm-msg" style="font-size:13px;color:#f0a030;min-height:18px;margin-bottom:8px"></div>
+    <button type="button" class="btn-primary" data-act="generar">🖼 Generar imagen</button>`;
+}
+function ctAdmReJornadas(){ const el = document.getElementById('ct-adm-jornadas'); if(el) el.innerHTML = ctAdmJornadasHTML(); ctAdmGuardar(); }
+function ctAdmAccion(act, ji, pi){
+  const c = CT_ADM, J = c.jornadas;
+  if(act==='jadd') J.push(ctJornadaVacia());
+  else if(act==='jdel'){ J.splice(ji,1); if(!J.length) J.push(ctJornadaVacia()); }
+  else if(act==='jdup') J.splice(ji+1,0,JSON.parse(JSON.stringify(J[ji])));
+  else if(act==='jup' && ji>0) [J[ji-1],J[ji]] = [J[ji],J[ji-1]];
+  else if(act==='jdown' && ji<J.length-1) [J[ji+1],J[ji]] = [J[ji],J[ji+1]];
+  else if(act==='jordenar'){ const it = J.map((r,i)=>({r,i,f:r.fecha||'9999-99-99'})); it.sort((a,b)=> a.f<b.f?-1 : a.f>b.f?1 : a.i-b.i); c.jornadas = it.map(x=>x.r); }
+  else if(act==='padd-primera') J[ji].partidos.push(ctPartidoVacio('primera'));
+  else if(act==='padd-reserva') J[ji].partidos.push(ctPartidoVacio('reserva'));
+  else if(act==='pdel') J[ji].partidos.splice(pi,1);
+  else if(act==='pdup'){ const o = J[ji].partidos[pi]; J[ji].partidos.splice(pi+1,0,{...o, div:o.div==='reserva'?'primera':'reserva'}); }
+  else if(act==='limpiar'){ if(!confirm('¿Borrar todas las fechas cargadas?')) return; CT_ADM = {...c, jornadas:[ctJornadaVacia()]}; ctAdmGuardar(); ctAdmRender(); return; }
+  else if(act==='quitarfondo'){ _ctAdmFondo = ''; ctAdmRender(); return; }
+  else if(act==='generar'){ ctAdmGenerar(); return; }
+  else return;
+  ctAdmReJornadas();
+}
+function ctAdmGenerar(){
+  const c = CT_ADM, msg = document.getElementById('ct-adm-msg'); msg.textContent = '';
+  if(!String(c.torneo||'').trim()){ msg.textContent = 'Escribí el nombre del torneo.'; return; }
+  const validas = c.jornadas.filter(j=>String(j.nombre||'').trim() || j.fecha);
+  if(!validas.length){ msg.textContent = 'Cargá al menos una fecha o fase.'; return; }
+  const sinDia = validas.filter(j=>!j.fecha).length;
+  if(sinDia) msg.textContent = sinDia + ' fecha(s) sin día: se muestran "A confirmar" y van al final.';
+  const cfg = JSON.parse(JSON.stringify(c)); cfg.fondo = _ctAdmFondo;
+  abrirShare(()=>ctRender(cfg));
+}
+function ctAdminInstalar(){
+  if(document.getElementById('admin-caltorneo')) return;
+  const tabs = document.querySelector('.admin-tabs'), secs = document.querySelectorAll('.admin-section');
+  if(!tabs || !secs.length) return;
+  const btn = document.createElement('button');
+  btn.className = 'admin-tab'; btn.textContent = '🏆 Calendario torneo';
+  btn.setAttribute('onclick', "switchAdminTab('caltorneo',this)");
+  btn.addEventListener('click', ()=>ctAdmRender());
+  tabs.appendChild(btn);
+  const sec = document.createElement('div');
+  sec.className = 'admin-section'; sec.id = 'admin-caltorneo';
+  sec.innerHTML = `<div class="admin-title">🏆 Calendario de torneo</div>
+    <p style="font-family:'DM Sans',sans-serif;font-size:12px;color:rgba(255,255,255,.4);margin-bottom:14px;">Armá una imagen con el calendario de un torneo: cuándo se juega cada Fecha (Fecha 1, Cuartos de Final…) y, opcionalmente, sus partidos de Primera y Reserva. Se carga a mano (no usa el fixture).</p>
+    <div id="ct-adm-root"></div>`;
+  secs[secs.length-1].after(sec);
+  const root = sec.querySelector('#ct-adm-root');
+  root.addEventListener('click', ev=>{
+    const b = ev.target.closest('[data-act]'); if(!b || !root.contains(b)) return;
+    ctAdmAccion(b.dataset.act, b.dataset.j!=null ? +b.dataset.j : -1, b.dataset.p!=null ? +b.dataset.p : -1);
+  });
+  const alCambiar = ev=>{
+    const t = ev.target;
+    if(t.id==='ct-adm-filefondo'){
+      const f = t.files && t.files[0]; if(!f) return;
+      calReducirFoto(f).then(d=>{ _ctAdmFondo = d; ctAdmRender(); }); return;
+    }
+    const k = t.dataset && t.dataset.k; if(!k) return;
+    const val = t.value;
+    if(t.dataset.p!=null){
+      const ji = +t.dataset.j, pi = +t.dataset.p; CT_ADM.jornadas[ji].partidos[pi][k] = val;
+      if(k==='local' || k==='visita'){ const h = root.querySelector(`[data-h="${ji}-${pi}-${k}"]`); if(h) h.innerHTML = calHint(val); }
+      if(k==='div' && ev.type==='change') ctAdmReJornadas();
+    } else if(t.dataset.j!=null){
+      CT_ADM.jornadas[+t.dataset.j][k] = val;
+    } else {
+      CT_ADM[k] = val;
+      if(k==='torneo'){ const h = root.querySelector('[data-hlogo]'); if(h) h.innerHTML = calHintComp(val); }
+      if(k==='acento' && ev.type==='change') ctAdmRender();
+    }
+    ctAdmGuardar();
+  };
+  root.addEventListener('input', alCambiar);
+  root.addEventListener('change', alCambiar);
+}
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', ctAdminInstalar); else ctAdminInstalar();
+/* CAL-TORNEO:FIN */
+
 // Reemplaza abrirShare (llamado desde los botones de las cards)
 function abrirShare(generadorFn){
   abrirShareCanvas(generadorFn);
