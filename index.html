@@ -5450,6 +5450,15 @@ table.posiciones td:nth-child(8){
         </div>
 
         <div id="promo-jugador-wrap" style="display:none">
+          <div class="form-group"><label>Jugadores en la imagen</label>
+            <select id="promo6-cant" onchange="promoJugCantCambiar()">
+              <option value="1">1 jugador (formato clásico)</option>
+              <option value="2">2 jugadores (2 bloques)</option>
+              <option value="3">3 jugadores (3 bloques)</option>
+              <option value="4">4 jugadores (4 bloques)</option>
+            </select>
+          </div>
+          <div id="promo6-uno">
           <div class="form-row">
             <div class="form-group"><label>Jugador</label>
               <input type="text" id="promo6-nombre" list="promo-jug-datalist" placeholder="Nombre y apellido" onchange="promoJugadorAutocompletar()"/>
@@ -5485,6 +5494,17 @@ table.posiciones td:nth-child(8){
           <div class="form-group"><label style="font-size:10px">Zoom</label><input type="range" id="promo6-zoom" min="100" max="250" value="100"/></div>
           <div class="form-group"><label style="font-size:10px">Posición horizontal</label><input type="range" id="promo6-px" min="0" max="100" value="50"/></div>
           <div class="form-group"><label style="font-size:10px">Posición vertical</label><input type="range" id="promo6-py" min="0" max="100" value="25"/></div>
+          </div><!-- /promo6-uno -->
+          <div id="promo6-multi" style="display:none">
+            <div class="form-row">
+              <div class="form-group"><label>Título (opcional)</label><input type="text" id="promo6-m-titulo" placeholder="Ej: LOS DESTACADOS DE LA FECHA 12 (vacío = JUGADORES DESTACADOS)"/></div>
+              <div class="form-group"><label>Subtítulo (opcional)</label><input type="text" id="promo6-m-sub" placeholder="Ej: CLAUSURA 2026 (vacío = ESTADÍSTICAS DE LA TEMPORADA)"/></div>
+            </div>
+            <p style="font-size:10px;color:var(--gris);margin-top:-4px;margin-bottom:12px;font-family:'Rajdhani',sans-serif">
+              Cada jugador va en su propio bloque, con su foto, su escudo y sus estadísticas. Al elegir un jugador de la lista de goleadores se completan el equipo, los goles y su foto (si la tiene cargada); podés corregir todo a mano.
+            </p>
+            <div id="promo6-bloques"></div>
+          </div>
           <datalist id="promo-jug-datalist"></datalist>
         </div>
 
@@ -16071,6 +16091,7 @@ function promoCambiarModo(){
   if(rr) rr.style.display = modo === 'radial' ? '' : 'none';
   if(fc && modo === 'radial') fc.style.display = 'none';
   if(modo === 'radial') _radialClubes();
+  if(modo === 'jugador') promoJugCantCambiar();
 }
 
 function promoCargarPartido3(){
@@ -16322,6 +16343,7 @@ function promoPoblarJugadores(){
 }
 
 function promoJugadorLimpiar(){
+  if(typeof pjmLimpiar === 'function') pjmLimpiar();
   ['promo6-nombre','promo6-equipo','promo6-sub'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   const labs=['PARTIDOS','GOLES','ASISTENCIAS',''];
   for(let i=1;i<=4;i++){
@@ -16345,6 +16367,7 @@ function promoJugadorAutocompletar(){
 }
 
 function promoGenerarJugador(){
+  if(pjmCant() > 1){ promoGenerarJugadorMulti(); return; }
   const val = id => (document.getElementById(id)||{value:''}).value.trim();
   const nombre = val('promo6-nombre');
   if(!nombre){ alert('Completá el nombre del jugador.'); return; }
@@ -17903,6 +17926,213 @@ async function generarImagenPromoJugador(p){
   ctx.fillStyle = C.DORADO;
   ctx.fillRect(nx, nameBase + 28, 150, 6);
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  return canvas;
+}
+
+// ============================================================
+// JUGADOR DESTACADO — VARIOS JUGADORES (2 a 4 bloques en una sola imagen)
+// Admin → Promoción → "Jugador destacado" → "Jugadores en la imagen". Mismo estilo que el formato de 1 jugador.
+// ============================================================
+const PJM_LABS = ['PARTIDOS','GOLES','ASISTENCIAS',''];
+const pjmVacio = () => ({nombre:'', equipo:'', foto:'', zoom:100, px:50, py:25, stats:PJM_LABS.map(l=>({v:'', l}))});
+let PROMO_JM = [pjmVacio(), pjmVacio(), pjmVacio(), pjmVacio()];
+let PJM_META = {titulo:'', sub:''};
+const pjmEsc = s => String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+const pjmCant = () => { const el = document.getElementById('promo6-cant'); return el ? Math.max(1, Math.min(4, parseInt(el.value,10)||1)) : 1; };
+
+function promoJugCantCambiar(){
+  const n = pjmCant(), uno = document.getElementById('promo6-uno'), mu = document.getElementById('promo6-multi');
+  if(uno) uno.style.display = n===1 ? '' : 'none';
+  if(mu) mu.style.display = n>1 ? '' : 'none';
+  const fc = document.getElementById('promo-foto-comun');          // en modo bloques cada jugador trae su foto
+  const modo = (document.getElementById('promo-modo')||{}).value;
+  if(fc && modo==='jugador') fc.style.display = n>1 ? 'none' : '';
+  if(n>1) pjmRender();
+}
+function pjmRender(){
+  const root = document.getElementById('promo6-bloques'); if(!root) return;
+  const n = pjmCant(), mini = 'display:grid;grid-template-columns:1fr 2fr;gap:6px;margin-bottom:6px';
+  const ti = document.getElementById('promo6-m-titulo'), su = document.getElementById('promo6-m-sub');
+  if(ti) ti.value = PJM_META.titulo; if(su) su.value = PJM_META.sub;
+  root.innerHTML = PROMO_JM.slice(0,n).map((j,i)=>`
+    <div style="border:1px solid var(--dorado-border);border-radius:var(--r-md);padding:12px;margin-bottom:12px;background:rgba(255,255,255,.02)">
+      <div style="font-family:'Rajdhani',sans-serif;font-weight:900;color:var(--dorado);letter-spacing:1px;margin-bottom:8px">BLOQUE ${i+1}</div>
+      <div class="form-row">
+        <div class="form-group"><label>Jugador</label><input type="text" list="promo-jug-datalist" placeholder="Nombre y apellido" data-i="${i}" data-k="nombre" value="${pjmEsc(j.nombre)}"/></div>
+        <div class="form-group"><label>Equipo (opcional)</label><input type="text" list="promo-equipos-datalist" placeholder="Su escudo va arriba a la derecha" data-i="${i}" data-k="equipo" value="${pjmEsc(j.equipo)}"/></div>
+      </div>
+      <div class="form-group"><label>Foto del jugador</label>
+        <input type="file" accept="image/*" data-i="${i}" data-k="file"/>
+        <div class="preview-wrap ${j.foto?'visible':''}"><img src="${j.foto?pjmEsc(j.foto):''}" alt="" style="max-height:120px;object-fit:cover;object-position:top"/><button type="button" class="btn-quitar-img" data-act="quitarfoto" data-i="${i}">✕ Quitar</button></div>
+      </div>
+      <label style="display:block;margin-bottom:6px">Estadísticas (hasta 4; valor vacío = se omite)</label>
+      ${j.stats.map((s,k)=>`<div style="${mini}"><input type="text" placeholder="Valor ${k+1}" data-i="${i}" data-s="${k}" data-k="v" value="${pjmEsc(s.v)}"/><input type="text" placeholder="Etiqueta ${k+1}" data-i="${i}" data-s="${k}" data-k="l" value="${pjmEsc(s.l)}"/></div>`).join('')}
+      <label style="display:block;margin:8px 0 4px">Encuadre de la foto</label>
+      <div class="form-row-3">
+        <div class="form-group"><label style="font-size:10px">Zoom</label><input type="range" min="100" max="250" data-i="${i}" data-k="zoom" value="${j.zoom}"/></div>
+        <div class="form-group"><label style="font-size:10px">Horizontal</label><input type="range" min="0" max="100" data-i="${i}" data-k="px" value="${j.px}"/></div>
+        <div class="form-group"><label style="font-size:10px">Vertical</label><input type="range" min="0" max="100" data-i="${i}" data-k="py" value="${j.py}"/></div>
+      </div>
+    </div>`).join('');
+}
+function pjmAlCambiar(ev){
+  const t = ev.target, k = t.dataset && t.dataset.k;
+  if(t.id==='promo6-m-titulo'){ PJM_META.titulo = t.value; return; }
+  if(t.id==='promo6-m-sub'){ PJM_META.sub = t.value; return; }
+  if(!k || t.dataset.i==null) return;
+  const i = +t.dataset.i, j = PROMO_JM[i];
+  if(k==='file'){
+    const f = t.files && t.files[0]; if(!f) return;
+    comprimirABase64(f, 1100, 0.82).then(d=>{ j.foto = d; pjmRender(); }); return;
+  }
+  if(t.dataset.s!=null){ j.stats[+t.dataset.s][k] = t.value; return; }
+  if(k==='zoom' || k==='px' || k==='py'){ j[k] = +t.value; return; }
+  j[k] = t.value;
+  if(k==='nombre' && ev.type==='change') pjmAutocompletar(i);
+}
+// Al elegir un jugador de la lista de goleadores: completa equipo, goles y la foto cargada (si tiene)
+function pjmAutocompletar(i){
+  const j = PROMO_JM[i], nom = (j.nombre||'').trim(); if(!nom) return;
+  const k = normalizar(nom), regs = (data.goleadores||[]).filter(g=>normalizar(g.nombre||'')===k);
+  if(!regs.length) return;
+  let cambio = false;
+  if(!j.equipo.trim()){ j.equipo = regs[regs.length-1].equipo || ''; cambio = true; }
+  if(j.stats[1].v===''){ j.stats[1].v = String(regs.reduce((s,g)=>s+(+g.goles||0),0)); cambio = true; }
+  if(!j.foto){ const cf = regs.slice().reverse().find(g=>g.foto); if(cf){ j.foto = cf.foto; cambio = true; } }
+  if(cambio) pjmRender();
+}
+function pjmQuitarFoto(i){ PROMO_JM[i].foto = ''; pjmRender(); }
+function pjmLimpiar(){
+  PROMO_JM = [pjmVacio(), pjmVacio(), pjmVacio(), pjmVacio()]; PJM_META = {titulo:'', sub:''};
+  const c = document.getElementById('promo6-cant'); if(c) c.value = '1';
+  promoJugCantCambiar();
+}
+(function pjmInstalar(){
+  const ini = () => {
+    const mu = document.getElementById('promo6-multi'); if(!mu || mu._pjm) return; mu._pjm = true;
+    mu.addEventListener('input', pjmAlCambiar); mu.addEventListener('change', pjmAlCambiar);
+    mu.addEventListener('click', ev=>{ const b = ev.target.closest('[data-act="quitarfoto"]'); if(b) pjmQuitarFoto(+b.dataset.i); });
+  };
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', ini); else ini();
+})();
+function promoGenerarJugadorMulti(){
+  const n = pjmCant(), jug = [];
+  for(let i=0;i<n;i++){
+    const j = PROMO_JM[i], nombre = (j.nombre||'').trim();
+    if(!nombre){ alert('Completá el nombre del jugador del bloque '+(i+1)+'.'); return; }
+    const stats = j.stats.filter(s=>String(s.v).trim()!=='').map(s=>({valor:String(s.v).trim(), etiqueta:String(s.l||'').trim().toUpperCase()}));
+    if(!stats.length){ alert('Cargá al menos una estadística (valor) en el bloque '+(i+1)+'.'); return; }
+    jug.push({nombre:nombre.toUpperCase(), equipo:(j.equipo||'').trim(), stats, foto:j.foto||'', zoom:(+j.zoom||100)/100, px:(+j.px)/100, py:(+j.py)/100});
+  }
+  const p = { titulo:(PJM_META.titulo||'JUGADORES DESTACADOS').trim().toUpperCase(), sub:(PJM_META.sub||'ESTADÍSTICAS DE LA TEMPORADA').trim().toUpperCase(), jugadores:jug };
+  abrirShare(() => generarImagenPromoJugadoresMulti(p));
+}
+
+async function generarImagenPromoJugadoresMulti(p){
+  await document.fonts.ready;
+  const id = getIdentidad(), liga = id.nombre || 'DEPORTEMAS';
+  const W = CV_W, H = CV_H, N = p.jugadores.length;
+  const canvas = document.createElement('canvas'); canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d'); ctx.textBaseline = 'alphabetic';
+  const FB = '"Bebas Neue", Arial, sans-serif', FR = '"Rajdhani", Arial, sans-serif';
+  const setLS = v => { if('letterSpacing' in ctx) ctx.letterSpacing = v; };
+  const rr = (x,y,w,h,r) => { ctx.beginPath(); ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.arcTo(x+w,y,x+w,y+r,r); ctx.lineTo(x+w,y+h-r); ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
+    ctx.lineTo(x+r,y+h); ctx.arcTo(x,y+h,x,y+h-r,r); ctx.lineTo(x,y+r); ctx.arcTo(x,y,x+r,y,r); ctx.closePath(); };
+  const logoImg = await cvImgAsync(id.logo);
+  const fotos = await Promise.all(p.jugadores.map(j=>cargarImagenAsync(j.foto)));
+
+  // ── Fondo + cabecera común ──
+  const bg = ctx.createLinearGradient(0,0,0,H); bg.addColorStop(0,'#2c2c32'); bg.addColorStop(1,'#0c0c0e');
+  ctx.fillStyle = bg; ctx.fillRect(0,0,W,H);
+  const HD = 176, GAPB = 6;
+  {
+    const lx = 48, ly = 40, ls = 96; let tx = lx;
+    if(logoImg){
+      ctx.save(); ctx.beginPath(); ctx.arc(lx+ls/2, ly+ls/2, ls/2, 0, Math.PI*2); ctx.clip(); cvDrawEscudoImg(ctx, logoImg, lx, ly, ls); ctx.restore();
+      ctx.lineWidth = 3; ctx.strokeStyle = C.DORADO; ctx.beginPath(); ctx.arc(lx+ls/2, ly+ls/2, ls/2+1, 0, Math.PI*2); ctx.stroke();
+      tx = lx + ls + 26;
+    }
+    const mw = W - tx - 48; ctx.textAlign = 'left';
+    ctx.font = `700 24px ${FR}`; setLS('5px'); ctx.fillStyle = 'rgba(255,255,255,.8)'; cvFillTextTrunc(ctx, liga.toUpperCase(), tx, 58, mw);
+    let ts = 78; ctx.font = `400 ${ts}px ${FB}`; setLS('3px');
+    while(ts > 40 && ctx.measureText(p.titulo).width > mw){ ts -= 2; ctx.font = `400 ${ts}px ${FB}`; }
+    ctx.fillStyle = '#ffffff'; cvFillTextTrunc(ctx, p.titulo, tx, 58 + ts*0.82 + 8, mw);
+    ctx.font = `700 26px ${FR}`; setLS('5px'); ctx.fillStyle = C.DORADO2; cvFillTextTrunc(ctx, p.sub, tx, 58 + ts*0.82 + 8 + 34, mw);
+    setLS('0px');
+  }
+  // ── Geometría de bloques ──
+  const BY = HD + 4, BH_TOT = H - BY;
+  ctx.fillStyle = C.DORADO; ctx.fillRect(0, HD, W, 4); ctx.fillRect(0, BY, W, BH_TOT);   // el hueco entre bloques queda dorado
+  const cols = N===3 ? 3 : 2, rows = N===4 ? 2 : 1;
+  const bw = (W - GAPB*(cols-1))/cols, bh = (BH_TOT - GAPB*(rows-1))/rows;
+  const L = N===4 ? 4 : (N===3 ? 3 : 2);        // variante de diseño
+  const cfg = { 2:{name:90, team:26, box:156, numMax:100, top:130, nz:250, pad:24},
+                3:{name:66, team:21, box:116, numMax:78,  top:110, nz:210, pad:18},
+                4:{name:64, team:22, box:0,   numMax:88,  top:122, nz:172, pad:22} }[L];
+
+  for(let i=0;i<N;i++){
+    const j = p.jugadores[i], foto = fotos[i];
+    const x = (i%cols)*(bw+GAPB), y = BY + Math.floor(i/cols)*(bh+GAPB);
+    ctx.save(); ctx.beginPath(); ctx.rect(x,y,bw,bh); ctx.clip();
+    const g0 = ctx.createLinearGradient(0,y,0,y+bh); g0.addColorStop(0,'#2c2c32'); g0.addColorStop(1,'#0c0c0e'); ctx.fillStyle = g0; ctx.fillRect(x,y,bw,bh);
+    if(foto){
+      const iw = foto.naturalWidth||foto.width||1, ih = foto.naturalHeight||foto.height||1, sc = Math.max(bw/iw, bh/ih)*(j.zoom||1), dw = iw*sc, dh = ih*sc;
+      ctx.drawImage(foto, x+(bw-dw)*j.px, y+(bh-dh)*j.py, dw, dh);
+    } else {
+      const rg = ctx.createRadialGradient(x+bw/2, y+bh*0.4, 20, x+bw/2, y+bh*0.4, bw*0.9);
+      rg.addColorStop(0,'rgba(201,162,39,0.28)'); rg.addColorStop(1,'rgba(201,162,39,0)'); ctx.fillStyle = rg; ctx.fillRect(x,y,bw,bh);
+    }
+    const gl = ctx.createLinearGradient(x,0,x+bw*0.7,0); gl.addColorStop(0,'rgba(0,0,0,.6)'); gl.addColorStop(1,'rgba(0,0,0,0)'); ctx.fillStyle = gl; ctx.fillRect(x,y,bw*0.7,bh);
+    const gt = ctx.createLinearGradient(0,y,0,y+150); gt.addColorStop(0,'rgba(0,0,0,.65)'); gt.addColorStop(1,'rgba(0,0,0,0)'); ctx.fillStyle = gt; ctx.fillRect(x,y,bw,150);
+    const gb = ctx.createLinearGradient(0,y+bh-cfg.nz-120,0,y+bh); gb.addColorStop(0,'rgba(0,0,0,0)'); gb.addColorStop(1,'rgba(0,0,0,.92)'); ctx.fillStyle = gb; ctx.fillRect(x,y+bh-cfg.nz-120,bw,cfg.nz+120);
+
+    // escudo del equipo (arriba a la derecha del bloque)
+    if(j.equipo){ const es = Math.max(60, Math.min(92, bw*0.2)); await cvDrawEscudoCompleto(ctx, j.equipo, x+bw-es-16, y+16, es); }
+
+    // nombre (1 línea si entra; si no, 2 renglones) + equipo arriba del nombre + subrayado dorado
+    const nx = x + cfg.pad, maxNW = bw - cfg.pad*2 - 6;
+    let nS = cfg.name; ctx.font = `400 ${nS}px ${FB}`; setLS('2px');
+    const minS = Math.round(cfg.name*0.72);
+    while(nS > minS && ctx.measureText(j.nombre).width > maxNW){ nS -= 2; ctx.font = `400 ${nS}px ${FB}`; }
+    let lines = [j.nombre];
+    if(ctx.measureText(j.nombre).width > maxNW){
+      const w = j.nombre.split(/\s+/).filter(Boolean); nS = Math.round(cfg.name*0.82); ctx.font = `400 ${nS}px ${FB}`;
+      let best = null;
+      for(let c=1;c<w.length;c++){ const a = w.slice(0,c).join(' '), b = w.slice(c).join(' '), m = Math.max(ctx.measureText(a).width, ctx.measureText(b).width); if(!best || m<best.m) best = {a,b,m}; }
+      if(best){ while(nS > 34 && best.m > maxNW){ nS -= 2; ctx.font = `400 ${nS}px ${FB}`; best.m = Math.max(ctx.measureText(best.a).width, ctx.measureText(best.b).width); } lines = [best.a, best.b]; }
+    }
+    const baseN = y + bh - 44, lh = nS*0.92;
+    ctx.textAlign = 'left'; ctx.fillStyle = '#ffffff'; ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 14; ctx.shadowOffsetY = 3;
+    lines.forEach((l,k)=> cvFillTextTrunc(ctx, l, nx, baseN - (lines.length-1-k)*lh, maxNW));
+    ctx.shadowBlur = 0; ctx.shadowOffsetY = 0; setLS('0px');
+    const topName = baseN - (lines.length-1)*lh - nS*0.78;
+    if(j.equipo){ ctx.font = `700 ${cfg.team}px ${FR}`; setLS('4px'); ctx.fillStyle = 'rgba(255,255,255,.88)'; cvFillTextTrunc(ctx, j.equipo.toUpperCase(), nx, topName - 14, maxNW); setLS('0px'); }
+    ctx.fillStyle = C.DORADO; ctx.fillRect(nx, y + bh - 28, 100, 5);
+    const nameTop = topName - 14 - (j.equipo ? cfg.team + 6 : 0);
+
+    // estadísticas: columna a la izquierda (2 y 3 jugadores) o grilla de 2 columnas (4 jugadores)
+    const ns = j.stats.length, areaTop = y + cfg.top, areaBot = nameTop - 14, areaH = Math.max(60, areaBot - areaTop);
+    let cs = L===4 ? (ns===1 ? 1 : 2) : 1, rs = Math.ceil(ns/cs), gp = 12;
+    let boxW = L===4 ? Math.min(230, (bw - cfg.pad*2 - gp*(cs-1))/cs) : cfg.box;
+    let boxH = Math.min(L===4 ? 150 : 190, (areaH - gp*(rs-1))/rs);
+    for(let k=0;k<ns;k++){
+      const st = j.stats[k], cx0 = nx + (k%cs)*(boxW+gp), cy0 = areaTop + Math.floor(k/cs)*(boxH+gp);
+      rr(cx0, cy0, boxW, boxH, Math.min(24, boxH*0.16)); ctx.fillStyle = 'rgba(8,8,10,.62)'; ctx.fill(); ctx.lineWidth = boxH<100 ? 2.5 : 3; ctx.strokeStyle = C.DORADO; ctx.stroke();
+      ctx.textAlign = 'center';
+      let nsz = Math.min(cfg.numMax, Math.round(boxH*0.64)); ctx.font = `400 ${nsz}px ${FB}`; setLS('1px');
+      while(nsz > 30 && ctx.measureText(st.valor).width > boxW - 20){ nsz -= 4; ctx.font = `400 ${nsz}px ${FB}`; }
+      ctx.fillStyle = '#ffffff'; ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 2;
+      ctx.fillText(st.valor, cx0 + boxW/2, cy0 + boxH*(st.etiqueta ? 0.64 : 0.7)); ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+      if(st.etiqueta){
+        let lsz = Math.max(12, Math.min(22, Math.round(boxH*0.15))); ctx.font = `700 ${lsz}px ${FR}`; setLS(Math.max(2, lsz*0.18)+'px'); ctx.fillStyle = C.DORADO2;
+        while(lsz > 11 && ctx.measureText(st.etiqueta).width > boxW - 16){ lsz--; ctx.font = `700 ${lsz}px ${FR}`; setLS(Math.max(1.5, lsz*0.16)+'px'); }
+        cvFillTextTrunc(ctx, st.etiqueta, cx0 + boxW/2 + 1, cy0 + boxH - Math.max(10, boxH*0.1), boxW - 14);
+      }
+      setLS('0px');
+    }
+    ctx.restore();
+  }
+  ctx.textAlign = 'left';
   return canvas;
 }
 
