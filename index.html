@@ -18051,7 +18051,7 @@ async function generarImagenPromoJugadoresMulti(p){
   // ── Fondo + cabecera común ──
   const bg = ctx.createLinearGradient(0,0,0,H); bg.addColorStop(0,'#2c2c32'); bg.addColorStop(1,'#0c0c0e');
   ctx.fillStyle = bg; ctx.fillRect(0,0,W,H);
-  const HD = 176, GAPB = 6;
+  const HD = 176, GAPB = 0;
   const dibujarCabecera = () => {
     ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.75)'; ctx.shadowBlur = 14; ctx.shadowOffsetY = 2;
     const lx = 48, ly = 40, ls = 96; let tx = lx;
@@ -18070,7 +18070,7 @@ async function generarImagenPromoJugadoresMulti(p){
   };
   // ── Geometría de bloques ──
   const BY = HD + 4, BH_TOT = H - BY;
-  ctx.fillStyle = C.DORADO; ctx.fillRect(0, 0, W, H);   // el hueco entre bloques queda dorado
+  ctx.fillStyle = '#0c0c0e'; ctx.fillRect(0, 0, W, H);   // el hueco entre bloques queda dorado
   const FILAS = p.disp === 'filas';
   const cols = FILAS ? 1 : (N===3 ? 3 : 2), rows = FILAS ? N : (N===4 ? 2 : 1);
   const bw = (W - GAPB*(cols-1))/cols, bh = (BH_TOT - GAPB*(rows-1))/rows;
@@ -18098,7 +18098,7 @@ async function generarImagenPromoJugadoresMulti(p){
   const dibujarFila = async (j, foto, x, y, bw, bh, ext) => {
     ext = ext || 0; const Y0 = y - ext, BHX = bh + ext;
     const cf = { 2:{name:100, team:28, bx:150, w:200, num:104}, 3:{name:78, team:24, bx:112, w:164, num:80}, 4:{name:62, team:20, bx:84, w:140, num:56} }[N] || {name:78, team:24, bx:112, w:164, num:80};
-    const pad = 40, fx = x + bw*0.40, fw = bw - bw*0.40;
+    const pad = 40, fx = x, fw = bw;
     const g0 = ctx.createLinearGradient(x,0,x+bw,0); g0.addColorStop(0,'#17171b'); g0.addColorStop(1,'#26262c'); ctx.fillStyle = g0; ctx.fillRect(x,Y0,bw,BHX);
     if(foto){
       ctx.save(); ctx.beginPath(); ctx.rect(fx,Y0,fw,BHX); ctx.clip();
@@ -18108,10 +18108,11 @@ async function generarImagenPromoJugadoresMulti(p){
       const rg = ctx.createRadialGradient(fx+fw*0.55, y+bh*0.5, 10, fx+fw*0.55, y+bh*0.5, fw*0.7);
       rg.addColorStop(0,'rgba(201,162,39,0.28)'); rg.addColorStop(1,'rgba(201,162,39,0)'); ctx.fillStyle = rg; ctx.fillRect(fx,Y0,fw,BHX);
     }
-    const gf = ctx.createLinearGradient(fx-10,0,fx+fw*0.5,0); gf.addColorStop(0,'rgba(23,23,27,1)'); gf.addColorStop(1,'rgba(23,23,27,0)');
-    ctx.fillStyle = gf; ctx.fillRect(x, Y0, fx+fw*0.5-x, BHX);
+    const gf = ctx.createLinearGradient(x,0,x+bw*0.68,0); gf.addColorStop(0,'rgba(0,0,0,.58)'); gf.addColorStop(0.5,'rgba(0,0,0,.30)'); gf.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle = gf; ctx.fillRect(x, Y0, bw, BHX);
     const gv = ctx.createLinearGradient(0,Y0,0,y+bh); gv.addColorStop(0,'rgba(0,0,0,.6)'); gv.addColorStop(ext ? Math.min(.9, (ext+60)/BHX) : 0.15,'rgba(0,0,0,0)'); gv.addColorStop(0.75,'rgba(0,0,0,0)'); gv.addColorStop(1,'rgba(0,0,0,.5)');
     ctx.fillStyle = gv; ctx.fillRect(x,Y0,bw,BHX);
+    if(y > BY){ const e1 = ctx.createLinearGradient(0,y,0,y+22); e1.addColorStop(0,'rgba(0,0,0,.5)'); e1.addColorStop(1,'rgba(0,0,0,0)'); ctx.fillStyle = e1; ctx.fillRect(x,y,bw,22); }
     if(j.equipo){ const es = Math.min(88, bh*0.3); await cvDrawEscudoCompleto(ctx, j.equipo, x+bw-es-24, y+14, es); }
     // nombre: una línea, se achica si hace falta
     const maxNW = bw*0.58 - pad; let nS = cf.name; ctx.font = `400 ${nS}px ${FB}`; setLS('2px');
@@ -18144,6 +18145,8 @@ async function generarImagenPromoJugadoresMulti(p){
     const gl = ctx.createLinearGradient(x,0,x+bw*0.7,0); gl.addColorStop(0,'rgba(0,0,0,.6)'); gl.addColorStop(1,'rgba(0,0,0,0)'); ctx.fillStyle = gl; ctx.fillRect(x,Y0,bw*0.7,BHX);
     const gt = ctx.createLinearGradient(0,Y0,0,y+150); gt.addColorStop(0,'rgba(0,0,0,.72)'); gt.addColorStop(ext ? ext/(ext+150) : 0.01,'rgba(0,0,0,.45)'); gt.addColorStop(1,'rgba(0,0,0,0)'); ctx.fillStyle = gt; ctx.fillRect(x,Y0,bw,ext+150);
     const gb = ctx.createLinearGradient(0,y+bh-cfg.nz-120,0,y+bh); gb.addColorStop(0,'rgba(0,0,0,0)'); gb.addColorStop(1,'rgba(0,0,0,.92)'); ctx.fillStyle = gb; ctx.fillRect(x,y+bh-cfg.nz-120,bw,cfg.nz+120);
+    if(x > 0){ const e2 = ctx.createLinearGradient(x,0,x+22,0); e2.addColorStop(0,'rgba(0,0,0,.5)'); e2.addColorStop(1,'rgba(0,0,0,0)'); ctx.fillStyle = e2; ctx.fillRect(x,Y0,22,BHX); }
+    if(y > BY){ const e3 = ctx.createLinearGradient(0,y,0,y+22); e3.addColorStop(0,'rgba(0,0,0,.5)'); e3.addColorStop(1,'rgba(0,0,0,0)'); ctx.fillStyle = e3; ctx.fillRect(x,y,bw,22); }
 
     // escudo del equipo (arriba a la derecha del bloque)
     if(j.equipo){ const es = Math.max(60, Math.min(92, bw*0.2)); await cvDrawEscudoCompleto(ctx, j.equipo, x+bw-es-16, y+16, es); }
