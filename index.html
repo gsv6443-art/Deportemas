@@ -18525,29 +18525,30 @@ async function generarImagenPromocionalNext(p){
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
-  const mR = 50;                                  // margen derecho
+  const mR = 52;                                  // margen derecho de escudos y datos
 
-  // ── Fondo: foto cover (prioriza izquierda/alto, donde va el jugador) ──
+  // ── Fondo: foto con un poco de zoom, corrida a la izquierda para dejar
+  //    aire a la derecha (como el afiche de referencia) ──
   const bg = ctx.createLinearGradient(0, 0, 0, H);
   bg.addColorStop(0, C.NEG3); bg.addColorStop(1, C.NEG);
   ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
   const foto = await cargarImagenAsync(p.foto);
   if(foto){
     const iw = foto.naturalWidth || foto.width || 1, ih = foto.naturalHeight || foto.height || 1;
-    const sc = Math.max(W/iw, H/ih);
+    const sc = Math.max(W/iw, H/ih) * 1.1;
     const dw = iw*sc, dh = ih*sc;
-    ctx.drawImage(foto, (W-dw)*0.25, (H-dh)*0.2, dw, dh);
+    ctx.drawImage(foto, (W-dw)*0.12, (H-dh)*0.18, dw, dh);
   } else {
     const gl = ctx.createRadialGradient(W*0.3, H*0.35, 40, W*0.3, H*0.35, W*0.9);
     gl.addColorStop(0, 'rgba(201,162,39,.22)'); gl.addColorStop(1, 'rgba(201,162,39,0)');
     ctx.fillStyle = gl; ctx.fillRect(0, 0, W, H);
   }
-  // Oscurecido suave a la derecha y abajo (como el afiche de referencia: foto casi natural)
-  const sh = ctx.createLinearGradient(W*0.5, 0, W, 0);
-  sh.addColorStop(0, 'rgba(0,0,0,0)'); sh.addColorStop(1, 'rgba(0,0,0,.38)');
-  ctx.fillStyle = sh; ctx.fillRect(0, 0, W, H);
-  const sb = ctx.createLinearGradient(0, H*0.68, 0, H);
-  sb.addColorStop(0, 'rgba(0,0,0,0)'); sb.addColorStop(1, 'rgba(0,0,0,.55)');
+  // Columna derecha oscurecida (texto, escudos y nombres se leen sobre cualquier foto)
+  const sh = ctx.createLinearGradient(W*0.46, 0, W*0.8, 0);
+  sh.addColorStop(0, 'rgba(0,0,0,0)'); sh.addColorStop(1, 'rgba(0,0,0,.62)');
+  ctx.fillStyle = sh; ctx.fillRect(W*0.46, 0, W*0.54, H);
+  const sb = ctx.createLinearGradient(0, H*0.75, 0, H);
+  sb.addColorStop(0, 'rgba(0,0,0,0)'); sb.addColorStop(1, 'rgba(0,0,0,.45)');
   ctx.fillStyle = sb; ctx.fillRect(0, 0, W, H);
 
   // ── Logo de la liga arriba a la izquierda ──
@@ -18562,21 +18563,21 @@ async function generarImagenPromocionalNext(p){
   ctx.font = '22px "Bebas Neue", Arial, sans-serif';
   ctx.fillText(liga.toUpperCase(), lx + (idLogo ? lg+12 : 0), ly + lg/2);
 
-  // ── Datos del partido (abajo a la derecha) ──
+  // ── Medidas de la columna derecha (de arriba abajo: texto, escudos, datos) ──
   const info = [];
   if(p.sede) info.push(p.sede);
   if(p.dia) info.push(p.dia);
   if(p.fechaHora) info.push(p.fechaHora);
   if(p.etiqueta) info.push(p.etiqueta);
-  const lineH = 40;
+  const lineH = 36;
   const infoH = info.length * lineH;
-  const infoBottom = H - 52;
-  const infoTop = infoBottom - infoH;
-
-  // ── Escudos + nombres (apilados, alineados a la derecha) ──
-  const sz = 118, gap = 26;
-  const escBottom = (info.length ? infoTop - 40 : infoBottom);
+  const sz = 100, gap = 22;
+  const bottomMargin = 110;
+  const infoTop = H - bottomMargin - infoH;
+  const escBottom = info.length ? infoTop - 40 : H - bottomMargin;
   const escTop = escBottom - (2*sz + gap);
+
+  // ── Escudos ──
   const dibujarEscudo = async (nombre, y) => {
     const img = await cvDrawEscudoPromise(nombre, sz);
     if(!img){ cvEscudoFallback(ctx, nombre, W - mR - sz, y, sz); return; }
@@ -18585,8 +18586,6 @@ async function generarImagenPromocionalNext(p){
     const dw = Math.max(1, Math.round(iw*sc)), dh = Math.max(1, Math.round(ih*sc));
     const dx = W - mR - dw, dy = y + (sz - dh)/2;
     if(p.escudosBlancos){
-      // Silueta blanca que conserva el detalle: lo oscuro del escudo queda
-      // semitransparente (se ve la foto), lo claro queda blanco.
       const off = document.createElement('canvas');
       off.width = dw; off.height = dh;
       const o = off.getContext('2d');
@@ -18606,17 +18605,18 @@ async function generarImagenPromocionalNext(p){
       }
       ctx.drawImage(off, dx, dy);
     } else {
-      ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 14;
+      ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 14;
       ctx.drawImage(img, dx, dy, dw, dh); ctx.restore();
     }
   };
-  // Nombre del equipo a la izquierda del escudo (se parte en 2 renglones si es largo)
+  // Nombre a la izquierda del escudo; 2 renglones si es largo; si aún no entra, achica la letra
   const dibujarNombre = (nombre, y) => {
-    const maxW = 420, fsN = 50, lh = 50;
+    const maxW = 400, lh = 46;
     ctx.save();
-    ctx.font = fsN + 'px "Bebas Neue", Arial, sans-serif';
+    let fz = 48;
+    ctx.font = fz + 'px "Bebas Neue", Arial, sans-serif';
     ctx.fillStyle = '#ffffff'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-    ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 12;
+    ctx.shadowColor = 'rgba(0,0,0,.7)'; ctx.shadowBlur = 12;
     if('letterSpacing' in ctx) ctx.letterSpacing = '1px';
     const txt = String(nombre || '').toUpperCase();
     let lineas = [txt];
@@ -18629,12 +18629,10 @@ async function generarImagenPromocionalNext(p){
       }
       lineas = mejor ? [mejor.a, mejor.b] : [txt];
     }
-    // si algún renglón no entra, se achica la letra (en vez de cortar el nombre)
-    let fz = fsN;
-    while(fz > 28 && lineas.some(l => ctx.measureText(l).width > maxW)){
+    while(fz > 26 && lineas.some(l => ctx.measureText(l).width > maxW)){
       fz -= 2; ctx.font = fz + 'px "Bebas Neue", Arial, sans-serif';
     }
-    const cx = W - mR - sz - 26, cy = y + sz/2;
+    const cx = W - mR - sz - 22, cy = y + sz/2;
     const y0 = cy - (lineas.length - 1) * lh / 2;
     lineas.forEach((l, k) => ctx.fillText(l, cx, y0 + k*lh));
     ctx.restore();
@@ -18644,45 +18642,45 @@ async function generarImagenPromocionalNext(p){
   dibujarNombre(p.local, escTop);
   dibujarNombre(p.visit, escTop + sz + gap);
 
-  // ── Texto vertical gigante, cursiva, de abajo hacia arriba ──
+  // ── Texto vertical gigante: cursiva, grueso, casi tocando el borde superior y derecho ──
   const texto = (p.nextTexto || 'PRÓXIMO').toUpperCase();
-  const topY = 36;
-  const maxLen = Math.max(300, escTop - 34 - topY);
-  let fs = 340;
+  const topY = 44;     // la cursiva empuja la parte alta de las letras ~40px hacia arriba
+  const maxLen = Math.max(280, escTop - 30 - topY);
+  let fs = 360;
   ctx.font = fs + 'px "Bebas Neue", Arial, sans-serif';
   const w0 = ctx.measureText(texto).width;
   if(w0 > maxLen) fs = Math.floor(fs * maxLen / w0);
   ctx.font = fs + 'px "Bebas Neue", Arial, sans-serif';
   const tw = ctx.measureText(texto).width;
   ctx.save();
-  ctx.translate(W - mR + 4, topY + tw);
+  ctx.translate(W - 26, topY + tw);
   ctx.rotate(-Math.PI/2);
-  ctx.transform(1, 0, -0.18, 1, 0, 0);            // cursiva
-  ctx.fillStyle = '#ffffff';
+  ctx.transform(1, 0, -0.2, 1, 0, 0);             // cursiva
+  ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = Math.max(4, fs * 0.035); ctx.lineJoin = 'miter';   // más peso, como el afiche
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   ctx.shadowColor = 'rgba(0,0,0,.3)'; ctx.shadowBlur = 16;
+  ctx.strokeText(texto, 0, 0);
   ctx.fillText(texto, 0, 0);
   ctx.restore();
 
-  // ── Datos: línea dorada + texto chico alineado a la derecha ──
+  // ── Datos: texto chico alineado a la derecha, debajo de los escudos ──
   if(info.length){
-    ctx.fillStyle = C.DORADO2;
-    ctx.fillRect(W - mR - 90, infoTop - 14, 90, 4);
     ctx.textAlign = 'right'; ctx.textBaseline = 'alphabetic';
     ctx.fillStyle = '#ffffff';
-    ctx.font = '700 29px "Rajdhani", Arial, sans-serif';
-    if('letterSpacing' in ctx) ctx.letterSpacing = '2px';
-    ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 8;
+    ctx.font = '700 26px "Rajdhani", Arial, sans-serif';
+    if('letterSpacing' in ctx) ctx.letterSpacing = '1.5px';
+    ctx.shadowColor = 'rgba(0,0,0,.65)'; ctx.shadowBlur = 8;
     info.forEach((t, k) => {
       let tx = String(t).toUpperCase();
-      while(ctx.measureText(tx).width > 600 && tx.length > 1) tx = tx.slice(0, -1);
-      ctx.fillText(tx, W - mR, infoTop + lineH*(k+1) - 11);
+      while(ctx.measureText(tx).width > 560 && tx.length > 1) tx = tx.slice(0, -1);
+      ctx.fillText(tx, W - mR, infoTop + lineH*(k+1) - 10);
     });
     ctx.shadowBlur = 0;
     if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
   }
 
-  // Marca discreta abajo a la izquierda (sin barra, como el afiche de referencia)
+  // Marca discreta abajo a la izquierda
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = 'rgba(255,255,255,.7)';
   ctx.font = '600 18px "DM Sans", Arial, sans-serif';
