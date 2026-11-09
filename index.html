@@ -15600,6 +15600,8 @@ function promoGenerarRadio(){
 }
 
 async function generarImagenPromoRadio(p){
+  // Mismo lenguaje visual que "Jugador destacado": foto a pantalla completa, título chico centrado arriba,
+  // logo de la liga arriba a la derecha y cajas de borde fino blanco con fondo oscuro translúcido.
   await document.fonts.ready;
   const W = 1080, H = 1920, CX = W/2;
   const T  = PROMO7_THEMES[p.tema] || PROMO7_THEMES.dorado;
@@ -15610,34 +15612,36 @@ async function generarImagenPromoRadio(p){
   const ctx = canvas.getContext('2d');
   ctx.textBaseline = 'alphabetic';
 
-  const IT = 0.2;
   const setLS = v => { if('letterSpacing' in ctx) ctx.letterSpacing = v; };
-  const rgba  = a => `rgba(${T.rgb},${a})`;
-  const itTxt = (txt, x, y, align) => {
-    ctx.save(); ctx.translate(x, y); ctx.transform(1, 0, -IT, 1, 0, 0);
-    ctx.textAlign = align || 'left'; ctx.fillText(txt, 0, 0); ctx.restore();
-  };
+  const fillT = a => `rgba(${T.rgb},${a})`;
+  const BORDE = 'rgba(255,255,255,.72)';
+  const txt = (t, x, y, align) => { ctx.textAlign = align || 'left'; ctx.fillText(t, x, y); };
   const sombra = on => {
     ctx.shadowColor = on ? 'rgba(0,0,0,.55)' : 'transparent';
-    ctx.shadowBlur = on ? 18 : 0; ctx.shadowOffsetY = on ? 3 : 0;
+    ctx.shadowBlur = on ? 8 : 0; ctx.shadowOffsetY = on ? 1 : 0;
   };
-  const fitSz = (txt, maxW, maxSz, minSz, fam, ls) => {
+  const fitSz = (t, maxW, maxSz, minSz, fam, ls) => {
     for(let sz = maxSz; sz >= minSz; sz -= 2){
       ctx.font = `400 ${sz}px ${fam}`; setLS(ls || '0px');
-      if(ctx.measureText(txt).width <= maxW) return sz;
+      if(ctx.measureText(t).width <= maxW) return sz;
     }
     return minSz;
   };
-  const trunc = (txt, maxW) => {
-    if(ctx.measureText(txt).width <= maxW) return txt;
-    let t = txt;
-    while(t.length > 1 && ctx.measureText(t + '…').width > maxW) t = t.slice(0, -1);
-    return t.trim() + '…';
+  const trunc = (t, maxW) => {
+    if(ctx.measureText(t).width <= maxW) return t;
+    let s = t;
+    while(s.length > 1 && ctx.measureText(s + '…').width > maxW) s = s.slice(0, -1);
+    return s.trim() + '…';
   };
   const rr = (x, y, w, h, r) => {
     ctx.beginPath(); ctx.moveTo(x + r, y);
     ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
     ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+  };
+  // Caja de la referencia: borde fino blanco + fondo oscuro translúcido
+  const caja = (x, y, w, h, r, a) => {
+    rr(x, y, w, h, r); ctx.fillStyle = fillT(a == null ? .55 : a); ctx.fill();
+    ctx.lineWidth = 1.6; ctx.strokeStyle = BORDE; ctx.stroke();
   };
   // Ícono de micrófono (cápsula + soporte + pie), centrado en (cx, cy)
   const micro = (cx, cy, sz, col) => {
@@ -15648,6 +15652,17 @@ async function generarImagenPromoRadio(p){
     ctx.beginPath(); ctx.moveTo(cx, cy + sz*0.2); ctx.lineTo(cx, cy + sz*0.42);
     ctx.moveTo(cx - sz*0.16, cy + sz*0.42); ctx.lineTo(cx + sz*0.16, cy + sz*0.42); ctx.stroke();
     ctx.restore();
+  };
+  // Píldora blanca "RELATA ..." con micrófono
+  const pildora = (x, y, bh, bfs, texto, maxTxtW, align) => {
+    ctx.font = `600 ${bfs}px ${FR}`; setLS('4px');
+    const tw = Math.min(ctx.measureText(texto).width, maxTxtW), bw = tw + bh*1.45;
+    const bx = align === 'center' ? x - bw/2 : x;
+    rr(bx, y, bw, bh, bh/2); ctx.fillStyle = '#ffffff'; ctx.fill();
+    micro(bx + bh*0.5, y + bh/2, bh*0.72, T.base);
+    ctx.font = `600 ${bfs}px ${FR}`; setLS('4px'); ctx.fillStyle = T.base;
+    txt(trunc(texto, maxTxtW), bx + bh*1.0, y + bh/2 + bfs*0.34, 'left'); setLS('0px');
+    return bw;
   };
   // Parte un nombre en 1 o 2 renglones a un tamaño dado (2 renglones balanceados; si no entra, trunca)
   const lineasNombre = (nombre, sz, maxW) => {
@@ -15694,126 +15709,128 @@ async function generarImagenPromoRadio(p){
       cvDrawEscudoImg(ctx, logoImg, CX-WS/2, H*0.42-WS/2, WS); ctx.restore();
     }
   }
+  // Sombras suaves, solo para que se lea el texto
+  const gT = ctx.createLinearGradient(0, 0, 0, 560);
+  gT.addColorStop(0, 'rgba(0,0,0,.55)'); gT.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = gT; ctx.fillRect(0, 0, W, 560);
+  const gB = ctx.createLinearGradient(0, 760, 0, H);
+  gB.addColorStop(0, 'rgba(0,0,0,0)'); gB.addColorStop(1, 'rgba(0,0,0,.6)');
+  ctx.fillStyle = gB; ctx.fillRect(0, 760, W, H-760);
 
   const t1 = (p.t1 || '').toUpperCase(), t2 = (p.t2 || '').toUpperCase();
 
-  // ── Dial de la radio: "ESCUCHALO EN VIVO" + RADIO | FRECUENCIA ──
-  const dibujarDial = (cx, topY, label, align) => {
-    let y = topY;
-    if(label){
-      ctx.font = `700 34px ${FR}`; setLS('6px'); ctx.fillStyle = T.sub; ctx.textAlign = align;
-      ctx.fillText(label.toUpperCase(), cx, y + 26); setLS('0px');
-      y += 26 + 16;
+  // ── Cabecera: título chico centrado + logo de la liga a la derecha (debajo de la zona de la interfaz de Instagram) ──
+  {
+    const tituloTxt = [t1, t2].filter(Boolean).join('  ·  ');
+    if(tituloTxt){
+      let fs = 22, ls = 6; ctx.font = `500 ${fs}px ${FR}`; setLS(ls + 'px');
+      while(fs > 12 && ctx.measureText(tituloTxt).width > 760){ fs--; ls = Math.max(3, ls - 0.25); ctx.font = `500 ${fs}px ${FR}`; setLS(ls + 'px'); }
+      ctx.fillStyle = '#ffffff'; sombra(true);
+      txt(tituloTxt, CX + ls/2, 282, 'center'); sombra(false); setLS('0px');
     }
-    const radio = (p.radio || '').toUpperCase(), frec = (p.frec || '').toUpperCase();
-    let sz = 118; const gap = 28, barW = 7;
+    if(logoImg){
+      const bs = 76, lx = W - 37 - bs, ly = 238;
+      const iw = logoImg.naturalWidth || logoImg.width || 1, ih = logoImg.naturalHeight || logoImg.height || 1;
+      const sc = Math.min(bs/iw, bs/ih), dw = iw*sc, dh = ih*sc;
+      ctx.drawImage(logoImg, lx + (bs-dw)/2, ly + (bs-dh)/2, dw, dh);
+    }
+  }
+
+  // ── Dial de la radio: caja con etiqueta + RADIO | FRECUENCIA ──
+  const radioTxt = (p.radio || '').toUpperCase(), frecTxt = (p.frec || '').toUpperCase();
+  const dialMedir = label => {
+    if(!radioTxt && !frecTxt && !label) return null;
+    const gap = 28, barW = 3, maxW = 920 - 80;
+    let sz = 104;
     const medir = z => {
       ctx.font = `400 ${z}px ${FB}`; setLS('0px');
-      const wR = ctx.measureText(radio).width, wF = frec ? ctx.measureText(frec).width : 0;
-      return { wR, wF, total: wR + (frec ? gap*2 + barW + wF : 0) };
+      const wR = ctx.measureText(radioTxt).width, wF = frecTxt ? ctx.measureText(frecTxt).width : 0;
+      return { wR, wF, total: wR + (frecTxt ? gap*2 + barW + wF : 0) };
     };
     let m = medir(sz);
-    if(m.total > 940){ sz = Math.floor(sz * 940 / m.total); m = medir(sz); }
-    const x = align === 'center' ? cx - m.total/2 : cx;
-    const base = y + sz*0.74 + 6;
-    ctx.fillStyle = '#ffffff'; itTxt(radio, x, base, 'left');
-    if(frec){
-      ctx.fillStyle = T.bar; ctx.fillRect(x + m.wR + gap, base - sz*0.72, barW, sz*0.72);
-      ctx.fillStyle = T.acc; itTxt(frec, x + m.wR + gap*2 + barW, base, 'left');
+    if(m.total > maxW){ sz = Math.floor(sz * maxW / m.total); m = medir(sz); }
+    const hL = label ? 26 + 18 : 0;
+    return { sz, m, label, gap, barW, h: 30 + hL + Math.round(sz*0.74) + 36 };
+  };
+  const dialDibujar = (D, x, y, w) => {
+    caja(x, y, w, D.h, 28, .55);
+    let yy = y + 30;
+    if(D.label){
+      ctx.font = `500 26px ${FR}`; setLS('6px'); ctx.fillStyle = 'rgba(255,255,255,.92)';
+      txt(D.label.toUpperCase(), x + w/2 + 3, yy + 22, 'center'); setLS('0px'); yy += 26 + 18;
     }
-    return base;
+    const base = yy + Math.round(D.sz*0.74), x0 = x + w/2 - D.m.total/2;
+    ctx.font = `400 ${D.sz}px ${FB}`; setLS('0px'); ctx.fillStyle = '#ffffff';
+    txt(radioTxt, x0, base, 'left');
+    if(frecTxt){
+      ctx.fillRect(x0 + D.m.wR + D.gap, base - D.sz*0.7, D.barW, D.sz*0.7);
+      txt(frecTxt, x0 + D.m.wR + D.gap*2 + D.barW, base, 'left');
+    }
   };
 
   if(p.diseno !== 'cartelera'){
-    // ═══ DISEÑO "PARTIDO" ═══
-    const m = partidos[0];
-    const gT = ctx.createLinearGradient(0, 0, 0, 880);
-    gT.addColorStop(0, rgba(.94)); gT.addColorStop(.55, rgba(.6)); gT.addColorStop(1, rgba(0));
-    ctx.fillStyle = gT; ctx.fillRect(0, 0, W, 880);
-    const gB = ctx.createLinearGradient(0, 860, 0, H);
-    gB.addColorStop(0, rgba(0)); gB.addColorStop(.30, rgba(.82)); gB.addColorStop(.6, rgba(.95)); gB.addColorStop(1, rgba(1));
-    ctx.fillStyle = gB; ctx.fillRect(0, 860, W, H-860);
-
-    // Titular (2 renglones: blanco + color)
-    let y = 270;
-    sombra(true);
-    if(t1){
-      const sz = fitSz(t1, 940, 158, 64, FB, '1px');
-      ctx.font = `400 ${sz}px ${FB}`; setLS('1px'); ctx.fillStyle = '#ffffff';
-      itTxt(t1, 70, y + sz*0.74, 'left'); y += sz*0.9;
-    }
-    if(t2){
-      const sz = fitSz(t2, 940, 158, 64, FB, '1px');
-      ctx.font = `400 ${sz}px ${FB}`; setLS('1px'); ctx.fillStyle = T.acc;
-      itTxt(t2, 70, y + sz*0.74, 'left'); y += sz*0.9;
-    }
-    sombra(false); setLS('0px');
-
-    // Escudos
+    // ═══ DISEÑO "PARTIDO": una caja con escudos, VS, nombres, día/hora y estadio + caja del dial ═══
+    const m = partidos[0] || {};
     const lift = p.margen ? 150 : 0;
-    const cs = 250, cy = 1040 - lift, cL = CX - 290, cV = CX + 290;
-    if(m.relato){
-      const txt = m.relator ? ('RELATA ' + m.relator.toUpperCase()) : 'CON RELATO';
-      const bh = 54, bfs = 32;
-      ctx.font = `700 ${bfs}px ${FR}`; setLS('4px');
-      const tw = Math.min(ctx.measureText(txt).width, 720), bw = tw + bh*0.45 + bh*1.0, bx = CX - bw/2, by = cy - 80;
-      ctx.fillStyle = T.acc; rr(bx, by, bw, bh, bh/2); ctx.fill();
-      micro(bx + bh*0.5, by + bh/2, bh*0.72, T.base);
-      ctx.fillStyle = T.base; ctx.textAlign = 'left';
-      ctx.fillText(trunc(txt, 720), bx + bh*1.0, by + bh/2 + bfs*0.34); setLS('0px');
-    }
-    await cvDrawEscudoCompleto(ctx, m.local, cL - cs/2, cy, cs);
-    await cvDrawEscudoCompleto(ctx, m.visit, cV - cs/2, cy, cs);
-    sombra(true);
-    ctx.font = `400 96px ${FB}`; setLS('0px'); ctx.fillStyle = '#ffffff';
-    itTxt('VS', CX, cy + cs/2 + 34, 'center');
-
-    // Nombres de los equipos (mismo tamaño para los dos)
+    const cardX = 80, cardW = 920, P = 38, cxL = CX - 250, cxV = CX + 250, nMaxW = 400;
     const nL = (m.local || '').toUpperCase(), nV = (m.visit || '').toUpperCase();
-    const nMaxW = 420;
-    const nsz = Math.min(tamNombre(nL, nMaxW, 64, 36), tamNombre(nV, nMaxW, 64, 36));
+    const nsz = Math.min(tamNombre(nL, nMaxW, 60, 34), tamNombre(nV, nMaxW, 60, 34));
     const lL = lineasNombre(nL, nsz, nMaxW).lines, lV = lineasNombre(nV, nsz, nMaxW).lines;
-    const nPitch = nsz*0.92, nBase = cy + cs + 24 + nsz*0.74;
-    ctx.font = `400 ${nsz}px ${FB}`; setLS('1px'); ctx.fillStyle = '#ffffff';
-    lL.forEach((t, k) => itTxt(t, cL, nBase + k*nPitch, 'center'));
-    lV.forEach((t, k) => itTxt(t, cV, nBase + k*nPitch, 'center'));
-    const nEnd = nBase + (Math.max(lL.length, lV.length) - 1)*nPitch;
-    setLS('0px');
-
-    // Día + hora
+    const maxL = Math.max(lL.length, lV.length), pitch = nsz*0.92;
     const dia = (m.dia || '').toUpperCase(), hora = _promoHoraTxt(m.hora);
-    const dTxt = dia + (dia && hora ? ' · ' : '') + hora;
-    let dBase = nEnd + 50;
-    if(dTxt){
-      const dsz = fitSz(dTxt, 940, 112, 56, FB, '1px');
-      dBase = nEnd + 58 + dsz*0.74;
-      ctx.font = `400 ${dsz}px ${FB}`; setLS('1px');
-      const wD = ctx.measureText(dia).width, wS = ctx.measureText(dia && hora ? ' · ' : '').width, wH = ctx.measureText(hora).width;
-      let x = CX - (wD + wS + wH)/2 + dsz*IT*0.35;
-      ctx.fillStyle = '#ffffff'; itTxt(dia, x, dBase, 'left'); x += wD;
-      ctx.fillStyle = T.acc;     itTxt((dia && hora ? ' · ' : '') + hora, x, dBase, 'left');
-      setLS('0px');
-    }
-    sombra(false);
+    const dTxt = dia + (dia && hora ? '  ·  ' : '') + hora;
+    const D = dialMedir((p.dialTxt === undefined ? 'Escuchalo en vivo' : p.dialTxt) || '');
+    const dH = D ? D.h + 26 : 0;
 
-    // Estadio + nota
-    let yy = dBase;
-    if(m.estadio){
-      yy += 18 + 34;
-      ctx.font = `600 36px ${FR}`; setLS('1px'); ctx.fillStyle = 'rgba(255,255,255,.94)'; ctx.textAlign = 'center';
-      ctx.fillText(trunc(m.estadio, 940), CX, yy); setLS('0px');
-    }
-    if(m.nota){
-      yy += 14 + 32;
-      ctx.font = `700 32px ${FR}`; setLS('4px'); ctx.fillStyle = T.acc; ctx.textAlign = 'center';
-      ctx.fillText(trunc(m.nota.toUpperCase(), 940), CX, yy); setLS('0px');
-    }
-
-    // Dial
-    dibujarDial(CX, yy + 56, (p.dialTxt === undefined ? 'Escuchalo en vivo' : p.dialTxt) || '', 'center');
+    const construir = cs => {
+      const ops = []; let r = P;
+      if(m.relato){
+        const rt = m.relator ? ('RELATA ' + m.relator.toUpperCase()) : 'CON RELATO', r0 = r;
+        ops.push(Y => pildora(CX, Y + r0, 54, 28, rt, 640, 'center')); r += 54 + 26;
+      }
+      { const r0 = r;
+        ops.push(async Y => {
+          await cvDrawEscudoCompleto(ctx, m.local, cxL - cs/2, Y + r0, cs);
+          await cvDrawEscudoCompleto(ctx, m.visit, cxV - cs/2, Y + r0, cs);
+          ctx.font = `400 84px ${FB}`; setLS('0px'); ctx.fillStyle = '#ffffff';
+          txt('VS', CX, Y + r0 + cs/2 + 30, 'center');
+        });
+        r += cs + 22; }
+      { const base = r + nsz*0.74;
+        ops.push(Y => {
+          ctx.font = `400 ${nsz}px ${FB}`; setLS('1px'); ctx.fillStyle = '#ffffff';
+          lL.forEach((t, k) => txt(t, cxL, Y + base + k*pitch, 'center'));
+          lV.forEach((t, k) => txt(t, cxV, Y + base + k*pitch, 'center'));
+          setLS('0px');
+        });
+        r = base + (maxL - 1)*pitch + 30; }
+      if(dTxt){
+        const dsz = fitSz(dTxt, cardW - P*2, 96, 52, FB, '1px'), base = r + dsz*0.74;
+        ops.push(Y => { ctx.font = `400 ${dsz}px ${FB}`; setLS('1px'); ctx.fillStyle = '#ffffff'; txt(dTxt, CX + 0.5, Y + base, 'center'); setLS('0px'); });
+        r = base + 22;
+      }
+      if(m.estadio){
+        const base = r + 30;
+        ops.push(Y => { ctx.font = `500 34px ${FR}`; setLS('2px'); ctx.fillStyle = 'rgba(255,255,255,.92)'; txt(trunc(m.estadio, cardW - P*2), CX + 1, Y + base, 'center'); setLS('0px'); });
+        r = base + 14;
+      }
+      if(m.nota){
+        const base = r + 34;
+        ops.push(Y => { ctx.font = `500 30px ${FR}`; setLS('5px'); ctx.fillStyle = 'rgba(255,255,255,.8)'; txt(trunc(m.nota.toUpperCase(), cardW - P*2), CX + 2, Y + base, 'center'); setLS('0px'); });
+        r = base + 14;
+      }
+      return { ops, h: r + P - 8 };
+    };
+    const bottom = H - 100 - lift;
+    let cs = 210, L = construir(cs);
+    if(bottom - (L.h + dH) < 520){ cs = 170; L = construir(cs); }
+    const Y0 = Math.max(460, bottom - (L.h + dH));
+    caja(cardX, Y0, cardW, L.h, 28, .55);
+    for(const op of L.ops) await op(Y0);
+    if(D) dialDibujar(D, cardX, Y0 + L.h + 26, cardW);
 
   } else {
-    // ═══ DISEÑO "CARTELERA" ═══
+    // ═══ DISEÑO "CARTELERA": dial arriba + una caja por partido (las de relato, más grandes y con píldora) ═══
     let items = partidos.slice();
     if(p.relatoPrimero) items = items.filter(m=>m.relato).concat(items.filter(m=>!m.relato));
     const n = items.length, nf = items.filter(m=>m.relato).length;
@@ -15822,94 +15839,40 @@ async function generarImagenPromoRadio(p){
     const unifDia = unico('dia'), unifEst = unico('estadio');
     const hdr = (unifDia || unifEst) ? 70 : 0;
     const lift = p.margen ? 150 : 0;                       // margen inferior para la interfaz de Instagram
-    const listBottom = H - 70 - lift;
-    const base = (n <= 4 ? 176 : (n <= 6 ? 148 : 122)) * (unifEst ? 1.14 : 1);   // sin estadio por fila, el contenido crece
+    const listBottom = H - 90 - lift;
+    const D = dialMedir((p.pre || '').trim());
+    const dialTop = 350, topLimit = dialTop + (D ? D.h : 0) + 40;
+    const base = (n <= 4 ? 176 : (n <= 6 ? 148 : 122)) * (unifEst ? 1.14 : 1);
     const filaH = base * (unifEst ? 0.82 : 1);
     let rowH = Math.round(filaH), rowHf = Math.round(filaH*1.5), kk = base/176;
     let total = (n - nf)*rowH + nf*rowHf;
-    const cap = Math.min(1100, listBottom - 340 - hdr - 36 - ((t1 || t2) ? 230 : 0));
+    const cap = Math.min(1100, listBottom - topLimit - hdr - 20);
     if(total > cap){ const f = cap/total; rowH = Math.round(rowH*f); rowHf = Math.round(rowHf*f); kk *= f; total = (n - nf)*rowH + nf*rowHf; }
-    const k = kk, compacto = total > 720;
+    const k = kk;
     const listTop = listBottom - total;
 
-    // Tamaños del titular (se mide primero para ubicarlo justo encima de la lista)
-    const s1 = t1 ? fitSz(t1, 940, compacto ? 100 : 130, 50, FB, '1px') : 0;
-    const s2 = t2 ? fitSz(t2, 940, compacto ? 150 : 215, 60, FB, '1px') : 0;
-    const pitch1 = s1*0.9, pitch2 = s2*0.9;
-    const titleH = pitch1 + pitch2;
-    const titleTop = listTop - hdr - 36 - titleH;
-
-    // Degradés
-    const gT = ctx.createLinearGradient(0, 0, 0, 560);
-    gT.addColorStop(0, rgba(.94)); gT.addColorStop(.46, rgba(.7)); gT.addColorStop(1, rgba(0));
-    ctx.fillStyle = gT; ctx.fillRect(0, 0, W, 560);
-    const gBy = Math.max(400, titleTop - 140);
-    const gB = ctx.createLinearGradient(0, gBy, 0, H);
-    gB.addColorStop(0, rgba(0)); gB.addColorStop(.2, rgba(.8)); gB.addColorStop(.5, rgba(.94)); gB.addColorStop(1, rgba(1));
-    ctx.fillStyle = gB; ctx.fillRect(0, gBy, W, H-gBy);
-
-    // Franja lateral de color
-    ctx.fillStyle = T.acc; ctx.fillRect(0, 0, 24, H);
-
-    // Bloque superior: texto + radio enorme + frecuencia
-    const pre = (p.pre || '').toUpperCase(), rad = (p.radio || '').toUpperCase(), frec = (p.frec || '').toUpperCase();
-    let ty = 56;
-    sombra(true);
-    if(pre){
-      ctx.font = `400 56px ${FB}`; setLS('1px'); ctx.fillStyle = T.acc; ctx.textAlign = 'left';
-      ctx.fillText(trunc(pre, 940), 70, ty + 44); setLS('0px');
-      ty += 44 + 22;
-    }
-    if(rad){
-      const rsz = fitSz(rad, 640, 250, 110, FB, '-3px');
-      ctx.font = `400 ${rsz}px ${FB}`; setLS('-3px'); ctx.fillStyle = '#ffffff';
-      const rBase = ty + rsz*0.74;
-      itTxt(rad, 66, rBase, 'left');
-      const wR = ctx.measureText(rad).width;
-      if(frec){
-        let fsz = Math.round(rsz*0.42);
-        ctx.font = `400 ${fsz}px ${FB}`; setLS('0px');
-        const wF = ctx.measureText(frec).width, libre = 1040 - (66 + wR + 34);
-        if(wF > libre && libre > 60){ fsz = Math.max(24, Math.floor(fsz*libre/wF)); ctx.font = `400 ${fsz}px ${FB}`; }
-        ctx.fillStyle = T.acc;
-        itTxt(frec, 66 + wR + 34, rBase, 'left');
-      }
-      setLS('0px');
-    }
-
-    // Titular
-    let y = titleTop;
-    if(t1){
-      ctx.font = `400 ${s1}px ${FB}`; setLS('1px'); ctx.fillStyle = '#ffffff';
-      itTxt(t1, 70, y + s1*0.74, 'left'); y += pitch1;
-    }
-    if(t2){
-      ctx.font = `400 ${s2}px ${FB}`; setLS('1px'); ctx.fillStyle = T.acc;
-      itTxt(t2, 70, y + s2*0.74, 'left'); y += pitch2;
-    }
-    sombra(false); setLS('0px');
+    if(D) dialDibujar(D, 80, dialTop, 920);
 
     if(hdr){
       const baseY = listTop - 22;
-      let hx = 70;
+      let hx = 80;
       sombra(true);
       if(unifDia){
         const dTxt = items[0].dia.toUpperCase();
         ctx.font = `400 56px ${FB}`; setLS('1px'); ctx.fillStyle = '#ffffff';
-        itTxt(dTxt, hx, baseY, 'left'); hx += ctx.measureText(dTxt).width + 26;
+        txt(dTxt, hx, baseY, 'left'); hx += ctx.measureText(dTxt).width + 26;
       }
       if(unifEst){
-        if(unifDia){ ctx.fillStyle = T.acc; ctx.fillRect(hx - 6, baseY - 34, 5, 34); hx += 18; }
-        ctx.font = `600 34px ${FR}`; setLS('1px'); ctx.fillStyle = T.sub; ctx.textAlign = 'left';
-        ctx.fillText(trunc(items[0].estadio, 970 - hx), hx, baseY - 2);
+        if(unifDia){ ctx.fillStyle = 'rgba(255,255,255,.72)'; ctx.fillRect(hx - 6, baseY - 34, 2, 34); hx += 18; }
+        ctx.font = `500 34px ${FR}`; setLS('2px'); ctx.fillStyle = 'rgba(255,255,255,.92)';
+        txt(trunc(items[0].estadio, 1000 - hx), hx, baseY - 2, 'left');
       }
       sombra(false); setLS('0px');
     }
 
-    // Filas de partidos: las que tienen relato van más grandes, con fondo de color y etiqueta
     const R = v => Math.round(v*k);
-    const xR0 = 970;
-    const normales = items.filter(m=>!m.relato), destacados = items.filter(m=>m.relato);
+    const LX = 92, RX = 988;
+    const normales = items.filter(m=>!m.relato);
 
     // Medidas comunes: columna de día/hora y tamaño de letra de los nombres (igual en todas las filas del mismo tipo)
     const dFsN = unifDia ? Math.max(38, R(56)) : Math.max(34, R(54)), hFsN = Math.max(28, R(42));
@@ -15919,82 +15882,72 @@ async function generarImagenPromoRadio(p){
     const wHoraN = Math.max(0, ...normales.map(m=>ctx.measureText(_promoHoraTxt(m.hora)).width));
     setLS('0px');
     const colWN = Math.max(wDiaN, wHoraN) + 36;
-    const csN = R(98), gapN = R(52), nameXN = 70 + 2*csN + gapN + R(26), maxWN = xR0 - colWN - nameXN;
-    const csF = R(127), gapF = Math.round(52*k*1.2), nameXF = 90 + 2*csF + gapF + Math.round(26*k*1.2), maxWF = (xR0 - 12) - nameXF;
+    const csN = R(98), gapN = R(52), nameXN = LX + 2*csN + gapN + R(26), maxWN = RX - colWN - nameXN;
+    const csF = R(127), gapF = Math.round(52*k*1.2), nameXF = LX + 2*csF + gapF + Math.round(26*k*1.2), maxWF = RX - nameXF;
     const nmaxN = Math.max(30, R(46)), nmaxF = Math.max(34, Math.round(46*k*1.2));
     let yRow = listTop;
     for(let i = 0; i < n; i++){
       const m = items[i], dest = !!m.relato, h = dest ? rowHf : rowH, y0 = yRow;
       yRow += h;
-      const ix = dest ? 12 : 0, x0 = 70 + ix, xR = xR0 - ix, S = dest ? 1.2 : 1;
+      const S = dest ? 1.2 : 1;
       const dia = (m.dia || '').toUpperCase(), hora = _promoHoraTxt(m.hora);
+      caja(72, y0 + R(5), 936, h - R(10), 24, dest ? .7 : .5);
       let yC, cs;
       if(dest){
-        ctx.save();
-        rr(58, y0 + R(4), 924, h - R(8), 16); ctx.clip();
-        ctx.fillStyle = rgba(.5); ctx.fillRect(58, y0, 924, h);
-        ctx.fillStyle = `rgba(${T.accRgb},0.2)`; ctx.fillRect(58, y0, 924, h);
-        ctx.fillStyle = T.acc; ctx.fillRect(58, y0, 8, h);
-        ctx.restore();
-        const bh = Math.max(28, R(40)), bfs = Math.max(20, R(26)), by = y0 + R(16);
-        const txt = m.relator ? ('RELATA ' + m.relator.toUpperCase()) : 'CON RELATO';
-        ctx.font = `700 ${bfs}px ${FR}`; setLS('3px');
-        const tw = Math.min(ctx.measureText(txt).width, 520), bw = tw + bh*0.45 + bh*1.0;
-        ctx.fillStyle = T.acc; rr(x0 + 8, by, bw, bh, bh/2); ctx.fill();
-        micro(x0 + 8 + bh*0.5, by + bh/2, bh*0.72, T.base);
-        ctx.fillStyle = T.base; ctx.textAlign = 'left';
-        ctx.fillText(trunc(txt, 520), x0 + 8 + bh*1.0, by + bh/2 + bfs*0.34); setLS('0px');
-        // día y hora arriba a la derecha, en la misma línea que la etiqueta
+        const bh = Math.max(28, R(40)), bfs = Math.max(20, R(26)), by = y0 + R(18);
+        const rt = m.relator ? ('RELATA ' + m.relator.toUpperCase()) : 'CON RELATO';
+        pildora(LX, by, bh, bfs, rt, 520, 'left');
+        // día y hora arriba a la derecha, en la misma línea que la píldora
         const fs = Math.max(34, R(52));
         ctx.font = `400 ${fs}px ${FB}`; setLS('1px');
         const yT = by + bh/2 + fs*0.36, wH2 = hora ? ctx.measureText(hora).width : 0;
-        ctx.fillStyle = T.acc; if(hora) itTxt(hora, xR, yT, 'right');
-        if(dia && !unifDia){ ctx.fillStyle = '#ffffff'; itTxt(dia + (hora ? ' · ' : ''), xR - wH2, yT, 'right'); }
+        ctx.fillStyle = '#ffffff';
+        if(hora) txt(hora, RX, yT, 'right');
+        if(dia && !unifDia) txt(dia + (hora ? ' · ' : ''), RX - wH2, yT, 'right');
         setLS('0px');
         cs = csF; yC = by + bh + R(10);
       } else {
-        ctx.fillStyle = i === 0 ? T.acc : 'rgba(255,255,255,.28)';
-        ctx.fillRect(70, y0, xR0 - 70, i === 0 ? 3 : 1);
-        cs = csN; yC = y0 + R(16);
+        cs = csN; yC = y0 + R(18);
       }
-      const gapC = dest ? gapF : gapN, cx0 = x0 + (dest ? 8 : 0);
+      const gapC = dest ? gapF : gapN, cx0 = LX;
       const nameX = dest ? nameXF : nameXN, nameMaxW = dest ? maxWF : maxWN, nmax = dest ? nmaxF : nmaxN;
-      const nsz = Math.max(Math.round(nmax*0.7), Math.min(fitSz((m.local || '').toUpperCase(), nameMaxW, nmax, 24, FB, '1px'), fitSz((m.visit || '').toUpperCase(), nameMaxW, nmax, 24, FB, '1px')));
+      const nsz = Math.max(Math.round(nmax*0.62), Math.min(fitSz((m.local || '').toUpperCase(), nameMaxW, nmax, 24, FB, '1px'), fitSz((m.visit || '').toUpperCase(), nameMaxW, nmax, 24, FB, '1px')));
 
       await cvDrawEscudoCompleto(ctx, m.local, cx0, yC, cs);
       await cvDrawEscudoCompleto(ctx, m.visit, cx0 + cs + gapC, yC, cs);
       ctx.font = `400 ${Math.max(22, Math.round(34*k*S))}px ${FB}`; setLS('0px'); ctx.fillStyle = '#ffffff';
-      itTxt('VS', cx0 + cs + gapC/2, yC + cs/2 + Math.round(12*k*S), 'center');
+      txt('VS', cx0 + cs + gapC/2, yC + cs/2 + Math.round(12*k*S), 'center');
 
       const nL = (m.local || '').toUpperCase(), nV = (m.visit || '').toUpperCase();
       ctx.font = `400 ${nsz}px ${FB}`; setLS('1px'); ctx.fillStyle = '#ffffff';
-      itTxt(trunc(nL, nameMaxW), nameX, yC + cs*0.43, 'left');
-      itTxt(trunc(nV, nameMaxW), nameX, yC + cs*0.92, 'left');
+      txt(trunc(nL, nameMaxW), nameX, yC + cs*0.43, 'left');
+      txt(trunc(nV, nameMaxW), nameX, yC + cs*0.92, 'left');
       setLS('0px');
 
       if(!dest){
+        ctx.fillStyle = '#ffffff'; setLS('1px');
         if(unifDia){
-          ctx.fillStyle = T.acc; ctx.font = `400 ${dFsN}px ${FB}`; setLS('1px');
-          if(hora) itTxt(hora, xR, yC + cs*0.66, 'right');
+          ctx.font = `400 ${dFsN}px ${FB}`;
+          if(hora) txt(hora, RX, yC + cs*0.66, 'right');
         } else {
-          ctx.fillStyle = '#ffffff'; ctx.font = `400 ${dFsN}px ${FB}`; setLS('1px');
-          if(dia) itTxt(dia, xR, yC + cs*0.47, 'right');
-          ctx.fillStyle = T.acc; ctx.font = `400 ${hFsN}px ${FB}`;
-          if(hora) itTxt(hora, xR, yC + cs*0.94, 'right');
+          ctx.font = `400 ${dFsN}px ${FB}`;
+          if(dia) txt(dia, RX, yC + cs*0.47, 'right');
+          ctx.font = `400 ${hFsN}px ${FB}`;
+          if(hora) txt(hora, RX, yC + cs*0.94, 'right');
         }
         setLS('0px');
       }
 
-      const yS = unifEst ? y0 + h - R(12) : (dest ? yC + cs + R(40) : y0 + R(152));
+      const yS = unifEst ? y0 + h - R(18) : (dest ? yC + cs + R(40) : y0 + R(152));
       let notaW = 0;
       if(m.nota){
-        ctx.font = `700 ${Math.max(22, R(28))}px ${FR}`; setLS('2px'); ctx.fillStyle = T.acc; ctx.textAlign = 'right';
+        ctx.font = `500 ${Math.max(22, R(28))}px ${FR}`; setLS('2px'); ctx.fillStyle = 'rgba(255,255,255,.8)';
         const nt = m.nota.toUpperCase();
-        ctx.fillText(trunc(nt, 360), xR, yS); notaW = Math.min(ctx.measureText(nt).width, 360) + 30; setLS('0px');
+        txt(trunc(nt, 360), RX, yS, 'right'); notaW = Math.min(ctx.measureText(nt).width, 360) + 30; setLS('0px');
       }
       if(m.estadio && !unifEst){
-        ctx.font = `600 ${Math.max(24, Math.round(30*k*(dest ? 1.1 : 1)))}px ${FR}`; setLS('1px'); ctx.fillStyle = T.sub; ctx.textAlign = 'left';
-        ctx.fillText(trunc(m.estadio, xR - x0 - notaW), cx0, yS); setLS('0px');
+        ctx.font = `500 ${Math.max(24, Math.round(30*k*(dest ? 1.1 : 1)))}px ${FR}`; setLS('1px'); ctx.fillStyle = 'rgba(255,255,255,.88)';
+        txt(trunc(m.estadio, RX - cx0 - notaW), cx0, yS, 'left'); setLS('0px');
       }
     }
   }
