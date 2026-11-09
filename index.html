@@ -5232,10 +5232,30 @@ table.posiciones td:nth-child(8){
 
         <div class="form-group">
           <label>Diseño</label>
-          <select id="promo-estilo">
+          <select id="promo-estilo" onchange="promoEstiloCambiar()">
             <option value="completo">Foto de fondo completa</option>
             <option value="split">Foto a la izquierda (como en Alineaciones)</option>
+            <option value="next">Próximo partido (texto vertical + escudos a la derecha)</option>
           </select>
+        </div>
+
+        <div id="promo-next-opts" style="display:none">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Texto vertical (grande)</label>
+              <input type="text" id="promo-next-texto" value="PRÓXIMO" maxlength="14" placeholder="Ej: PRÓXIMO, HOY, MAÑANA, FINAL"/>
+            </div>
+            <div class="form-group">
+              <label>Escudos</label>
+              <select id="promo-next-escudos">
+                <option value="color">Colores originales</option>
+                <option value="blanco">Blancos (silueta)</option>
+              </select>
+            </div>
+          </div>
+          <p style="font-size:10px;color:var(--gris);margin-top:-8px;margin-bottom:14px;font-family:'Rajdhani',sans-serif">
+            Abajo a la derecha se escriben la sede, el día y la fecha/hora de los campos de arriba. Con la opción "Blancos" los escudos con fondo transparente quedan como silueta; si alguno tiene fondo sólido, usá "Colores originales".
+          </p>
         </div>
 
         </div><!-- /promo-uno-wrap -->
@@ -16444,7 +16464,11 @@ function promoGenerar(){
     sede:      document.getElementById('promo-sede').value.trim(),
   };
   const estilo = document.getElementById('promo-estilo').value;
-  abrirShare(() => estilo==='split' ? generarImagenPromocionalSplit(p) : generarImagenPromocional(p));
+  if(estilo === 'next'){
+    p.nextTexto = (document.getElementById('promo-next-texto').value || 'PRÓXIMO').trim().toUpperCase();
+    p.escudosBlancos = document.getElementById('promo-next-escudos').value === 'blanco';
+  }
+  abrirShare(() => estilo==='next' ? generarImagenPromocionalNext(p) : estilo==='split' ? generarImagenPromocionalSplit(p) : generarImagenPromocional(p));
 }
 
 
@@ -18484,6 +18508,145 @@ async function generarImagenPromocionalTabla(p){
    y toda la información del partido en un panel derecho con fondo
    normal, sin rayos ni efectos — mockup a pedido de Gustavo.
    ══════════════════════════════════════════════════════════════ */
+
+function promoEstiloCambiar(){
+  const e = document.getElementById('promo-estilo');
+  const o = document.getElementById('promo-next-opts');
+  if(o) o.style.display = (e && e.value === 'next') ? '' : 'none';
+}
+
+// Diseño "Próximo partido": foto a pantalla completa, texto vertical gigante
+// a la derecha, escudos apilados y datos del partido abajo a la derecha.
+async function generarImagenPromocionalNext(p){
+  await document.fonts.ready;
+  const id   = getIdentidad();
+  const liga = id.nombre || 'DEPORTEMAS';
+  const W = CV_W, H = CV_H;
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.textBaseline = 'alphabetic';
+
+  const footH = s(40);
+  const mR = 52;                    // margen derecho
+
+  // ── Fondo: foto cover (prioriza la parte izquierda/alta, donde va el jugador) ──
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, C.NEG3); bg.addColorStop(1, C.NEG);
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  const foto = await cargarImagenAsync(p.foto);
+  if(foto){
+    const iw = foto.naturalWidth || foto.width || 1, ih = foto.naturalHeight || foto.height || 1;
+    const sc = Math.max(W/iw, H/ih);
+    const dw = iw*sc, dh = ih*sc;
+    ctx.drawImage(foto, (W-dw)*0.25, (H-dh)*0.2, dw, dh);
+  } else {
+    const gl = ctx.createRadialGradient(W*0.3, H*0.35, 40, W*0.3, H*0.35, W*0.9);
+    gl.addColorStop(0, 'rgba(201,162,39,.22)'); gl.addColorStop(1, 'rgba(201,162,39,0)');
+    ctx.fillStyle = gl; ctx.fillRect(0, 0, W, H);
+  }
+  // Oscurecido a la derecha (para que el texto blanco se lea) y abajo
+  const sh = ctx.createLinearGradient(W*0.45, 0, W, 0);
+  sh.addColorStop(0, 'rgba(0,0,0,0)'); sh.addColorStop(1, 'rgba(0,0,0,.55)');
+  ctx.fillStyle = sh; ctx.fillRect(0, 0, W, H);
+  const sb = ctx.createLinearGradient(0, H*0.62, 0, H);
+  sb.addColorStop(0, 'rgba(0,0,0,0)'); sb.addColorStop(1, 'rgba(0,0,0,.6)');
+  ctx.fillStyle = sb; ctx.fillRect(0, 0, W, H);
+
+  // ── Logo de la liga arriba a la izquierda ──
+  const idLogo = await cargarImagenAsync(id.logo);
+  const lg = 46, lx = 46, ly = 50;
+  if(idLogo){
+    ctx.save(); ctx.beginPath(); ctx.arc(lx+lg/2, ly+lg/2, lg/2, 0, Math.PI*2); ctx.clip();
+    cvDrawEscudoImg(ctx, idLogo, lx, ly, lg); ctx.restore();
+  }
+  ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+  ctx.fillStyle = C.BLANCO;
+  ctx.font = '22px "Bebas Neue", Arial, sans-serif';
+  ctx.fillText(liga.toUpperCase(), lx + (idLogo ? lg+12 : 0), ly + lg/2);
+  ctx.textBaseline = 'alphabetic';
+
+  // ── Texto vertical gigante (se lee de abajo hacia arriba) ──
+  const texto = (p.nextTexto || 'PRÓXIMO').toUpperCase();
+  const maxLen = 760;                           // largo máximo en vertical
+  let fs = 330;
+  ctx.font = fs + 'px "Bebas Neue", Arial, sans-serif';
+  const w0 = ctx.measureText(texto).width;
+  if(w0 > maxLen) fs = Math.floor(fs * maxLen / w0);
+  ctx.font = fs + 'px "Bebas Neue", Arial, sans-serif';
+  const tw = ctx.measureText(texto).width;
+  const capH = fs * 0.70;
+  ctx.save();
+  ctx.translate(W - mR, 40 + tw);               // la base del texto queda a la derecha
+  ctx.rotate(-Math.PI/2);
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 18;
+  ctx.fillText(texto, 0, 0);
+  ctx.restore();
+  const textoBottom = 40 + tw;
+
+  // ── Escudos apilados ──
+  const sz = 130, gap = 26;
+  const escX = W - mR - sz;
+  let escY = Math.max(textoBottom + 34, 760);
+  const info = [];
+  if(p.sede) info.push(p.sede);
+  if(p.dia) info.push(p.dia);
+  if(p.fechaHora) info.push(p.fechaHora);
+  if(p.etiqueta) info.push(p.etiqueta);
+  const lineH = 44;
+  const infoH = info.length * lineH;
+  const infoTop = H - footH - 34 - infoH;
+  // si no entra, achico escudos
+  let szUse = sz;
+  const disp = infoTop - 24 - escY;
+  if(disp < 2*sz + gap) szUse = Math.max(80, Math.floor((disp - gap)/2));
+  const escYUse = escY;
+
+  const dibujarEscudo = async (nombre, y) => {
+    const img = await cvDrawEscudoPromise(nombre, szUse);
+    if(!img){ cvEscudoFallback(ctx, nombre, W - mR - szUse, y, szUse); return; }
+    const iw = img.naturalWidth || img.width || 1, ih = img.naturalHeight || img.height || 1;
+    const sc = Math.min(szUse/iw, szUse/ih);
+    const dw = iw*sc, dh = ih*sc;
+    const dx = W - mR - dw, dy = y + (szUse - dh)/2;   // alineado a la derecha
+    if(p.escudosBlancos){
+      const off = document.createElement('canvas');
+      off.width = Math.ceil(dw); off.height = Math.ceil(dh);
+      const o = off.getContext('2d');
+      o.drawImage(img, 0, 0, dw, dh);
+      o.globalCompositeOperation = 'source-in';
+      o.fillStyle = '#ffffff'; o.fillRect(0, 0, off.width, off.height);
+      ctx.drawImage(off, dx, dy);
+    } else {
+      ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 14;
+      ctx.drawImage(img, dx, dy, dw, dh); ctx.restore();
+    }
+  };
+  await dibujarEscudo(p.local, escYUse);
+  await dibujarEscudo(p.visit, escYUse + szUse + gap);
+
+  // ── Datos del partido abajo a la derecha ──
+  ctx.textAlign = 'right'; ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '700 34px "Rajdhani", Arial, sans-serif';
+  if('letterSpacing' in ctx) ctx.letterSpacing = '2px';
+  info.forEach((t, i) => {
+    let tx = String(t).toUpperCase();
+    while(ctx.measureText(tx).width > 520 && tx.length > 1) tx = tx.slice(0, -1);
+    ctx.fillText(tx, W - mR, infoTop + lineH*(i+1) - 10);
+  });
+  if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+
+  // Línea dorada fina sobre los datos
+  ctx.fillStyle = C.DORADO2;
+  ctx.fillRect(W - mR - 90, infoTop - 6, 90, 4);
+
+  cvFooter(ctx, W, H - footH, liga);
+  return canvas;
+}
+
 async function generarImagenPromocionalSplit(p){
   await document.fonts.ready;
   const id   = getIdentidad();
