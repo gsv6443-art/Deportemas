@@ -18525,12 +18525,9 @@ async function generarImagenPromocionalNext(p){
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
-  ctx.textBaseline = 'alphabetic';
+  const mR = 50;                                  // margen derecho
 
-  const footH = s(40);
-  const mR = 52;                    // margen derecho
-
-  // ── Fondo: foto cover (prioriza la parte izquierda/alta, donde va el jugador) ──
+  // ── Fondo: foto cover (prioriza izquierda/alto, donde va el jugador) ──
   const bg = ctx.createLinearGradient(0, 0, 0, H);
   bg.addColorStop(0, C.NEG3); bg.addColorStop(1, C.NEG);
   ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
@@ -18545,12 +18542,12 @@ async function generarImagenPromocionalNext(p){
     gl.addColorStop(0, 'rgba(201,162,39,.22)'); gl.addColorStop(1, 'rgba(201,162,39,0)');
     ctx.fillStyle = gl; ctx.fillRect(0, 0, W, H);
   }
-  // Oscurecido a la derecha (para que el texto blanco se lea) y abajo
-  const sh = ctx.createLinearGradient(W*0.45, 0, W, 0);
-  sh.addColorStop(0, 'rgba(0,0,0,0)'); sh.addColorStop(1, 'rgba(0,0,0,.55)');
+  // Oscurecido suave a la derecha y abajo (como el afiche de referencia: foto casi natural)
+  const sh = ctx.createLinearGradient(W*0.5, 0, W, 0);
+  sh.addColorStop(0, 'rgba(0,0,0,0)'); sh.addColorStop(1, 'rgba(0,0,0,.38)');
   ctx.fillStyle = sh; ctx.fillRect(0, 0, W, H);
-  const sb = ctx.createLinearGradient(0, H*0.62, 0, H);
-  sb.addColorStop(0, 'rgba(0,0,0,0)'); sb.addColorStop(1, 'rgba(0,0,0,.6)');
+  const sb = ctx.createLinearGradient(0, H*0.68, 0, H);
+  sb.addColorStop(0, 'rgba(0,0,0,0)'); sb.addColorStop(1, 'rgba(0,0,0,.55)');
   ctx.fillStyle = sb; ctx.fillRect(0, 0, W, H);
 
   // ── Logo de la liga arriba a la izquierda ──
@@ -18564,86 +18561,133 @@ async function generarImagenPromocionalNext(p){
   ctx.fillStyle = C.BLANCO;
   ctx.font = '22px "Bebas Neue", Arial, sans-serif';
   ctx.fillText(liga.toUpperCase(), lx + (idLogo ? lg+12 : 0), ly + lg/2);
-  ctx.textBaseline = 'alphabetic';
 
-  // ── Texto vertical gigante (se lee de abajo hacia arriba) ──
-  const texto = (p.nextTexto || 'PRÓXIMO').toUpperCase();
-  const maxLen = 760;                           // largo máximo en vertical
-  let fs = 330;
-  ctx.font = fs + 'px "Bebas Neue", Arial, sans-serif';
-  const w0 = ctx.measureText(texto).width;
-  if(w0 > maxLen) fs = Math.floor(fs * maxLen / w0);
-  ctx.font = fs + 'px "Bebas Neue", Arial, sans-serif';
-  const tw = ctx.measureText(texto).width;
-  const capH = fs * 0.70;
-  ctx.save();
-  ctx.translate(W - mR, 40 + tw);               // la base del texto queda a la derecha
-  ctx.rotate(-Math.PI/2);
-  ctx.fillStyle = '#ffffff';
-  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-  ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 18;
-  ctx.fillText(texto, 0, 0);
-  ctx.restore();
-  const textoBottom = 40 + tw;
-
-  // ── Escudos apilados ──
-  const sz = 130, gap = 26;
-  const escX = W - mR - sz;
-  let escY = Math.max(textoBottom + 34, 760);
+  // ── Datos del partido (abajo a la derecha) ──
   const info = [];
   if(p.sede) info.push(p.sede);
   if(p.dia) info.push(p.dia);
   if(p.fechaHora) info.push(p.fechaHora);
   if(p.etiqueta) info.push(p.etiqueta);
-  const lineH = 44;
+  const lineH = 40;
   const infoH = info.length * lineH;
-  const infoTop = H - footH - 34 - infoH;
-  // si no entra, achico escudos
-  let szUse = sz;
-  const disp = infoTop - 24 - escY;
-  if(disp < 2*sz + gap) szUse = Math.max(80, Math.floor((disp - gap)/2));
-  const escYUse = escY;
+  const infoBottom = H - 52;
+  const infoTop = infoBottom - infoH;
 
+  // ── Escudos + nombres (apilados, alineados a la derecha) ──
+  const sz = 118, gap = 26;
+  const escBottom = (info.length ? infoTop - 40 : infoBottom);
+  const escTop = escBottom - (2*sz + gap);
   const dibujarEscudo = async (nombre, y) => {
-    const img = await cvDrawEscudoPromise(nombre, szUse);
-    if(!img){ cvEscudoFallback(ctx, nombre, W - mR - szUse, y, szUse); return; }
+    const img = await cvDrawEscudoPromise(nombre, sz);
+    if(!img){ cvEscudoFallback(ctx, nombre, W - mR - sz, y, sz); return; }
     const iw = img.naturalWidth || img.width || 1, ih = img.naturalHeight || img.height || 1;
-    const sc = Math.min(szUse/iw, szUse/ih);
-    const dw = iw*sc, dh = ih*sc;
-    const dx = W - mR - dw, dy = y + (szUse - dh)/2;   // alineado a la derecha
+    const sc = Math.min(sz/iw, sz/ih);
+    const dw = Math.max(1, Math.round(iw*sc)), dh = Math.max(1, Math.round(ih*sc));
+    const dx = W - mR - dw, dy = y + (sz - dh)/2;
     if(p.escudosBlancos){
+      // Silueta blanca que conserva el detalle: lo oscuro del escudo queda
+      // semitransparente (se ve la foto), lo claro queda blanco.
       const off = document.createElement('canvas');
-      off.width = Math.ceil(dw); off.height = Math.ceil(dh);
+      off.width = dw; off.height = dh;
       const o = off.getContext('2d');
       o.drawImage(img, 0, 0, dw, dh);
-      o.globalCompositeOperation = 'source-in';
-      o.fillStyle = '#ffffff'; o.fillRect(0, 0, off.width, off.height);
+      try{
+        const d = o.getImageData(0, 0, dw, dh), px = d.data;
+        for(let k = 0; k < px.length; k += 4){
+          const lum = (0.299*px[k] + 0.587*px[k+1] + 0.114*px[k+2]) / 255;
+          const a = px[k+3] / 255;
+          px[k] = px[k+1] = px[k+2] = 255;
+          px[k+3] = Math.round(255 * a * Math.min(1, 0.22 + lum*1.4));
+        }
+        o.putImageData(d, 0, 0);
+      }catch(e){
+        o.globalCompositeOperation = 'source-in';
+        o.fillStyle = '#ffffff'; o.fillRect(0, 0, dw, dh);
+      }
       ctx.drawImage(off, dx, dy);
     } else {
       ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 14;
       ctx.drawImage(img, dx, dy, dw, dh); ctx.restore();
     }
   };
-  await dibujarEscudo(p.local, escYUse);
-  await dibujarEscudo(p.visit, escYUse + szUse + gap);
+  // Nombre del equipo a la izquierda del escudo (se parte en 2 renglones si es largo)
+  const dibujarNombre = (nombre, y) => {
+    const maxW = 420, fsN = 50, lh = 50;
+    ctx.save();
+    ctx.font = fsN + 'px "Bebas Neue", Arial, sans-serif';
+    ctx.fillStyle = '#ffffff'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 12;
+    if('letterSpacing' in ctx) ctx.letterSpacing = '1px';
+    const txt = String(nombre || '').toUpperCase();
+    let lineas = [txt];
+    if(ctx.measureText(txt).width > maxW){
+      const pal = txt.split(/\s+/); let mejor = null;
+      for(let k = 1; k < pal.length; k++){
+        const a = pal.slice(0, k).join(' '), b = pal.slice(k).join(' ');
+        const m = Math.max(ctx.measureText(a).width, ctx.measureText(b).width);
+        if(!mejor || m < mejor.m) mejor = { a, b, m };
+      }
+      lineas = mejor ? [mejor.a, mejor.b] : [txt];
+    }
+    // si algún renglón no entra, se achica la letra (en vez de cortar el nombre)
+    let fz = fsN;
+    while(fz > 28 && lineas.some(l => ctx.measureText(l).width > maxW)){
+      fz -= 2; ctx.font = fz + 'px "Bebas Neue", Arial, sans-serif';
+    }
+    const cx = W - mR - sz - 26, cy = y + sz/2;
+    const y0 = cy - (lineas.length - 1) * lh / 2;
+    lineas.forEach((l, k) => ctx.fillText(l, cx, y0 + k*lh));
+    ctx.restore();
+  };
+  await dibujarEscudo(p.local, escTop);
+  await dibujarEscudo(p.visit, escTop + sz + gap);
+  dibujarNombre(p.local, escTop);
+  dibujarNombre(p.visit, escTop + sz + gap);
 
-  // ── Datos del partido abajo a la derecha ──
-  ctx.textAlign = 'right'; ctx.textBaseline = 'alphabetic';
+  // ── Texto vertical gigante, cursiva, de abajo hacia arriba ──
+  const texto = (p.nextTexto || 'PRÓXIMO').toUpperCase();
+  const topY = 36;
+  const maxLen = Math.max(300, escTop - 34 - topY);
+  let fs = 340;
+  ctx.font = fs + 'px "Bebas Neue", Arial, sans-serif';
+  const w0 = ctx.measureText(texto).width;
+  if(w0 > maxLen) fs = Math.floor(fs * maxLen / w0);
+  ctx.font = fs + 'px "Bebas Neue", Arial, sans-serif';
+  const tw = ctx.measureText(texto).width;
+  ctx.save();
+  ctx.translate(W - mR + 4, topY + tw);
+  ctx.rotate(-Math.PI/2);
+  ctx.transform(1, 0, -0.18, 1, 0, 0);            // cursiva
   ctx.fillStyle = '#ffffff';
-  ctx.font = '700 34px "Rajdhani", Arial, sans-serif';
-  if('letterSpacing' in ctx) ctx.letterSpacing = '2px';
-  info.forEach((t, i) => {
-    let tx = String(t).toUpperCase();
-    while(ctx.measureText(tx).width > 520 && tx.length > 1) tx = tx.slice(0, -1);
-    ctx.fillText(tx, W - mR, infoTop + lineH*(i+1) - 10);
-  });
-  if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.shadowColor = 'rgba(0,0,0,.3)'; ctx.shadowBlur = 16;
+  ctx.fillText(texto, 0, 0);
+  ctx.restore();
 
-  // Línea dorada fina sobre los datos
-  ctx.fillStyle = C.DORADO2;
-  ctx.fillRect(W - mR - 90, infoTop - 6, 90, 4);
+  // ── Datos: línea dorada + texto chico alineado a la derecha ──
+  if(info.length){
+    ctx.fillStyle = C.DORADO2;
+    ctx.fillRect(W - mR - 90, infoTop - 14, 90, 4);
+    ctx.textAlign = 'right'; ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '700 29px "Rajdhani", Arial, sans-serif';
+    if('letterSpacing' in ctx) ctx.letterSpacing = '2px';
+    ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 8;
+    info.forEach((t, k) => {
+      let tx = String(t).toUpperCase();
+      while(ctx.measureText(tx).width > 600 && tx.length > 1) tx = tx.slice(0, -1);
+      ctx.fillText(tx, W - mR, infoTop + lineH*(k+1) - 11);
+    });
+    ctx.shadowBlur = 0;
+    if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+  }
 
-  cvFooter(ctx, W, H - footH, liga);
+  // Marca discreta abajo a la izquierda (sin barra, como el afiche de referencia)
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = 'rgba(255,255,255,.7)';
+  ctx.font = '600 18px "DM Sans", Arial, sans-serif';
+  ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 6;
+  ctx.fillText('deportemas.pages.dev', 46, H - 34);
   return canvas;
 }
 
