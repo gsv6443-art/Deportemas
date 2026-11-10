@@ -5259,8 +5259,30 @@ table.posiciones td:nth-child(8){
               <option value="oscuro">Oscuro</option>
             </select>
           </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Zoom de la foto de fondo</label>
+              <input type="range" id="promo-md-zoom" min="100" max="240" value="100" style="width:100%"/>
+            </div>
+            <div class="form-group">
+              <label>Posición vertical de la foto</label>
+              <input type="range" id="promo-md-py" min="0" max="100" value="0" style="width:100%"/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Jugador recortado (PNG sin fondo, opcional)</label>
+            <input type="file" accept="image/png,image/webp" id="promo-md-recorte-file" onchange="promoRecorteCargar(this)"/>
+            <div class="preview-wrap" id="promo-recorte-wrap">
+              <img id="promo-recorte-preview" src="" alt="" style="max-height:140px;object-fit:contain;background:#222"/>
+              <button type="button" class="btn-quitar-img" onclick="promoQuitarRecorte()">✕ Quitar</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Tamaño del jugador recortado</label>
+            <input type="range" id="promo-md-rtam" min="30" max="70" value="46" style="width:100%"/>
+          </div>
           <p style="font-size:10px;color:var(--gris);margin-top:-6px;margin-bottom:14px;font-family:'Rajdhani',sans-serif">
-            Para dividir el texto gigante en dos renglones usá "/" (por ejemplo: DÍA DE / PARTIDO). La foto se funde hacia el color de fondo: conviene una foto con el jugador en la parte de arriba.
+            Para dividir el texto gigante en dos renglones usá "/" (por ejemplo: DÍA DE / PARTIDO). La foto de fondo se funde hacia el color elegido: conviene una con el jugador en la parte de arriba (subile el zoom para un primer plano). El jugador recortado tiene que ser un PNG con fondo transparente; se dibuja adelante del texto gigante, abajo y al centro.
           </p>
         </div>
 
@@ -16173,6 +16195,7 @@ function promoQuitarLogoTorneo(){
 }
 
 function promoLimpiarForm(){
+  if(typeof promoQuitarRecorte === 'function') promoQuitarRecorte();
   ['promo-local','promo-visit','promo-etiqueta','promo-torneo','promo-competicion-logo','promo-dia','promo-fechahora','promo-h2h-titulo','promo-h2h-local','promo-h2h-empate','promo-h2h-visit','promo-sede'].forEach(id=>{
     const el = document.getElementById(id); if(el) el.value = '';
   });
@@ -16192,6 +16215,32 @@ function promoLimpiarForm(){
 }
 
 // Foto de fondo de la imagen de Promoción (misma lógica que la foto de gol/campeón)
+let _promoRecorte = '';
+function promoRecorteCargar(input){
+  const f = input.files && input.files[0]; if(!f) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    const im = new Image();
+    im.onload = () => {
+      // se conserva el PNG (con transparencia); solo se reduce el tamaño
+      const sc = Math.min(1, 1100 / Math.max(im.width, im.height));
+      const cv = document.createElement('canvas');
+      cv.width = Math.max(1, Math.round(im.width*sc)); cv.height = Math.max(1, Math.round(im.height*sc));
+      cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height);
+      _promoRecorte = cv.toDataURL('image/png');
+      const pv = document.getElementById('promo-recorte-preview'); if(pv) pv.src = _promoRecorte;
+      const w = document.getElementById('promo-recorte-wrap'); if(w) w.classList.add('visible');
+    };
+    im.src = rd.result;
+  };
+  rd.readAsDataURL(f);
+}
+function promoQuitarRecorte(){
+  _promoRecorte = '';
+  const pv = document.getElementById('promo-recorte-preview'); if(pv) pv.src = '';
+  const w = document.getElementById('promo-recorte-wrap'); if(w) w.classList.remove('visible');
+  const f = document.getElementById('promo-md-recorte-file'); if(f) f.value = '';
+}
 let _promoFoto = '';
 function promoPreviewFoto(input){
   const file = input.files[0]; if(!file) return;
@@ -16475,6 +16524,11 @@ function promoGenerar(){
     p.mdTexto = (document.getElementById('promo-md-texto').value || 'PARTIDO').trim().toUpperCase();
     p.mdColor = document.getElementById('promo-md-color').value || '#0f2a1e';
     p.mdEscudos = document.getElementById('promo-md-escudos').value || 'color';
+    const nv = (idc, def) => { const el = document.getElementById(idc); const n = el ? Number(el.value) : NaN; return isNaN(n) ? def : n; };
+    p.mdZoom = nv('promo-md-zoom', 100) / 100;
+    p.mdPy = nv('promo-md-py', 0) / 100;
+    p.mdRecorte = _promoRecorte || '';
+    p.mdRecorteTam = nv('promo-md-rtam', 46) / 100;
   }
   abrirShare(() => estilo==='matchday' ? generarImagenPromocionalMatchday(p) : estilo==='afiche' ? generarImagenPromocionalAfiche(p) : estilo==='split' ? generarImagenPromocionalSplit(p) : generarImagenPromocional(p));
 }
@@ -18563,11 +18617,15 @@ async function generarImagenPromocionalMatchday(p){
   const foto = await cargarImagenAsync(p.foto);
   if(foto){
     const iw = foto.naturalWidth || foto.width || 1, ih = foto.naturalHeight || foto.height || 1;
-    const sc = Math.max(W/iw, (H*0.92)/ih);   // la foto llega hasta donde el degradé ya es sólido
+    const zoom = Math.max(1, p.mdZoom || 1), py = Math.min(1, Math.max(0, p.mdPy || 0));
+    const sc = Math.max(W/iw, (H*0.92)/ih) * zoom;   // cubre hasta donde el degradé ya es sólido
     const dw = iw*sc, dh = ih*sc;
-    ctx.drawImage(foto, (W-dw)/2, 0, dw, dh);
-    // tiñe la foto con el color de fondo para que se integre
-    ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.globalAlpha = 0.32;
+    ctx.save();
+    try{ ctx.filter = 'contrast(1.1) saturate(1.1)'; }catch(e){}   // foto más viva (si el navegador lo soporta)
+    ctx.drawImage(foto, (W-dw)/2, (H*0.92 - dh)*py, dw, dh);
+    ctx.restore();
+    // tiñe apenas la foto con el color de fondo para que se integre
+    ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.globalAlpha = 0.2;
     ctx.fillStyle = col; ctx.fillRect(0, 0, W, H); ctx.restore();
   } else {
     const gl = ctx.createRadialGradient(W*0.72, H*0.22, 30, W*0.72, H*0.22, W*0.9);
@@ -18661,6 +18719,27 @@ async function generarImagenPromocionalMatchday(p){
     ctx.fillText(t, W/2, y);
   });
 
+  // ── Jugador recortado (PNG): va adelante del texto gigante, abajo y al centro ──
+  if(p.mdRecorte){
+    const rc = await cargarImagenAsync(p.mdRecorte);
+    if(rc){
+      const rw0 = rc.naturalWidth || rc.width || 1, rh0 = rc.naturalHeight || rc.height || 1;
+      const hh = H * Math.min(0.75, Math.max(0.25, p.mdRecorteTam || 0.46));
+      const ww = rw0 * hh / rh0;
+      const pies = H * 0.865;
+      // sombra en el piso
+      ctx.save();
+      ctx.translate(W/2, pies - 4); ctx.scale(1, 0.16);
+      const sg = ctx.createRadialGradient(0, 0, 10, 0, 0, Math.max(120, ww*0.55));
+      sg.addColorStop(0, 'rgba(0,0,0,.65)'); sg.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(0, 0, Math.max(120, ww*0.55), 0, Math.PI*2); ctx.fill();
+      ctx.restore();
+      ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 24;
+      ctx.drawImage(rc, (W - ww)/2, pies - hh, ww, hh);
+      ctx.restore();
+    }
+  }
+
   // ── Línea de datos centrada con separadores cuadrados ──
   const segs = [
     p.etiqueta,
@@ -18672,12 +18751,12 @@ async function generarImagenPromocionalMatchday(p){
   if(segs.length){
     let f = 28, gapS = 30, sq = 11, total = 0, widths = [];
     const medir = () => {
-      ctx.font = '700 ' + f + 'px ' + SANS; sp(2);
+      ctx.font = '700 ' + f + 'px ' + SANS; sp(1.2);
       widths = segs.map(t => ctx.measureText(t).width);
       total = widths.reduce((a, b) => a + b, 0) + (segs.length - 1) * (gapS*2 + sq);
     };
     medir();
-    while(f > 14 && total > W - 150){ f -= 1; gapS = Math.max(14, gapS - 1); sq = Math.max(7, Math.round(f*0.4)); medir(); }
+    while(f > 14 && total > W - 120){ f -= 1; gapS = Math.max(14, gapS - 1); sq = Math.max(7, Math.round(f*0.4)); medir(); }
     let x = (W - total) / 2;
     ctx.textAlign = 'left'; ctx.fillStyle = '#ffffff';
     ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 8;
