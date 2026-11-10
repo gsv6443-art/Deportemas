@@ -5277,9 +5277,19 @@ table.posiciones td:nth-child(8){
               <button type="button" class="btn-quitar-img" onclick="promoQuitarRecorte()">✕ Quitar</button>
             </div>
           </div>
-          <div class="form-group">
-            <label>Tamaño del jugador recortado</label>
-            <input type="range" id="promo-md-rtam" min="30" max="70" value="46" style="width:100%"/>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Tamaño del recorte</label>
+              <input type="range" id="promo-md-rtam" min="25" max="80" value="46" style="width:100%"/>
+            </div>
+            <div class="form-group">
+              <label>Izquierda ⇄ derecha</label>
+              <input type="range" id="promo-md-rx" min="0" max="100" value="50" style="width:100%"/>
+            </div>
+            <div class="form-group">
+              <label>Arriba ⇅ abajo (pies)</label>
+              <input type="range" id="promo-md-ry" min="40" max="100" value="86" style="width:100%"/>
+            </div>
           </div>
           <p style="font-size:10px;color:var(--gris);margin-top:-6px;margin-bottom:14px;font-family:'Rajdhani',sans-serif">
             Para dividir el texto gigante en dos renglones usá "/" (por ejemplo: DÍA DE / PARTIDO). La foto de fondo se funde hacia el color elegido: conviene una con el jugador en la parte de arriba (subile el zoom para un primer plano). El jugador recortado tiene que ser un PNG con fondo transparente; se dibuja adelante del texto gigante, abajo y al centro.
@@ -16529,6 +16539,8 @@ function promoGenerar(){
     p.mdPy = nv('promo-md-py', 0) / 100;
     p.mdRecorte = _promoRecorte || '';
     p.mdRecorteTam = nv('promo-md-rtam', 46) / 100;
+    p.mdRx = nv('promo-md-rx', 50) / 100;
+    p.mdRy = nv('promo-md-ry', 86) / 100;
   }
   abrirShare(() => estilo==='matchday' ? generarImagenPromocionalMatchday(p) : estilo==='afiche' ? generarImagenPromocionalAfiche(p) : estilo==='split' ? generarImagenPromocionalSplit(p) : generarImagenPromocional(p));
 }
@@ -18726,24 +18738,59 @@ async function generarImagenPromocionalMatchday(p){
       const rw0 = rc.naturalWidth || rc.width || 1, rh0 = rc.naturalHeight || rc.height || 1;
       const hh = H * Math.min(0.75, Math.max(0.25, p.mdRecorteTam || 0.46));
       const ww = rw0 * hh / rh0;
-      const pies = H * 0.865;
+      const pies = H * Math.min(1, Math.max(0.4, p.mdRy || 0.86));
+      const cx = W * Math.min(1, Math.max(0, (p.mdRx == null ? 0.5 : p.mdRx)));
       // sombra en el piso
       ctx.save();
-      ctx.translate(W/2, pies - 4); ctx.scale(1, 0.16);
+      ctx.translate(cx, pies - 4); ctx.scale(1, 0.16);
       const sg = ctx.createRadialGradient(0, 0, 10, 0, 0, Math.max(120, ww*0.55));
       sg.addColorStop(0, 'rgba(0,0,0,.65)'); sg.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(0, 0, Math.max(120, ww*0.55), 0, Math.PI*2); ctx.fill();
       ctx.restore();
       ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 24;
-      ctx.drawImage(rc, (W - ww)/2, pies - hh, ww, hh);
+      ctx.drawImage(rc, cx - ww/2, pies - hh, ww, hh);
       ctx.restore();
     }
   }
 
+  // ── Nombres de los equipos debajo del texto gigante ──
+  const nL = String(p.local || '').toUpperCase(), nV = String(p.visit || '').toUpperCase();
+  if(nL || nV){
+    let fn = 58;
+    const gapN = 34;
+    const medirN = () => {
+      ctx.font = fn + 'px ' + ANTON; sp(2);
+      const a = ctx.measureText(nL).width, b = ctx.measureText(nV).width;
+      ctx.font = '700 ' + Math.round(fn*0.5) + 'px ' + SANS; sp(2);
+      const v = (nL && nV) ? ctx.measureText('VS').width : 0;
+      return { a, b, v, total: a + b + (v ? v + gapN*2 : 0) };
+    };
+    let mN = medirN();
+    while(fn > 26 && mN.total > W - 120){ fn -= 2; mN = medirN(); }
+    let xN = (W - mN.total) / 2;
+    const yN = Math.round(baseFinal + 30 + fn * 0.72);
+    ctx.save();
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic'; ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 14;
+    ctx.font = fn + 'px ' + ANTON; sp(2);
+    if(nL){ ctx.fillText(nL, xN, yN); xN += mN.a; }
+    if(nL && nV){
+      xN += gapN;
+      ctx.font = '700 ' + Math.round(fn*0.5) + 'px ' + SANS; sp(2);
+      ctx.globalAlpha = 0.85; ctx.fillText('VS', xN, yN - fn*0.1); ctx.globalAlpha = 1;
+      xN += mN.v + gapN;
+    }
+    ctx.font = fn + 'px ' + ANTON; sp(2);
+    if(nV) ctx.fillText(nV, xN, yN);
+    ctx.restore(); sp(0);
+  }
+
   // ── Línea de datos centrada con separadores cuadrados ──
+  const norm = (t) => String(t || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Z0-9]/g, '');
+  const nEti = norm(p.etiqueta), nGig = norm(lineas.join(''));
+  const etiRepite = nEti && nGig && (nEti.includes(nGig) || nGig.includes(nEti));   // p. ej. "Semifinales" y "SEMIFINAL"
   const segs = [
-    p.etiqueta,
-    (p.local && p.visit) ? (String(p.local) + ' VS ' + String(p.visit)) : '',
+    etiRepite ? '' : p.etiqueta,
     p.dia,
     p.fechaHora
   ].map(t => String(t || '').trim().toUpperCase()).filter(Boolean);
@@ -18769,7 +18816,7 @@ async function generarImagenPromocionalMatchday(p){
     ctx.shadowBlur = 0; sp(0);
   }
   // Torneo · sede (más chico, arriba de la línea de datos)
-  const sub = [p.torneoNombre, p.sede].map(t => String(t || '').trim()).filter(Boolean).join('  ·  ').toUpperCase();
+  const sub = [p.torneoNombre, p.sede].map(t => String(t || '').trim().replace(/[.\s]+$/, '')).filter(Boolean).join('  ·  ').toUpperCase();
   if(sub){
     let f2 = 20;
     ctx.font = '500 ' + f2 + 'px ' + SANS; sp(3);
