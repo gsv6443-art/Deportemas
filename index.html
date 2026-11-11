@@ -4961,6 +4961,10 @@ table.posiciones td:nth-child(8){
         </div>
 
         <div class="form-group">
+          <label>Logo del torneo (va entre los dos escudos)</label>
+          <select id="alin-torneo"></select>
+        </div>
+        <div class="form-group">
           <label>Foto del panel izquierdo (opcional) <span style="color:var(--gris);font-size:10px">— si no cargás una, se usa la foto de la ficha del club</span></label>
           <div class="upload-area">
             <input type="file" accept="image/*" id="alin-foto-file" onchange="alinPreviewFoto(this)"/>
@@ -4969,6 +4973,18 @@ table.posiciones td:nth-child(8){
           <div class="preview-wrap" id="alin-foto-wrap">
             <img id="alin-foto-preview" src="" alt="" style="max-height:120px;object-fit:cover;object-position:top"/>
             <button type="button" class="btn-quitar-img" onclick="quitarFotoAlineacion()">✕ Quitar</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Foto del panel derecho (opcional) <span style="color:var(--gris);font-size:10px">— si no cargás una, se usa un fondo de estadio</span></label>
+          <div class="upload-area">
+            <input type="file" accept="image/*" id="alin-foto2-file" onchange="alinPreviewFoto2(this)"/>
+            <span class="icon">🏟️</span><p>Hacé clic o arrastrá la foto</p>
+          </div>
+          <div class="preview-wrap" id="alin-foto2-wrap">
+            <img id="alin-foto2-preview" src="" alt="" style="max-height:120px;object-fit:cover;object-position:top"/>
+            <button type="button" class="btn-quitar-img" onclick="quitarFotoAlineacion2()">✕ Quitar</button>
           </div>
         </div>
 
@@ -12582,7 +12598,7 @@ function switchAdminTab(tab,el){
   if(tab==='sanciones'){ poblarSelectClubSancion('am'); renderAdminListaAmonestaciones(); recalcularSancionesVigentes(); }
   if(tab==='torneos'){ renderTorneoClubesChecklist(); toActualizarVisEstado(); }
   if(tab==='notificaciones'){ actualizarContadorSubs(); }
-  if(tab==='alineaciones'){ poblarSelectPartidoAlineacion(); renderAdminListaAlineaciones(); alinRenderSlots(); }
+  if(tab==='alineaciones'){ poblarSelectPartidoAlineacion(); alinPoblarTorneos(); renderAdminListaAlineaciones(); alinRenderSlots(); }
   if(tab==='jugfecha'){ jfLimpiarLegado(); jfPoblarClubes(); jfCambiarTipo(); jfRenderLista(); }
   if(tab==='historiagol'){ hgPoblarEquipos(); hgActualizarCamposEvento(); hgPoblarPlantillas(); }
   if(tab==='promo'){ promoPoblarEquipos(); promoPoblarPartidos(); }}
@@ -23966,6 +23982,51 @@ const FORMACIONES = {
 let _alinEditId = null; // id de la alineación en edición (null = nueva)
 let _alinFoto = '';         // base64 de la foto de fondo recién subida (pendiente de guardar)
 let _alinFotoEliminada = false;
+let _alinFoto2 = '';        // foto del panel derecho (pendiente de guardar)
+let _alinFoto2Eliminada = false;
+function alinPreviewFoto2(input){
+  const file = input.files[0]; if(!file) return;
+  comprimirABase64(file, 900, 0.8).then(dataUrl=>{
+    _alinFoto2 = dataUrl; _alinFoto2Eliminada = false;
+    const p=document.getElementById('alin-foto2-preview'); if(p) p.src=_alinFoto2;
+    const w=document.getElementById('alin-foto2-wrap'); if(w) w.classList.add('visible');
+  });
+}
+function quitarFotoAlineacion2(){
+  _alinFoto2=''; _alinFoto2Eliminada=true;
+  const p=document.getElementById('alin-foto2-preview'); if(p) p.src='';
+  const w=document.getElementById('alin-foto2-wrap'); if(w) w.classList.remove('visible');
+  const f=document.getElementById('alin-foto2-file'); if(f) f.value='';
+}
+// Opciones de logo de torneo: logo de la liga, Primera, Segunda y cada torneo cargado
+function alinPoblarTorneos(valor){
+  const sel = document.getElementById('alin-torneo'); if(!sel) return;
+  const idn = getIdentidad();
+  let h = '<option value="liga">Logo de la liga (por defecto)</option>';
+  if(idn.logoPrimera) h += '<option value="primera">Primera División</option>';
+  if(idn.logoSegunda) h += '<option value="segunda">Segunda División</option>';
+  (data.torneos||[]).forEach(tn=>{
+    const lg = tn.logo || (window._torneoLogosCache && window._torneoLogosCache[tn.id]);
+    if(lg) h += `<option value="t:${tn.id}">${tn.nombre}${tn.edicion?' '+tn.edicion:''}</option>`;
+  });
+  sel.innerHTML = h;
+  sel.value = valor || 'liga';
+  if(sel.value !== (valor||'liga')) sel.value = 'liga';
+}
+// Devuelve el logo (base64) elegido para una alineación
+function alinLogoTorneo(a){
+  const idn = getIdentidad();
+  const v = a.torneo || 'liga';
+  if(v==='primera' && idn.logoPrimera) return idn.logoPrimera;
+  if(v==='segunda' && idn.logoSegunda) return idn.logoSegunda;
+  if(v.indexOf('t:')===0){
+    const tid = v.slice(2);
+    const tn = (data.torneos||[]).find(x=>String(x.id)===tid);
+    const lg = tn && (tn.logo || (window._torneoLogosCache && window._torneoLogosCache[tid]));
+    if(lg) return lg;
+  }
+  return idn.logo || '';
+}
 
 function alinPreviewFoto(input){
   const file = input.files[0]; if(!file) return;
@@ -24040,6 +24101,10 @@ function alinLimpiarForm(){
   _alinFoto=''; _alinFotoEliminada=false;
   const fp=document.getElementById('alin-foto-preview'), fw=document.getElementById('alin-foto-wrap'), ff=document.getElementById('alin-foto-file');
   if(fp) fp.src=''; if(fw) fw.classList.remove('visible'); if(ff) ff.value='';
+  _alinFoto2=''; _alinFoto2Eliminada=false;
+  const f2p=document.getElementById('alin-foto2-preview'), f2w=document.getElementById('alin-foto2-wrap'), f2f=document.getElementById('alin-foto2-file');
+  if(f2p) f2p.src=''; if(f2w) f2w.classList.remove('visible'); if(f2f) f2f.value='';
+  alinPoblarTorneos('liga');
   const btn = document.getElementById('alin-guardar-btn');
   if(btn) btn.textContent='Guardar alineación';
 }
@@ -24060,6 +24125,7 @@ function guardarAlineacion(){
     fecha: document.getElementById('alin-fecha').value.trim(),
     hora: document.getElementById('alin-hora').value.trim(),
     sede: document.getElementById('alin-sede').value.trim(),
+    torneo: (document.getElementById('alin-torneo')||{}).value || 'liga',
     formacion, dt, titulares, suplentes
   };
   if(!data.alineaciones) data.alineaciones = [];
@@ -24080,6 +24146,15 @@ function guardarAlineacion(){
   } else if(_alinFotoEliminada){
     if(window._fb) window._fb.delAlinFoto(obj.id);
     if(window._alinFotosCache) delete window._alinFotosCache[obj.id];
+  }
+
+  if(_alinFoto2){
+    if(window._fb) window._fb.setAlinFoto(obj.id+'_der', _alinFoto2);
+    if(!window._alinFotosCache) window._alinFotosCache={};
+    window._alinFotosCache[obj.id+'_der']=_alinFoto2;
+  } else if(_alinFoto2Eliminada){
+    if(window._fb) window._fb.delAlinFoto(obj.id+'_der');
+    if(window._alinFotosCache) delete window._alinFotosCache[obj.id+'_der'];
   }
 
   alinLimpiarForm();
@@ -24115,14 +24190,22 @@ function editarAlineacion(id){
   if(ff) ff.value='';
   if(fotoExistente){ if(fp) fp.src=fotoExistente; if(fw) fw.classList.add('visible'); }
   else { if(fp) fp.src=''; if(fw) fw.classList.remove('visible'); }
+
+  _alinFoto2=''; _alinFoto2Eliminada=false;
+  const foto2 = window._alinFotosCache ? window._alinFotosCache[id+'_der'] : '';
+  const f2p=document.getElementById('alin-foto2-preview'), f2w=document.getElementById('alin-foto2-wrap'), f2f=document.getElementById('alin-foto2-file');
+  if(f2f) f2f.value='';
+  if(foto2){ if(f2p) f2p.src=foto2; if(f2w) f2w.classList.add('visible'); }
+  else { if(f2p) f2p.src=''; if(f2w) f2w.classList.remove('visible'); }
+  alinPoblarTorneos(a.torneo||'liga');
 }
 
 function eliminarAlineacion(id){
   pedirConfirmacion('¿Eliminar esta alineación?', function(){
     data.alineaciones = (data.alineaciones||[]).filter(a=>a.id!==id);
     saveData(data);
-    if(window._fb) window._fb.delAlinFoto(id);
-    if(window._alinFotosCache) delete window._alinFotosCache[id];
+    if(window._fb){ window._fb.delAlinFoto(id); window._fb.delAlinFoto(id+'_der'); }
+    if(window._alinFotosCache){ delete window._alinFotosCache[id]; delete window._alinFotosCache[id+'_der']; }
     renderAdminListaAlineaciones();
   });
 }
@@ -24177,6 +24260,8 @@ async function generarImagenAlineacionDesde(id){
   sky.addColorStop(1, '#15151a');
   ctx.fillStyle = sky;
   ctx.fillRect(x2, 0, W - x2, H);
+  const _hayFoto2 = !!(window._alinFotosCache && window._alinFotosCache[a.id+'_der']);
+  if(!_hayFoto2){
   // nubes suaves (elipses con degradé radial)
   const nube = (px, py, rx, ry, col, al)=>{
     ctx.save();
@@ -24211,6 +24296,19 @@ async function generarImagenAlineacionDesde(id){
     ctx.fillStyle = '#fff';
     ctx.fillRect(fx-8, fy-3, 16, 6);
   });
+  } // fin fondo de estadio procedural
+  // foto del panel derecho (si hay)
+  const foto2Img = await cargarImagenAsync(window._alinFotosCache && window._alinFotosCache[a.id+'_der']);
+  if(foto2Img){
+    const pw = W - x2;
+    const iw = foto2Img.naturalWidth || foto2Img.width, ih = foto2Img.naturalHeight || foto2Img.height;
+    const sc = Math.max(pw/iw, H/ih);
+    const dw = iw*sc, dh = ih*sc;
+    ctx.drawImage(foto2Img, x2 + (pw-dw)/2, dh > H ? 0 : (H-dh)/2, dw, dh);
+    const rs = ctx.createLinearGradient(x2, 0, x2+90, 0);
+    rs.addColorStop(0, 'rgba(10,11,15,.55)'); rs.addColorStop(1, 'rgba(10,11,15,0)');
+    ctx.fillStyle = rs; ctx.fillRect(x2, 0, 90, H);
+  }
   // viñeta inferior para que lean los logos
   const vg = ctx.createLinearGradient(0, H*0.7, 0, H);
   vg.addColorStop(0, 'rgba(8,8,12,0)'); vg.addColorStop(1, 'rgba(8,8,12,.75)');
@@ -24283,7 +24381,8 @@ async function generarImagenAlineacionDesde(id){
 
   // ── Cabecera: escudos en cuadros (propio | liga | rival) ──
   const box = 88, boxY = 150, gap = 26;
-  const logoLiga = await cargarImagenAsync(identidad.logo || '');
+  const logoLiga = await cargarImagenAsync(alinLogoTorneo(a));   // logo del torneo (entre escudos)
+  const logoMarca = await cargarImagenAsync(identidad.logo || ''); // logo de la liga (abajo a la derecha)
   const dibujarCaja = async (bx, nombre)=>{
     ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 1.5;
     ctx.strokeRect(bx+.75, boxY+.75, box-1.5, box-1.5);
@@ -24328,17 +24427,25 @@ async function generarImagenAlineacionDesde(id){
   const tit = (a.titulares||[]).slice(0,11);
   const rowH = 66;
   let ny = 416;
-  const maxNameW = x2 - x1 - 120;
+  const maxNameW = x2 - x1 - 170;
   tit.forEach(t=>{
     const nombre = (t.nombre||'').toUpperCase();
     let fz = 64;
     ctx.font = `${fz}px ${FB}`;
-    while(ctx.measureText(nombre).width > maxNameW && fz > 38){ fz -= 2; ctx.font = `${fz}px ${FB}`; }
+    while(ctx.measureText(nombre).width > maxNameW && fz > 30){ fz -= 2; ctx.font = `${fz}px ${FB}`; }
     ctx.fillStyle = '#fff';
     ctx.textAlign = 'center';
-    ctx.fillText(nombre, cx, ny);
+    cvFillTextTrunc(ctx, nombre, cx, ny, maxNameW);
+    if(t.numero){
+      ctx.fillStyle = C.DORADO;
+      ctx.font = `40px ${FB}`;
+      ctx.textAlign = 'left';
+      ctx.fillText(String(t.numero), x1 + 36, ny - 2);
+      ctx.textAlign = 'center';
+      ctx.font = `${fz}px ${FB}`;
+    }
     if(t.capitan){
-      const nw = ctx.measureText(nombre).width;
+      const nw = Math.min(ctx.measureText(nombre).width, maxNameW);
       const bxc = cx + nw/2 + 24, byc = ny - 22;
       ctx.fillStyle = C.DORADO;
       ctx.beginPath(); ctx.arc(bxc, byc, 14, 0, Math.PI*2); ctx.fill();
@@ -24395,11 +24502,11 @@ async function generarImagenAlineacionDesde(id){
   const ligaNom = (identidad.nombre || 'DEPORTEMAS').toUpperCase();
   const rcx = (x2 + W) / 2;
   let ry = H - 250;
-  if(logoLiga){
+  if(logoMarca){
     const lm = 120;
-    const iw = logoLiga.naturalWidth || logoLiga.width || 1, ih = logoLiga.naturalHeight || logoLiga.height || 1;
+    const iw = logoMarca.naturalWidth || logoMarca.width || 1, ih = logoMarca.naturalHeight || logoMarca.height || 1;
     const sc = Math.min(lm/iw, lm/ih);
-    ctx.drawImage(logoLiga, rcx - iw*sc/2, ry + (lm-ih*sc)/2, iw*sc, ih*sc);
+    ctx.drawImage(logoMarca, rcx - iw*sc/2, ry + (lm-ih*sc)/2, iw*sc, ih*sc);
     ry += lm + 40;
   } else {
     ry += 40;
