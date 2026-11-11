@@ -4945,13 +4945,23 @@ table.posiciones td:nth-child(8){
             </select>
           </div>
         </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-group">
+            <label>Horario (opcional)</label>
+            <input type="text" id="alin-hora" placeholder="Ej: 21:00 HS"/>
+          </div>
+          <div class="form-group">
+            <label>Cancha / Sede (opcional)</label>
+            <input type="text" id="alin-sede" placeholder="Ej: Estadio Municipal"/>
+          </div>
+        </div>
         <div class="form-group">
           <label>Director Técnico</label>
           <input type="text" id="alin-dt" placeholder="Nombre del DT"/>
         </div>
 
         <div class="form-group">
-          <label>Foto de fondo (opcional) <span style="color:var(--gris);font-size:10px">— si no cargás una, se usa la foto de la ficha del club</span></label>
+          <label>Foto del panel izquierdo (opcional) <span style="color:var(--gris);font-size:10px">— si no cargás una, se usa la foto de la ficha del club</span></label>
           <div class="upload-area">
             <input type="file" accept="image/*" id="alin-foto-file" onchange="alinPreviewFoto(this)"/>
             <span class="icon">📸</span><p>Hacé clic o arrastrá la foto</p>
@@ -24021,6 +24031,8 @@ function alinLimpiarForm(){
   document.getElementById('alin-rival').value='';
   document.getElementById('alin-fecha').value='';
   document.getElementById('alin-dt').value='';
+  document.getElementById('alin-hora').value='';
+  document.getElementById('alin-sede').value='';
   document.getElementById('alin-formacion').value='4-3-3';
   alinRenderSlots([]);
   document.querySelectorAll('#alin-suplentes-container .alin-sup-num').forEach(e=>e.value='');
@@ -24046,6 +24058,8 @@ function guardarAlineacion(){
     id: _alinEditId || ('alin_'+Date.now()),
     equipo, rival: document.getElementById('alin-rival').value.trim(),
     fecha: document.getElementById('alin-fecha').value.trim(),
+    hora: document.getElementById('alin-hora').value.trim(),
+    sede: document.getElementById('alin-sede').value.trim(),
     formacion, dt, titulares, suplentes
   };
   if(!data.alineaciones) data.alineaciones = [];
@@ -24080,6 +24094,8 @@ function editarAlineacion(id){
   document.getElementById('alin-rival').value = a.rival||'';
   document.getElementById('alin-fecha').value = a.fecha||'';
   document.getElementById('alin-dt').value = a.dt||'';
+  document.getElementById('alin-hora').value = a.hora||'';
+  document.getElementById('alin-sede').value = a.sede||'';
   document.getElementById('alin-formacion').value = a.formacion||'4-3-3';
   alinRenderSlots(a.titulares||[]);
   const supNumInputs = document.querySelectorAll('#alin-suplentes-container .alin-sup-num');
@@ -24133,210 +24149,273 @@ async function generarImagenAlineacionDesde(id){
   if(!a) return null;
   await document.fonts.ready;
   const identidad = getIdentidad();
-  const W = CV_W;
+  const W = CV_W, H = CV_H;
 
   const canvas = document.createElement('canvas');
-  canvas.width = W; canvas.height = CV_H;
+  canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
   ctx.textBaseline = 'alphabetic';
 
-  ctx.fillStyle = '#141414';
-  ctx.fillRect(0,0,W,CV_H);
+  // Tres paneles verticales: foto | información + once | ambiente de estadio
+  const x1 = 270;            // borde foto / panel central
+  const x2 = 812;            // borde panel central / panel derecho
+  const cx = (x1 + x2) / 2;  // centro del panel central
+  const FB = '"Bebas Neue", "Rajdhani", Arial, sans-serif';
+  const FR = '"Rajdhani", Arial, sans-serif';
 
-  const colW = s(280);
-  const contentTop = 0;
-  const contentH = CV_H;
-  const cutInset = s(50); // cuánto se cierra el corte diagonal hacia la izquierda en la base
+  // ── Fondo base ──
+  ctx.fillStyle = '#0b0c10';
+  ctx.fillRect(0, 0, W, H);
 
-  // ── Panel de foto con corte diagonal a la izquierda ──
+  // ── Panel derecho: cielo de estadio nocturno con torre de reflectores ──
   ctx.save();
+  ctx.beginPath(); ctx.rect(x2, 0, W - x2, H); ctx.clip();
+  const sky = ctx.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, '#1d2638');
+  sky.addColorStop(0.45, '#3b3f4d');
+  sky.addColorStop(0.75, '#6a5c4c');
+  sky.addColorStop(1, '#15151a');
+  ctx.fillStyle = sky;
+  ctx.fillRect(x2, 0, W - x2, H);
+  // nubes suaves (elipses con degradé radial)
+  const nube = (px, py, rx, ry, col, al)=>{
+    ctx.save();
+    ctx.translate(px, py); ctx.scale(1, ry/rx);
+    const g = ctx.createRadialGradient(0,0,0,0,0,rx);
+    g.addColorStop(0, col.replace('A', al));
+    g.addColorStop(1, col.replace('A', 0));
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(0,0,rx,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  };
+  nube(x2+150, 640, 190, 70, 'rgba(236,214,176,A)', .55);
+  nube(x2+90,  760, 170, 60, 'rgba(236,200,150,A)', .45);
+  nube(x2+220, 900, 200, 80, 'rgba(210,186,150,A)', .40);
+  nube(x2+120, 1010, 180, 60, 'rgba(180,160,140,A)', .35);
+  nube(x2+200, 480, 160, 50, 'rgba(160,175,205,A)', .30);
+  // torre de reflectores (silueta inclinada, arriba a la izquierda del panel)
+  ctx.fillStyle = '#07080c';
   ctx.beginPath();
-  ctx.moveTo(0, contentTop);
-  ctx.lineTo(colW, contentTop);
-  ctx.lineTo(colW-cutInset, contentTop+contentH);
-  ctx.lineTo(0, contentTop+contentH);
-  ctx.closePath();
-  ctx.clip();
+  ctx.moveTo(x2, 130); ctx.lineTo(x2+190, 330); ctx.lineTo(x2+245, 560);
+  ctx.lineTo(x2+200, 575); ctx.lineTo(x2, 300); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,.9)'; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.moveTo(x2, 120); ctx.lineTo(x2+70, 40); ctx.stroke();
+  // focos con resplandor
+  [[x2+40, 270],[x2+105, 335],[x2+170, 400],[x2+225, 520],[x2+185, 470]].forEach(([fx,fy])=>{
+    const g = ctx.createRadialGradient(fx, fy, 0, fx, fy, 34);
+    g.addColorStop(0, 'rgba(255,255,255,.95)');
+    g.addColorStop(.25, 'rgba(255,245,220,.55)');
+    g.addColorStop(1, 'rgba(255,240,200,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(fx, fy, 34, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(fx-8, fy-3, 16, 6);
+  });
+  // viñeta inferior para que lean los logos
+  const vg = ctx.createLinearGradient(0, H*0.7, 0, H);
+  vg.addColorStop(0, 'rgba(8,8,12,0)'); vg.addColorStop(1, 'rgba(8,8,12,.75)');
+  ctx.fillStyle = vg; ctx.fillRect(x2, H*0.7, W-x2, H*0.3);
+  ctx.restore();
 
-  const fotoGrad = ctx.createLinearGradient(0,0,0,CV_H);
-  fotoGrad.addColorStop(0,'#3a3a40'); fotoGrad.addColorStop(1,'#151518');
-  ctx.fillStyle = fotoGrad;
-  ctx.fillRect(0,0,colW,CV_H);
+  // ── Panel izquierdo: foto ──
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0, 0, x1, H); ctx.clip();
+  const fg = ctx.createLinearGradient(0, 0, 0, H);
+  fg.addColorStop(0, '#2a2c33'); fg.addColorStop(1, '#121317');
+  ctx.fillStyle = fg; ctx.fillRect(0, 0, x1, H);
 
   const fotoSrc = (window._alinFotosCache && window._alinFotosCache[a.id])
     || (window._clubFotosCache && window._clubFotosCache[normalizar(a.equipo)])
     || '';
-  if(fotoSrc){
-    await new Promise(res=>{
-      const img = new Image();
-      img.onload = ()=>{
-        const iw = img.naturalWidth, ih = img.naturalHeight;
-        const scale = Math.max(colW/iw, CV_H/ih);
-        const dw = iw*scale, dh = ih*scale;
-        const dx = (colW-dw)/2, dy = (CV_H-dh)/2;
-        ctx.drawImage(img, dx, dy, dw, dh);
-        res();
-      };
-      img.onerror = ()=>res();
-      img.src = fotoSrc;
-    });
+  const fotoImg = await cargarImagenAsync(fotoSrc);
+  if(fotoImg){
+    const iw = fotoImg.naturalWidth || fotoImg.width, ih = fotoImg.naturalHeight || fotoImg.height;
+    const sc = Math.max(x1/iw, H/ih);
+    const dw = iw*sc, dh = ih*sc;
+    // si la foto es más alta que el panel, se alinea arriba (para no cortar caras)
+    ctx.drawImage(fotoImg, (x1-dw)/2, dh > H ? 0 : (H-dh)/2, dw, dh);
   } else {
-    ctx.fillStyle = 'rgba(255,255,255,.13)';
-    ctx.font = `${s(120)}px "Rajdhani", Arial, sans-serif`;
-    ctx.textAlign='center';
-    ctx.fillText('⚽', colW*0.4, CV_H*0.7);
+    ctx.globalAlpha = .28;
+    await cvDrawEscudoCompleto(ctx, a.equipo, 25, H/2-110, 220);
+    ctx.globalAlpha = 1;
   }
+  // sombra suave hacia el borde derecho y hacia abajo
+  const fs = ctx.createLinearGradient(x1-90, 0, x1, 0);
+  fs.addColorStop(0, 'rgba(10,11,15,0)'); fs.addColorStop(1, 'rgba(10,11,15,.55)');
+  ctx.fillStyle = fs; ctx.fillRect(x1-90, 0, 90, H);
+  const fb = ctx.createLinearGradient(0, H*0.78, 0, H);
+  fb.addColorStop(0, 'rgba(10,11,15,0)'); fb.addColorStop(1, 'rgba(10,11,15,.7)');
+  ctx.fillStyle = fb; ctx.fillRect(0, H*0.78, x1, H*0.22);
+  // grilla fina (detalle editorial)
+  ctx.strokeStyle = 'rgba(255,255,255,.10)'; ctx.lineWidth = 1;
+  [90, 180].forEach(gx=>{ ctx.beginPath(); ctx.moveTo(gx,0); ctx.lineTo(gx,H); ctx.stroke(); });
+  [270, 540, 810, 1080].forEach(gy=>{ ctx.beginPath(); ctx.moveTo(0,gy); ctx.lineTo(x1,gy); ctx.stroke(); });
   ctx.restore();
 
-  // Costura dorada con resplandor sobre el borde diagonal
+  // ── Panel central: "vidrio" oscuro ──
   ctx.save();
-  ctx.shadowColor = 'rgba(233,201,106,.85)';
-  ctx.shadowBlur = s(9);
-  ctx.strokeStyle = 'rgba(233,201,106,.75)';
-  ctx.lineWidth = s(1.5);
-  ctx.beginPath();
-  ctx.moveTo(colW, contentTop);
-  ctx.lineTo(colW-cutInset, contentTop+contentH);
-  ctx.stroke();
+  ctx.beginPath(); ctx.rect(x1, 0, x2-x1, H); ctx.clip();
+  const pg = ctx.createLinearGradient(0, 0, 0, H);
+  pg.addColorStop(0, '#0a0d16'); pg.addColorStop(.5, '#1b1e28'); pg.addColorStop(1, '#0c0d12');
+  ctx.fillStyle = pg; ctx.fillRect(x1, 0, x2-x1, H);
+  // manchas de luz difusas
+  const mancha = (px, py, r, al)=>{
+    const g = ctx.createRadialGradient(px,py,0,px,py,r);
+    g.addColorStop(0, `rgba(190,200,225,${al})`); g.addColorStop(1, 'rgba(190,200,225,0)');
+    ctx.fillStyle = g; ctx.fillRect(px-r, py-r, r*2, r*2);
+  };
+  mancha(x1+90, 720, 300, .20);
+  mancha(x2-40, 980, 260, .12);
+  mancha(cx, 60, 280, .10);
   ctx.restore();
 
-  // Fecha, arriba a la izquierda sobre la foto: texto simple + línea dorada fina debajo
-  if(a.fecha){
-    ctx.save();
-    const scrimGrad = ctx.createRadialGradient(0,0,0,0,0,s(230));
-    scrimGrad.addColorStop(0, 'rgba(0,0,0,.6)');
-    scrimGrad.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = scrimGrad;
-    ctx.fillRect(0, 0, s(230), s(110));
+  // costuras finas entre paneles
+  ctx.strokeStyle = 'rgba(255,255,255,.14)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(x1+.5, 0); ctx.lineTo(x1+.5, H); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x2+.5, 0); ctx.lineTo(x2+.5, H); ctx.stroke();
 
-    ctx.textAlign='left';
-    ctx.shadowColor = 'rgba(0,0,0,.85)';
-    ctx.shadowBlur = s(6);
-    ctx.fillStyle = C.BLANCO;
-    ctx.font = `800 ${s(19)}px "Rajdhani", Arial, sans-serif`;
-    ctx.fillText(a.fecha.toUpperCase(), s(20), s(38));
-    const anchoTexto = ctx.measureText(a.fecha.toUpperCase()).width;
-    ctx.shadowColor = 'transparent';
-    ctx.strokeStyle = C.DORADO;
-    ctx.lineWidth = s(2);
-    ctx.beginPath();
-    ctx.moveTo(s(20), s(46));
-    ctx.lineTo(s(20)+Math.min(anchoTexto, s(64)), s(46));
-    ctx.stroke();
-    ctx.restore();
-  }
+  // cruces "+" decorativas
+  const plus = (px, py, r, al)=>{
+    ctx.strokeStyle = `rgba(255,255,255,${al})`; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(px-r,py); ctx.lineTo(px+r,py); ctx.moveTo(px,py-r); ctx.lineTo(px,py+r); ctx.stroke();
+  };
+  [[x1-0, 90],[x1, 270],[x2, 90],[x2, 270],[x2+95, 40],[x2+200, 240],[x1+205, 540],[x1+205, 1040]].forEach(([px,py])=>plus(px, py, 7, .35));
 
-  // ── Haz de luz diagonal muy sutil, detrás de todo el panel derecho ──
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(colW, 0, W-colW, CV_H);
-  ctx.clip();
-  ctx.translate(colW+s(90), 0);
-  ctx.rotate(20*Math.PI/180);
-  const beamGrad = ctx.createLinearGradient(0, -CV_H*0.3, 0, CV_H*0.9);
-  beamGrad.addColorStop(0, 'rgba(255,255,255,.07)');
-  beamGrad.addColorStop(1, 'rgba(255,255,255,0)');
-  ctx.fillStyle = beamGrad;
-  ctx.fillRect(-s(45), -CV_H*0.3, s(90), CV_H*1.3);
-  ctx.restore();
-
-  // ── Escudos: propio y rival, en cápsula de "vidrio esmerilado" arriba a la derecha ──
-  const escSize = s(46);
-  const escY = s(26);
-  const escPad = s(9);
-  const escX_der = W-s(24)-escSize;                    // rival (o el propio, si no hay rival)
-  const escX_izq = W-s(24)-escSize*2-s(10);             // propio, cuando hay rival
-
-  const capLeft = (a.rival ? escX_izq : escX_der) - escPad;
-  const capRight = escX_der + escSize + escPad;
-  const capTop = escY - escPad;
-  const capH = escSize + escPad*2;
-  const capBottom = capTop + capH;
-
-  ctx.fillStyle = 'rgba(10,10,10,.45)';
-  cvRoundRect(ctx, capLeft, capTop, capRight-capLeft, capH, capH/2);
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(201,162,39,.4)';
-  ctx.lineWidth = 1;
-  cvRoundRect(ctx, capLeft, capTop, capRight-capLeft, capH, capH/2);
-  ctx.stroke();
-
-  if(a.rival){
-    const dividerX = escX_izq + escSize + s(5);
-    ctx.strokeStyle = 'rgba(201,162,39,.4)';
-    ctx.beginPath();
-    ctx.moveTo(dividerX, capTop+s(8));
-    ctx.lineTo(dividerX, capTop+capH-s(8));
-    ctx.stroke();
-    await cvDrawEscudo(ctx, a.rival, escX_der, escY, escSize);
-    await cvDrawEscudo(ctx, a.equipo, escX_izq, escY, escSize);
-  } else {
-    await cvDrawEscudo(ctx, a.equipo, escX_der, escY, escSize);
-  }
-
-  // ── Lista de titulares: nombre y número alineados en columnas, estilo grilla ──
-  const listX = colW + s(18);
-  const listW = W - listX - s(24);
-  const numColW = s(50);
-  const nameColRight = listX + listW - numColW - s(14);
-  const numColRight = listX + listW;
-  let ly = capBottom + s(45);
-  const rowH = s(46);
-
-  (a.titulares||[]).slice(0,11).forEach(t=>{
-    ctx.textAlign='right';
-    ctx.font = `800 ${s(29)}px "Rajdhani", Arial, sans-serif`;
-    ctx.fillStyle = C.BLANCO;
-    const nombre = (t.nombre||'').toUpperCase();
-    cvFillTextTrunc(ctx, nombre, nameColRight, ly, nameColRight-listX-(t.capitan?s(34):0));
-    if(t.capitan){
-      const nombreW = Math.min(ctx.measureText(nombre).width, nameColRight-listX-s(34));
-      ctx.fillStyle = C.DORADO;
-      ctx.fillText('©', nameColRight-nombreW-s(12), ly);
+  // ── Cabecera: escudos en cuadros (propio | liga | rival) ──
+  const box = 88, boxY = 150, gap = 26;
+  const logoLiga = await cargarImagenAsync(identidad.logo || '');
+  const dibujarCaja = async (bx, nombre)=>{
+    ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 1.5;
+    ctx.strokeRect(bx+.75, boxY+.75, box-1.5, box-1.5);
+    await cvDrawEscudoCompleto(ctx, nombre, bx+11, boxY+11, box-22);
+  };
+  const dibujarCentroLiga = ()=>{
+    const m = 62;
+    const mx = cx - m/2, my = boxY + (box-m)/2;
+    if(logoLiga){
+      const iw = logoLiga.naturalWidth || logoLiga.width || 1, ih = logoLiga.naturalHeight || logoLiga.height || 1;
+      const sc = Math.min(m/iw, m/ih);
+      ctx.drawImage(logoLiga, mx+(m-iw*sc)/2, my+(m-ih*sc)/2, iw*sc, ih*sc);
+    } else {
+      ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
+      ctx.font = `38px ${FB}`;
+      ctx.fillText('VS', cx, boxY + box/2 + 13);
     }
+  };
+  if(a.rival){
+    await dibujarCaja(cx - 62/2 - gap - box, a.equipo);
+    dibujarCentroLiga();
+    await dibujarCaja(cx + 62/2 + gap, a.rival);
+  } else {
+    await dibujarCaja(cx - box/2, a.equipo);
+  }
 
-    ctx.fillStyle = C.DORADO;
-    ctx.font = `700 ${s(24)}px "Rajdhani", Arial, sans-serif`;
-    ctx.fillText(t.numero||'', numColRight, ly);
+  // ── Fecha / horario / sede ──
+  ctx.textAlign = 'center';
+  const linea1 = [a.fecha, a.hora].filter(Boolean).map(t=>String(t).toUpperCase()).join('  //  ');
+  let yInfo = 290;
+  ctx.fillStyle = '#fff';
+  ctx.font = `700 27px ${FR}`;
+  if(linea1){ cvFillTextTrunc(ctx, linea1, cx, yInfo, x2-x1-50); yInfo += 31; }
+  if(a.sede){
+    ctx.fillStyle = 'rgba(255,255,255,.82)';
+    ctx.font = `500 27px ${FR}`;
+    cvFillTextTrunc(ctx, String(a.sede).toUpperCase(), cx, yInfo, x2-x1-50);
+    yInfo += 31;
+  }
 
-    ctx.strokeStyle = 'rgba(255,255,255,.08)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(listX, ly+s(11));
-    ctx.lineTo(listX+listW, ly+s(11));
-    ctx.stroke();
-
-    ly += rowH;
+  // ── Once titular: nombres grandes centrados ──
+  const tit = (a.titulares||[]).slice(0,11);
+  const rowH = 66;
+  let ny = 416;
+  const maxNameW = x2 - x1 - 120;
+  tit.forEach(t=>{
+    const nombre = (t.nombre||'').toUpperCase();
+    let fz = 64;
+    ctx.font = `${fz}px ${FB}`;
+    while(ctx.measureText(nombre).width > maxNameW && fz > 38){ fz -= 2; ctx.font = `${fz}px ${FB}`; }
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'center';
+    ctx.fillText(nombre, cx, ny);
+    if(t.capitan){
+      const nw = ctx.measureText(nombre).width;
+      const bxc = cx + nw/2 + 24, byc = ny - 22;
+      ctx.fillStyle = C.DORADO;
+      ctx.beginPath(); ctx.arc(bxc, byc, 14, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#0b0c10';
+      ctx.font = `700 19px ${FR}`;
+      ctx.fillText('C', bxc, byc + 6.5);
+    }
+    ny += rowH;
   });
 
   // ── Suplentes ──
-  ctx.textAlign='left';
-  ly += s(18);
-  ctx.fillStyle = 'rgba(255,255,255,.4)';
-  ctx.font = `italic ${s(19)}px "DM Sans", Arial, sans-serif`;
-  ctx.fillText('Suplentes', listX, ly);
-  ly += s(28);
-  ctx.fillStyle = 'rgba(255,255,255,.85)';
-  ctx.font = `700 ${s(20)}px "DM Sans", Arial, sans-serif`;
-  const supTxt = (a.suplentes||[]).map(sp=>(sp.nombre||'').toUpperCase()).join(', ');
-  cvWrapTexto(ctx, supTxt, listX, ly, listW, s(29), 3);
+  const sup = (a.suplentes||[]).map(sp=>(sp.nombre||'').trim().toUpperCase()).filter(Boolean);
+  let sy = ny + 38;
+  if(sup.length){
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#fff';
+    ctx.font = `700 24px ${FR}`;
+    ctx.fillText('SUPLENTES', cx, sy);
+    sy += 33;
+    ctx.fillStyle = 'rgba(255,255,255,.9)';
+    ctx.font = `500 23px ${FR}`;
+    const sepTxt = '  \u2022  ';
+    const maxW = x2 - x1 - 40;
+    const lineas = []; let cur = '';
+    sup.forEach(n=>{
+      const test = cur ? cur + sepTxt + n : n;
+      if(ctx.measureText(test).width > maxW && cur){ lineas.push(cur); cur = n; } else cur = test;
+    });
+    if(cur) lineas.push(cur);
+    lineas.slice(0,4).forEach(l=>{ ctx.fillText(l, cx, sy); sy += 29; });
+  }
 
-  // DT, más visible al pie de la columna derecha
-  ctx.textAlign='left';
-  ctx.fillStyle = C.DORADO;
-  ctx.font = `700 ${s(15)}px "DM Sans", Arial, sans-serif`;
-  ctx.fillText('DT', listX, CV_H-s(20));
-  const dtLabelW = ctx.measureText('DT').width;
-  ctx.fillStyle = C.BLANCO;
-  ctx.font = `700 ${s(24)}px "Rajdhani", Arial, sans-serif`;
-  cvFillTextTrunc(ctx, a.dt||'—', listX+dtLabelW+s(10), CV_H-s(18), listW-dtLabelW-s(10)-s(95));
+  // ── DT ──
+  if(a.dt){
+    sy += 22;
+    ctx.textAlign = 'center';
+    const lab = 'DT', nom = String(a.dt).toUpperCase();
+    ctx.font = `700 20px ${FR}`; const lw = ctx.measureText(lab).width;
+    ctx.font = `600 25px ${FR}`; const nw2 = Math.min(ctx.measureText(nom).width, x2-x1-110);
+    const tx = cx - (lw + 12 + nw2)/2;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = C.DORADO; ctx.font = `700 20px ${FR}`; ctx.fillText(lab, tx, sy);
+    ctx.fillStyle = '#fff'; ctx.font = `600 25px ${FR}`;
+    cvFillTextTrunc(ctx, nom, tx + lw + 12, sy, x2-x1-110);
+  }
 
-  ctx.textAlign='right';
-  ctx.fillStyle = 'rgba(255,255,255,.3)';
-  ctx.font = `500 ${s(10)}px "DM Sans", Arial, sans-serif`;
-  ctx.fillText((identidad.nombre||'DEPORTEMAS').toUpperCase(), listX+listW, CV_H-s(20));
+  // ── Pie del panel central ──
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(255,255,255,.32)';
+  ctx.font = `600 15px ${FR}`;
+  ctx.fillText('deportemas.pages.dev', cx, H - 26);
 
-  ctx.textAlign='left';
+  // ── Panel derecho: logo + nombre de la liga ──
+  const ligaNom = (identidad.nombre || 'DEPORTEMAS').toUpperCase();
+  const rcx = (x2 + W) / 2;
+  let ry = H - 250;
+  if(logoLiga){
+    const lm = 120;
+    const iw = logoLiga.naturalWidth || logoLiga.width || 1, ih = logoLiga.naturalHeight || logoLiga.height || 1;
+    const sc = Math.min(lm/iw, lm/ih);
+    ctx.drawImage(logoLiga, rcx - iw*sc/2, ry + (lm-ih*sc)/2, iw*sc, ih*sc);
+    ry += lm + 40;
+  } else {
+    ry += 40;
+  }
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#fff';
+  let lf = 38; ctx.font = `${lf}px ${FB}`;
+  while(ctx.measureText(ligaNom).width > (W-x2-30) && lf > 20){ lf -= 2; ctx.font = `${lf}px ${FB}`; }
+  ctx.fillText(ligaNom, rcx, ry);
+  if(identidad.subtitulo){
+    ctx.fillStyle = 'rgba(255,255,255,.7)';
+    ctx.font = `500 18px ${FR}`;
+    cvFillTextTrunc(ctx, String(identidad.subtitulo).toUpperCase(), rcx, ry + 26, W-x2-30);
+  }
+
+  ctx.textAlign = 'left';
   return canvas;
 }
 
