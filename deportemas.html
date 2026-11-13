@@ -4960,6 +4960,7 @@ table.posiciones td:nth-child(8){
           <input type="text" id="alin-dt" placeholder="Nombre del DT"/>
         </div>
 
+        <details style="margin:4px 0 14px"><summary style="cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:12px;letter-spacing:1px;color:var(--gris)">🔠 TAMAÑO DE CADA TEXTO</summary><div id="txt-alin" class="form-row" style="flex-wrap:wrap;margin-top:10px"></div></details>
         <div class="form-group">
           <label>Logo del torneo (va entre los dos escudos)</label>
           <select id="alin-torneo"></select>
@@ -5295,6 +5296,17 @@ table.posiciones td:nth-child(8){
               <input type="range" id="promo-md-py" min="0" max="100" value="0" style="width:100%"/>
             </div>
           </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Alto del texto grande: <span id="promo-md-alto-val">100</span>%</label>
+              <input type="range" id="promo-md-alto" min="50" max="150" value="100" style="width:100%" oninput="document.getElementById('promo-md-alto-val').textContent=this.value"/>
+            </div>
+            <div class="form-group">
+              <label>Ancho del texto grande: <span id="promo-md-ancho-val">100</span>%</label>
+              <input type="range" id="promo-md-ancho" min="50" max="130" value="100" style="width:100%" oninput="document.getElementById('promo-md-ancho-val').textContent=this.value"/>
+            </div>
+          </div>
+          <details style="margin:4px 0 14px"><summary style="cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:12px;letter-spacing:1px;color:var(--gris)">🔠 TAMAÑO DE CADA TEXTO</summary><div id="txt-md" class="form-row" style="flex-wrap:wrap;margin-top:10px"></div></details>
           <div class="form-group md-solo">
             <label>Jugador recortado (PNG sin fondo, opcional)</label>
             <input type="file" accept="image/png,image/webp" id="promo-md-recorte-file" onchange="promoRecorteCargar(this)"/>
@@ -5558,6 +5570,14 @@ table.posiciones td:nth-child(8){
           <div class="form-group"><label>Texto gigante abajo (opcional)</label>
             <input type="text" id="promo6-giga" maxlength="20" placeholder="Ej: INVICTO, GOLEADOR, FIGURA (vacío = sin texto)"/>
           </div>
+          <div class="form-row">
+            <div class="form-group"><label style="font-size:10px">Alto del texto gigante: <span id="promo6-alto-val">100</span>%</label>
+              <input type="range" id="promo6-alto" min="40" max="160" value="100" oninput="document.getElementById('promo6-alto-val').textContent=this.value"/></div>
+            <div class="form-group"><label style="font-size:10px">Ancho del texto gigante: <span id="promo6-ancho-val">100</span>%</label>
+              <input type="range" id="promo6-ancho" min="40" max="104" value="100" oninput="document.getElementById('promo6-ancho-val').textContent=this.value"/></div>
+          </div>
+          <details style="margin:4px 0 14px"><summary style="cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:12px;letter-spacing:1px;color:var(--gris)">🔠 TAMAÑO DE CADA TEXTO</summary><div id="txt-jug" class="form-row" style="flex-wrap:wrap;margin-top:10px"></div></details>
+
           <div class="form-row">
             <div class="form-group"><label>Estadísticas: lado</label>
               <select id="promo6-pos">
@@ -16492,6 +16512,8 @@ function promoJugadorLimpiar(){
   const z=document.getElementById('promo6-zoom'), x=document.getElementById('promo6-px'), y=document.getElementById('promo6-py');
   if(z) z.value='100'; if(x) x.value='50'; if(y) y.value='25';
   const g6=document.getElementById('promo6-giga'); if(g6) g6.value='';
+  txtPoner('txt-jug', TXT_JUG, {});
+  [['promo6-alto','100'],['promo6-ancho','100']].forEach(([i,v])=>{ const r=document.getElementById(i), l=document.getElementById(i+'-val'); if(r) r.value=v; if(l) l.textContent=v; });
   const ps=document.getElementById('promo6-pos'); if(ps) ps.value='izq';
   const py2=document.getElementById('promo6-posy'); if(py2) py2.value='arriba';
   const es=document.getElementById('promo6-escudo'); if(es) es.checked=false;
@@ -16527,6 +16549,8 @@ function promoGenerarJugador(){
     sub: (val('promo6-sub')||'ESTADÍSTICAS DE LA TEMPORADA').toUpperCase(),
     stats, foto: _promoFoto||'',
     giga: val('promo6-giga').toUpperCase(),
+    txt: txtLeer('txt-jug', TXT_JUG),
+    gigaAlto: num('promo6-alto',100)/100, gigaAncho: num('promo6-ancho',100)/100,
     pos: val('promo6-pos')==='der' ? 'der' : 'izq',
     posy: ['centro','abajo'].includes(val('promo6-posy')) ? val('promo6-posy') : 'arriba',
     escudo: !!(document.getElementById('promo6-escudo')||{}).checked,
@@ -16592,6 +16616,9 @@ function promoGenerar(){
     const nv = (idc, def) => { const el = document.getElementById(idc); const n = el ? Number(el.value) : NaN; return isNaN(n) ? def : n; };
     p.mdZoom = nv('promo-md-zoom', 100) / 100;
     p.mdPy = nv('promo-md-py', 0) / 100;
+    p.mdAlto = nv('promo-md-alto', 100) / 100;
+    p.txt = txtLeer('txt-md', TXT_MD);
+    p.mdAncho = nv('promo-md-ancho', 100) / 100;
     p.mdRecorte = _promoRecorte || '';
     p.mdRecorteTam = nv('promo-md-rtam', 46) / 100;
     p.mdRx = nv('promo-md-rx', 50) / 100;
@@ -18004,7 +18031,7 @@ async function generarImagenPromoJugador(p){
   // ── Título centrado arriba: "NOMBRE · ESTADÍSTICAS DE LA TEMPORADA" ──
   {
     const txt = (p.nombre + '  ·  ' + p.sub).toUpperCase();
-    let fs = 21, ls = 6;
+    let fs = Math.round(21*tk(p,'enc')), ls = 6;
     ctx.font = `500 ${fs}px ${FR}`; setLS(ls + 'px');
     while(fs > 12 && ctx.measureText(txt).width > 780){
       fs--; ls = Math.max(3, ls - 0.25);
@@ -18033,8 +18060,10 @@ async function generarImagenPromoJugador(p){
     ctx.font = `400 100px ${FB}`; setLS('0px');
     const w100 = ctx.measureText(gt).width || 1;
     const gfs = Math.min(460, Math.floor(100 * maxGW / w100));
+    const gSY = Math.max(0.3, Math.min(1.8, p.gigaAlto || 1));    // escala vertical (alto)
+    const gSX = Math.max(0.3, Math.min(1.04, p.gigaAncho || 1)); // escala horizontal (ancho)
     const gBase = H - 44;
-    const gCap = (ctx.measureText('H').actualBoundingBoxAscent || 70) * gfs / 100;
+    const gCap = (ctx.measureText('H').actualBoundingBoxAscent || 70) * gfs / 100 * gSY;
     gigaTop = gBase - gCap;
     // sombra inferior leve para que el blanco se lea sobre cualquier foto
     const gB = ctx.createLinearGradient(0, gigaTop - 120, 0, H);
@@ -18043,7 +18072,9 @@ async function generarImagenPromoJugador(p){
     ctx.font = `400 ${gfs}px ${FB}`; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
     ctx.fillStyle = '#ffffff';
     ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 18;
-    ctx.fillText(gt, CX, gBase);
+    ctx.save(); ctx.translate(CX, gBase); ctx.scale(gSX, gSY);
+    ctx.fillText(gt, 0, 0);
+    ctx.restore();
     ctx.shadowBlur = 0;
   }
 
@@ -18087,7 +18118,7 @@ async function generarImagenPromoJugador(p){
 
     // Número grande, blanco, condensado
     ctx.textAlign = 'center';
-    let ns = 158;
+    let ns = Math.round(158*tk(p,'num'));
     ctx.font = `400 ${ns}px ${FB}`; setLS('0px');
     while(ns > 48 && ctx.measureText(st.valor).width > bw - 36){ ns -= 4; ctx.font = `400 ${ns}px ${FB}`; }
     ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.lineJoin = 'round';
@@ -18097,7 +18128,7 @@ async function generarImagenPromoJugador(p){
 
     // Etiqueta chica con mucho espaciado de letras, blanca
     if(st.etiqueta){
-      let fs = 20, ls = 5;
+      let fs = Math.round(20*tk(p,'eti')), ls = 5;
       ctx.font = `500 ${fs}px ${FR}`; setLS(ls + 'px');
       while(fs > 12 && ctx.measureText(st.etiqueta).width > bw - 28){
         fs--; ls = Math.max(2, ls - 0.35);
@@ -18688,12 +18719,42 @@ async function generarImagenPromocionalTabla(p){
    normal, sin rayos ni efectos — mockup a pedido de Gustavo.
    ══════════════════════════════════════════════════════════════ */
 
+// ── Tamaño de cada texto (sliders reutilizables) ─────────────────
+//   items: [clave, etiqueta, clase, mín%, máx%]
+const TXT_MD  = [['equipos','Nombres de los equipos','md-solo',60,150],['sub','Torneo · sede','af-solo',60,150],['datos','Línea de datos (fecha y hora)','',60,150],['marca','Marca "Presentado por"','',60,150]];
+const TXT_JUG = [['enc','Encabezado (nombre · estadísticas)','',60,160],['num','Números de las cajas','',60,130],['eti','Etiquetas de las cajas','',60,150]];
+const TXT_ALIN = [['nombres','Nombres del once','',70,115],['numeros','Números','',60,130],['info','Fecha, horario y sede','',60,140],['supl','Suplentes','',60,130],['dt','DT','',60,140]];
+function txtInit(cont, items){
+  const el = document.getElementById(cont); if(!el) return;
+  el.innerHTML = items.map(([k,l,cls,mn,mx]) =>
+    '<div class="form-group ' + (cls||'') + '"><label style="font-size:10px">' + l + ': <span id="' + cont + '-' + k + '-v">100</span>%</label>' +
+    '<input type="range" id="' + cont + '-' + k + '" min="' + mn + '" max="' + mx + '" value="100" style="width:100%" ' +
+    'oninput="document.getElementById(\'' + cont + '-' + k + '-v\').textContent=this.value"/></div>').join('');
+}
+function txtLeer(cont, items){
+  const o = {};
+  items.forEach(([k]) => { const e = document.getElementById(cont + '-' + k); o[k] = e ? Number(e.value) / 100 : 1; });
+  return o;
+}
+function txtPoner(cont, items, o){
+  items.forEach(([k]) => {
+    const e = document.getElementById(cont + '-' + k), v = document.getElementById(cont + '-' + k + '-v');
+    const val = Math.round(((o && o[k]) || 1) * 100);
+    if(e) e.value = val; if(v) v.textContent = val;
+  });
+}
+// Factor de tamaño de un texto (1 = normal)
+function tk(p, k){ const v = p && p.txt && p.txt[k]; return (typeof v === 'number' && v > 0.2 && v < 3) ? v : 1; }
+function txtInitTodos(){ txtInit('txt-md', TXT_MD); txtInit('txt-jug', TXT_JUG); txtInit('txt-alin', TXT_ALIN); }
+if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', txtInitTodos); else txtInitTodos();
+
 function promoEstiloCambiar(){
   const e = document.getElementById('promo-estilo');
   const o = document.getElementById('promo-md-opts');
   const est = e ? e.value : '';
   if(o) o.style.display = (est === 'matchday' || est === 'afiche') ? '' : 'none';
   document.querySelectorAll('#promo-md-opts .md-solo').forEach(el => { el.style.display = (est === 'matchday') ? '' : 'none'; });
+  document.querySelectorAll('#promo-md-opts .af-solo').forEach(el => { el.style.display = (est === 'afiche') ? '' : 'none'; });
 }
 
 // Diseño "Día de partido": foto que se funde hacia un color de fondo, escudos en
@@ -18717,6 +18778,7 @@ async function generarImagenPromocionalMatchday(p){
   const col = /^#[0-9a-fA-F]{6}$/.test(p.mdColor || '') ? p.mdColor : '#0f2a1e';
   const cr = parseInt(col.slice(1,3),16), cg = parseInt(col.slice(3,5),16), cb = parseInt(col.slice(5,7),16);
   const rgba = (a) => 'rgba(' + cr + ',' + cg + ',' + cb + ',' + a + ')';
+  const kM = tk(p,'marca'), kS = tk(p,'sub'), kD = tk(p,'datos'), kE = tk(p,'equipos');
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
@@ -18763,9 +18825,9 @@ async function generarImagenPromocionalMatchday(p){
   ctx.textAlign = 'right'; ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = '#ffffff';
   ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 10;
-  ctx.font = '500 22px ' + SANS; sp(0.5);
+  ctx.font = '500 ' + Math.round(22*kM) + 'px ' + SANS; sp(0.5);
   ctx.fillText('Presentado por', W - 46, 68);
-  ctx.font = '54px "Bebas Neue", Arial, sans-serif'; sp(4);
+  ctx.font = Math.round(54*kM) + 'px "Bebas Neue", Arial, sans-serif'; sp(4);
   ctx.fillText(marca, W - 46, 118);
   ctx.shadowBlur = 0; sp(0);
 
@@ -18778,8 +18840,11 @@ async function generarImagenPromocionalMatchday(p){
   const w0 = Math.max(...lineas.map(t => ctx.measureText(t).width));
   if(w0 > maxTW) fs = Math.floor(fs * maxTW / w0);
   ctx.font = fs + 'px ' + ANTON;
-  const tw = Math.max(...lineas.map(t => ctx.measureText(t).width));
-  const capH = ctx.measureText('H').actualBoundingBoxAscent || fs * 0.72;
+  const tw0 = Math.max(...lineas.map(t => ctx.measureText(t).width));
+  const sy = Math.max(0.3, Math.min(1.6, p.mdAlto || 1));                                   // alto del texto
+  const sx = Math.max(0.3, Math.min(1.4, p.mdAncho || 1, (W - 60) / Math.max(1, tw0)));      // ancho del texto
+  const tw = tw0 * sx;
+  const capH = (ctx.measureText('H').actualBoundingBoxAscent || fs * 0.72) * sy;
   const lineGap = capH * 1.14;
   const baseFinal = Math.round(H * 0.585);               // base del último renglón
   const textLeft = (W - tw) / 2;
@@ -18787,7 +18852,7 @@ async function generarImagenPromocionalMatchday(p){
   // ── Fila de escudos (cuadrados redondeados) pegada arriba del texto ──
   const bs = 100, bgap = 6;
   const topText = baseFinal - capH - (lineas.length - 1) * lineGap;
-  const acento = /[ÁÉÍÓÚÜÑ]/.test(lineas[0]) ? fs * 0.17 : 0;   // deja lugar a las tildes
+  const acento = /[ÁÉÍÓÚÜÑ]/.test(lineas[0]) ? fs * 0.17 * sy : 0;   // deja lugar a las tildes
   const rowY = topText - 26 - acento - bs;
   const colorDe = (img) => {
     try{
@@ -18835,7 +18900,9 @@ async function generarImagenPromocionalMatchday(p){
   ctx.font = fs + 'px ' + ANTON; sp(0);
   lineas.forEach((t, k) => {
     const y = baseFinal - (lineas.length - 1 - k) * lineGap;
-    ctx.fillText(t, W/2, y);
+    ctx.save(); ctx.translate(W/2, y); ctx.scale(sx, sy);
+    ctx.fillText(t, 0, 0);
+    ctx.restore();
   });
 
   // ── Jugador recortado (PNG): va adelante del texto gigante, abajo y al centro ──
@@ -18863,7 +18930,7 @@ async function generarImagenPromocionalMatchday(p){
   // ── Nombres de los equipos debajo del texto gigante ──
   const nL = String(p.local || '').toUpperCase(), nV = String(p.visit || '').toUpperCase();
   if(nL || nV){
-    let fn = 58;
+    let fn = Math.round(58*kE);
     const gapN = 34;
     const medirN = () => {
       ctx.font = fn + 'px ' + ANTON; sp(2);
@@ -18903,7 +18970,7 @@ async function generarImagenPromocionalMatchday(p){
   ].map(t => String(t || '').trim().toUpperCase()).filter(Boolean);
   const infoY = H - 62;
   if(segs.length){
-    let f = 28, gapS = 30, sq = 11, total = 0, widths = [];
+    let f = Math.round(28*kD), gapS = 30, sq = Math.max(7, Math.round(11*kD)), total = 0, widths = [];
     const medir = () => {
       ctx.font = '700 ' + f + 'px ' + SANS; sp(1.2);
       widths = segs.map(t => ctx.measureText(t).width);
@@ -18958,6 +19025,7 @@ async function generarImagenPromocionalAfiche(p){
   const col = /^#[0-9a-fA-F]{6}$/.test(p.mdColor || '') ? p.mdColor : '#0f2a1e';
   const cr = parseInt(col.slice(1,3),16), cg = parseInt(col.slice(3,5),16), cb = parseInt(col.slice(5,7),16);
   const rgba = (a) => 'rgba(' + cr + ',' + cg + ',' + cb + ',' + a + ')';
+  const kM = tk(p,'marca'), kS = tk(p,'sub'), kD = tk(p,'datos'), kE = tk(p,'equipos');
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
@@ -19003,16 +19071,16 @@ async function generarImagenPromocionalAfiche(p){
   ctx.textAlign = 'right'; ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = '#ffffff';
   ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 10;
-  ctx.font = '500 22px ' + SANS; sp(0.5);
+  ctx.font = '500 ' + Math.round(22*kM) + 'px ' + SANS; sp(0.5);
   ctx.fillText('Presentado por', W - 46, 68);
-  ctx.font = '54px "Bebas Neue", Arial, sans-serif'; sp(4);
+  ctx.font = Math.round(54*kM) + 'px "Bebas Neue", Arial, sans-serif'; sp(4);
   ctx.fillText(marca, W - 46, 118);
   ctx.shadowBlur = 0; sp(0);
 
   // ── Posiciones fijas desde abajo ──
   const infoY  = H - 62;          // línea de datos (con separadores cuadrados)
-  const subY   = infoY - 50;      // torneo · sede
-  const title2Y = subY - 62;      // base del 2.º renglón del título
+  const subY   = infoY - Math.round(28*kD) - 22;      // torneo · sede
+  const title2Y = subY - Math.round(20*kS) - 42;      // base del 2.º renglón del título
 
   // ── Título: local / visitante en Anton, alineado a la izquierda ──
   const t1 = String(p.local || '').toUpperCase();
@@ -19022,13 +19090,16 @@ async function generarImagenPromocionalAfiche(p){
   const anchoMax = Math.max(ctx.measureText(t1).width, ctx.measureText(t2).width);
   if(anchoMax > maxW) fs = Math.max(64, Math.floor(fs * maxW / anchoMax));
   ctx.font = fs + 'px ' + ANTON;
-  const capH = ctx.measureText('H').actualBoundingBoxAscent || fs * 0.72;
+  const sy = Math.max(0.3, Math.min(1.6, p.mdAlto || 1));                                          // alto del título
+  const anchoFin = Math.max(ctx.measureText(t1).width, ctx.measureText(t2).width);
+  const sx = Math.max(0.3, Math.min(1.4, p.mdAncho || 1, (W - L - 40) / Math.max(1, anchoFin)));  // ancho del título
+  const capH = (ctx.measureText('H').actualBoundingBoxAscent || fs * 0.72) * sy;
   const interl = capH * 1.14;
   const title1Y = title2Y - interl;
 
   // ── Escudos en cuadrados redondeados arriba del título ──
   const bs = 100, bgap = 6;
-  const acento = /[ÁÉÍÓÚÜÑ]/.test(t1) ? fs * 0.17 : 0;
+  const acento = /[ÁÉÍÓÚÜÑ]/.test(t1) ? fs * 0.17 * sy : 0;
   const rowY = title1Y - capH - 26 - acento - bs;
   const colorDe = (img) => {
     try{
@@ -19076,14 +19147,14 @@ async function generarImagenPromocionalAfiche(p){
   ctx.fillStyle = '#ffffff'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   ctx.shadowColor = 'rgba(0,0,0,.4)'; ctx.shadowBlur = 22;
   ctx.font = fs + 'px ' + ANTON; sp(0);
-  ctx.fillText(t1, L, title1Y);
-  ctx.fillText(t2, L, title2Y);
+  ctx.save(); ctx.translate(L, title1Y); ctx.scale(sx, sy); ctx.fillText(t1, 0, 0); ctx.restore();
+  ctx.save(); ctx.translate(L, title2Y); ctx.scale(sx, sy); ctx.fillText(t2, 0, 0); ctx.restore();
   ctx.restore();
 
   // ── Torneo · sede (más chico, espaciado) ──
   const sub = [p.torneoNombre, p.sede].map(t => String(t || '').trim().replace(/[.\s]+$/, '')).filter(Boolean).join('  ·  ').toUpperCase();
   if(sub){
-    let f2 = 20;
+    let f2 = Math.round(20*kS);
     ctx.font = '500 ' + f2 + 'px ' + SANS; sp(3);
     while(f2 > 13 && ctx.measureText(sub).width > maxW){ f2 -= 1; ctx.font = '500 ' + f2 + 'px ' + SANS; }
     ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(255,255,255,.82)';
@@ -19094,7 +19165,7 @@ async function generarImagenPromocionalAfiche(p){
   // ── Línea de datos con separadores cuadrados ──
   const segs = [p.etiqueta, p.dia, p.fechaHora].map(t => String(t || '').trim().toUpperCase()).filter(Boolean);
   if(segs.length){
-    let f = 28, gapS = 30, sq = 11, total = 0, widths = [];
+    let f = Math.round(28*kD), gapS = 30, sq = Math.max(7, Math.round(11*kD)), total = 0, widths = [];
     const medir = () => {
       ctx.font = '700 ' + f + 'px ' + SANS; sp(1.2);
       widths = segs.map(t => ctx.measureText(t).width);
@@ -24221,6 +24292,7 @@ function alinLimpiarForm(){
   const f2p=document.getElementById('alin-foto2-preview'), f2w=document.getElementById('alin-foto2-wrap'), f2f=document.getElementById('alin-foto2-file');
   if(f2p) f2p.src=''; if(f2w) f2w.classList.remove('visible'); if(f2f) f2f.value='';
   alinPoblarTorneos('liga');
+  txtPoner('txt-alin', TXT_ALIN, {});
   const btn = document.getElementById('alin-guardar-btn');
   if(btn) btn.textContent='Guardar alineación';
 }
@@ -24242,6 +24314,7 @@ function guardarAlineacion(){
     hora: document.getElementById('alin-hora').value.trim(),
     sede: document.getElementById('alin-sede').value.trim(),
     torneo: (document.getElementById('alin-torneo')||{}).value || 'liga',
+    txt: txtLeer('txt-alin', TXT_ALIN),
     formacion, dt, titulares, suplentes
   };
   if(!data.alineaciones) data.alineaciones = [];
@@ -24314,6 +24387,7 @@ function editarAlineacion(id){
   if(foto2){ if(f2p) f2p.src=foto2; if(f2w) f2w.classList.add('visible'); }
   else { if(f2p) f2p.src=''; if(f2w) f2w.classList.remove('visible'); }
   alinPoblarTorneos(a.torneo||'liga');
+  txtPoner('txt-alin', TXT_ALIN, a.txt||{});
 }
 
 function eliminarAlineacion(id){
@@ -24349,6 +24423,7 @@ async function generarImagenAlineacionDesde(id){
   await document.fonts.ready;
   const identidad = getIdentidad();
   const W = CV_W, H = CV_H;
+  const kN = tk(a,'nombres'), kNum = tk(a,'numeros'), kI = tk(a,'info'), kSu = tk(a,'supl'), kDt = tk(a,'dt');
 
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
@@ -24530,23 +24605,38 @@ async function generarImagenAlineacionDesde(id){
   const linea1 = [a.fecha, a.hora].filter(Boolean).map(t=>String(t).toUpperCase()).join('  //  ');
   let yInfo = 290;
   ctx.fillStyle = '#fff';
-  ctx.font = `700 27px ${FR}`;
-  if(linea1){ cvFillTextTrunc(ctx, linea1, cx, yInfo, x2-x1-50); yInfo += 31; }
+  ctx.font = `700 ${Math.round(27*kI)}px ${FR}`;
+  if(linea1){ cvFillTextTrunc(ctx, linea1, cx, yInfo, x2-x1-50); yInfo += Math.round(31*kI); }
   if(a.sede){
     ctx.fillStyle = 'rgba(255,255,255,.82)';
-    ctx.font = `500 27px ${FR}`;
+    ctx.font = `500 ${Math.round(27*kI)}px ${FR}`;
     cvFillTextTrunc(ctx, String(a.sede).toUpperCase(), cx, yInfo, x2-x1-50);
-    yInfo += 31;
+    yInfo += Math.round(31*kI);
   }
 
   // ── Once titular: nombres grandes centrados ──
   const tit = (a.titulares||[]).slice(0,11);
-  const rowH = 66;
+  // Reserva de espacio abajo (suplentes + DT) para que nada se salga ni pise el pie
+  const supEst = (a.suplentes||[]).map(sp=>(sp.nombre||'').trim().toUpperCase()).filter(Boolean);
+  let nLinEst = 0;
+  if(supEst.length){
+    ctx.font = `500 ${Math.round(23*kSu)}px ${FR}`;
+    let cur = '';
+    supEst.forEach(n=>{
+      const test = cur ? cur + '  \u2022  ' + n : n;
+      if(ctx.measureText(test).width > x2 - x1 - 40 && cur){ nLinEst++; cur = n; } else cur = test;
+    });
+    if(cur) nLinEst++;
+    nLinEst = Math.min(nLinEst, 4);
+  }
+  const bloqueInf = (supEst.length ? 38 + Math.round(33*kSu) + nLinEst*Math.round(29*kSu) : 0) + (a.dt ? 22 + Math.round(25*kDt) : 0);
+  const rowHDeseada = Math.round(66 * (1 + (kN - 1) * 0.5));
+  const rowH = Math.max(40, Math.min(rowHDeseada, Math.floor((H - 58 - bloqueInf - 416) / Math.max(1, Math.min(11, (a.titulares||[]).length)))));
   let ny = 416;
   const maxNameW = x2 - x1 - 170;
   tit.forEach(t=>{
     const nombre = (t.nombre||'').toUpperCase();
-    let fz = 64;
+    let fz = Math.min(Math.round(64*kN), Math.round(rowH * 0.98));
     ctx.font = `${fz}px ${FB}`;
     while(ctx.measureText(nombre).width > maxNameW && fz > 30){ fz -= 2; ctx.font = `${fz}px ${FB}`; }
     ctx.fillStyle = '#fff';
@@ -24554,7 +24644,7 @@ async function generarImagenAlineacionDesde(id){
     cvFillTextTrunc(ctx, nombre, cx, ny, maxNameW);
     if(t.numero){
       ctx.fillStyle = C.DORADO;
-      ctx.font = `40px ${FB}`;
+      ctx.font = `${Math.round(40*kNum)}px ${FB}`;
       ctx.textAlign = 'left';
       ctx.fillText(String(t.numero), x1 + 36, ny - 2);
       ctx.textAlign = 'center';
@@ -24578,11 +24668,11 @@ async function generarImagenAlineacionDesde(id){
   if(sup.length){
     ctx.textAlign = 'center';
     ctx.fillStyle = '#fff';
-    ctx.font = `700 24px ${FR}`;
+    ctx.font = `700 ${Math.round(24*kSu)}px ${FR}`;
     ctx.fillText('SUPLENTES', cx, sy);
-    sy += 33;
+    sy += Math.round(33*kSu);
     ctx.fillStyle = 'rgba(255,255,255,.9)';
-    ctx.font = `500 23px ${FR}`;
+    ctx.font = `500 ${Math.round(23*kSu)}px ${FR}`;
     const sepTxt = '  \u2022  ';
     const maxW = x2 - x1 - 40;
     const lineas = []; let cur = '';
@@ -24591,7 +24681,7 @@ async function generarImagenAlineacionDesde(id){
       if(ctx.measureText(test).width > maxW && cur){ lineas.push(cur); cur = n; } else cur = test;
     });
     if(cur) lineas.push(cur);
-    lineas.slice(0,4).forEach(l=>{ ctx.fillText(l, cx, sy); sy += 29; });
+    lineas.slice(0,4).forEach(l=>{ ctx.fillText(l, cx, sy); sy += Math.round(29*kSu); });
   }
 
   // ── DT ──
@@ -24599,12 +24689,12 @@ async function generarImagenAlineacionDesde(id){
     sy += 22;
     ctx.textAlign = 'center';
     const lab = 'DT', nom = String(a.dt).toUpperCase();
-    ctx.font = `700 20px ${FR}`; const lw = ctx.measureText(lab).width;
-    ctx.font = `600 25px ${FR}`; const nw2 = Math.min(ctx.measureText(nom).width, x2-x1-110);
+    ctx.font = `700 ${Math.round(20*kDt)}px ${FR}`; const lw = ctx.measureText(lab).width;
+    ctx.font = `600 ${Math.round(25*kDt)}px ${FR}`; const nw2 = Math.min(ctx.measureText(nom).width, x2-x1-110);
     const tx = cx - (lw + 12 + nw2)/2;
     ctx.textAlign = 'left';
-    ctx.fillStyle = C.DORADO; ctx.font = `700 20px ${FR}`; ctx.fillText(lab, tx, sy);
-    ctx.fillStyle = '#fff'; ctx.font = `600 25px ${FR}`;
+    ctx.fillStyle = C.DORADO; ctx.font = `700 ${Math.round(20*kDt)}px ${FR}`; ctx.fillText(lab, tx, sy);
+    ctx.fillStyle = '#fff'; ctx.font = `600 ${Math.round(25*kDt)}px ${FR}`;
     cvFillTextTrunc(ctx, nom, tx + lw + 12, sy, x2-x1-110);
   }
 
