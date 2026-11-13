@@ -5261,14 +5261,14 @@ table.posiciones td:nth-child(8){
           <select id="promo-estilo" onchange="promoEstiloCambiar()">
             <option value="completo">Foto de fondo completa</option>
             <option value="split">Foto a la izquierda (como en Alineaciones)</option>
-            <option value="afiche">Afiche (título grande abajo, estilo club)</option>
+            <option value="afiche">Afiche (estilo Día de partido, título abajo a la izquierda)</option>
             <option value="matchday">Día de partido (texto gigante + escudos arriba)</option>
           </select>
         </div>
 
         <div id="promo-md-opts" style="display:none">
           <div class="form-row">
-            <div class="form-group">
+            <div class="form-group md-solo">
               <label>Texto gigante</label>
               <input type="text" id="promo-md-texto" value="PARTIDO" maxlength="24" placeholder="Ej: PARTIDO, HOY JUEGA, FINAL"/>
             </div>
@@ -5295,7 +5295,7 @@ table.posiciones td:nth-child(8){
               <input type="range" id="promo-md-py" min="0" max="100" value="0" style="width:100%"/>
             </div>
           </div>
-          <div class="form-group">
+          <div class="form-group md-solo">
             <label>Jugador recortado (PNG sin fondo, opcional)</label>
             <input type="file" accept="image/png,image/webp" id="promo-md-recorte-file" onchange="promoRecorteCargar(this)"/>
             <div class="preview-wrap" id="promo-recorte-wrap">
@@ -5303,7 +5303,7 @@ table.posiciones td:nth-child(8){
               <button type="button" class="btn-quitar-img" onclick="promoQuitarRecorte()">✕ Quitar</button>
             </div>
           </div>
-          <div class="form-row">
+          <div class="form-row md-solo">
             <div class="form-group">
               <label>Tamaño del recorte</label>
               <input type="range" id="promo-md-rtam" min="25" max="80" value="46" style="width:100%"/>
@@ -5317,7 +5317,7 @@ table.posiciones td:nth-child(8){
               <input type="range" id="promo-md-ry" min="40" max="100" value="86" style="width:100%"/>
             </div>
           </div>
-          <p style="font-size:10px;color:var(--gris);margin-top:-6px;margin-bottom:14px;font-family:'Rajdhani',sans-serif">
+          <p class="md-solo" style="font-size:10px;color:var(--gris);margin-top:-6px;margin-bottom:14px;font-family:'Rajdhani',sans-serif">
             Para dividir el texto gigante en dos renglones usá "/" (por ejemplo: DÍA DE / PARTIDO). La foto de fondo se funde hacia el color elegido: conviene una con el jugador en la parte de arriba (subile el zoom para un primer plano). El jugador recortado tiene que ser un PNG con fondo transparente; se dibuja adelante del texto gigante, abajo y al centro.
           </p>
         </div>
@@ -5554,6 +5554,27 @@ table.posiciones td:nth-child(8){
           </div>
           <div class="form-group"><label>Subtítulo (opcional)</label>
             <input type="text" id="promo6-sub" placeholder="Ej: ESTADÍSTICAS DEL CLAUSURA (vacío = ESTADÍSTICAS DE LA TEMPORADA)"/>
+          </div>
+          <div class="form-group"><label>Texto gigante abajo (opcional)</label>
+            <input type="text" id="promo6-giga" maxlength="20" placeholder="Ej: INVICTO, GOLEADOR, FIGURA (vacío = sin texto)"/>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Estadísticas: lado</label>
+              <select id="promo6-pos">
+                <option value="izq">Izquierda</option>
+                <option value="der">Derecha</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Estadísticas: altura</label>
+              <select id="promo6-posy">
+                <option value="arriba">Arriba</option>
+                <option value="centro">Centro</option>
+                <option value="abajo">Abajo</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group"><label style="display:flex;align-items:center;gap:8px;text-transform:none">
+            <input type="checkbox" id="promo6-escudo" style="width:auto"/> Mostrar el escudo del equipo arriba de las estadísticas (hay que completar "Equipo")</label>
           </div>
           <label style="display:block;margin-bottom:6px">Estadísticas (hasta 4; dejá el valor vacío para omitir una)</label>
           <div style="display:grid;grid-template-columns:1fr 2fr;gap:6px;margin-bottom:6px">
@@ -16470,6 +16491,10 @@ function promoJugadorLimpiar(){
   }
   const z=document.getElementById('promo6-zoom'), x=document.getElementById('promo6-px'), y=document.getElementById('promo6-py');
   if(z) z.value='100'; if(x) x.value='50'; if(y) y.value='25';
+  const g6=document.getElementById('promo6-giga'); if(g6) g6.value='';
+  const ps=document.getElementById('promo6-pos'); if(ps) ps.value='izq';
+  const py2=document.getElementById('promo6-posy'); if(py2) py2.value='arriba';
+  const es=document.getElementById('promo6-escudo'); if(es) es.checked=false;
 }
 
 function promoJugadorAutocompletar(){
@@ -16501,6 +16526,10 @@ function promoGenerarJugador(){
     nombre: nombre.toUpperCase(), equipo: val('promo6-equipo'),
     sub: (val('promo6-sub')||'ESTADÍSTICAS DE LA TEMPORADA').toUpperCase(),
     stats, foto: _promoFoto||'',
+    giga: val('promo6-giga').toUpperCase(),
+    pos: val('promo6-pos')==='der' ? 'der' : 'izq',
+    posy: ['centro','abajo'].includes(val('promo6-posy')) ? val('promo6-posy') : 'arriba',
+    escudo: !!(document.getElementById('promo6-escudo')||{}).checked,
     zoom: num('promo6-zoom',100)/100, px: num('promo6-px',50)/100, py: num('promo6-py',25)/100
   };
   abrirShare(() => generarImagenPromoJugador(p));
@@ -16556,7 +16585,7 @@ function promoGenerar(){
     sede:      document.getElementById('promo-sede').value.trim(),
   };
   const estilo = document.getElementById('promo-estilo').value;
-  if(estilo === 'matchday'){
+  if(estilo === 'matchday' || estilo === 'afiche'){
     p.mdTexto = (document.getElementById('promo-md-texto').value || 'PARTIDO').trim().toUpperCase();
     p.mdColor = document.getElementById('promo-md-color').value || '#0f2a1e';
     p.mdEscudos = document.getElementById('promo-md-escudos').value || 'color';
@@ -17996,9 +18025,59 @@ async function generarImagenPromoJugador(p){
     ctx.drawImage(logoImg, bxL + (bs-dw)/2, byL + (bs-dh)/2, dw, dh);
   }
 
-  // ── Cajas de estadísticas (columna izquierda): borde fino blanco, fondo oscuro translúcido ──
+  // ── Texto gigante abajo (opcional), ancho completo y condensado ──
+  let gigaTop = H;   // y de la parte de arriba del texto (para no pisarlo con las estadísticas)
+  if(p.giga){
+    const gt = String(p.giga).toUpperCase();
+    const maxGW = W - 90;
+    ctx.font = `400 100px ${FB}`; setLS('0px');
+    const w100 = ctx.measureText(gt).width || 1;
+    const gfs = Math.min(460, Math.floor(100 * maxGW / w100));
+    const gBase = H - 44;
+    const gCap = (ctx.measureText('H').actualBoundingBoxAscent || 70) * gfs / 100;
+    gigaTop = gBase - gCap;
+    // sombra inferior leve para que el blanco se lea sobre cualquier foto
+    const gB = ctx.createLinearGradient(0, gigaTop - 120, 0, H);
+    gB.addColorStop(0, 'rgba(0,0,0,0)'); gB.addColorStop(1, 'rgba(0,0,0,.38)');
+    ctx.fillStyle = gB; ctx.fillRect(0, gigaTop - 120, W, H - gigaTop + 120);
+    ctx.font = `400 ${gfs}px ${FB}`; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 18;
+    ctx.fillText(gt, CX, gBase);
+    ctx.shadowBlur = 0;
+  }
+
+  // ── Cajas de estadísticas: borde fino blanco, fondo oscuro translúcido ──
+  //    lado (izq/der) y altura (arriba/centro/abajo) configurables
   const n = Math.min(4, p.stats.length);
-  const bw = 188, bh = 188, step = 211, bx = 108, by0 = 190;
+  const bw = 188, bh = 188, step = 211;
+  const bx = (p.pos === 'der') ? (W - 108 - bw) : 108;
+  const totalH = n*step - (step - bh);
+  const conEscudo = !!(p.escudo && p.equipo);
+  const topMin = conEscudo ? 214 : 130;
+  const botLim = (p.giga ? gigaTop - 34 : H - 60);
+  let by0 = 190;
+  if(p.posy === 'abajo') by0 = botLim - totalH;
+  else if(p.posy === 'centro') by0 = (Math.max(topMin, 190) + (botLim - totalH)) / 2;
+  by0 = Math.max(topMin, Math.min(by0, botLim - totalH));
+  if(p.posy === 'arriba' || !p.posy) by0 = Math.max(by0, topMin);
+
+  // Escudo del equipo sobre la columna de estadísticas (opcional)
+  if(conEscudo){
+    const es = 96;
+    const eImg = await cvDrawEscudoPromise(p.equipo, es);
+    const ex = bx + bw/2 - es/2, ey = by0 - es - 16;
+    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 14;
+    if(eImg){
+      const iw = eImg.naturalWidth || eImg.width || 1, ih = eImg.naturalHeight || eImg.height || 1;
+      const sc = Math.min(es/iw, es/ih);
+      ctx.drawImage(eImg, ex + (es - iw*sc)/2, ey + (es - ih*sc)/2, iw*sc, ih*sc);
+    } else {
+      cvEscudoFallback(ctx, p.equipo, ex, ey, es);
+    }
+    ctx.restore();
+  }
+
   for(let i = 0; i < n; i++){
     const st = p.stats[i];
     const y = by0 + i*step;
@@ -18612,7 +18691,9 @@ async function generarImagenPromocionalTabla(p){
 function promoEstiloCambiar(){
   const e = document.getElementById('promo-estilo');
   const o = document.getElementById('promo-md-opts');
-  if(o) o.style.display = (e && e.value === 'matchday') ? '' : 'none';
+  const est = e ? e.value : '';
+  if(o) o.style.display = (est === 'matchday' || est === 'afiche') ? '' : 'none';
+  document.querySelectorAll('#promo-md-opts .md-solo').forEach(el => { el.style.display = (est === 'matchday') ? '' : 'none'; });
 }
 
 // Diseño "Día de partido": foto que se funde hacia un color de fondo, escudos en
@@ -18855,147 +18936,182 @@ async function generarImagenPromocionalMatchday(p){
 }
 
 
-// Diseño "Afiche": foto a pantalla completa, escudos arriba del título,
-// nombres de los equipos en tipografía grande con serif, datos debajo,
-// línea fina y pie con la liga (izquierda) y DEPORTEMAS (derecha).
+// Diseño "Afiche": misma estética que "Día de partido" (foto que se funde al color de
+// fondo, Anton, escudos en cuadros redondeados, separadores cuadrados), pero con el
+// título (local / visitante) alineado a la izquierda, abajo.
 async function generarImagenPromocionalAfiche(p){
   try{
-    if(document.head && !document.getElementById('afiche-fuentes')){
-      const l = document.createElement('link'); l.id = 'afiche-fuentes'; l.rel = 'stylesheet';
-      l.href = 'https://fonts.googleapis.com/css2?family=DM+Serif+Display&display=swap';
+    if(document.head && !document.getElementById('md-fuentes')){
+      const l = document.createElement('link'); l.id = 'md-fuentes'; l.rel = 'stylesheet';
+      l.href = 'https://fonts.googleapis.com/css2?family=Anton&family=DM+Sans:wght@500;700&display=swap';
       document.head.appendChild(l);
     }
-    await document.fonts.load('100px "DM Serif Display"');
+    await Promise.all(['100px "Anton"','700 20px "DM Sans"','500 20px "DM Sans"'].map(f => document.fonts.load(f)));
   }catch(e){}
   try{ await document.fonts.ready; }catch(e){}
 
-  const SERIF = '"DM Serif Display", Georgia, "Times New Roman", serif';
+  const ANTON = '"Anton", "Bebas Neue", Impact, "Arial Narrow", sans-serif';
   const SANS  = '"DM Sans", Arial, sans-serif';
-  const CREMA = '#f6efe3';
   const id = getIdentidad();
   const W = CV_W, H = CV_H;
-  const L = 96, R = W - 96, maxW = R - L;
+  const L = 80, R = W - 80, maxW = R - L;
+  const col = /^#[0-9a-fA-F]{6}$/.test(p.mdColor || '') ? p.mdColor : '#0f2a1e';
+  const cr = parseInt(col.slice(1,3),16), cg = parseInt(col.slice(3,5),16), cb = parseInt(col.slice(5,7),16);
+  const rgba = (a) => 'rgba(' + cr + ',' + cg + ',' + cb + ',' + a + ')';
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
   const sp = (px) => { if('letterSpacing' in ctx) ctx.letterSpacing = px + 'px'; };
+  const rr = (x, y, w, h, r) => {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  };
 
-  // ── Fondo: foto cover (o degradé si no hay foto) ──
-  const bg = ctx.createLinearGradient(0, 0, 0, H);
-  bg.addColorStop(0, '#2a1114'); bg.addColorStop(1, '#0b0b0e');
-  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  // ── Fondo: color liso + foto anclada arriba que se funde hacia abajo (estética "Día de partido") ──
+  ctx.fillStyle = col; ctx.fillRect(0, 0, W, H);
   const foto = await cargarImagenAsync(p.foto);
   if(foto){
     const iw = foto.naturalWidth || foto.width || 1, ih = foto.naturalHeight || foto.height || 1;
-    const sc = Math.max(W/iw, H/ih);
+    const zoom = Math.max(1, p.mdZoom || 1), py = Math.min(1, Math.max(0, p.mdPy || 0));
+    const sc = Math.max(W/iw, (H*0.92)/ih) * zoom;
     const dw = iw*sc, dh = ih*sc;
-    ctx.drawImage(foto, (W-dw)/2, (H-dh)/2, dw, dh);
+    ctx.save();
+    try{ ctx.filter = 'contrast(1.1) saturate(1.1)'; }catch(e){}
+    ctx.drawImage(foto, (W-dw)/2, (H*0.92 - dh)*py, dw, dh);
+    ctx.restore();
+    ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.globalAlpha = 0.2;
+    ctx.fillStyle = col; ctx.fillRect(0, 0, W, H); ctx.restore();
   } else {
-    const gl = ctx.createRadialGradient(W*0.7, H*0.25, 40, W*0.7, H*0.25, W*0.9);
-    gl.addColorStop(0, 'rgba(201,162,39,.25)'); gl.addColorStop(1, 'rgba(201,162,39,0)');
+    const gl = ctx.createRadialGradient(W*0.72, H*0.22, 30, W*0.72, H*0.22, W*0.9);
+    gl.addColorStop(0, 'rgba(255,255,255,.14)'); gl.addColorStop(1, 'rgba(255,255,255,0)');
     ctx.fillStyle = gl; ctx.fillRect(0, 0, W, H);
   }
-  // Degradé oscuro desde el medio hacia abajo (para que el título y los datos se lean)
-  const sh = ctx.createLinearGradient(0, H*0.38, 0, H);
-  sh.addColorStop(0, 'rgba(8,4,6,0)');
-  sh.addColorStop(0.30, 'rgba(8,4,6,.55)');
-  sh.addColorStop(0.62, 'rgba(8,4,6,.84)');
-  sh.addColorStop(1, 'rgba(8,4,6,.97)');
-  ctx.fillStyle = sh; ctx.fillRect(0, H*0.38, W, H*0.62);
+  const fade = ctx.createLinearGradient(0, H*0.34, 0, H*0.84);
+  fade.addColorStop(0, rgba(0)); fade.addColorStop(0.55, rgba(0.82)); fade.addColorStop(1, rgba(1));
+  ctx.fillStyle = fade; ctx.fillRect(0, H*0.34, W, H*0.66);
+  const topv = ctx.createLinearGradient(0, 0, 0, H*0.16);
+  topv.addColorStop(0, 'rgba(0,0,0,.35)'); topv.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = topv; ctx.fillRect(0, 0, W, H*0.16);
 
-  // ── Posiciones fijas desde abajo (como en el afiche de referencia) ──
-  const footerY = H - 56;
-  const divY    = H - 120;
-  const line2Y  = H - 166;   // sede
-  const line1Y  = H - 204;   // día · hora · etiqueta
-  const title2Y = H - 272;   // base del 2.º renglón del título
+  // ── Marca arriba a la derecha ("Presentado por …") ──
+  const marca = (id.nombre || 'DEPORTEMAS').toUpperCase();
+  ctx.textAlign = 'right'; ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = '#ffffff';
+  ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 10;
+  ctx.font = '500 22px ' + SANS; sp(0.5);
+  ctx.fillText('Presentado por', W - 46, 68);
+  ctx.font = '54px "Bebas Neue", Arial, sans-serif'; sp(4);
+  ctx.fillText(marca, W - 46, 118);
+  ctx.shadowBlur = 0; sp(0);
 
-  // ── Título: local / visitante, serif grande, un poco condensado ──
+  // ── Posiciones fijas desde abajo ──
+  const infoY  = H - 62;          // línea de datos (con separadores cuadrados)
+  const subY   = infoY - 50;      // torneo · sede
+  const title2Y = subY - 62;      // base del 2.º renglón del título
+
+  // ── Título: local / visitante en Anton, alineado a la izquierda ──
   const t1 = String(p.local || '').toUpperCase();
   const t2 = String(p.visit || '').toUpperCase();
-  const sx = 0.72;                                  // condensado horizontal (letras más altas y angostas, como el afiche)
-  let fs = 180;
-  ctx.font = fs + 'px ' + SERIF; sp(0);
-  const anchoMax = Math.max(ctx.measureText(t1).width, ctx.measureText(t2).width) * sx;
+  let fs = 190;
+  ctx.font = fs + 'px ' + ANTON; sp(0);
+  const anchoMax = Math.max(ctx.measureText(t1).width, ctx.measureText(t2).width);
   if(anchoMax > maxW) fs = Math.max(64, Math.floor(fs * maxW / anchoMax));
-  ctx.font = fs + 'px ' + SERIF;
-  const interl = Math.round(fs * 0.84);
+  ctx.font = fs + 'px ' + ANTON;
+  const capH = ctx.measureText('H').actualBoundingBoxAscent || fs * 0.72;
+  const interl = capH * 1.14;
   const title1Y = title2Y - interl;
-  const capH = fs * 0.70;
 
-  // ── Escudos arriba del título ──
-  const sz = 88, gapE = 16;
-  const escY = title1Y - capH - 34 - sz;
-  const dibujarEscudo = async (nombre, x) => {
-    const img = await cvDrawEscudoPromise(nombre, sz);
-    if(!img){ cvEscudoFallback(ctx, nombre, x, escY, sz); return sz; }
-    const iw = img.naturalWidth || img.width || 1, ih = img.naturalHeight || img.height || 1;
-    const sc = Math.min(sz/iw, sz/ih);
-    const dw = iw*sc, dh = ih*sc;
-    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 14;
-    ctx.drawImage(img, x, escY + (sz - dh)/2, dw, dh); ctx.restore();
-    return dw;
+  // ── Escudos en cuadrados redondeados arriba del título ──
+  const bs = 100, bgap = 6;
+  const acento = /[ÁÉÍÓÚÜÑ]/.test(t1) ? fs * 0.17 : 0;
+  const rowY = title1Y - capH - 26 - acento - bs;
+  const colorDe = (img) => {
+    try{
+      const c = document.createElement('canvas'); c.width = c.height = 24;
+      const g = c.getContext('2d'); g.drawImage(img, 0, 0, 24, 24);
+      const d = g.getImageData(0, 0, 24, 24).data;
+      let r = 0, gg = 0, b = 0, wt = 0;
+      for(let i = 0; i < d.length; i += 4){
+        const a = d[i+3] / 255; if(a < 0.6) continue;
+        const mx = Math.max(d[i], d[i+1], d[i+2]), mn = Math.min(d[i], d[i+1], d[i+2]);
+        const sat = (mx - mn) / 255, w = a * (0.12 + sat*sat*3);
+        r += d[i]*w; gg += d[i+1]*w; b += d[i+2]*w; wt += w;
+      }
+      if(!wt) return '#1c1c1c';
+      return 'rgb(' + Math.round(r/wt*0.82) + ',' + Math.round(gg/wt*0.82) + ',' + Math.round(b/wt*0.82) + ')';
+    }catch(e){ return '#1c1c1c'; }
   };
-  const w1 = await dibujarEscudo(p.local, L);
-  await dibujarEscudo(p.visit, L + w1 + gapE);
-
-  // Texto del título
-  ctx.save();
-  ctx.fillStyle = CREMA; ctx.strokeStyle = CREMA;
-  ctx.lineWidth = Math.max(2, fs * 0.02); ctx.lineJoin = 'round';
-  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-  ctx.shadowColor = 'rgba(0,0,0,.4)'; ctx.shadowBlur = 22;
-  [[t1, title1Y], [t2, title2Y]].forEach(([t, y]) => {
-    ctx.save(); ctx.translate(L, y); ctx.scale(sx, 1);
-    ctx.strokeText(t, 0, 0); ctx.fillText(t, 0, 0);
-    ctx.restore();
-  });
-  ctx.restore();
-
-  // ── Línea 1: DÍA - HORA - ETIQUETA (negrita) ──
-  const l1 = [p.dia, p.fechaHora, p.etiqueta].filter(Boolean).join(' - ').toUpperCase();
-  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic'; ctx.fillStyle = CREMA;
-  if(l1){
-    let f1 = 28;
-    ctx.font = '600 ' + f1 + 'px ' + SANS; sp(1);
-    while(f1 > 16 && ctx.measureText(l1).width > maxW){ f1 -= 1; ctx.font = '600 ' + f1 + 'px ' + SANS; }
-    ctx.fillText(l1, L, line1Y);
-  }
-  // ── Línea 2: sede (más chica, espaciada) ──
-  const l2 = String(p.sede || '').toUpperCase();
-  if(l2){
-    let f2 = 22;
-    ctx.font = '500 ' + f2 + 'px ' + SANS; sp(3);
-    while(f2 > 14 && ctx.measureText(l2).width > maxW){ f2 -= 1; ctx.font = '500 ' + f2 + 'px ' + SANS; }
-    ctx.globalAlpha = 0.92; ctx.fillText(l2, L, line2Y); ctx.globalAlpha = 1;
-  }
-  sp(0);
-
-  // ── Línea divisoria ──
-  ctx.fillStyle = 'rgba(246,239,227,.35)';
-  ctx.fillRect(L, divY, maxW, 2);
-
-  // ── Pie: liga a la izquierda, marca DEPORTEMAS a la derecha ──
-  ctx.textBaseline = 'alphabetic';
-  const liga = (p.torneoNombre || '').trim();
-  if(liga){
-    ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(246,239,227,.85)';
-    let fl = 24;
-    ctx.font = fl + 'px ' + SERIF;
-    while(fl > 14 && ctx.measureText(liga).width > maxW*0.55){ fl -= 1; ctx.font = fl + 'px ' + SERIF; }
-    ctx.fillText(liga, L, footerY);
-  }
-  const marca = (id.nombre || 'DEPORTEMAS').toUpperCase();
-  ctx.textAlign = 'right'; ctx.fillStyle = CREMA;
-  ctx.font = '40px "Bebas Neue", Arial, sans-serif'; sp(1.5);
-  const mw = ctx.measureText(marca).width;
-  ctx.fillText(marca, R, footerY + 2);
-  sp(0);
+  const dibujarBadge = async (nombre, x) => {
+    const img = await cvDrawEscudoPromise(nombre, bs);
+    let fill = '#ffffff';
+    if(p.mdEscudos === 'oscuro') fill = 'rgba(0,0,0,.55)';
+    else if(p.mdEscudos !== 'blanco' && img) fill = colorDe(img);
+    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 14;
+    rr(x, rowY, bs, bs, 24); ctx.fillStyle = fill; ctx.fill(); ctx.restore();
+    const pad = 15, inner = bs - pad*2;
+    if(!img){ cvEscudoFallback(ctx, nombre, x + pad, rowY + pad, inner); return; }
+    const iw = img.naturalWidth || img.width || 1, ih = img.naturalHeight || img.height || 1;
+    const sc = Math.min(inner/iw, inner/ih);
+    ctx.drawImage(img, x + (bs - iw*sc)/2, rowY + (bs - ih*sc)/2, iw*sc, ih*sc);
+  };
+  let bx = L;
+  await dibujarBadge(p.local, bx); bx += bs + bgap;
   const logo = await cargarImagenAsync(id.logo);
   if(logo){
-    const ls = 46, lx = R - mw - 14 - ls, ly = footerY - 34;
-    ctx.save(); ctx.beginPath(); ctx.arc(lx + ls/2, ly + ls/2, ls/2, 0, Math.PI*2); ctx.clip();
-    cvDrawEscudoImg(ctx, logo, lx, ly, ls); ctx.restore();
+    const cs = 80, cy = rowY + (bs - cs)/2;
+    ctx.save(); ctx.beginPath(); ctx.arc(bx + cs/2, cy + cs/2, cs/2, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fill(); ctx.clip();
+    cvDrawEscudoImg(ctx, logo, bx + 8, cy + 8, cs - 16); ctx.restore();
+    bx += cs + bgap;
+  }
+  await dibujarBadge(p.visit, bx);
+
+  // ── Texto del título (blanco, Anton) ──
+  ctx.save();
+  ctx.fillStyle = '#ffffff'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.shadowColor = 'rgba(0,0,0,.4)'; ctx.shadowBlur = 22;
+  ctx.font = fs + 'px ' + ANTON; sp(0);
+  ctx.fillText(t1, L, title1Y);
+  ctx.fillText(t2, L, title2Y);
+  ctx.restore();
+
+  // ── Torneo · sede (más chico, espaciado) ──
+  const sub = [p.torneoNombre, p.sede].map(t => String(t || '').trim().replace(/[.\s]+$/, '')).filter(Boolean).join('  ·  ').toUpperCase();
+  if(sub){
+    let f2 = 20;
+    ctx.font = '500 ' + f2 + 'px ' + SANS; sp(3);
+    while(f2 > 13 && ctx.measureText(sub).width > maxW){ f2 -= 1; ctx.font = '500 ' + f2 + 'px ' + SANS; }
+    ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(255,255,255,.82)';
+    ctx.fillText(sub, L, subY);
+    sp(0);
+  }
+
+  // ── Línea de datos con separadores cuadrados ──
+  const segs = [p.etiqueta, p.dia, p.fechaHora].map(t => String(t || '').trim().toUpperCase()).filter(Boolean);
+  if(segs.length){
+    let f = 28, gapS = 30, sq = 11, total = 0, widths = [];
+    const medir = () => {
+      ctx.font = '700 ' + f + 'px ' + SANS; sp(1.2);
+      widths = segs.map(t => ctx.measureText(t).width);
+      total = widths.reduce((a, b) => a + b, 0) + (segs.length - 1) * (gapS*2 + sq);
+    };
+    medir();
+    while(f > 14 && total > maxW){ f -= 1; gapS = Math.max(14, gapS - 1); sq = Math.max(7, Math.round(f*0.4)); medir(); }
+    let x = L;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic'; ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 8;
+    segs.forEach((t, k) => {
+      ctx.fillText(t, x, infoY); x += widths[k];
+      if(k < segs.length - 1){
+        x += gapS; ctx.fillRect(x, infoY - f*0.52 - sq/2 + 2, sq, sq); x += sq + gapS;
+      }
+    });
+    ctx.shadowBlur = 0; sp(0);
   }
   return canvas;
 }
