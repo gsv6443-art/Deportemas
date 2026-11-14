@@ -4961,6 +4961,32 @@ table.posiciones td:nth-child(8){
         </div>
 
         <details style="margin:4px 0 14px"><summary style="cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:12px;letter-spacing:1px;color:var(--gris)">🔠 TAMAÑO DE CADA TEXTO</summary><div id="txt-alin" class="form-row" style="flex-wrap:wrap;margin-top:10px"></div></details>
+        <details style="margin:4px 0 14px"><summary style="cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:12px;letter-spacing:1px;color:var(--gris)">🎨 DISEÑO "DÍA DE PARTIDO"</summary>
+          <div style="margin-top:10px">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div class="form-group">
+                <label>Color de fondo</label>
+                <input type="color" id="alin-md-color" value="#0f2a1e" style="height:38px;padding:2px"/>
+              </div>
+              <div class="form-group">
+                <label>Cuadros de los escudos</label>
+                <select id="alin-md-escudos">
+                  <option value="color">Color del escudo</option>
+                  <option value="blanco">Blancos</option>
+                  <option value="oscuro">Oscuros</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Texto gigante <span style="color:var(--gris);font-size:10px">— vacío = ALINEACIÓN · usá "/" para dos renglones</span></label>
+              <input type="text" id="alin-md-texto" placeholder="ALINEACIÓN"/>
+            </div>
+            <div class="form-group">
+              <label>Posición vertical de la foto <span style="color:var(--gris);font-size:10px">— 0 = arriba</span></label>
+              <input type="range" id="alin-md-py" min="0" max="100" value="0"/>
+            </div>
+          </div>
+        </details>
         <div class="form-group">
           <label>Logo del torneo (va entre los dos escudos)</label>
           <select id="alin-torneo"></select>
@@ -18122,7 +18148,11 @@ async function generarImagenPromoJugador(p){
     ctx.font = `400 ${ns}px ${FB}`; setLS('0px');
     while(ns > 48 && ctx.measureText(st.valor).width > bw - 36){ ns -= 4; ctx.font = `400 ${ns}px ${FB}`; }
     ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.lineJoin = 'round';
-    const baseN = y + bh*0.72 + (158-ns)*0.35;
+    // el número se centra en el espacio que deja la etiqueta (no la pisa aunque cambie el tamaño)
+    const efs = Math.round(20*tk(p,'eti'));
+    const areaTop = y + 16, areaBot = y + bh - 18 - efs*0.72 - 8;
+    while(ns > 40 && ns*0.7 > (areaBot - areaTop)){ ns -= 4; ctx.font = `400 ${ns}px ${FB}`; }
+    const baseN = areaBot - ((areaBot - areaTop) - ns*0.7) / 2;
     ctx.fillText(st.valor, bx + bw/2, baseN);
     ctx.strokeText(st.valor, bx + bw/2, baseN);
 
@@ -18826,9 +18856,10 @@ async function generarImagenPromocionalMatchday(p){
   ctx.fillStyle = '#ffffff';
   ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 10;
   ctx.font = '500 ' + Math.round(22*kM) + 'px ' + SANS; sp(0.5);
-  ctx.fillText('Presentado por', W - 46, 68);
+  const yMarca1 = 46 + Math.round(22*kM);
+  ctx.fillText('Presentado por', W - 46, yMarca1);
   ctx.font = Math.round(54*kM) + 'px "Bebas Neue", Arial, sans-serif'; sp(4);
-  ctx.fillText(marca, W - 46, 118);
+  ctx.fillText(marca, W - 46, yMarca1 + Math.round(54*kM*0.85) + 6);
   ctx.shadowBlur = 0; sp(0);
 
   // ── Texto gigante (blanco, centrado; "/" separa renglones) ──
@@ -19072,9 +19103,10 @@ async function generarImagenPromocionalAfiche(p){
   ctx.fillStyle = '#ffffff';
   ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 10;
   ctx.font = '500 ' + Math.round(22*kM) + 'px ' + SANS; sp(0.5);
-  ctx.fillText('Presentado por', W - 46, 68);
+  const yMarca1 = 46 + Math.round(22*kM);
+  ctx.fillText('Presentado por', W - 46, yMarca1);
   ctx.font = Math.round(54*kM) + 'px "Bebas Neue", Arial, sans-serif'; sp(4);
-  ctx.fillText(marca, W - 46, 118);
+  ctx.fillText(marca, W - 46, yMarca1 + Math.round(54*kM*0.85) + 6);
   ctx.shadowBlur = 0; sp(0);
 
   // ── Posiciones fijas desde abajo ──
@@ -22912,7 +22944,7 @@ async function abrirShareCanvas(generadorFn){
           ? 'Seleccioná una red para compartir. Si no funciona, descargá la imagen y adjuntala.'
           : 'En PC: se descarga la imagen automáticamente. Luego adjuntala en la red social.';
       if(_shareCanvases && _shareCanvases._etiquetas){
-        noteEl.textContent = 'Usá ‹ › para elegir entre publicación e historia. ' + noteEl.textContent;
+        noteEl.textContent = (_shareCanvases._nota || 'Usá ‹ › para elegir entre publicación e historia. ') + noteEl.textContent;
       }
     } catch(e) {
       loadEl.textContent = 'Error al generar la imagen.';
@@ -24273,6 +24305,14 @@ function alinLeerTitularesActuales(){
   return nums.map((n,i)=>({numero:n,nombre:noms[i]||'',capitan:i===capIdx}));
 }
 
+// Carga en el formulario las opciones del diseño "Día de partido" (con valores por defecto)
+function alinMdPoner(a){
+  const c=document.getElementById('alin-md-color'), t=document.getElementById('alin-md-texto'), e=document.getElementById('alin-md-escudos'), p=document.getElementById('alin-md-py');
+  if(c) c.value = /^#[0-9a-fA-F]{6}$/.test(a.mdColor||'') ? a.mdColor : '#0f2a1e';
+  if(t) t.value = a.mdTexto || '';
+  if(e) e.value = a.mdEscudos || 'color';
+  if(p) p.value = Math.round((a.mdPy||0)*100);
+}
 function alinLimpiarForm(){
   _alinEditId = null;
   document.getElementById('alin-equipo').value='';
@@ -24293,6 +24333,7 @@ function alinLimpiarForm(){
   if(f2p) f2p.src=''; if(f2w) f2w.classList.remove('visible'); if(f2f) f2f.value='';
   alinPoblarTorneos('liga');
   txtPoner('txt-alin', TXT_ALIN, {});
+  alinMdPoner({});
   const btn = document.getElementById('alin-guardar-btn');
   if(btn) btn.textContent='Guardar alineación';
 }
@@ -24315,6 +24356,10 @@ function guardarAlineacion(){
     sede: document.getElementById('alin-sede').value.trim(),
     torneo: (document.getElementById('alin-torneo')||{}).value || 'liga',
     txt: txtLeer('txt-alin', TXT_ALIN),
+    mdColor: (document.getElementById('alin-md-color')||{}).value || '#0f2a1e',
+    mdTexto: ((document.getElementById('alin-md-texto')||{}).value || '').trim(),
+    mdEscudos: (document.getElementById('alin-md-escudos')||{}).value || 'color',
+    mdPy: (parseInt((document.getElementById('alin-md-py')||{}).value, 10) || 0) / 100,
     formacion, dt, titulares, suplentes
   };
   if(!data.alineaciones) data.alineaciones = [];
@@ -24388,6 +24433,7 @@ function editarAlineacion(id){
   else { if(f2p) f2p.src=''; if(f2w) f2w.classList.remove('visible'); }
   alinPoblarTorneos(a.torneo||'liga');
   txtPoner('txt-alin', TXT_ALIN, a.txt||{});
+  alinMdPoner(a);
 }
 
 function eliminarAlineacion(id){
@@ -24408,7 +24454,7 @@ function renderAdminListaAlineaciones(){
   cont.innerHTML = items.map(a=>`
     <div class="admin-list-item">
       <span>${a.equipo}${a.rival?' vs '+a.rival:''}${a.fecha?' · '+a.fecha:''}${a.formacion?' · '+a.formacion:''}</span>
-      <button class="btn-edit" onclick="abrirShare(()=>generarImagenAlineacionDesde('${a.id}'))">🖼️ Imagen</button>
+      <button class="btn-edit" onclick="abrirShare(()=>generarImagenesAlineacion('${a.id}'))">🖼️ Imagen</button>
       <button class="btn-edit" onclick="editarAlineacion('${a.id}')">✏ Editar</button>
       <button class="btn-danger" onclick="eliminarAlineacion('${a.id}')">✕ Eliminar</button>
     </div>
@@ -24732,6 +24778,309 @@ async function generarImagenAlineacionDesde(id){
   return canvas;
 }
 
+
+// ============================================================
+// ALINEACIONES — estilo "Día de partido"
+// Misma estética que generarImagenPromocionalMatchday: foto arriba que se funde
+// hacia un color liso, escudos en cuadrados redondeados, texto gigante (Anton),
+// nombres en Anton blanco y datos con separadores cuadrados.
+// Usa los mismos datos que generarImagenAlineacionDesde(id): se puede intercambiar.
+// Campos opcionales nuevos en la alineación: a.mdColor (#rrggbb), a.mdTexto, a.mdEscudos, a.mdPy
+// ============================================================
+function alinNombreTorneo(a){
+  const idn = getIdentidad(); const v = a.torneo || 'liga';
+  if(v==='primera') return 'Primera División';
+  if(v==='segunda') return 'Segunda División';
+  if(v.indexOf('t:')===0){
+    const tn = (data.torneos||[]).find(x=>String(x.id)===v.slice(2));
+    if(tn) return tn.nombre + (tn.edicion ? ' ' + tn.edicion : '');
+  }
+  return '';
+}
+async function generarImagenAlineacionMatchday(id){
+  const a = (data.alineaciones||[]).find(x=>x.id===id);
+  if(!a) return null;
+  try{
+    if(document.head && !document.getElementById('md-fuentes')){
+      const l = document.createElement('link'); l.id = 'md-fuentes'; l.rel = 'stylesheet';
+      l.href = 'https://fonts.googleapis.com/css2?family=Anton&family=DM+Sans:wght@500;700&display=swap';
+      document.head.appendChild(l);
+    }
+    await Promise.all(['100px "Anton"','700 20px "DM Sans"','500 20px "DM Sans"'].map(f => document.fonts.load(f)));
+  }catch(e){}
+  try{ await document.fonts.ready; }catch(e){}
+
+  const ANTON = '"Anton", "Bebas Neue", Impact, "Arial Narrow", sans-serif';
+  const SANS  = '"DM Sans", Arial, sans-serif';
+  const idn = getIdentidad();
+  const W = CV_W, H = CV_H, cx = W/2;
+  const col = /^#[0-9a-fA-F]{6}$/.test(a.mdColor || '') ? a.mdColor : '#0f2a1e';
+  const cr = parseInt(col.slice(1,3),16), cg = parseInt(col.slice(3,5),16), cb = parseInt(col.slice(5,7),16);
+  const rgba = (al) => 'rgba(' + cr + ',' + cg + ',' + cb + ',' + al + ')';
+  const kN = tk(a,'nombres'), kNum = tk(a,'numeros'), kI = tk(a,'info'), kSu = tk(a,'supl'), kDt = tk(a,'dt'), kM = tk(a,'marca');
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  const sp = (px) => { if('letterSpacing' in ctx) ctx.letterSpacing = px + 'px'; };
+  const rr = (x, y, w, h, r) => {
+    ctx.beginPath(); ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+  };
+
+  // ── Fondo: color liso + foto anclada arriba que se funde hacia abajo ──
+  ctx.fillStyle = col; ctx.fillRect(0, 0, W, H);
+  const fotoSrc = (window._alinFotosCache && window._alinFotosCache[a.id])
+    || (window._clubFotosCache && window._clubFotosCache[normalizar(a.equipo)]) || '';
+  const foto = await cargarImagenAsync(fotoSrc);
+  if(foto){
+    const iw = foto.naturalWidth || foto.width || 1, ih = foto.naturalHeight || foto.height || 1;
+    const zoom = Math.max(1, a.mdZoom || 1), py = Math.min(1, Math.max(0, a.mdPy || 0));
+    const alto = H * 0.70;
+    const sc = Math.max(W/iw, alto/ih) * zoom;
+    const dw = iw*sc, dh = ih*sc;
+    ctx.save();
+    try{ ctx.filter = 'contrast(1.1) saturate(1.1)'; }catch(e){}
+    ctx.drawImage(foto, (W-dw)/2, (alto - dh)*py, dw, dh);
+    ctx.restore();
+    ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.globalAlpha = 0.2;
+    ctx.fillStyle = col; ctx.fillRect(0, 0, W, H); ctx.restore();
+  } else {
+    const gl = ctx.createRadialGradient(W*0.72, H*0.18, 30, W*0.72, H*0.18, W*0.9);
+    gl.addColorStop(0, 'rgba(255,255,255,.14)'); gl.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = gl; ctx.fillRect(0, 0, W, H);
+  }
+  // el degradé arranca antes que en "Día de partido": la lista de nombres necesita fondo parejo
+  const fade = ctx.createLinearGradient(0, H*0.14, 0, H*0.62);
+  fade.addColorStop(0, rgba(0)); fade.addColorStop(0.45, rgba(0.62)); fade.addColorStop(0.75, rgba(0.9)); fade.addColorStop(1, rgba(1));
+  ctx.fillStyle = fade; ctx.fillRect(0, H*0.14, W, H*0.86);
+  const topv = ctx.createLinearGradient(0, 0, 0, H*0.16);
+  topv.addColorStop(0, 'rgba(0,0,0,.35)'); topv.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = topv; ctx.fillRect(0, 0, W, H*0.16);
+
+  // ── Marca arriba a la derecha ──
+  const marca = (idn.nombre || 'DEPORTEMAS').toUpperCase();
+  ctx.textAlign = 'right'; ctx.textBaseline = 'alphabetic'; ctx.fillStyle = '#ffffff';
+  ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 10;
+  ctx.font = '500 ' + Math.round(22*kM) + 'px ' + SANS; sp(0.5);
+  const yMarca1 = 46 + Math.round(22*kM);
+  ctx.fillText('Presentado por', W - 46, yMarca1);
+  ctx.font = Math.round(54*kM) + 'px "Bebas Neue", Arial, sans-serif'; sp(4);
+  ctx.fillText(marca, W - 46, yMarca1 + Math.round(54*kM*0.85) + 6);
+  ctx.shadowBlur = 0; sp(0);
+
+  // ── Texto gigante ──
+  const lineas = String(a.mdTexto || 'ALINEACIÓN').toUpperCase().split('/').map(t => t.trim()).filter(Boolean).slice(0, 2);
+  if(!lineas.length) lineas.push('ALINEACIÓN');
+  ctx.font = '100px ' + ANTON; sp(0);
+  const capR = (ctx.measureText('H').actualBoundingBoxAscent || 72) / 100;     // alto de mayúscula por px de fuente
+  const capMax = lineas.length === 1 ? 128 : 96;
+  let fs = Math.floor(capMax / capR);
+  ctx.font = fs + 'px ' + ANTON;
+  const tw0 = Math.max(...lineas.map(t => ctx.measureText(t).width));
+  if(tw0 > W*0.86) fs = Math.floor(fs * W*0.86 / tw0);
+  ctx.font = fs + 'px ' + ANTON;
+  const capH = fs * capR, lineGap = capH * 1.14;
+
+  // ── Fila de escudos (cuadrados redondeados), centrada ──
+  const bs = 100, bgap = 8, rowY = 160;
+  const colorDe = (img) => {
+    try{
+      const c = document.createElement('canvas'); c.width = c.height = 24;
+      const g = c.getContext('2d'); g.drawImage(img, 0, 0, 24, 24);
+      const d = g.getImageData(0, 0, 24, 24).data;
+      let r = 0, gg = 0, b = 0, wt = 0;
+      for(let i = 0; i < d.length; i += 4){
+        const al = d[i+3] / 255; if(al < 0.6) continue;
+        const mx = Math.max(d[i], d[i+1], d[i+2]), mn = Math.min(d[i], d[i+1], d[i+2]);
+        const sat = (mx - mn) / 255, w = al * (0.12 + sat*sat*3);
+        r += d[i]*w; gg += d[i+1]*w; b += d[i+2]*w; wt += w;
+      }
+      if(!wt) return '#1c1c1c';
+      return 'rgb(' + Math.round(r/wt*0.82) + ',' + Math.round(gg/wt*0.82) + ',' + Math.round(b/wt*0.82) + ')';
+    }catch(e){ return '#1c1c1c'; }
+  };
+  const dibujarBadge = async (nombre, x) => {
+    const img = await cvDrawEscudoPromise(nombre, bs);
+    let fill = '#ffffff';
+    if(a.mdEscudos === 'oscuro') fill = 'rgba(0,0,0,.55)';
+    else if(a.mdEscudos !== 'blanco' && img) fill = colorDe(img);
+    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 14;
+    rr(x, rowY, bs, bs, 24); ctx.fillStyle = fill; ctx.fill(); ctx.restore();
+    const pad = 15, inner = bs - pad*2;
+    if(!img){ cvEscudoFallback(ctx, nombre, x + pad, rowY + pad, inner); return; }
+    const iw = img.naturalWidth || img.width || 1, ih = img.naturalHeight || img.height || 1;
+    const sc = Math.min(inner/iw, inner/ih);
+    ctx.drawImage(img, x + (bs - iw*sc)/2, rowY + (bs - ih*sc)/2, iw*sc, ih*sc);
+  };
+  const logo = a.rival ? await cargarImagenAsync(alinLogoTorneo(a)) : null;
+  const cs = 80;
+  const anchoFila = a.rival ? (bs + bgap + (logo ? cs + bgap : 0) + bs) : bs;
+  let bx = cx - anchoFila/2;
+  await dibujarBadge(a.equipo, bx); bx += bs + bgap;
+  if(a.rival){
+    if(logo){
+      const cy = rowY + (bs - cs)/2;
+      ctx.save(); ctx.beginPath(); ctx.arc(bx + cs/2, cy + cs/2, cs/2, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fill(); ctx.clip();
+      cvDrawEscudoImg(ctx, logo, bx + 8, cy + 8, cs - 16); ctx.restore();
+      bx += cs + bgap;
+    }
+    await dibujarBadge(a.rival, bx);
+  }
+
+  // texto gigante (debajo de los escudos)
+  const acento = /[ÁÉÍÓÚÜÑ]/.test(lineas[0]) ? fs * 0.17 : 0;
+  const baseFinal = Math.round(rowY + bs + 26 + acento + capH + (lineas.length - 1) * lineGap);
+  ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.font = fs + 'px ' + ANTON; sp(0);
+  ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 16;
+  lineas.forEach((t, k) => ctx.fillText(t, cx, baseFinal - (lineas.length - 1 - k) * lineGap));
+  ctx.shadowBlur = 0;
+
+  // ── Bloque inferior anclado desde abajo: datos → torneo·sede → DT → suplentes ──
+  const infoY = H - 62;                       // línea de datos (fecha · hora)
+  const subY = infoY - 50;                    // torneo · sede
+  const tieneSub = !!([alinNombreTorneo(a), a.sede].some(t => String(t||'').trim()));
+  let yBottom = (tieneSub ? subY : infoY) - 46;   // última línea de contenido (baseline)
+  const sup = (a.suplentes||[]).map(s => (s.nombre||'').trim().toUpperCase()).filter(Boolean);
+  const fSup = Math.round(25*kSu), sqS = Math.max(6, Math.round(fSup*0.36)), gapS = 18;
+  const fLab = Math.round(20*kSu), lhSup = Math.round(fSup*1.5);
+  const fL = Math.round(20*kDt), fD = Math.round(30*kDt);
+  const lineasSup = [];
+  if(sup.length){
+    ctx.font = '700 ' + fSup + 'px ' + SANS; sp(1);
+    let cur = [], curW = 0;
+    sup.forEach(n => {
+      const w = ctx.measureText(n).width;
+      const add = cur.length ? gapS*2 + sqS + w : w;
+      if(cur.length && curW + add > W - 150){ lineasSup.push({it:cur, w:curW}); cur = [n]; curW = w; }
+      else { cur.push(n); curW += add; }
+    });
+    if(cur.length) lineasSup.push({it:cur, w:curW});
+    sp(0);
+  }
+  const lsDib = lineasSup.slice(0,3);
+  // DT
+  let dtBase = 0;
+  if(a.dt){ dtBase = yBottom; yBottom = dtBase - fD - 30; }
+  // suplentes (las líneas terminan en yBottom; el rótulo va arriba de la primera)
+  let supTop = yBottom;
+  if(lsDib.length){
+    supTop = yBottom - (lsDib.length - 1)*lhSup - fSup - 18 - fLab;
+  }
+  if(a.dt){
+    const lab = 'DT', nom = String(a.dt).toUpperCase();
+    ctx.font = '700 ' + fL + 'px ' + SANS; sp(3); const lw = ctx.measureText(lab).width;
+    ctx.font = '700 ' + fD + 'px ' + SANS; sp(1);
+    const nw2 = Math.min(ctx.measureText(nom).width, W - 300);
+    const tx = cx - (lw + 18 + nw2)/2;
+    ctx.textAlign = 'left'; ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 8;
+    ctx.fillStyle = 'rgba(255,255,255,.72)'; ctx.font = '700 ' + fL + 'px ' + SANS; sp(3); ctx.fillText(lab, tx, dtBase);
+    ctx.fillStyle = '#ffffff'; ctx.font = '700 ' + fD + 'px ' + SANS; sp(1);
+    cvFillTextTrunc(ctx, nom, tx + lw + 18, dtBase, W - 300);
+    ctx.shadowBlur = 0; sp(0);
+  }
+  if(lsDib.length){
+    ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,.72)';
+    ctx.font = '700 ' + fLab + 'px ' + SANS; sp(4);
+    ctx.fillText('SUPLENTES', cx, supTop + fLab); sp(0);
+    ctx.textAlign = 'left'; ctx.fillStyle = '#ffffff';
+    ctx.font = '700 ' + fSup + 'px ' + SANS; sp(1);
+    ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 8;
+    let sy = supTop + fLab + 18 + fSup;
+    lsDib.forEach(l => {
+      let x = cx - l.w/2;
+      l.it.forEach((n, k) => {
+        ctx.fillText(n, x, sy); x += ctx.measureText(n).width;
+        if(k < l.it.length - 1){ x += gapS; ctx.fillRect(x, sy - fSup*0.36 - sqS/2, sqS, sqS); x += sqS + gapS; }
+      });
+      sy += lhSup;
+    });
+    ctx.shadowBlur = 0; sp(0);
+  }
+
+  // ── Once titular: Anton blanco centrado, ocupa el alto que dejan arriba y abajo ──
+  const tit = (a.titulares||[]).slice(0,11);
+  const yList0 = baseFinal + 40;
+  const yList1 = supTop - 36;
+  const nFilas = Math.max(1, tit.length);
+  const rowHDes = Math.round(70 * (1 + (kN - 1) * 0.5));
+  const rowH = Math.max(34, Math.min(rowHDes, Math.floor((yList1 - yList0) / nFilas)));
+  ctx.font = '100px ' + ANTON;
+  const capRN = (ctx.measureText('H').actualBoundingBoxAscent || 72) / 100;
+  const maxNameW = 560;
+  const slack = Math.max(0, (yList1 - yList0) - rowH*nFilas);
+  let ny = yList0 + Math.min(slack/2, 30) + rowH * 0.80;
+  tit.forEach(t => {
+    const nombre = (t.nombre||'').toUpperCase();
+    let fz = Math.min(Math.round(64*kN), Math.floor(rowH * 0.64 / capRN));
+    ctx.font = fz + 'px ' + ANTON; sp(0.5);
+    while(ctx.measureText(nombre).width > maxNameW && fz > 24){ fz -= 2; ctx.font = fz + 'px ' + ANTON; }
+    const nw = Math.min(ctx.measureText(nombre).width, maxNameW);
+    const capN = fz * capRN;
+    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 12;
+    ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center';
+    cvFillTextTrunc(ctx, nombre, cx, ny, maxNameW);
+    if(t.numero){
+      ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.textAlign = 'right';
+      ctx.font = Math.round(fz*0.8*kNum) + 'px ' + ANTON;
+      ctx.fillText(String(t.numero), cx - nw/2 - 24, ny);
+    }
+    ctx.restore();
+    if(t.capitan){
+      const q = Math.round(capN * 0.95), qx = cx + nw/2 + 22, qy = ny - capN/2 - q/2;
+      ctx.save(); rr(qx, qy, q, q, Math.round(q*0.26)); ctx.fillStyle = '#ffffff'; ctx.fill();
+      ctx.fillStyle = col; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.font = '700 ' + Math.round(q*0.68) + 'px ' + SANS;
+      ctx.fillText('C', qx + q/2, qy + q/2 + 1); ctx.restore();
+    }
+    ctx.textBaseline = 'alphabetic'; sp(0);
+    ny += rowH;
+  });
+
+  // ── Línea de datos centrada con separadores cuadrados ──
+  const segs = [a.fecha, a.hora].map(t => String(t || '').trim().toUpperCase()).filter(Boolean);
+  if(segs.length){
+    let f = Math.round(28*kI), gS = 30, sq = Math.max(7, Math.round(11*kI)), total = 0, widths = [];
+    const medir = () => {
+      ctx.font = '700 ' + f + 'px ' + SANS; sp(1.2);
+      widths = segs.map(t => ctx.measureText(t).width);
+      total = widths.reduce((x, y) => x + y, 0) + (segs.length - 1) * (gS*2 + sq);
+    };
+    medir();
+    while(f > 14 && total > W - 120){ f -= 1; gS = Math.max(14, gS - 1); sq = Math.max(7, Math.round(f*0.4)); medir(); }
+    let x = (W - total) / 2;
+    ctx.textAlign = 'left'; ctx.fillStyle = '#ffffff'; ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 8;
+    segs.forEach((t, k) => {
+      ctx.fillText(t, x, infoY); x += widths[k];
+      if(k < segs.length - 1){ x += gS; ctx.fillRect(x, infoY - f*0.52 - sq/2 + 2, sq, sq); x += sq + gS; }
+    });
+    ctx.shadowBlur = 0; sp(0);
+  }
+  const sub = [alinNombreTorneo(a), a.sede].map(t => String(t || '').trim().replace(/[.\s]+$/, '')).filter(Boolean).join('  ·  ').toUpperCase();
+  if(sub){
+    let f2 = Math.round(20*kI);
+    ctx.font = '500 ' + f2 + 'px ' + SANS; sp(3);
+    while(f2 > 13 && ctx.measureText(sub).width > W - 170){ f2 -= 1; ctx.font = '500 ' + f2 + 'px ' + SANS; }
+    ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,.82)';
+    ctx.fillText(sub, W/2, subY); sp(0);
+  }
+  ctx.textAlign = 'left';
+  return canvas;
+}
+
+// Botón "🖼️ Imagen" de Alineaciones: devuelve los dos diseños para elegir con ‹ › en el modal de compartir.
+async function generarImagenesAlineacion(id){
+  const res = [], etiquetas = [];
+  try{ const c = await generarImagenAlineacionDesde(id); if(c){ res.push(c); etiquetas.push('Clásico · 1 / 2'); } }catch(e){ console.error('Alineación clásica', e); }
+  try{ const c = await generarImagenAlineacionMatchday(id); if(c){ res.push(c); etiquetas.push('Día de partido · 2 / 2'); } }catch(e){ console.error('Alineación Día de partido', e); }
+  if(res.length > 1){
+    res._etiquetas = etiquetas;
+    res._nota = 'Usá ‹ › para elegir el diseño (Clásico o Día de partido). ';
+  }
+  return res;
+}
 
 // Envuelve texto en hasta maxLineas renglones (con "…" al final si no entra todo)
 function cvWrapTexto(ctx, text, x, y, maxW, lineH, maxLineas){
