@@ -4960,8 +4960,8 @@ table.posiciones td:nth-child(8){
           <input type="text" id="alin-dt" placeholder="Nombre del DT"/>
         </div>
 
-        <details style="margin:4px 0 14px"><summary style="cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:12px;letter-spacing:1px;color:var(--gris)">🔠 TAMAÑO DE CADA TEXTO</summary><div id="txt-alin" class="form-row" style="flex-wrap:wrap;margin-top:10px"></div></details>
-        <details style="margin:4px 0 14px"><summary style="cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:12px;letter-spacing:1px;color:var(--gris)">🎨 DISEÑO "DÍA DE PARTIDO"</summary>
+        <details style="margin:4px 0 14px"><summary style="cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:12px;letter-spacing:1px;color:var(--gris)">🔠 TAMAÑO DE CADA TEXTO (diseño clásico)</summary><div id="txt-alin" class="form-row" style="flex-wrap:wrap;margin-top:10px"></div></details>
+        <details style="margin:4px 0 14px"><summary style="cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:12px;letter-spacing:1px;color:var(--gris)">🎨 DISEÑO "DÍA DE PARTIDO" (color, foto y tamaños)</summary>
           <div style="margin-top:10px">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
               <div class="form-group">
@@ -4981,10 +4981,21 @@ table.posiciones td:nth-child(8){
               <label>Texto gigante <span style="color:var(--gris);font-size:10px">— vacío = ALINEACIÓN · usá "/" para dos renglones</span></label>
               <input type="text" id="alin-md-texto" placeholder="ALINEACIÓN"/>
             </div>
+            <p style="font-size:11px;color:var(--dorado);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 6px">Foto de fondo</p>
             <div class="form-group">
-              <label>Posición vertical de la foto <span style="color:var(--gris);font-size:10px">— 0 = arriba</span></label>
-              <input type="range" id="alin-md-py" min="0" max="100" value="0"/>
+              <label style="font-size:10px">Tamaño de la foto: <span id="alin-md-zoom-v">100</span>% <span style="color:var(--gris)">— más = acerca · menos = muestra más foto</span></label>
+              <input type="range" id="alin-md-zoom" min="50" max="250" value="100" style="width:100%" oninput="document.getElementById('alin-md-zoom-v').textContent=this.value"/>
             </div>
+            <div class="form-group">
+              <label style="font-size:10px">Posición horizontal: <span id="alin-md-px-v">50</span>% <span style="color:var(--gris)">— 0 = izquierda</span></label>
+              <input type="range" id="alin-md-px" min="0" max="100" value="50" style="width:100%" oninput="document.getElementById('alin-md-px-v').textContent=this.value"/>
+            </div>
+            <div class="form-group">
+              <label style="font-size:10px">Posición vertical: <span id="alin-md-py-v">0</span>% <span style="color:var(--gris)">— 0 = arriba</span></label>
+              <input type="range" id="alin-md-py" min="0" max="100" value="0" style="width:100%" oninput="document.getElementById('alin-md-py-v').textContent=this.value"/>
+            </div>
+            <p style="font-size:11px;color:var(--dorado);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 0">Tamaño de cada texto</p>
+            <div id="txt-alin-md" class="form-row" style="flex-wrap:wrap;margin-top:6px"></div>
           </div>
         </details>
         <div class="form-group">
@@ -18754,6 +18765,8 @@ async function generarImagenPromocionalTabla(p){
 const TXT_MD  = [['equipos','Nombres de los equipos','md-solo',60,150],['sub','Torneo · sede','af-solo',60,150],['datos','Línea de datos (fecha y hora)','',60,150],['marca','Marca "Presentado por"','',60,150]];
 const TXT_JUG = [['enc','Encabezado (nombre · estadísticas)','',60,160],['num','Números de las cajas','',60,130],['eti','Etiquetas de las cajas','',60,150]];
 const TXT_ALIN = [['nombres','Nombres del once','',70,115],['numeros','Números','',60,130],['info','Fecha, horario y sede','',60,140],['supl','Suplentes','',60,130],['dt','DT','',60,140]];
+// Tamaños propios del diseño "Día de partido" de Alineaciones (se guardan en a.txtMd)
+const TXT_ALIN_MD = [['titulo','Texto gigante','',50,150],['escudos','Escudos','',60,150],['marca','Marca "Presentado por"','',60,150],['nombres','Nombres del once','',60,140],['numeros','Números','',60,140],['supl','Suplentes','',60,140],['dt','DT','',60,150],['info','Fecha y horario','',60,150],['sub','Torneo · sede','',60,150]];
 function txtInit(cont, items){
   const el = document.getElementById(cont); if(!el) return;
   el.innerHTML = items.map(([k,l,cls,mn,mx]) =>
@@ -18775,7 +18788,7 @@ function txtPoner(cont, items, o){
 }
 // Factor de tamaño de un texto (1 = normal)
 function tk(p, k){ const v = p && p.txt && p.txt[k]; return (typeof v === 'number' && v > 0.2 && v < 3) ? v : 1; }
-function txtInitTodos(){ txtInit('txt-md', TXT_MD); txtInit('txt-jug', TXT_JUG); txtInit('txt-alin', TXT_ALIN); }
+function txtInitTodos(){ txtInit('txt-md', TXT_MD); txtInit('txt-jug', TXT_JUG); txtInit('txt-alin', TXT_ALIN); txtInit('txt-alin-md', TXT_ALIN_MD); }
 if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', txtInitTodos); else txtInitTodos();
 
 function promoEstiloCambiar(){
@@ -24307,11 +24320,15 @@ function alinLeerTitularesActuales(){
 
 // Carga en el formulario las opciones del diseño "Día de partido" (con valores por defecto)
 function alinMdPoner(a){
-  const c=document.getElementById('alin-md-color'), t=document.getElementById('alin-md-texto'), e=document.getElementById('alin-md-escudos'), p=document.getElementById('alin-md-py');
+  const c=document.getElementById('alin-md-color'), t=document.getElementById('alin-md-texto'), e=document.getElementById('alin-md-escudos');
   if(c) c.value = /^#[0-9a-fA-F]{6}$/.test(a.mdColor||'') ? a.mdColor : '#0f2a1e';
   if(t) t.value = a.mdTexto || '';
   if(e) e.value = a.mdEscudos || 'color';
-  if(p) p.value = Math.round((a.mdPy||0)*100);
+  const setR = (id, v) => { const r = document.getElementById('alin-md-'+id), l = document.getElementById('alin-md-'+id+'-v'); if(r) r.value = v; if(l) l.textContent = v; };
+  setR('zoom', Math.round((a.mdZoom||1)*100));
+  setR('px', a.mdPx == null ? 50 : Math.round(a.mdPx*100));
+  setR('py', Math.round((a.mdPy||0)*100));
+  txtPoner('txt-alin-md', TXT_ALIN_MD, a.txtMd || a.txt || {});
 }
 function alinLimpiarForm(){
   _alinEditId = null;
@@ -24360,6 +24377,9 @@ function guardarAlineacion(){
     mdTexto: ((document.getElementById('alin-md-texto')||{}).value || '').trim(),
     mdEscudos: (document.getElementById('alin-md-escudos')||{}).value || 'color',
     mdPy: (parseInt((document.getElementById('alin-md-py')||{}).value, 10) || 0) / 100,
+    mdPx: (function(){ const v = parseInt((document.getElementById('alin-md-px')||{}).value, 10); return (isNaN(v) ? 50 : v) / 100; })(),
+    mdZoom: (parseInt((document.getElementById('alin-md-zoom')||{}).value, 10) || 100) / 100,
+    txtMd: txtLeer('txt-alin-md', TXT_ALIN_MD),
     formacion, dt, titulares, suplentes
   };
   if(!data.alineaciones) data.alineaciones = [];
@@ -24817,7 +24837,10 @@ async function generarImagenAlineacionMatchday(id){
   const col = /^#[0-9a-fA-F]{6}$/.test(a.mdColor || '') ? a.mdColor : '#0f2a1e';
   const cr = parseInt(col.slice(1,3),16), cg = parseInt(col.slice(3,5),16), cb = parseInt(col.slice(5,7),16);
   const rgba = (al) => 'rgba(' + cr + ',' + cg + ',' + cb + ',' + al + ')';
-  const kN = tk(a,'nombres'), kNum = tk(a,'numeros'), kI = tk(a,'info'), kSu = tk(a,'supl'), kDt = tk(a,'dt'), kM = tk(a,'marca');
+  // tamaños de texto propios de este diseño (a.txtMd); si la alineación es vieja, cae en los generales (a.txt)
+  const _T = a.txtMd || a.txt || {};
+  const tkm = (k) => tk({txt:_T}, k);
+  const kN = tkm('nombres'), kNum = tkm('numeros'), kI = tkm('info'), kSu = tkm('supl'), kDt = tkm('dt'), kM = tkm('marca'), kT = tkm('titulo'), kE = tkm('escudos'), kSub = tkm('sub');
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
@@ -24835,14 +24858,24 @@ async function generarImagenAlineacionMatchday(id){
   const foto = await cargarImagenAsync(fotoSrc);
   if(foto){
     const iw = foto.naturalWidth || foto.width || 1, ih = foto.naturalHeight || foto.height || 1;
-    const zoom = Math.max(1, a.mdZoom || 1), py = Math.min(1, Math.max(0, a.mdPy || 0));
+    // Tamaño de la foto: 100% = cubre el panel superior; más = acerca; menos = muestra más foto (nunca menos que el ancho)
+    const zoom = Math.min(3, Math.max(0.5, a.mdZoom || 1));
+    const px = Math.min(1, Math.max(0, a.mdPx == null ? 0.5 : a.mdPx)), py = Math.min(1, Math.max(0, a.mdPy || 0));
     const alto = H * 0.70;
-    const sc = Math.max(W/iw, alto/ih) * zoom;
+    const sc = Math.max(W/iw, Math.max(W/iw, alto/ih) * zoom);
     const dw = iw*sc, dh = ih*sc;
+    const fx = (W - dw) * px, fy = dh > alto ? (alto - dh) * py : 0;
     ctx.save();
     try{ ctx.filter = 'contrast(1.1) saturate(1.1)'; }catch(e){}
-    ctx.drawImage(foto, (W-dw)/2, (alto - dh)*py, dw, dh);
+    ctx.drawImage(foto, fx, fy, dw, dh);
     ctx.restore();
+    // si la foto termina antes de que el degradé sea sólido, se difumina su borde inferior (sin corte)
+    if(fy + dh < H*0.66){
+      const eb = fy + dh, fe = ctx.createLinearGradient(0, eb - 160, 0, eb + 1);
+      fe.addColorStop(0, rgba(0)); fe.addColorStop(1, rgba(1));
+      ctx.fillStyle = fe; ctx.fillRect(0, eb - 160, W, 161);
+      ctx.fillStyle = col; ctx.fillRect(0, eb, W, H - eb);
+    }
     ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.globalAlpha = 0.2;
     ctx.fillStyle = col; ctx.fillRect(0, 0, W, H); ctx.restore();
   } else {
@@ -24874,7 +24907,7 @@ async function generarImagenAlineacionMatchday(id){
   if(!lineas.length) lineas.push('ALINEACIÓN');
   ctx.font = '100px ' + ANTON; sp(0);
   const capR = (ctx.measureText('H').actualBoundingBoxAscent || 72) / 100;     // alto de mayúscula por px de fuente
-  const capMax = lineas.length === 1 ? 128 : 96;
+  const capMax = (lineas.length === 1 ? 128 : 96) * kT;
   let fs = Math.floor(capMax / capR);
   ctx.font = fs + 'px ' + ANTON;
   const tw0 = Math.max(...lineas.map(t => ctx.measureText(t).width));
@@ -24883,7 +24916,7 @@ async function generarImagenAlineacionMatchday(id){
   const capH = fs * capR, lineGap = capH * 1.14;
 
   // ── Fila de escudos (cuadrados redondeados), centrada ──
-  const bs = 100, bgap = 8, rowY = 160;
+  const bs = Math.round(100*kE), bgap = 8, rowY = 160;
   const colorDe = (img) => {
     try{
       const c = document.createElement('canvas'); c.width = c.height = 24;
@@ -24906,15 +24939,15 @@ async function generarImagenAlineacionMatchday(id){
     if(a.mdEscudos === 'oscuro') fill = 'rgba(0,0,0,.55)';
     else if(a.mdEscudos !== 'blanco' && img) fill = colorDe(img);
     ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 14;
-    rr(x, rowY, bs, bs, 24); ctx.fillStyle = fill; ctx.fill(); ctx.restore();
-    const pad = 15, inner = bs - pad*2;
+    rr(x, rowY, bs, bs, Math.round(24*kE)); ctx.fillStyle = fill; ctx.fill(); ctx.restore();
+    const pad = Math.round(15*kE), inner = bs - pad*2;
     if(!img){ cvEscudoFallback(ctx, nombre, x + pad, rowY + pad, inner); return; }
     const iw = img.naturalWidth || img.width || 1, ih = img.naturalHeight || img.height || 1;
     const sc = Math.min(inner/iw, inner/ih);
     ctx.drawImage(img, x + (bs - iw*sc)/2, rowY + (bs - ih*sc)/2, iw*sc, ih*sc);
   };
   const logo = a.rival ? await cargarImagenAsync(alinLogoTorneo(a)) : null;
-  const cs = 80;
+  const cs = Math.round(80*kE);
   const anchoFila = a.rival ? (bs + bgap + (logo ? cs + bgap : 0) + bs) : bs;
   let bx = cx - anchoFila/2;
   await dibujarBadge(a.equipo, bx); bx += bs + bgap;
@@ -25006,7 +25039,7 @@ async function generarImagenAlineacionMatchday(id){
   const yList1 = supTop - 36;
   const nFilas = Math.max(1, tit.length);
   const rowHDes = Math.round(70 * (1 + (kN - 1) * 0.5));
-  const rowH = Math.max(34, Math.min(rowHDes, Math.floor((yList1 - yList0) / nFilas)));
+  const rowH = Math.max(22, Math.min(rowHDes, Math.floor((yList1 - yList0) / nFilas)));
   ctx.font = '100px ' + ANTON;
   const capRN = (ctx.measureText('H').actualBoundingBoxAscent || 72) / 100;
   const maxNameW = 560;
@@ -25014,7 +25047,9 @@ async function generarImagenAlineacionMatchday(id){
   let ny = yList0 + Math.min(slack/2, 30) + rowH * 0.80;
   tit.forEach(t => {
     const nombre = (t.nombre||'').toUpperCase();
-    let fz = Math.min(Math.round(64*kN), Math.floor(rowH * 0.64 / capRN));
+    // el tamaño elegido se respeta aunque no entre en la fila (hasta que dos renglones se tocarían)
+    let fz = Math.min(Math.round(80*kN), Math.floor(rowH * 0.64 * kN / capRN));
+    fz = Math.min(fz, Math.floor(rowH * 0.86 / capRN));
     ctx.font = fz + 'px ' + ANTON; sp(0.5);
     while(ctx.measureText(nombre).width > maxNameW && fz > 24){ fz -= 2; ctx.font = fz + 'px ' + ANTON; }
     const nw = Math.min(ctx.measureText(nombre).width, maxNameW);
@@ -25024,7 +25059,7 @@ async function generarImagenAlineacionMatchday(id){
     cvFillTextTrunc(ctx, nombre, cx, ny, maxNameW);
     if(t.numero){
       ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.textAlign = 'right';
-      ctx.font = Math.round(fz*0.8*kNum) + 'px ' + ANTON;
+      ctx.font = Math.round(Math.min(fz*0.8*kNum, fz*0.95)) + 'px ' + ANTON;
       ctx.fillText(String(t.numero), cx - nw/2 - 24, ny);
     }
     ctx.restore();
@@ -25060,7 +25095,7 @@ async function generarImagenAlineacionMatchday(id){
   }
   const sub = [alinNombreTorneo(a), a.sede].map(t => String(t || '').trim().replace(/[.\s]+$/, '')).filter(Boolean).join('  ·  ').toUpperCase();
   if(sub){
-    let f2 = Math.round(20*kI);
+    let f2 = Math.round(20*kSub);
     ctx.font = '500 ' + f2 + 'px ' + SANS; sp(3);
     while(f2 > 13 && ctx.measureText(sub).width > W - 170){ f2 -= 1; ctx.font = '500 ' + f2 + 'px ' + SANS; }
     ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,.82)';
