@@ -4961,7 +4961,7 @@ table.posiciones td:nth-child(8){
         </div>
 
         <details style="margin:4px 0 14px"><summary style="cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:12px;letter-spacing:1px;color:var(--gris)">🔠 TAMAÑO DE CADA TEXTO (diseño clásico)</summary><div id="txt-alin" class="form-row" style="flex-wrap:wrap;margin-top:10px"></div></details>
-        <details style="margin:4px 0 14px"><summary style="cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:12px;letter-spacing:1px;color:var(--gris)">🎨 DISEÑO "DÍA DE PARTIDO" (color, foto y tamaños)</summary>
+        <details style="margin:4px 0 14px"><summary style="cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:12px;letter-spacing:1px;color:var(--gris)">🎨 DISEÑO "DÍA DE PARTIDO" (color, foto, ubicación y tamaños)</summary>
           <div style="margin-top:10px">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
               <div class="form-group">
@@ -4980,6 +4980,27 @@ table.posiciones td:nth-child(8){
             <div class="form-group">
               <label>Texto gigante <span style="color:var(--gris);font-size:10px">— vacío = ALINEACIÓN · usá "/" para dos renglones</span></label>
               <input type="text" id="alin-md-texto" placeholder="ALINEACIÓN"/>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div class="form-group">
+                <label>Degradé de color</label>
+                <select id="alin-md-degrade">
+                  <option value="si">Sí (la foto se funde al color)</option>
+                  <option value="no">No (foto completa con velo oscuro)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Ubicación de la alineación</label>
+                <select id="alin-md-pos">
+                  <option value="centro">Centro</option>
+                  <option value="izquierda">Izquierda</option>
+                  <option value="derecha">Derecha</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label style="font-size:10px">Velo oscuro sobre la foto: <span id="alin-md-velo-v">40</span>% <span style="color:var(--gris)">— solo se usa sin degradé</span></label>
+              <input type="range" id="alin-md-velo" min="0" max="85" value="40" style="width:100%" oninput="document.getElementById('alin-md-velo-v').textContent=this.value"/>
             </div>
             <p style="font-size:11px;color:var(--dorado);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 6px">Foto de fondo</p>
             <div class="form-group">
@@ -24328,6 +24349,10 @@ function alinMdPoner(a){
   setR('zoom', Math.round((a.mdZoom||1)*100));
   setR('px', a.mdPx == null ? 50 : Math.round(a.mdPx*100));
   setR('py', Math.round((a.mdPy||0)*100));
+  const dg = document.getElementById('alin-md-degrade'), ps = document.getElementById('alin-md-pos');
+  if(dg) dg.value = a.mdDegrade === 'no' ? 'no' : 'si';
+  if(ps) ps.value = (a.mdPos === 'izquierda' || a.mdPos === 'derecha') ? a.mdPos : 'centro';
+  setR('velo', a.mdVelo == null ? 40 : Math.round(a.mdVelo*100));
   txtPoner('txt-alin-md', TXT_ALIN_MD, a.txtMd || a.txt || {});
 }
 function alinLimpiarForm(){
@@ -24380,6 +24405,9 @@ function guardarAlineacion(){
     mdPx: (function(){ const v = parseInt((document.getElementById('alin-md-px')||{}).value, 10); return (isNaN(v) ? 50 : v) / 100; })(),
     mdZoom: (parseInt((document.getElementById('alin-md-zoom')||{}).value, 10) || 100) / 100,
     txtMd: txtLeer('txt-alin-md', TXT_ALIN_MD),
+    mdDegrade: (document.getElementById('alin-md-degrade')||{}).value || 'si',
+    mdPos: (document.getElementById('alin-md-pos')||{}).value || 'centro',
+    mdVelo: (function(){ const v = parseInt((document.getElementById('alin-md-velo')||{}).value, 10); return (isNaN(v) ? 40 : v) / 100; })(),
     formacion, dt, titulares, suplentes
   };
   if(!data.alineaciones) data.alineaciones = [];
@@ -24841,6 +24869,14 @@ async function generarImagenAlineacionMatchday(id){
   const _T = a.txtMd || a.txt || {};
   const tkm = (k) => tk({txt:_T}, k);
   const kN = tkm('nombres'), kNum = tkm('numeros'), kI = tkm('info'), kSu = tkm('supl'), kDt = tkm('dt'), kM = tkm('marca'), kT = tkm('titulo'), kE = tkm('escudos'), kSub = tkm('sub');
+  // Opciones de composición: degradé de color sí/no y ubicación de la alineación (izquierda / centro / derecha)
+  const degr = a.mdDegrade !== 'no';
+  const pos = (a.mdPos === 'izquierda' || a.mdPos === 'derecha') ? a.mdPos : 'centro';
+  const MG = 70;                                                            // margen lateral cuando va a un costado
+  const ax = pos === 'izquierda' ? MG : pos === 'derecha' ? W - MG : cx;    // ancla horizontal del contenido
+  const al = pos === 'izquierda' ? 'left' : pos === 'derecha' ? 'right' : 'center';
+  const xDe = (w) => pos === 'izquierda' ? MG : pos === 'derecha' ? W - MG - w : cx - w/2;   // x inicial de un bloque de ancho w
+  const velo = Math.min(0.85, Math.max(0, a.mdVelo == null ? 0.4 : a.mdVelo));
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
@@ -24861,7 +24897,7 @@ async function generarImagenAlineacionMatchday(id){
     // Tamaño de la foto: 100% = cubre el panel superior; más = acerca; menos = muestra más foto (nunca menos que el ancho)
     const zoom = Math.min(3, Math.max(0.5, a.mdZoom || 1));
     const px = Math.min(1, Math.max(0, a.mdPx == null ? 0.5 : a.mdPx)), py = Math.min(1, Math.max(0, a.mdPy || 0));
-    const alto = H * 0.70;
+    const alto = degr ? H * 0.70 : H;
     const sc = Math.max(W/iw, Math.max(W/iw, alto/ih) * zoom);
     const dw = iw*sc, dh = ih*sc;
     const fx = (W - dw) * px, fy = dh > alto ? (alto - dh) * py : 0;
@@ -24870,7 +24906,7 @@ async function generarImagenAlineacionMatchday(id){
     ctx.drawImage(foto, fx, fy, dw, dh);
     ctx.restore();
     // si la foto termina antes de que el degradé sea sólido, se difumina su borde inferior (sin corte)
-    if(fy + dh < H*0.66){
+    if(fy + dh < (degr ? H*0.66 : H - 1)){
       const eb = fy + dh, fe = ctx.createLinearGradient(0, eb - 160, 0, eb + 1);
       fe.addColorStop(0, rgba(0)); fe.addColorStop(1, rgba(1));
       ctx.fillStyle = fe; ctx.fillRect(0, eb - 160, W, 161);
@@ -24884,9 +24920,14 @@ async function generarImagenAlineacionMatchday(id){
     ctx.fillStyle = gl; ctx.fillRect(0, 0, W, H);
   }
   // el degradé arranca antes que en "Día de partido": la lista de nombres necesita fondo parejo
-  const fade = ctx.createLinearGradient(0, H*0.14, 0, H*0.62);
-  fade.addColorStop(0, rgba(0)); fade.addColorStop(0.45, rgba(0.62)); fade.addColorStop(0.75, rgba(0.9)); fade.addColorStop(1, rgba(1));
-  ctx.fillStyle = fade; ctx.fillRect(0, H*0.14, W, H*0.86);
+  if(degr){
+    const fade = ctx.createLinearGradient(0, H*0.14, 0, H*0.62);
+    fade.addColorStop(0, rgba(0)); fade.addColorStop(0.45, rgba(0.62)); fade.addColorStop(0.75, rgba(0.9)); fade.addColorStop(1, rgba(1));
+    ctx.fillStyle = fade; ctx.fillRect(0, H*0.14, W, H*0.86);
+  } else if(foto && velo > 0){
+    // sin degradé: la foto ocupa toda la imagen y solo se oscurece parejo para que se lean los textos
+    ctx.fillStyle = 'rgba(0,0,0,' + velo + ')'; ctx.fillRect(0, 0, W, H);
+  }
   const topv = ctx.createLinearGradient(0, 0, 0, H*0.16);
   topv.addColorStop(0, 'rgba(0,0,0,.35)'); topv.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = topv; ctx.fillRect(0, 0, W, H*0.16);
@@ -24949,7 +24990,7 @@ async function generarImagenAlineacionMatchday(id){
   const logo = a.rival ? await cargarImagenAsync(alinLogoTorneo(a)) : null;
   const cs = Math.round(80*kE);
   const anchoFila = a.rival ? (bs + bgap + (logo ? cs + bgap : 0) + bs) : bs;
-  let bx = cx - anchoFila/2;
+  let bx = xDe(anchoFila);
   await dibujarBadge(a.equipo, bx); bx += bs + bgap;
   if(a.rival){
     if(logo){
@@ -24965,10 +25006,10 @@ async function generarImagenAlineacionMatchday(id){
   // texto gigante (debajo de los escudos)
   const acento = /[ÁÉÍÓÚÜÑ]/.test(lineas[0]) ? fs * 0.17 : 0;
   const baseFinal = Math.round(rowY + bs + 26 + acento + capH + (lineas.length - 1) * lineGap);
-  ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = '#ffffff'; ctx.textAlign = al; ctx.textBaseline = 'alphabetic';
   ctx.font = fs + 'px ' + ANTON; sp(0);
   ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 16;
-  lineas.forEach((t, k) => ctx.fillText(t, cx, baseFinal - (lineas.length - 1 - k) * lineGap));
+  lineas.forEach((t, k) => ctx.fillText(t, ax, baseFinal - (lineas.length - 1 - k) * lineGap));
   ctx.shadowBlur = 0;
 
   // ── Bloque inferior anclado desde abajo: datos → torneo·sede → DT → suplentes ──
@@ -24987,7 +25028,7 @@ async function generarImagenAlineacionMatchday(id){
     sup.forEach(n => {
       const w = ctx.measureText(n).width;
       const add = cur.length ? gapS*2 + sqS + w : w;
-      if(cur.length && curW + add > W - 150){ lineasSup.push({it:cur, w:curW}); cur = [n]; curW = w; }
+      if(cur.length && curW + add > (pos === 'centro' ? W - 150 : W - 2*MG)){ lineasSup.push({it:cur, w:curW}); cur = [n]; curW = w; }
       else { cur.push(n); curW += add; }
     });
     if(cur.length) lineasSup.push({it:cur, w:curW});
@@ -25007,7 +25048,7 @@ async function generarImagenAlineacionMatchday(id){
     ctx.font = '700 ' + fL + 'px ' + SANS; sp(3); const lw = ctx.measureText(lab).width;
     ctx.font = '700 ' + fD + 'px ' + SANS; sp(1);
     const nw2 = Math.min(ctx.measureText(nom).width, W - 300);
-    const tx = cx - (lw + 18 + nw2)/2;
+    const tx = xDe(lw + 18 + nw2);
     ctx.textAlign = 'left'; ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 8;
     ctx.fillStyle = 'rgba(255,255,255,.72)'; ctx.font = '700 ' + fL + 'px ' + SANS; sp(3); ctx.fillText(lab, tx, dtBase);
     ctx.fillStyle = '#ffffff'; ctx.font = '700 ' + fD + 'px ' + SANS; sp(1);
@@ -25015,15 +25056,15 @@ async function generarImagenAlineacionMatchday(id){
     ctx.shadowBlur = 0; sp(0);
   }
   if(lsDib.length){
-    ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,.72)';
+    ctx.textAlign = al; ctx.fillStyle = 'rgba(255,255,255,.72)';
     ctx.font = '700 ' + fLab + 'px ' + SANS; sp(4);
-    ctx.fillText('SUPLENTES', cx, supTop + fLab); sp(0);
+    ctx.fillText('SUPLENTES', ax, supTop + fLab); sp(0);
     ctx.textAlign = 'left'; ctx.fillStyle = '#ffffff';
     ctx.font = '700 ' + fSup + 'px ' + SANS; sp(1);
     ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 8;
     let sy = supTop + fLab + 18 + fSup;
     lsDib.forEach(l => {
-      let x = cx - l.w/2;
+      let x = xDe(l.w);
       l.it.forEach((n, k) => {
         ctx.fillText(n, x, sy); x += ctx.measureText(n).width;
         if(k < l.it.length - 1){ x += gapS; ctx.fillRect(x, sy - fSup*0.36 - sqS/2, sqS, sqS); x += sqS + gapS; }
@@ -25042,7 +25083,8 @@ async function generarImagenAlineacionMatchday(id){
   const rowH = Math.max(22, Math.min(rowHDes, Math.floor((yList1 - yList0) / nFilas)));
   ctx.font = '100px ' + ANTON;
   const capRN = (ctx.measureText('H').actualBoundingBoxAscent || 72) / 100;
-  const maxNameW = 560;
+  const maxNameW = pos === 'centro' ? 560 : 620;
+  const numCol = 78;   // ancho reservado al número cuando la lista va a un costado
   const slack = Math.max(0, (yList1 - yList0) - rowH*nFilas);
   let ny = yList0 + Math.min(slack/2, 30) + rowH * 0.80;
   tit.forEach(t => {
@@ -25054,17 +25096,22 @@ async function generarImagenAlineacionMatchday(id){
     while(ctx.measureText(nombre).width > maxNameW && fz > 24){ fz -= 2; ctx.font = fz + 'px ' + ANTON; }
     const nw = Math.min(ctx.measureText(nombre).width, maxNameW);
     const capN = fz * capRN;
+    const q = Math.round(capN * 0.95);
+    let nameX, numX, numAl, qx;
+    if(pos === 'izquierda'){ nameX = MG + numCol; numX = MG; numAl = 'left'; qx = nameX + nw + 22; }
+    else if(pos === 'derecha'){ nameX = W - MG - numCol; numX = W - MG; numAl = 'right'; qx = nameX - nw - 22 - q; }
+    else { nameX = cx; numX = cx - nw/2 - 24; numAl = 'right'; qx = cx + nw/2 + 22; }
     ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 12;
-    ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center';
-    cvFillTextTrunc(ctx, nombre, cx, ny, maxNameW);
+    ctx.fillStyle = '#ffffff'; ctx.textAlign = al;
+    cvFillTextTrunc(ctx, nombre, nameX, ny, maxNameW);
     if(t.numero){
-      ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.textAlign = 'right';
+      ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.textAlign = numAl;
       ctx.font = Math.round(Math.min(fz*0.8*kNum, fz*0.95)) + 'px ' + ANTON;
-      ctx.fillText(String(t.numero), cx - nw/2 - 24, ny);
+      ctx.fillText(String(t.numero), numX, ny);
     }
     ctx.restore();
     if(t.capitan){
-      const q = Math.round(capN * 0.95), qx = cx + nw/2 + 22, qy = ny - capN/2 - q/2;
+      const qy = ny - capN/2 - q/2;
       ctx.save(); rr(qx, qy, q, q, Math.round(q*0.26)); ctx.fillStyle = '#ffffff'; ctx.fill();
       ctx.fillStyle = col; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.font = '700 ' + Math.round(q*0.68) + 'px ' + SANS;
@@ -25085,7 +25132,7 @@ async function generarImagenAlineacionMatchday(id){
     };
     medir();
     while(f > 14 && total > W - 120){ f -= 1; gS = Math.max(14, gS - 1); sq = Math.max(7, Math.round(f*0.4)); medir(); }
-    let x = (W - total) / 2;
+    let x = xDe(total);
     ctx.textAlign = 'left'; ctx.fillStyle = '#ffffff'; ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 8;
     segs.forEach((t, k) => {
       ctx.fillText(t, x, infoY); x += widths[k];
@@ -25098,8 +25145,8 @@ async function generarImagenAlineacionMatchday(id){
     let f2 = Math.round(20*kSub);
     ctx.font = '500 ' + f2 + 'px ' + SANS; sp(3);
     while(f2 > 13 && ctx.measureText(sub).width > W - 170){ f2 -= 1; ctx.font = '500 ' + f2 + 'px ' + SANS; }
-    ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,.82)';
-    ctx.fillText(sub, W/2, subY); sp(0);
+    ctx.textAlign = al; ctx.fillStyle = 'rgba(255,255,255,.82)';
+    ctx.fillText(sub, ax, subY); sp(0);
   }
   ctx.textAlign = 'left';
   return canvas;
