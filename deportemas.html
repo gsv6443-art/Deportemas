@@ -5737,6 +5737,27 @@ table.posiciones td:nth-child(8){
               <option value="cartelera">Cartelera de partidos (hasta 8, con la radio arriba)</option>
             </select>
           </div>
+          <div class="form-group"><label>Estilo</label>
+            <select id="promo7-estilo" onchange="promoRadioCambiarEstilo()">
+              <option value="clasico">Clásico</option>
+              <option value="md">Día de partido (foto arriba, escudos en cuadros, titular gigante)</option>
+            </select>
+          </div>
+          <div id="promo7-md-opts" style="display:none">
+            <div class="form-row">
+              <div class="form-group"><label>Color de fondo</label><input type="color" id="promo7-md-color" value="#0f2a1e" style="height:38px;padding:2px"/></div>
+              <div class="form-group"><label>Cuadros de los escudos</label>
+                <select id="promo7-md-escudos">
+                  <option value="color">Color del escudo</option>
+                  <option value="blanco">Blancos</option>
+                  <option value="oscuro">Oscuros</option>
+                </select>
+              </div>
+            </div>
+            <p style="font-size:10px;color:var(--gris);margin:-4px 0 12px;font-family:'Rajdhani',sans-serif">
+              En este estilo la foto ocupa la parte de arriba y se funde al color de fondo. La paleta de abajo define el color de acento (titular, hora, micrófono). Podés ajustar la foto con "Encuadre de la foto".
+            </p>
+          </div>
           <div class="form-row">
             <div class="form-group"><label>Radio</label><input type="text" id="promo7-radio" value="LV26" placeholder="Ej: LV26"/></div>
             <div class="form-group"><label>Frecuencia</label><input type="text" id="promo7-frec" value="FM 101.9" placeholder="Ej: FM 101.9"/></div>
@@ -15683,6 +15704,12 @@ function promoRadioCargarSlot(i){
   set('promo7-h', (p.hora && !/^[-\s:]+$/.test(p.hora)) ? p.hora : '');
 }
 
+// Muestra u oculta las opciones propias del estilo "Día de partido"
+function promoRadioCambiarEstilo(){
+  const md = (document.getElementById('promo7-estilo')||{value:'clasico'}).value === 'md';
+  const o = document.getElementById('promo7-md-opts'); if(o) o.style.display = md ? '' : 'none';
+  promoRadioCambiarDiseno();
+}
 function promoRadioCambiarDiseno(){
   const d = (document.getElementById('promo7-diseno')||{value:'partido'}).value;
   const cart = d === 'cartelera';
@@ -15692,7 +15719,8 @@ function promoRadioCambiarDiseno(){
     if(el) el.style.display = i <= vis ? '' : 'none';
   }
   const show = (id, on) => { const el = document.getElementById(id); if(el) el.style.display = on ? '' : 'none'; };
-  show('promo7-orden-wrap', cart); show('promo7-pre-wrap', cart); show('promo7-dial-wrap', !cart); show('promo7-dia-wrap', cart);
+  const md = (document.getElementById('promo7-estilo')||{value:'clasico'}).value === 'md';
+  show('promo7-orden-wrap', cart); show('promo7-pre-wrap', cart || md); show('promo7-dial-wrap', !cart); show('promo7-dia-wrap', cart);
   show('promo7-mas', cart && vis < 8);
 }
 
@@ -15700,7 +15728,8 @@ function promoRadioGuardarCfg(){
   const v = id => (document.getElementById(id)||{value:''}).value;
   try{
     localStorage.setItem(PROMO7_LS, JSON.stringify({
-      radio:v('promo7-radio'), frec:v('promo7-frec'), pre:v('promo7-pre'), dial:v('promo7-dial'), tema:v('promo7-tema'), diseno:v('promo7-diseno')
+      radio:v('promo7-radio'), frec:v('promo7-frec'), pre:v('promo7-pre'), dial:v('promo7-dial'), tema:v('promo7-tema'), diseno:v('promo7-diseno'),
+      estilo:v('promo7-estilo'), mdColor:v('promo7-md-color'), mdEscudos:v('promo7-md-escudos')
     }));
   }catch(e){}
 }
@@ -15711,6 +15740,8 @@ function promoRadioCargarCfg(){
   const set = (id,val)=>{ const el = document.getElementById(id); if(el && val!=null) el.value = val; };
   set('promo7-radio',c.radio); set('promo7-frec',c.frec); set('promo7-pre',c.pre); set('promo7-dial',c.dial);
   set('promo7-tema',c.tema); set('promo7-diseno',c.diseno);
+  set('promo7-estilo',c.estilo); set('promo7-md-color',c.mdColor); set('promo7-md-escudos',c.mdEscudos);
+  promoRadioCambiarEstilo();
 }
 
 function promoRadioPreviewFoto(input){
@@ -15779,8 +15810,10 @@ function promoGenerarRadio(){
     margen: !!(document.getElementById('promo7-safe')||{}).checked,
     foto: _promoFoto7 || '',
     zoom: num('promo7-zoom',100)/100, px: num('promo7-px',50)/100, py: num('promo7-py',30)/100,
+    estilo: val('promo7-estilo') === 'md' ? 'md' : 'clasico',
+    mdColor: val('promo7-md-color') || '#0f2a1e', mdEscudos: val('promo7-md-escudos') || 'color',
   };
-  abrirShare(() => generarImagenPromoRadio(p));
+  abrirShare(() => p.estilo === 'md' ? generarImagenPromoRadioMatchday(p) : generarImagenPromoRadio(p));
 }
 
 async function generarImagenPromoRadio(p){
@@ -16180,6 +16213,394 @@ async function generarImagenPromoRadio(p){
         ctx.font = `600 ${Math.max(24, Math.round(30*k*(dest ? 1.1 : 1)))}px ${FR}`; setLS('1px'); ctx.fillStyle = T.sub; ctx.textAlign = 'left';
         ctx.fillText(trunc(m.estadio, xR - x0 - notaW), cx0, yS); setLS('0px');
       }
+    }
+  }
+  ctx.textAlign = 'left';
+  return canvas;
+}
+
+// ============================================================
+// COBERTURA RADIAL — estilo "Día de partido" (1080×1920)
+// Misma estética que el resto de las piezas "Día de partido": foto arriba que se funde a un color liso,
+// escudos en cuadrados redondeados, titular gigante en Anton y datos con separadores cuadrados.
+// Recibe el mismo objeto `p` que generarImagenPromoRadio, más: p.mdColor (#rrggbb) y p.mdEscudos ('color'|'blanco'|'oscuro').
+// Soporta los dos diseños: "partido" y "cartelera".
+// ============================================================
+async function generarImagenPromoRadioMatchday(p){
+  try{
+    if(document.head && !document.getElementById('md-fuentes')){
+      const l = document.createElement('link'); l.id = 'md-fuentes'; l.rel = 'stylesheet';
+      l.href = 'https://fonts.googleapis.com/css2?family=Anton&family=DM+Sans:wght@500;700&display=swap';
+      document.head.appendChild(l);
+    }
+    await Promise.all(['100px "Anton"','100px "Bebas Neue"','700 20px "DM Sans"','500 20px "DM Sans"'].map(f => document.fonts.load(f)));
+  }catch(e){}
+  try{ await document.fonts.ready; }catch(e){}
+
+  const W = 1080, H = 1920, CX = W/2, ML = 70, MR = W - 70;
+  const T = PROMO7_THEMES[p.tema] || PROMO7_THEMES.dorado;
+  const ANTON = '"Anton", "Bebas Neue", Impact, "Arial Narrow", sans-serif';
+  const BEB   = '"Bebas Neue", Arial, sans-serif';
+  const SANS  = '"DM Sans", Arial, sans-serif';
+  const col = /^#[0-9a-fA-F]{6}$/.test(p.mdColor || '') ? p.mdColor : '#0f2a1e';
+  const cr = parseInt(col.slice(1,3),16), cg = parseInt(col.slice(3,5),16), cb = parseInt(col.slice(5,7),16);
+  const rgba = a => 'rgba(' + cr + ',' + cg + ',' + cb + ',' + a + ')';
+  const canvas = document.createElement('canvas'); canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d'); ctx.textBaseline = 'alphabetic';
+
+  const sp = px => { if('letterSpacing' in ctx) ctx.letterSpacing = px + 'px'; };
+  const sombra = on => { ctx.shadowColor = on ? 'rgba(0,0,0,.5)' : 'transparent'; ctx.shadowBlur = on ? 14 : 0; ctx.shadowOffsetY = 0; };
+  const rr = (x, y, w, h, r) => {
+    ctx.beginPath(); ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+  };
+  const fitSz = (txt, maxW, maxSz, minSz, fam, ls) => {
+    for(let sz = maxSz; sz >= minSz; sz -= 2){
+      ctx.font = '400 ' + sz + 'px ' + fam; sp(ls || 0);
+      if(ctx.measureText(txt).width <= maxW){ sp(0); return sz; }
+    }
+    sp(0); return minSz;
+  };
+  const trunc = (txt, maxW) => {
+    if(ctx.measureText(txt).width <= maxW) return txt;
+    let t = txt;
+    while(t.length > 1 && ctx.measureText(t + '…').width > maxW) t = t.slice(0, -1);
+    return t.trim() + '…';
+  };
+  const micro = (cx, cy, sz, c) => {
+    cy += sz*0.04;
+    ctx.save(); ctx.fillStyle = c; ctx.strokeStyle = c; ctx.lineCap = 'round'; ctx.lineWidth = Math.max(2, sz*0.085);
+    rr(cx - sz*0.19, cy - sz*0.5, sz*0.38, sz*0.6, sz*0.19); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx, cy - sz*0.1, sz*0.3, 0, Math.PI, false); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, cy + sz*0.2); ctx.lineTo(cx, cy + sz*0.42);
+    ctx.moveTo(cx - sz*0.16, cy + sz*0.42); ctx.lineTo(cx + sz*0.16, cy + sz*0.42); ctx.stroke();
+    ctx.restore();
+  };
+  ctx.font = '100px ' + ANTON;
+  const capR = (ctx.measureText('H').actualBoundingBoxAscent || 72) / 100;     // alto de mayúscula por px de fuente (Anton)
+
+  // Parte un nombre en 1 o 2 renglones (2 balanceados; si no entra, trunca)
+  const lineasNombre = (nombre, sz, maxW) => {
+    ctx.font = sz + 'px ' + ANTON; sp(0.5);
+    if(ctx.measureText(nombre).width <= maxW){ sp(0); return { lines:[nombre], ok:true }; }
+    const words = nombre.split(/\s+/).filter(Boolean); let best = null;
+    for(let k = 1; k < words.length; k++){
+      const a = words.slice(0, k).join(' '), b = words.slice(k).join(' ');
+      const w = Math.max(ctx.measureText(a).width, ctx.measureText(b).width);
+      if(!best || w < best.w) best = { a, b, w };
+    }
+    sp(0);
+    if(best && best.w <= maxW) return { lines:[best.a, best.b], ok:true };
+    return { lines:[trunc(nombre, maxW)], ok:false };
+  };
+  const tamNombre = (nombre, maxW, maxSz, minSz) => {
+    for(let sz = maxSz; sz >= minSz; sz -= 2){ if(lineasNombre(nombre, sz, maxW).ok) return sz; }
+    return minSz;
+  };
+
+  // Cuadrado redondeado del color dominante del escudo (como en el resto de las piezas "Día de partido")
+  const colorDe = (img) => {
+    try{
+      const c = document.createElement('canvas'); c.width = c.height = 24;
+      const g = c.getContext('2d'); g.drawImage(img, 0, 0, 24, 24);
+      const d = g.getImageData(0, 0, 24, 24).data;
+      let r = 0, gg = 0, b = 0, wt = 0;
+      for(let i = 0; i < d.length; i += 4){
+        const al = d[i+3] / 255; if(al < 0.6) continue;
+        const mx = Math.max(d[i], d[i+1], d[i+2]), mn = Math.min(d[i], d[i+1], d[i+2]);
+        const sat = (mx - mn) / 255, w = al * (0.12 + sat*sat*3);
+        r += d[i]*w; gg += d[i+1]*w; b += d[i+2]*w; wt += w;
+      }
+      if(!wt) return '#1c1c1c';
+      return 'rgb(' + Math.round(r/wt*0.82) + ',' + Math.round(gg/wt*0.82) + ',' + Math.round(b/wt*0.82) + ')';
+    }catch(e){ return '#1c1c1c'; }
+  };
+  const badge = async (nombre, x, y, size) => {
+    const img = await cvDrawEscudoPromise(nombre, size);
+    let fill = '#ffffff';
+    if(p.mdEscudos === 'oscuro') fill = 'rgba(0,0,0,.55)';
+    else if(p.mdEscudos !== 'blanco' && img) fill = colorDe(img);
+    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = Math.round(size*0.14);
+    rr(x, y, size, size, Math.round(size*0.24)); ctx.fillStyle = fill; ctx.fill(); ctx.restore();
+    const pad = Math.round(size*0.15), inner = size - pad*2;
+    if(!img){ cvEscudoFallback(ctx, nombre, x + pad, y + pad, inner); return; }
+    const iw = img.naturalWidth || img.width || 1, ih = img.naturalHeight || img.height || 1, sc = Math.min(inner/iw, inner/ih);
+    ctx.drawImage(img, x + (size - iw*sc)/2, y + (size - ih*sc)/2, iw*sc, ih*sc);
+  };
+  // Píldora de color con micrófono (relato)
+  const pildora = (txt, x, y, bh, bfs, maxT) => {
+    ctx.font = '700 ' + bfs + 'px ' + SANS; sp(3);
+    const tw = Math.min(ctx.measureText(txt).width, maxT), bw = tw + bh*0.45 + bh*1.0;
+    ctx.fillStyle = T.acc; rr(x, y, bw, bh, bh/2); ctx.fill();
+    micro(x + bh*0.5, y + bh/2, bh*0.72, T.base);
+    ctx.fillStyle = T.base; ctx.textAlign = 'left';
+    ctx.fillText(trunc(txt, maxT), x + bh*1.0, y + bh/2 + bfs*0.34); sp(0);
+    return bw;
+  };
+  // Segmentos separados por cuadrados (como la línea de datos de "Día de partido")
+  const segs = (arr, x, base, fam, fsz, sq, gap, color, sqColor, w0) => {
+    ctx.font = fam.replace('%', fsz); sp(w0 || 0);
+    const ws = arr.map(t => ctx.measureText(t).width);
+    ctx.fillStyle = color; ctx.textAlign = 'left';
+    arr.forEach((t, k) => {
+      ctx.fillStyle = color; ctx.fillText(t, x, base); x += ws[k];
+      if(k < arr.length - 1){ x += gap; ctx.fillStyle = sqColor; ctx.fillRect(x, base - fsz*capR*0.5 - sq/2, sq, sq); x += sq + gap; }
+    });
+    sp(0);
+  };
+  const anchoSegs = (arr, fam, fsz, sq, gap, w0) => {
+    ctx.font = fam.replace('%', fsz); sp(w0 || 0);
+    const t = arr.reduce((a, s) => a + ctx.measureText(s).width, 0) + (arr.length - 1)*(gap*2 + sq); sp(0); return t;
+  };
+
+  const partidos = p.partidos || [];
+  const lift = p.margen ? 150 : 0;
+  const carte = p.diseno === 'cartelera';
+  const [foto, logoImg] = await Promise.all([
+    cargarImagenAsync(p.foto),
+    cvImgAsync((typeof getIdentidad === 'function' ? getIdentidad() : {}).logo)
+  ]);
+
+  // ── Fondo: color liso + foto anclada arriba que se funde hacia abajo ──
+  ctx.fillStyle = col; ctx.fillRect(0, 0, W, H);
+  const areaH = Math.round(H * (carte ? 0.46 : 0.62));
+  if(foto){
+    const iw = foto.naturalWidth || foto.width || 1, ih = foto.naturalHeight || foto.height || 1;
+    const sc = Math.max(W/iw, areaH/ih) * Math.max(1, p.zoom || 1);
+    const dw = iw*sc, dh = ih*sc;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0, 0, W, areaH); ctx.clip();      // la foto no pasa del panel superior
+    try{ ctx.filter = 'contrast(1.1) saturate(1.1)'; }catch(e){}
+    ctx.drawImage(foto, (W - dw)*(p.px == null ? 0.5 : p.px), (areaH - dh)*(p.py == null ? 0.3 : p.py), dw, dh);
+    ctx.restore();
+    ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.globalAlpha = 0.2; ctx.fillStyle = col; ctx.fillRect(0, 0, W, areaH); ctx.restore();
+    const fade = ctx.createLinearGradient(0, areaH*0.22, 0, areaH);
+    fade.addColorStop(0, rgba(0)); fade.addColorStop(0.45, rgba(0.6)); fade.addColorStop(0.8, rgba(0.92)); fade.addColorStop(1, rgba(1));
+    ctx.fillStyle = fade; ctx.fillRect(0, areaH*0.22, W, areaH*0.78 + 1);
+  } else {
+    const gl = ctx.createRadialGradient(W*0.72, H*0.16, 30, W*0.72, H*0.16, W*0.95);
+    gl.addColorStop(0, 'rgba(255,255,255,.14)'); gl.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = gl; ctx.fillRect(0, 0, W, H);
+    if(logoImg){
+      const WS = 760;
+      ctx.save(); ctx.globalAlpha = 0.06; ctx.beginPath(); ctx.arc(CX, H*0.5, WS/2, 0, Math.PI*2); ctx.clip();
+      cvDrawEscudoImg(ctx, logoImg, CX - WS/2, H*0.5 - WS/2, WS); ctx.restore();
+    }
+  }
+  const topv = ctx.createLinearGradient(0, 0, 0, H*0.12);
+  topv.addColorStop(0, 'rgba(0,0,0,.35)'); topv.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = topv; ctx.fillRect(0, 0, W, H*0.12);
+
+  // ── Marca arriba a la derecha: "Cobertura y transmisión de" + RADIO | FRECUENCIA ──
+  const pre = (p.pre === undefined ? 'COBERTURA Y TRANSMISIÓN DE' : p.pre).toUpperCase();
+  const rad = (p.radio || '').toUpperCase(), frec = (p.frec || '').toUpperCase();
+  let brandBottom = 56;
+  sombra(true); ctx.fillStyle = '#ffffff';
+  if(pre){
+    ctx.font = '700 22px ' + SANS; sp(3); ctx.textAlign = 'right';
+    ctx.fillText(trunc(pre, 700), W - 46, 56 + 20); sp(0); brandBottom = 56 + 20;
+  }
+  if(rad){
+    let rsz = 112; const gap = 20, bw = 6;
+    const medir = z => { ctx.font = z + 'px ' + BEB; sp(0); const a = ctx.measureText(rad).width, b = frec ? ctx.measureText(frec).width : 0; return { a, b, t: a + (frec ? gap*2 + bw + b : 0) }; };
+    let m = medir(rsz); if(m.t > 700){ rsz = Math.floor(rsz*700/m.t); m = medir(rsz); }
+    const base = brandBottom + 14 + rsz*0.74, x0 = W - 46 - m.t;
+    ctx.textAlign = 'left'; ctx.font = rsz + 'px ' + BEB; ctx.fillStyle = '#ffffff'; ctx.fillText(rad, x0, base);
+    if(frec){
+      ctx.fillStyle = T.bar; ctx.fillRect(x0 + m.a + gap, base - rsz*0.72, bw, rsz*0.72);
+      ctx.fillStyle = T.acc; ctx.fillText(frec, x0 + m.a + gap*2 + bw, base);
+    }
+    brandBottom = base;
+  }
+  sombra(false);
+
+  const t1 = (p.t1 || '').toUpperCase(), t2 = (p.t2 || '').toUpperCase();
+
+  if(!carte){
+    // ═══ DISEÑO "PARTIDO" ═══
+    const m = partidos[0];
+    // Bloque inferior anclado desde abajo: [píldora "Escuchalo en vivo"] / nota / estadio / día · hora
+    let yb = H - 80 - lift;
+    const dialTxt = ((p.dialTxt === undefined ? 'Escuchalo en vivo' : p.dialTxt) || '').toUpperCase();
+    if(dialTxt){
+      const bh = 92, bfs = 34; ctx.font = '700 ' + bfs + 'px ' + SANS; sp(4);
+      const bw = ctx.measureText(dialTxt).width + bh*0.5 + bh*1.0;
+      sombra(true); ctx.fillStyle = T.acc; rr(ML, yb - bh, bw, bh, bh/2); ctx.fill(); sombra(false);
+      micro(ML + bh*0.52, yb - bh/2, bh*0.62, T.base);
+      ctx.fillStyle = T.base; ctx.textAlign = 'left'; ctx.fillText(dialTxt, ML + bh*1.0, yb - bh/2 + bfs*0.34); sp(0);
+      yb -= bh + 64;
+    }
+    sombra(true);
+    if(m.nota){
+      ctx.font = '700 30px ' + SANS; sp(4); ctx.fillStyle = T.acc; ctx.textAlign = 'left';
+      ctx.fillText(trunc(m.nota.toUpperCase(), 940), ML, yb); sp(0); yb -= 30 + 24;
+    }
+    if(m.estadio){
+      ctx.font = '700 34px ' + SANS; sp(3); ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.textAlign = 'left';
+      ctx.fillText(trunc(m.estadio.toUpperCase(), 940), ML, yb); sp(0); yb -= 34 + 34;
+    }
+    const dia = (m.dia || '').toUpperCase(), hora = _promoHoraTxt(m.hora);
+    const arr = [dia, hora].filter(Boolean);
+    let infoTop = yb;
+    if(arr.length){
+      let f = 110; const gp = 26, sq = 18;
+      while(f > 56 && anchoSegs(arr, '400 %px ' + ANTON, f, sq, gp, 1) > 940) f -= 2;
+      segs(arr, ML, yb, '400 %px ' + ANTON, f, sq, gp, '#ffffff', T.acc, 1);
+      infoTop = yb - f*capR;
+    }
+    sombra(false);
+
+    // Relato + escudos
+    let y = brandBottom + 90;
+    if(m.relato){
+      sombra(true);
+      pildora(m.relator ? 'RELATA ' + m.relator.toUpperCase() : 'CON RELATO', ML, y, 58, 32, 700);
+      sombra(false); y += 58 + 30;
+    }
+    const bs = 250, bgp = 26, vs = 100, x1 = ML, xv = x1 + bs + bgp, x2 = xv + vs + bgp;
+    await badge(m.local, x1, y, bs); await badge(m.visit, x2, y, bs);
+    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 12;
+    ctx.beginPath(); ctx.arc(xv + vs/2, y + bs/2, vs/2, 0, Math.PI*2); ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fill(); ctx.restore();
+    ctx.font = '44px ' + ANTON; ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.fillText('VS', xv + vs/2, y + bs/2 + 44*capR/2);
+
+    // Nombres de los equipos debajo de cada escudo
+    const nL = (m.local || '').toUpperCase(), nV = (m.visit || '').toUpperCase(), nMaxW = 310;
+    const nsz = Math.min(tamNombre(nL, nMaxW, 46, 28), tamNombre(nV, nMaxW, 46, 28));
+    const lL = lineasNombre(nL, nsz, nMaxW).lines, lV = lineasNombre(nV, nsz, nMaxW).lines;
+    const nPitch = nsz*capR*1.35, nBase = y + bs + 30 + nsz*capR;
+    sombra(true); ctx.font = nsz + 'px ' + ANTON; sp(0.5); ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center';
+    lL.forEach((t, k) => ctx.fillText(t, x1 + bs/2, nBase + k*nPitch));
+    lV.forEach((t, k) => ctx.fillText(t, x2 + bs/2, nBase + k*nPitch));
+    sp(0); sombra(false);
+    const nEnd = nBase + (Math.max(lL.length, lV.length) - 1)*nPitch;
+
+    // Titular gigante (renglón blanco + renglón de color), centrado en el espacio libre
+    const tl = [t1, t2].filter(Boolean); if(!tl.length) tl.push('PARTIDO');
+    const cols = tl.length === 2 ? ['#ffffff', T.acc] : [T.acc === undefined ? '#ffffff' : '#ffffff'];
+    if(t1 && !t2) cols[0] = '#ffffff'; if(!t1 && t2) cols[0] = T.acc;
+    const capMax = tl.length === 1 ? 210 : 175;
+    let sizes = tl.map(t => Math.min(Math.floor(capMax/capR), fitSz(t, 940, 400, 40, ANTON, 0)));
+    let pitch = sizes.map(s => s*capR*1.16), tH = sizes.reduce((a, s) => a + s*capR, 0) + (tl.length - 1)*sizes[0]*capR*0.16;
+    const libre = infoTop - 70 - (nEnd + 70);
+    if(tH > libre && libre > 120){ const f = libre/tH; sizes = sizes.map(s => Math.floor(s*f)); pitch = sizes.map(s => s*capR*1.16); tH = sizes.reduce((a, s) => a + s*capR, 0) + (tl.length - 1)*sizes[0]*capR*0.16; }
+    let ty = nEnd + 70 + Math.max(0, (infoTop - 70 - (nEnd + 70) - tH) * 0.45);
+    sombra(true); ctx.textAlign = 'left';
+    tl.forEach((t, k) => { ty += sizes[k]*capR; ctx.font = sizes[k] + 'px ' + ANTON; ctx.fillStyle = cols[k]; ctx.fillText(t, ML, ty); ty += sizes[k]*capR*0.16; });
+    sombra(false);
+
+  } else {
+    // ═══ DISEÑO "CARTELERA" ═══
+    let items = partidos.slice();
+    if(p.relatoPrimero) items = items.filter(m => m.relato).concat(items.filter(m => !m.relato));
+    const n = items.length, nf = items.filter(m => m.relato).length;
+    const unico = key => n >= 2 && items.every(m => m[key]) && new Set(items.map(m => m[key])).size === 1;
+    const unifDia = unico('dia'), unifEst = unico('estadio');
+    const hdr = (unifDia || unifEst) ? 80 : 0;
+
+    // Titular arriba (debajo de la marca)
+    let ty = brandBottom + 80;
+    const compacto = n > 4;
+    const tl = [t1, t2].filter(Boolean);
+    sombra(true); ctx.textAlign = 'left';
+    if(t1){ const s = Math.min(Math.floor((compacto ? 80 : 100)/capR), fitSz(t1, 940, 400, 40, ANTON, 0)); ty += s*capR; ctx.font = s + 'px ' + ANTON; ctx.fillStyle = '#ffffff'; ctx.fillText(t1, ML, ty); ty += s*capR*0.16; }
+    if(t2){ const s = Math.min(Math.floor((compacto ? 130 : 175)/capR), fitSz(t2, 940, 400, 40, ANTON, 0)); ty += s*capR; ctx.font = s + 'px ' + ANTON; ctx.fillStyle = T.acc; ctx.fillText(t2, ML, ty); ty += s*capR*0.16; }
+    sombra(false);
+    const titleBottom = tl.length ? ty : brandBottom + 40;
+
+    // Alto de filas: se achican para que la lista entre debajo del titular
+    const listBottom = H - 70 - lift;
+    const base = (n <= 4 ? 190 : (n <= 6 ? 154 : 126)) * (unifEst ? 1.1 : 1);
+    const filaH = base * (unifEst ? 0.84 : 1);
+    let rowH = Math.round(filaH), rowHf = Math.round(filaH*1.5), kk = base/190;
+    let total = (n - nf)*rowH + nf*rowHf;
+    const cap = listBottom - (titleBottom + 40 + hdr);
+    if(total > cap){ const f = cap/total; rowH = Math.round(rowH*f); rowHf = Math.round(rowHf*f); kk *= f; total = (n - nf)*rowH + nf*rowHf; }
+    const k = kk;
+    const listTop = listBottom - total;
+
+    if(hdr){
+      const baseY = listTop - 26; let hx = ML;
+      sombra(true);
+      if(unifDia){
+        const dTxt = items[0].dia.toUpperCase();
+        ctx.font = '56px ' + ANTON; sp(1); ctx.fillStyle = '#ffffff'; ctx.textAlign = 'left';
+        ctx.fillText(dTxt, hx, baseY); hx += ctx.measureText(dTxt).width + 28; sp(0);
+      }
+      if(unifEst){
+        if(unifDia){ ctx.fillStyle = T.acc; ctx.fillRect(hx, baseY - 56*capR*0.5 - 9, 18, 18); hx += 18 + 28; }
+        ctx.font = '700 32px ' + SANS; sp(2); ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.textAlign = 'left';
+        ctx.fillText(trunc(items[0].estadio.toUpperCase(), MR - hx), hx, baseY - 2); sp(0);
+      }
+      sombra(false);
+    }
+
+    const R = v => Math.round(v*k);
+    const xR0 = MR;
+    const normales = items.filter(m => !m.relato);
+    const dFsN = unifDia ? Math.max(40, R(60)) : Math.max(36, R(58)), hFsN = Math.max(30, R(46));
+    ctx.font = dFsN + 'px ' + ANTON; sp(1);
+    const wDiaN = unifDia ? 0 : Math.max(0, ...normales.map(m => ctx.measureText((m.dia || '').toUpperCase()).width));
+    ctx.font = (unifDia ? dFsN : hFsN) + 'px ' + ANTON;
+    const wHoraN = Math.max(0, ...normales.map(m => ctx.measureText(_promoHoraTxt(m.hora)).width)); sp(0);
+    const colWN = Math.max(wDiaN, wHoraN) + 36;
+    const csN = R(104), gapN = R(44), nameXN = ML + 2*csN + gapN + R(30), maxWN = xR0 - colWN - nameXN;
+    const csF = R(132), gapF = Math.round(44*k*1.2), nameXF = ML + 24 + 2*csF + gapF + Math.round(30*k*1.2), maxWF = (xR0 - 12) - nameXF;
+    const nmaxN = Math.max(30, R(50)), nmaxF = Math.max(34, Math.round(50*k*1.2));
+    let yRow = listTop;
+    for(let i = 0; i < n; i++){
+      const m = items[i], dest = !!m.relato, h = dest ? rowHf : rowH, y0 = yRow; yRow += h;
+      const ix = dest ? 14 : 0, x0 = ML + ix, xR = xR0 - ix, S = dest ? 1.2 : 1;
+      const dia = (m.dia || '').toUpperCase(), hora = _promoHoraTxt(m.hora);
+      let yC, cs;
+      if(dest){
+        ctx.save(); rr(ML - 12, y0 + R(4), W - 2*ML + 24, h - R(8), 22); ctx.clip();
+        ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.fillRect(0, y0, W, h);
+        ctx.fillStyle = 'rgba(' + T.accRgb + ',0.2)'; ctx.fillRect(0, y0, W, h);
+        ctx.fillStyle = T.acc; ctx.fillRect(ML - 12, y0, 8, h); ctx.restore();
+        const bh = Math.max(30, R(44)), bfs = Math.max(20, R(26)), by = y0 + R(18);
+        pildora(m.relator ? 'RELATA ' + m.relator.toUpperCase() : 'CON RELATO', x0 + 12, by, bh, bfs, 520);
+        const fs = Math.max(36, R(56)); ctx.font = fs + 'px ' + ANTON; sp(1);
+        const yT = by + bh/2 + fs*capR/2, wH2 = hora ? ctx.measureText(hora).width : 0;
+        ctx.textAlign = 'right'; ctx.fillStyle = T.acc; if(hora) ctx.fillText(hora, xR, yT);
+        if(dia && !unifDia){ ctx.fillStyle = '#ffffff'; ctx.fillText(dia + (hora ? '  ' : ''), xR - wH2, yT); }
+        sp(0); cs = csF; yC = by + bh + R(12);
+      } else {
+        ctx.fillStyle = i === 0 ? T.acc : 'rgba(255,255,255,.25)'; ctx.fillRect(ML, y0, xR0 - ML, i === 0 ? 3 : 1);
+        cs = csN; yC = y0 + R(18);
+      }
+      const gapC = dest ? gapF : gapN, cx0 = x0 + (dest ? 12 : 0);
+      const nameX = dest ? nameXF : nameXN, nameMaxW = dest ? maxWF : maxWN, nmax = dest ? nmaxF : nmaxN;
+      const nL = (m.local || '').toUpperCase(), nV = (m.visit || '').toUpperCase();
+      const nsz = Math.max(Math.round(nmax*0.7), Math.min(fitSz(nL, nameMaxW, nmax, 24, ANTON, 0.5), fitSz(nV, nameMaxW, nmax, 24, ANTON, 0.5)));
+      await badge(m.local, cx0, yC, cs); await badge(m.visit, cx0 + cs + gapC, yC, cs);
+      sombra(true);
+      ctx.font = Math.max(22, Math.round(30*k*S)) + 'px ' + ANTON; ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center';
+      ctx.fillText('VS', cx0 + cs + gapC/2, yC + cs/2 + Math.round(10*k*S));
+      ctx.font = nsz + 'px ' + ANTON; sp(0.5); ctx.textAlign = 'left';
+      ctx.fillText(trunc(nL, nameMaxW), nameX, yC + cs*0.44);
+      ctx.fillText(trunc(nV, nameMaxW), nameX, yC + cs*0.92);
+      sp(0);
+      if(!dest){
+        ctx.textAlign = 'right'; sp(1);
+        if(unifDia){ ctx.fillStyle = T.acc; ctx.font = dFsN + 'px ' + ANTON; if(hora) ctx.fillText(hora, xR, yC + cs*0.68); }
+        else {
+          ctx.fillStyle = '#ffffff'; ctx.font = dFsN + 'px ' + ANTON; if(dia) ctx.fillText(dia, xR, yC + cs*0.47);
+          ctx.fillStyle = T.acc; ctx.font = hFsN + 'px ' + ANTON; if(hora) ctx.fillText(hora, xR, yC + cs*0.95);
+        }
+        sp(0);
+      }
+      const yS = unifEst ? y0 + h - R(14) : (dest ? yC + cs + R(42) : y0 + R(160));
+      let notaW = 0;
+      if(m.nota){
+        ctx.font = '700 ' + Math.max(22, R(28)) + 'px ' + SANS; sp(2); ctx.fillStyle = T.acc; ctx.textAlign = 'right';
+        const nt = m.nota.toUpperCase(); ctx.fillText(trunc(nt, 360), xR, yS); notaW = Math.min(ctx.measureText(nt).width, 360) + 30; sp(0);
+      }
+      if(m.estadio && !unifEst){
+        ctx.font = '700 ' + Math.max(24, Math.round(30*k*(dest ? 1.1 : 1))) + 'px ' + SANS; sp(1); ctx.fillStyle = 'rgba(255,255,255,.88)'; ctx.textAlign = 'left';
+        ctx.fillText(trunc(m.estadio.toUpperCase(), xR - x0 - notaW), cx0, yS); sp(0);
+      }
+      sombra(false);
     }
   }
   ctx.textAlign = 'left';
