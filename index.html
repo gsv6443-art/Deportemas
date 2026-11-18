@@ -295,32 +295,50 @@
       }catch(e){ console.warn('FB getAllClubFotos error', e); return {}; }
     },
 
-    // ── FOTO DE FONDO DE RESULTADO: subcolección /lrr/partidofotos/items/<id> ──
+    // ── FOTO DE FONDO DE RESULTADO: un documento por partido /lrr/partidofoto_<id> (antes: subcolección partidofotos/items) ──
     // Vive fuera de la colección /lrr (los getDocs(collection(db,COL)) no la descargan) y las
     // reglas /lrr/{document=**} ya la cubren. Un documento por partido: { value: base64, cfg: {zoom,x,y,osc} }
     async getPartidoFoto(id){
+      id = String(id);
       try{
-        const snap = await getDoc(doc(db, COL, 'partidofotos', 'items', String(id)));
-        return snap.exists() ? snap.data() : null;
-      }catch(e){ console.warn('FB getPartidoFoto error', id, e); return null; }
+        const snap = await getDoc(doc(db, COL, 'partidofoto_' + id));
+        if(snap.exists() && snap.data().value) return snap.data();
+      }catch(e){ console.warn('FB getPartidoFoto error', id, e); }
+      // Formato anterior (subcolección): se sigue leyendo para no perder fotos viejas
+      try{
+        const snap2 = await getDoc(doc(db, COL, 'partidofotos', 'items', id));
+        return snap2.exists() ? snap2.data() : null;
+      }catch(e){ return null; }
     },
     async setPartidoFoto(id, base64, cfg){
       try{
-        await setDoc(doc(db, COL, 'partidofotos', 'items', String(id)), { value: base64, cfg: cfg || {} });
+        await setDoc(doc(db, COL, 'partidofoto_' + String(id)), { value: base64, cfg: cfg || {} });
+        window._fbUltimoError = '';
         return true;
-      }catch(e){ console.error('FB setPartidoFoto error', id, e); return false; }
+      }catch(e){
+        console.error('FB setPartidoFoto error', id, e);
+        window._fbUltimoError = (e && (e.code || e.message)) || String(e);
+        return false;
+      }
     },
     async setPartidoFotoCfg(id, cfg){
       try{
-        await setDoc(doc(db, COL, 'partidofotos', 'items', String(id)), { cfg: cfg || {} }, { merge: true });
+        await setDoc(doc(db, COL, 'partidofoto_' + String(id)), { cfg: cfg || {} }, { merge: true });
+        window._fbUltimoError = '';
         return true;
-      }catch(e){ console.error('FB setPartidoFotoCfg error', id, e); return false; }
+      }catch(e){
+        console.error('FB setPartidoFotoCfg error', id, e);
+        window._fbUltimoError = (e && (e.code || e.message)) || String(e);
+        return false;
+      }
     },
     async delPartidoFoto(id){
-      try{
-        await deleteDoc(doc(db, COL, 'partidofotos', 'items', String(id)));
-        return true;
-      }catch(e){ console.warn('FB delPartidoFoto error', id, e); return false; }
+      id = String(id);
+      let ok = true;
+      try{ await deleteDoc(doc(db, COL, 'partidofoto_' + id)); }
+      catch(e){ console.warn('FB delPartidoFoto error', id, e); window._fbUltimoError = (e && (e.code || e.message)) || String(e); ok = false; }
+      try{ await deleteDoc(doc(db, COL, 'partidofotos', 'items', id)); }catch(e){ /* formato anterior: puede no existir o no tener permisos */ }
+      return ok;
     },
 
     // ── FOTO DE FONDO DE ALINEACIÓN: un documento individual por alineación para evitar el límite de 1MB ──
@@ -10916,7 +10934,7 @@ function agregarPartido(){
   if(_pFotoFondo){
     const _fv=_pFotoFondo, _fc=Object.assign({},PF_CFG_DEF);
     _pfCache[String(d.id)]={value:_fv,cfg:_fc};
-    if(window._fb&&window._fb.setPartidoFoto) window._fb.setPartidoFoto(d.id,_fv,_fc).then(ok=>{ if(!ok) alert('El partido se guardó, pero la foto de fondo no se pudo subir. Probá agregarla desde Compartir.'); });
+    if(window._fb&&window._fb.setPartidoFoto) window._fb.setPartidoFoto(d.id,_fv,_fc).then(ok=>{ if(!ok) alert('El partido se guardó, pero la foto de fondo no se pudo subir al servidor.'+_pfErrTxt()+'\n\nMientras no recargues la página podés descargar la imagen con el botón ⬇ Imagen de la lista de partidos.'); });
   }
   recalcularTodo();   // recalcular siempre: puede que haya partidos jugados anteriores
   aplicarTodasLasPenalizaciones();
@@ -11611,6 +11629,7 @@ function abrirModalEdicion(tipo,id,objOverride){
         <div class="pf-ed-row">
           <label class="pf-ed-btn">📷 <span id="ed-pf-txt">Agregar foto</span><input type="file" accept="image/*" id="ed-pf-file" onchange="edPfElegir(this)" style="display:none"/></label>
           <button type="button" class="pf-ed-btn pf-ed-btn-del" id="ed-pf-quitar" onclick="edPfQuitar()" style="display:none">🗑 Quitar foto</button>
+          <button type="button" class="pf-ed-btn" onclick="edPfDescargar(this)">⬇ Descargar imagen</button>
         </div>
         <div id="ed-pf-ajustes" style="display:none">
           <label class="pf-ed-sl">Zoom<input type="range" id="ed-pf-zoom" min="100" max="300" value="100" oninput="edPfCambio()"/></label>
@@ -11620,7 +11639,7 @@ function abrirModalEdicion(tipo,id,objOverride){
         </div>
         <div class="pf-ed-preview" id="ed-pf-prev-wrap" style="display:none">
           <img id="ed-pf-prev" alt="Vista previa del resultado"/>
-          <div class="pf-ed-nota">La vista previa usa los datos ya guardados del partido.</div>
+          <div class="pf-ed-nota">La vista previa y la descarga usan los datos ya guardados del partido (resultado, goles, etc.).</div>
         </div>
       </div>`;
   } else if(tipo==='posiciones'){
@@ -12605,6 +12624,7 @@ function renderAdminListas(){
     return `<div class="admin-list-item" style="flex-direction:column;align-items:stretch;gap:4px">
       <div style="display:flex;align-items:center;gap:8px">
         <span><b>${p.div==='primera'?'1ª':p.div==='segunda'?'2ª':'Extra Liga'}</b>${p.div==='extraliga'&&p.torneoExtra?' ('+p.torneoExtra+')':''} | ${p.fecha}${p.dia?' | 📅 '+p.dia:''} | <b>${p.local}</b> vs <b>${p.visit}</b> | ${p.hora} | <em>${p.estado}</em>${p.resultado?' | '+p.resultado:''}${p.esPlayoff&&p.tienePenales&&p.penales?' | Penales: '+p.penales:''}${p.esPlayoff?' | <b style="color:var(--dorado)">PLAY OFF</b>':''}</span>
+        <button class="btn-edit" onclick="descargarImagenPartido('${p.id}',this)" title="Descargar la imagen del resultado">⬇ Imagen</button>
         ${btnAcciones('partidos',p.id)}
       </div>
       ${cronoControls}
@@ -14876,7 +14896,7 @@ function logoParaPartido(p){
 }
 /* ══════════════════════════════════════════════════════════════
    IMAGEN DE RESULTADO (estilo panel de vidrio) + FOTO DE FONDO POR PARTIDO
-   La foto se guarda aparte (subcolección /lrr/partidofotos/items/<id>) para no
+   La foto se guarda aparte (documento /lrr/partidofoto_<id>) para no
    engordar el documento de los partidos ni las lecturas de la colección /lrr.
    ══════════════════════════════════════════════════════════════ */
 const PF_CFG_DEF = { zoom:1, x:0.5, y:0.4, osc:0.35 };
@@ -15312,6 +15332,9 @@ function edPfQuitar(){
   const pv = document.getElementById('ed-pf-prev'); if(pv) pv.removeAttribute('src');
   edPfUI();
 }
+// Texto técnico del último error de Firebase (para saber por qué falló una subida)
+function _pfErrTxt(){ return window._fbUltimoError ? '\n(Detalle técnico: ' + window._fbUltimoError + ')' : ''; }
+
 // Se llama desde guardarEdicion(): sube / borra / actualiza la foto según lo que haya cambiado
 function edPfGuardar(sid){
   const st = _edPF;
@@ -15319,14 +15342,50 @@ function edPfGuardar(sid){
   const cfg = Object.assign({}, st.cfg);
   if(st.cambioFoto && !st.valor){
     _pfCache[sid] = null;
-    Promise.resolve(window._fb.delPartidoFoto(sid)).then(ok=>{ if(ok===false){ delete _pfCache[sid]; alert('El partido se guardó, pero no se pudo quitar la foto de fondo. Probá de nuevo desde ✏ Editar.'); } });
-  } else if(st.cambioFoto){
-    _pfCache[sid] = { value: st.valor, cfg };
-    Promise.resolve(window._fb.setPartidoFoto(sid, st.valor, cfg)).then(ok=>{ if(!ok){ delete _pfCache[sid]; alert('El partido se guardó, pero la foto de fondo no se pudo subir. Probá de nuevo desde ✏ Editar.'); } });
+    Promise.resolve(window._fb.delPartidoFoto(sid)).then(ok=>{ if(ok===false) alert('El partido se guardó, pero no se pudo quitar la foto de fondo del servidor.' + _pfErrTxt() + '\nProbá de nuevo desde ✏ Editar.'); });
   } else if(st.valor){
+    // foto nueva, o solo ajustes de encuadre: se escribe el registro completo
     _pfCache[sid] = { value: st.valor, cfg };
-    Promise.resolve(window._fb.setPartidoFotoCfg(sid, cfg)).then(ok=>{ if(!ok){ delete _pfCache[sid]; alert('El partido se guardó, pero no se pudieron guardar los ajustes de la foto.'); } });
+    Promise.resolve(window._fb.setPartidoFoto(sid, st.valor, cfg)).then(ok=>{ if(!ok) alert('El partido se guardó, pero la foto de fondo no se pudo subir al servidor.' + _pfErrTxt() + '\n\nMientras no recargues la página podés descargar la imagen con el botón ⬇ Imagen de la lista de partidos.'); });
   }
+}
+
+/* ── Descargar la imagen del resultado directo desde el panel (sin pasar por Compartir) ── */
+function _descargarCanvas(cv, nombre){
+  cv.toBlob(blob=>{
+    if(!blob){ alert('No se pudo generar la imagen.'); return; }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = nombre;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url), 4000);
+  }, 'image/png');
+}
+function _nombreArchivoPartido(p){
+  const limpio = t => String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-+|-+$/g,'').toLowerCase();
+  return 'resultado-' + limpio(p.local) + '-vs-' + limpio(p.visit) + '.png';
+}
+// Botón "⬇ Imagen" de la lista de partidos: usa la foto guardada (o la que quedó en memoria)
+async function descargarImagenPartido(id, btn){
+  const p = data.partidos.find(x => String(x.id) === String(id)); if(!p) return;
+  const txt = btn ? btn.textContent : '';
+  if(btn){ btn.disabled = true; btn.textContent = 'Generando…'; }
+  try{
+    const cv = await generarImagenPartido(p);
+    _descargarCanvas(cv, _nombreArchivoPartido(p));
+  }catch(e){ console.error(e); alert('No se pudo generar la imagen.'); }
+  if(btn){ btn.disabled = false; btn.textContent = txt; }
+}
+// Botón dentro de ✏ Editar: usa la foto que se ve en el editor, aunque todavía no se haya guardado
+async function edPfDescargar(btn){
+  const st = _edPF; if(!st) return;
+  const txt = btn ? btn.textContent : '';
+  if(btn){ btn.disabled = true; btn.textContent = 'Generando…'; }
+  try{
+    const cv = await generarImagenPartido(st.p, { img: st.img || null, cfg: st.cfg });
+    _descargarCanvas(cv, _nombreArchivoPartido(st.p));
+  }catch(e){ console.error(e); alert('No se pudo generar la imagen.'); }
+  if(btn){ btn.disabled = false; btn.textContent = txt; }
 }
 
 /* Foto elegida al CARGAR un partido (formulario Agregar Partido) */
