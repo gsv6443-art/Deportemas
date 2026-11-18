@@ -3132,15 +3132,19 @@ table.posiciones td:nth-child(8){
 .share-box-header span{font-family:'Rajdhani',sans-serif;font-weight:900;font-size:16px;color:var(--dorado);letter-spacing:1.2px;}
 .share-box-close{background:none;border:none;color:rgba(255,255,255,.4);font-size:20px;cursor:pointer;line-height:1;padding:0;}
 .share-box-close:hover{color:var(--dorado);}
-#share-editor{margin:0 16px 6px;border:1px solid rgba(201,162,39,.25);border-radius:var(--r-md);background:var(--negro3);}
-#share-editor summary{cursor:pointer;padding:9px 12px;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:14px;letter-spacing:.6px;color:var(--dorado);}
-#share-editor .se-body{padding:4px 12px 12px;max-height:26vh;overflow:auto;}
-#share-editor .se-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
-#share-editor .se-btn{display:inline-block;background:rgba(201,162,39,.12);border:1px solid rgba(201,162,39,.4);color:var(--dorado);border-radius:8px;padding:7px 12px;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:13px;cursor:pointer;}
-#share-editor .se-sl{display:grid;grid-template-columns:86px 1fr;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,.75);margin:4px 0;}
-#share-editor .se-sl input{width:100%;accent-color:var(--dorado);}
-#se-msg{font-size:12px;margin-top:6px;min-height:14px;}
-#share-modal.con-editor .share-img-preview-wrap img{max-height:44vh;}
+/* Editor de foto de fondo del resultado (modal de edición del partido, panel admin) */
+.pf-ed{border:1px solid rgba(201,162,39,.25);border-radius:var(--r-md);background:var(--negro3);padding:12px;margin-bottom:8px;}
+.pf-ed-estado{font-size:12px;color:var(--gris);margin-bottom:8px;min-height:14px;}
+.pf-ed-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
+.pf-ed-btn{display:inline-block;background:rgba(201,162,39,.12);border:1px solid rgba(201,162,39,.4);color:var(--dorado);border-radius:8px;padding:7px 12px;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:13px;cursor:pointer;}
+.pf-ed-btn:hover{background:rgba(201,162,39,.25);}
+.pf-ed-btn-del{background:rgba(192,57,43,.15);border-color:rgba(192,57,43,.4);color:#e74c3c;}
+.pf-ed-btn-del:hover{background:rgba(192,57,43,.35);}
+.pf-ed-sl{display:grid;grid-template-columns:86px 1fr;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,.75);margin:4px 0;}
+.pf-ed-sl input{width:100%;accent-color:var(--dorado);}
+.pf-ed-preview{margin-top:10px;text-align:center;}
+.pf-ed-preview img{max-width:100%;max-height:340px;border-radius:var(--r-md);border:1px solid rgba(201,162,39,.2);}
+.pf-ed-nota{font-size:11px;color:var(--gris);margin-top:6px;}
 .share-img-preview-wrap{margin:14px 16px 6px;border-radius:var(--r-md);overflow:hidden;border:1px solid rgba(201,162,39,.2);background:var(--negro3);display:flex;align-items:center;justify-content:center;min-height:100px;}
 .share-img-preview-wrap img{width:100%;max-height:72vh;object-fit:contain;display:block;border-radius:var(--r-md);}
 .share-img-loading{font-family:'Rajdhani',sans-serif;font-size:12px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.5px;padding:28px;display:flex;flex-direction:column;align-items:center;gap:8px;}
@@ -3369,22 +3373,6 @@ table.posiciones td:nth-child(8){
       <span id="share-img-contador">1 / 2</span>
       <button type="button" onclick="shareCambiarImagen(1)" aria-label="Imagen siguiente">›</button>
     </div>
-    <details id="share-editor" style="display:none">
-      <summary>📷 Foto de fondo · editar</summary>
-      <div class="se-body">
-        <div class="se-row">
-          <label class="se-btn">📷 <span id="se-foto-txt">Agregar foto de fondo</span><input type="file" accept="image/*" onchange="spElegirFoto(this)" style="display:none"/></label>
-          <button type="button" class="se-btn" id="se-quitar" onclick="spQuitarFoto()" style="display:none">🗑 Quitar</button>
-        </div>
-        <div id="se-ajustes" style="display:none">
-          <label class="se-sl">Zoom<input type="range" id="se-zoom" min="100" max="300" value="100" oninput="spCambio()" onchange="spGuardarCfg()"/></label>
-          <label class="se-sl">Horizontal<input type="range" id="se-x" min="0" max="100" value="50" oninput="spCambio()" onchange="spGuardarCfg()"/></label>
-          <label class="se-sl">Vertical<input type="range" id="se-y" min="0" max="100" value="40" oninput="spCambio()" onchange="spGuardarCfg()"/></label>
-          <label class="se-sl">Oscuridad<input type="range" id="se-osc" min="0" max="100" value="35" oninput="spCambio()" onchange="spGuardarCfg()"/></label>
-        </div>
-        <div id="se-msg"></div>
-      </div>
-    </details>
     <div class="share-redes">
       <button class="share-red-btn whatsapp" onclick="compartirImgEn('whatsapp')">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347"/></svg>
@@ -3595,7 +3583,7 @@ table.posiciones td:nth-child(8){
           <button class="btn-add-evento" onclick="addEventoRow('p-exp-list','exp')">+ Agregar expulsión</button>
         </div>
         <div class="form-group" style="margin-top:14px">
-          <label>Foto de fondo para la imagen del resultado <span style="color:var(--gris);font-size:11px">(opcional · después se puede editar o cambiar desde Compartir)</span></label>
+          <label>Foto de fondo para la imagen del resultado <span style="color:var(--gris);font-size:11px">(opcional · después se puede cambiar o quitar desde ✏ Editar)</span></label>
           <div class="upload-area" style="padding:12px">
             <input type="file" accept="image/*" id="p-foto-file" onchange="pPreviewFotoFondo(this)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%"/>
             <p style="pointer-events:none;font-size:11px">Hacé clic para subir una foto</p>
@@ -11616,6 +11604,24 @@ function abrirModalEdicion(tipo,id,objOverride){
       <div class="seccion-label">🟥 Expulsiones</div>
       <div class="evento-list" id="ed-exp-list">${buildEventoRowsHTML(obj.expulsiones||[],'exp','ed-exp-list')}</div>
       <button class="btn-add-evento" onclick="addEventoRow('ed-exp-list','exp')">+ Agregar expulsión</button>
+      </div>
+      <div class="seccion-label">📷 Foto de fondo de la imagen del resultado</div>
+      <div class="pf-ed" id="ed-pf">
+        <div class="pf-ed-estado" id="ed-pf-estado">Cargando foto…</div>
+        <div class="pf-ed-row">
+          <label class="pf-ed-btn">📷 <span id="ed-pf-txt">Agregar foto</span><input type="file" accept="image/*" id="ed-pf-file" onchange="edPfElegir(this)" style="display:none"/></label>
+          <button type="button" class="pf-ed-btn pf-ed-btn-del" id="ed-pf-quitar" onclick="edPfQuitar()" style="display:none">🗑 Quitar foto</button>
+        </div>
+        <div id="ed-pf-ajustes" style="display:none">
+          <label class="pf-ed-sl">Zoom<input type="range" id="ed-pf-zoom" min="100" max="300" value="100" oninput="edPfCambio()"/></label>
+          <label class="pf-ed-sl">Horizontal<input type="range" id="ed-pf-x" min="0" max="100" value="50" oninput="edPfCambio()"/></label>
+          <label class="pf-ed-sl">Vertical<input type="range" id="ed-pf-y" min="0" max="100" value="40" oninput="edPfCambio()"/></label>
+          <label class="pf-ed-sl">Oscuridad<input type="range" id="ed-pf-osc" min="0" max="100" value="35" oninput="edPfCambio()"/></label>
+        </div>
+        <div class="pf-ed-preview" id="ed-pf-prev-wrap" style="display:none">
+          <img id="ed-pf-prev" alt="Vista previa del resultado"/>
+          <div class="pf-ed-nota">La vista previa usa los datos ya guardados del partido.</div>
+        </div>
       </div>`;
   } else if(tipo==='posiciones'){
     const esPrimera=obj.div==='primera';
@@ -11779,6 +11785,7 @@ function abrirModalEdicion(tipo,id,objOverride){
   document.getElementById('edit-modal-title').textContent='Editar – '+(obj.nombre||obj.local||obj.equipo||tipo);
   document.getElementById('edit-modal-save').onclick=()=>guardarEdicion(tipo,id);
   document.getElementById('edit-modal').style.display='flex';
+  if(tipo==='partidos') edPfIniciar(obj); else _edPF=null;
 }
 
 function editPreviewEscudo(input){
@@ -11786,7 +11793,7 @@ function editPreviewEscudo(input){
   comprimirABase64(file, 300, 0.85, 'image/png').then(dataUrl=>{_editEscudoB64=dataUrl;const p=document.getElementById('ed-escudo-preview');p.src=_editEscudoB64;p.style.display='block';});
 }
 
-function cerrarModalEdicion(){document.getElementById('edit-modal').style.display='none';_editEscudoB64='';}
+function cerrarModalEdicion(){document.getElementById('edit-modal').style.display='none';_editEscudoB64='';_edPF=null;}
 
 // ============================================================
 // ANIMACIÓN MARCADOR EN VIVO
@@ -12109,6 +12116,7 @@ function guardarEdicion(tipo,id){
     updated.torneoReserva=null;
     if(esReserva){ updated.goles=[]; updated.expulsiones=[]; }
     data.partidos[idx]=updated;
+    edPfGuardar(sid);   // foto de fondo del resultado (subir / quitar / ajustes)
     // Recalcular posiciones y goleadores desde todos los partidos jugados
     recalcularTodo();
     aplicarTodasLasPenalizaciones();
@@ -14872,6 +14880,7 @@ function logoParaPartido(p){
    engordar el documento de los partidos ni las lecturas de la colección /lrr.
    ══════════════════════════════════════════════════════════════ */
 const PF_CFG_DEF = { zoom:1, x:0.5, y:0.4, osc:0.35 };
+const PF_PEN_ESTILO = 'badge';   // cómo se muestran los penales: 'badge' | 'marcador' | 'divisor' | 'escudo' | 'puntos' | 'cinta'
 const _pfCache = {};   // id -> { value, cfg } | null
 
 async function pfCargar(id){
@@ -14990,10 +14999,17 @@ async function generarImagenPartido(p, opts){
   // ── Datos para el panel ──
   const golesL = (p.goles||[]).filter(g => g.equipo==='local'),  golesV = (p.goles||[]).filter(g => g.equipo==='visit');
   const expsL  = (p.expulsiones||[]).filter(e => e.equipo==='local'), expsV = (p.expulsiones||[]).filter(e => e.equipo==='visit');
-  const totalEv = golesL.length + golesV.length + expsL.length + expsV.length;
-  const LH = totalEv > 8 ? s(30) : s(36), EF = totalEv > 8 ? 22 : 25;
-  const PX = s(36), PW = s(650), padT = s(28), padB = s(22), mid = s(72);
-  const textX = s(270), nameMaxW = PW - textX - s(28);
+  // Penales: "2-4" = local - visitante. Si no se puede leer, se muestra como texto libre (como antes)
+  const mpen = (p.estado==='jugado' && p.tienePenales && p.penales) ? String(p.penales).match(/(\d+)\s*[-–:]\s*(\d+)/) : null;
+  const penA = mpen ? parseInt(mpen[1],10) : 0, penB = mpen ? parseInt(mpen[2],10) : 0;
+  const penTxt = (p.estado==='jugado' && p.tienePenales && p.penales && !mpen) ? ('DEFINIÓ POR PENALES  ·  ' + p.penales) : '';
+  const penH = penTxt ? s(48) : 0;
+  const estilo = opts.penEstilo || PF_PEN_ESTILO;     // 'badge' | 'marcador' | 'divisor' | 'escudo' | 'puntos' | 'cinta'
+  const cintaH = (mpen && estilo==='cinta') ? s(74) : 0;       // franja de penales debajo del panel
+  const dotsH  = (mpen && estilo==='puntos') ? s(34) : 0;      // renglón de puntos bajo el nombre
+  const PX = s(36), PW = s(650), padT = s(28), padB = s(22);
+  const textX = (mpen && estilo==='marcador') ? s(340) : s(270);
+  const nameMaxW = PW - textX - s(28) - ((mpen && estilo==='badge') ? s(118) : 0);
 
   const fitNombre = (txt) => {
     const T = String(txt||'').toUpperCase();
@@ -15020,23 +15036,34 @@ async function generarImagenPartido(p, opts){
     }
     return { lines:[T], size:40 };
   };
-  const medir = (nombre, gs, es) => {
-    const f = fitNombre(nombre);
-    const nameH = f.lines.length * s(f.size) * 1.02;
-    const grp = nameH + s(12) + (gs.length + es.length) * LH;
-    return { f, nameH, grp, h: Math.max(s(170), grp + s(56)) };
-  };
-  const mL = medir(p.local, golesL, expsL), mV = medir(p.visit, golesV, expsV);
 
+  // Espaciado adaptable: con pocos goles el panel es más compacto; con muchos se extiende
+  // (más aire entre líneas y entre los dos equipos) mientras entre en la imagen.
+  const arbitros = (p.arbitros||[]).map(a => String((a && a.nombre) ? a.nombre : a)).filter(Boolean);
+  const arbH = arbitros.length ? s(84) : 0;
+  const NIVELES = [
+    { LH:42, EF:27, pad:100, mid:100 },
+    { LH:38, EF:26, pad:80,  mid:84 },
+    { LH:34, EF:24, pad:60,  mid:70 },
+    { LH:30, EF:22, pad:46,  mid:60 },
+  ];
+  let LH, EF, mid, mL, mV, PH;
+  for(const nv of NIVELES){
+    LH = s(nv.LH); EF = nv.EF; mid = s(nv.mid);
+    const medir = (nombre, gs, es) => {
+      const f = fitNombre(nombre);
+      const nameH = f.lines.length * s(f.size) * 1.02;
+      const grp = nameH + s(14) + dotsH + (gs.length + es.length) * LH;
+      return { f, nameH, grp, h: Math.max(s(170), grp + s(nv.pad)) };
+    };
+    mL = medir(p.local, golesL, expsL); mV = medir(p.visit, golesV, expsV);
+    PH = padT + mL.h + mid + mV.h + penH + arbH + padB;
+    if(PH + cintaH <= H - yHead - s(60)) break;
+  }
   const mres = String(p.resultado || '').match(/(\d+)\s*[-–:]\s*(\d+)/);
   const scL = mres ? mres[1] : (p.estado==='en-juego' ? '0' : '-');
   const scV = mres ? mres[2] : (p.estado==='en-juego' ? '0' : '-');
-  const penTxt = (p.estado==='jugado' && p.tienePenales && p.penales) ? ('DEFINIÓ POR PENALES  ·  ' + p.penales) : '';
-  const penH = penTxt ? s(48) : 0;
-  const arbitros = (p.arbitros||[]).map(a => String((a && a.nombre) ? a.nombre : a)).filter(Boolean);
-  const arbH = arbitros.length ? s(84) : 0;
-  const PH = padT + mL.h + mid + mV.h + penH + arbH + padB;
-  const PY = Math.round(yHead + Math.max(s(30), (H - yHead - PH) * 0.38));
+  const PY = Math.round(yHead + Math.max(s(30), (H - yHead - PH - cintaH) * 0.38));
 
   // ── Panel de vidrio ──
   ctx.save();
@@ -15055,47 +15082,109 @@ async function generarImagenPartido(p, opts){
   ctx.strokeStyle = 'rgba(255,255,255,0.28)'; ctx.lineWidth = s(1.5); ctx.stroke();
 
   // ── Filas de equipo ──
-  const fila = async (top, m, nombre, score, gs, es) => {
+  const fila = async (top, m, nombre, score, gs, es, penN, penGana) => {
     const cy = top + m.h/2, ESC = s(100);
-    await cvDrawEscudoCompleto(ctx, nombre, PX + s(28), cy - ESC/2, ESC);
+    const escUp = (mpen && estilo==='escudo') ? s(16) : 0;
+    await cvDrawEscudoCompleto(ctx, nombre, PX + s(28), cy - ESC/2 - escUp, ESC);
     ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
     ctx.font = `${s(score.length > 1 ? 150 : 200)}px "Bebas Neue", Arial, sans-serif`;
     ctx.fillText(score, PX + s(150), cy + s(6));
     const y0 = cy - m.grp/2, tx = PX + textX;
     ctx.font = `${s(m.f.size)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.fillStyle = '#fff'; ctx.textAlign = 'left';
     m.f.lines.forEach((ln, i) => cvFillTextTrunc(ctx, ln, tx, y0 + s(m.f.size)*1.02*(i+0.5), nameMaxW));
-    let ey = y0 + m.nameH + s(12) + LH/2;
-    const evMaxW = PW - textX - s(58) - s(24);
+    // Penales
+    if(mpen && estilo === 'marcador'){            // círculo con los penales pegado al marcador grande
+      const r = s(30), cx = PX + s(296);
+      ctx.beginPath(); ctx.arc(cx, cy + s(6), r, 0, Math.PI*2);
+      ctx.fillStyle = penGana ? C.DORADO : 'rgba(255,255,255,0.08)'; ctx.fill();
+      ctx.strokeStyle = penGana ? C.DORADO : 'rgba(255,255,255,0.55)'; ctx.lineWidth = s(1.6); ctx.stroke();
+      ctx.fillStyle = penGana ? C.NEG : '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.font = `${s(40)}px "Bebas Neue", Arial, sans-serif`; ctx.fillText(String(penN), cx, cy + s(6) - s(7));
+      ctx.font = `700 ${s(12)}px "Rajdhani", Arial, sans-serif`; ctx.fillText('PEN', cx, cy + s(6) + s(18));
+      ctx.textAlign = 'left';
+    } else if(mpen && estilo === 'badge'){        // píldora "PEN n" al final del renglón del nombre
+      ctx.font = `700 ${s(22)}px "Rajdhani", Arial, sans-serif`;
+      const txt = 'PEN ' + penN, bw = ctx.measureText(txt).width + s(30), bh = s(38);
+      const bx = PX + PW - s(28) - bw, by = y0 + s(m.f.size)*1.02*0.5 - bh/2;
+      cvRoundRect(ctx, bx, by, bw, bh, bh/2);
+      ctx.fillStyle = penGana ? C.DORADO : 'rgba(255,255,255,0.08)'; ctx.fill();
+      ctx.strokeStyle = penGana ? C.DORADO : 'rgba(255,255,255,0.55)'; ctx.lineWidth = s(1.6); ctx.stroke();
+      ctx.fillStyle = penGana ? C.NEG : '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(txt, bx + bw/2, by + bh/2 + s(1));
+      ctx.textAlign = 'left';
+    }
+    if(mpen && estilo === 'escudo'){              // píldora "PEN n" debajo del escudo
+      ctx.font = `700 ${s(18)}px "Rajdhani", Arial, sans-serif`;
+      const txt = 'PEN ' + penN, bw = ctx.measureText(txt).width + s(26), bh = s(30);
+      const bx = PX + s(78) - bw/2, by = cy - escUp + ESC/2 + s(8);
+      cvRoundRect(ctx, bx, by, bw, bh, bh/2);
+      ctx.fillStyle = penGana ? C.DORADO : 'rgba(255,255,255,0.08)'; ctx.fill();
+      ctx.strokeStyle = penGana ? C.DORADO : 'rgba(255,255,255,0.55)'; ctx.lineWidth = s(1.4); ctx.stroke();
+      ctx.fillStyle = penGana ? C.NEG : '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(txt, bx + bw/2, by + bh/2 + s(1));
+      ctx.textAlign = 'left';
+    }
+    if(mpen && estilo === 'puntos'){              // un punto por penal convertido, bajo el nombre
+      const yd = y0 + m.nameH + s(14) + s(15);
+      ctx.font = `700 ${s(15)}px "Rajdhani", Arial, sans-serif`;
+      ctx.fillStyle = penGana ? C.DORADO : 'rgba(255,255,255,0.7)'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      const xe = _pfSpaced(ctx, tx, yd, 'PENALES', s(2.5)) + s(14);
+      if(penN <= 8){
+        for(let i=0; i<penN; i++){
+          ctx.beginPath(); ctx.arc(xe + s(8) + i*s(22), yd, s(8), 0, Math.PI*2);
+          if(penGana){ ctx.fillStyle = C.DORADO; ctx.fill(); }
+          else { ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = s(1.8); ctx.stroke(); }
+        }
+      } else {
+        ctx.font = `${s(26)}px "Bebas Neue", Arial, sans-serif`; ctx.fillStyle = penGana ? C.DORADO : '#fff';
+        ctx.fillText('× ' + penN, xe, yd);
+      }
+    }
+    ctx.textBaseline = 'middle';
+    let ey = y0 + m.nameH + s(14) + dotsH + LH/2;
     const evento = (e, rojo) => {
       ctx.fillStyle = rojo ? '#ff7070' : 'rgba(255,255,255,0.93)';
       let nx = tx;
       if(e.min){
         ctx.font = `700 ${s(EF)}px "DM Sans", Arial, sans-serif`;
-        ctx.fillText(e.min + "'", tx, ey); nx = tx + s(58);
+        const mt = e.min + "'";
+        ctx.fillText(mt, tx, ey);
+        nx = tx + Math.max(s(58), ctx.measureText(mt).width + s(16));   // el minuto puede ser largo ("PT 8", "45+2")
       }
       ctx.font = `500 ${s(EF)}px "DM Sans", Arial, sans-serif`;
       const pre = rojo ? (e.subtipo==='doble' ? '🟨🟨 ' : '🟥 ') : '';
-      cvFillTextTrunc(ctx, pre + e.jugador, nx, ey, evMaxW);
+      cvFillTextTrunc(ctx, pre + e.jugador, nx, ey, PW - textX - (nx - tx) - s(24));
       ey += LH;
     };
     gs.forEach(e => evento(e, false));
     es.forEach(e => evento(e, true));
   };
-  await fila(PY + padT, mL, p.local, scL, golesL, expsL);
-  await fila(PY + padT + mL.h + mid, mV, p.visit, scV, golesV, expsV);
+  await fila(PY + padT, mL, p.local, scL, golesL, expsL, penA, penA > penB);
+  await fila(PY + padT + mL.h + mid, mV, p.visit, scV, golesV, expsV, penB, penB > penA);
 
-  // ── Divisor con estado (FIN / VIVO / VS) ──
-  const ym = PY + padT + mL.h + mid/2, R = s(26);
+  // ── Divisor con estado (FIN / VIVO / VS); con estilo 'divisor' lleva los penales ──
+  const ym = PY + padT + mL.h + mid/2, R = s(26), mx = PX + PW/2;
+  const pillPen = !!(mpen && estilo === 'divisor');
+  const pillW = pillPen ? s(330) : R*2, pillH = pillPen ? s(54) : R*2;
   ctx.fillStyle = 'rgba(255,255,255,0.28)';
-  ctx.fillRect(PX + s(40), ym, PW/2 - s(40) - R - s(4), 1);
-  ctx.fillRect(PX + PW/2 + R + s(4), ym, PW/2 - s(40) - R - s(4), 1);
+  ctx.fillRect(PX + s(40), ym, mx - pillW/2 - s(8) - (PX + s(40)), 1);
+  ctx.fillRect(mx + pillW/2 + s(8), ym, PX + PW - s(40) - (mx + pillW/2 + s(8)), 1);
   const enVivo = p.estado === 'en-juego';
-  ctx.beginPath(); ctx.arc(PX + PW/2, ym, R, 0, Math.PI*2);
-  ctx.fillStyle = enVivo ? 'rgba(192,57,43,0.35)' : 'rgba(255,255,255,0.07)'; ctx.fill();
-  ctx.strokeStyle = enVivo ? '#ff6b6b' : 'rgba(255,255,255,0.8)'; ctx.lineWidth = s(1.6); ctx.stroke();
-  ctx.fillStyle = '#fff'; ctx.font = `700 ${s(enVivo ? 15 : 20)}px "Rajdhani", Arial, sans-serif`;
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText(p.estado==='jugado' ? 'FIN' : enVivo ? 'VIVO' : 'VS', PX + PW/2, ym + s(1));
+  if(pillPen){
+    cvRoundRect(ctx, mx - pillW/2, ym - pillH/2, pillW, pillH, pillH/2);
+    ctx.fillStyle = C.DORADO; ctx.fill();
+    ctx.fillStyle = C.NEG; ctx.font = `700 ${s(25)}px "Rajdhani", Arial, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('PENALES  ' + penA + ' – ' + penB, mx, ym + s(1));
+  } else {
+    ctx.beginPath(); ctx.arc(mx, ym, R, 0, Math.PI*2);
+    ctx.fillStyle = enVivo ? 'rgba(192,57,43,0.35)' : 'rgba(255,255,255,0.07)'; ctx.fill();
+    ctx.strokeStyle = enVivo ? '#ff6b6b' : 'rgba(255,255,255,0.8)'; ctx.lineWidth = s(1.6); ctx.stroke();
+    ctx.fillStyle = '#fff'; ctx.font = `700 ${s(enVivo ? 15 : 20)}px "Rajdhani", Arial, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(p.estado==='jugado' ? 'FIN' : enVivo ? 'VIVO' : 'VS', mx, ym + s(1));
+  }
 
   let yb = PY + padT + mL.h + mid + mV.h;
   if(penTxt){
@@ -15116,19 +15205,30 @@ async function generarImagenPartido(p, opts){
     ctx.textAlign = 'left';
     cvFillTextTrunc(ctx, arbitros.join('  ·  '), xe + s(22), ay, PX + PW - s(40) - (xe + s(22)));
   }
+  // ── Franja de penales debajo del panel (estilo 'cinta') ──
+  if(cintaH){
+    const cy2 = PY + PH + s(18), ch = s(56);
+    cvRoundRect(ctx, PX, cy2, PW, ch, ch/2);
+    ctx.fillStyle = 'rgba(201,162,39,0.18)'; ctx.fill();
+    ctx.strokeStyle = 'rgba(201,162,39,0.7)'; ctx.lineWidth = s(1.5); ctx.stroke();
+    const gan = penA === penB ? null : (penA > penB ? p.local : p.visit);
+    const txt = (gan ? (String(gan).toUpperCase() + ' GANÓ POR PENALES  ') : 'DEFINIÓ POR PENALES  ') + Math.max(penA,penB) + ' – ' + Math.min(penA,penB);
+    let fs = 25; ctx.font = `700 ${s(fs)}px "Rajdhani", Arial, sans-serif`;
+    while(fs > 16 && ctx.measureText(txt).width > PW - s(60)){ fs--; ctx.font = `700 ${s(fs)}px "Rajdhani", Arial, sans-serif`; }
+    ctx.fillStyle = C.DORADO2; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(txt, PX + PW/2, cy2 + ch/2 + s(1));
+  }
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   return canvas;
 }
 
 /* ── Compartir resultado con foto de fondo editable (solo admin edita) ── */
 let _sp = null;   // { p, rec, img, cfg, tok }
-function _spEsAdmin(){ return !!window._fbUser; }
 
 async function _spAplicarRec(rec){
   _sp.rec = (rec && rec.value) ? rec : null;
   _sp.img = _sp.rec ? await cargarImagenAsync(_sp.rec.value) : null;
   _sp.cfg = Object.assign({}, PF_CFG_DEF, (_sp.rec && _sp.rec.cfg) || {});
-  _spSincronizarEditor();
 }
 
 function abrirSharePartido(id){
@@ -15139,84 +15239,94 @@ function abrirSharePartido(id){
     await _spAplicarRec(rec);
     return generarImagenPartido(p, { img:_sp.img, cfg:_sp.cfg });
   });
-  _sp = { p, rec:null, img:null, cfg:Object.assign({}, PF_CFG_DEF), tok:0, tmr:null };
-  _spMostrarEditor();
+  _sp = { p, rec:null, img:null, cfg:Object.assign({}, PF_CFG_DEF) };
 }
+// (la foto de fondo ya no se edita desde Compartir: se hace en el panel admin → ✏ Editar partido)
+function _spOcultarEditor(){ _sp = null; }
 
-function _spMostrarEditor(){
-  const ed = document.getElementById('share-editor');
-  if(!ed) return;
-  const ok = _spEsAdmin();
-  ed.style.display = ok ? 'block' : 'none';
-  document.getElementById('share-modal').classList.toggle('con-editor', ok);
-  if(ok) ed.open = false;
+/* ── Editor de la foto de fondo dentro de ✏ Editar partido (panel admin) ──
+   Los cambios (foto nueva, quitar, ajustes de encuadre) se aplican recién al tocar
+   "Guardar cambios"; "Cancelar" los descarta. */
+let _edPF = null;   // { p, img, cfg, valor, cambioFoto, cambioCfg, listo, tok, tmr }
+
+async function edPfIniciar(p){
+  const st = _edPF = { p, img:null, cfg:Object.assign({}, PF_CFG_DEF), valor:'', cambioFoto:false, cambioCfg:false, listo:false, tok:0, tmr:null };
+  edPfUI();
+  const rec = await pfCargar(p.id);
+  if(_edPF !== st) return;                       // se cerró o se abrió otro modal
+  if(!st.cambioFoto){                            // si ya eligió una foto nueva, no pisarla
+    st.valor = (rec && rec.value) ? rec.value : '';
+    st.img   = st.valor ? await cargarImagenAsync(st.valor) : null;
+    if(_edPF !== st) return;
+    st.cfg   = Object.assign({}, PF_CFG_DEF, (rec && rec.cfg) || {});
+  }
+  st.listo = true;
+  edPfUI();
+  edPfRegenerar();
 }
-function _spOcultarEditor(){
-  const ed = document.getElementById('share-editor');
-  if(ed) ed.style.display = 'none';
-  const m = document.getElementById('share-modal'); if(m) m.classList.remove('con-editor');
-  _sp = null;
-}
-function _spSincronizarEditor(){
-  if(!_sp) return;
-  const c = _sp.cfg, tiene = !!_sp.img;
+function edPfUI(){
+  const st = _edPF; if(!st) return;
+  const tiene = !!st.valor;
   const set = (i, v) => { const el = document.getElementById(i); if(el) el.value = v; };
-  set('se-zoom', Math.round(c.zoom*100)); set('se-x', Math.round(c.x*100));
-  set('se-y', Math.round(c.y*100));       set('se-osc', Math.round(c.osc*100));
-  const aj = document.getElementById('se-ajustes'); if(aj) aj.style.display = tiene ? 'block' : 'none';
-  const q = document.getElementById('se-quitar');   if(q) q.style.display = tiene ? 'inline-block' : 'none';
-  const t = document.getElementById('se-foto-txt'); if(t) t.textContent = tiene ? 'Cambiar foto' : 'Agregar foto de fondo';
+  set('ed-pf-zoom', Math.round(st.cfg.zoom*100)); set('ed-pf-x', Math.round(st.cfg.x*100));
+  set('ed-pf-y', Math.round(st.cfg.y*100));       set('ed-pf-osc', Math.round(st.cfg.osc*100));
+  const show = (i, on, d) => { const el = document.getElementById(i); if(el) el.style.display = on ? (d||'block') : 'none'; };
+  show('ed-pf-ajustes', tiene); show('ed-pf-quitar', tiene, 'inline-block'); show('ed-pf-prev-wrap', tiene);
+  const t = document.getElementById('ed-pf-txt'); if(t) t.textContent = tiene ? 'Cambiar foto' : 'Agregar foto';
+  const e = document.getElementById('ed-pf-estado');
+  if(e) e.textContent = !st.listo ? 'Cargando foto…'
+    : (tiene ? (st.cambioFoto ? 'Foto nueva (se guarda al tocar “Guardar cambios”).' : 'Este partido tiene foto de fondo.')
+             : (st.cambioFoto ? 'La foto se va a quitar al tocar “Guardar cambios”.' : 'Este partido no tiene foto de fondo.'));
 }
-function _spMsg(txt, ok){
-  const el = document.getElementById('se-msg'); if(!el) return;
-  el.textContent = txt || ''; el.style.color = ok === false ? '#ff7070' : 'var(--dorado)';
+async function edPfRegenerar(){
+  const st = _edPF; if(!st || !st.valor || !st.img) return;
+  const tok = ++st.tok;
+  const cv = await generarImagenPartido(st.p, { img:st.img, cfg:st.cfg });
+  if(_edPF !== st || tok !== st.tok) return;     // llegó un cambio más nuevo
+  const el = document.getElementById('ed-pf-prev'); if(el) el.src = cv.toDataURL('image/jpeg', 0.7);
 }
-
-async function spRegenerar(){
-  if(!_sp) return;
-  const tok = ++_sp.tok;
-  const cv = await generarImagenPartido(_sp.p, { img:_sp.img, cfg:_sp.cfg });
-  if(!_sp || tok !== _sp.tok) return;       // llegó otro cambio más nuevo
-  _shareCanvas = cv; _shareCanvases = null;
-  const el = document.getElementById('share-img-preview');
-  el.src = cv.toDataURL('image/jpeg', 0.85); el.style.display = 'block';
-}
-function spCambio(){
-  if(!_sp) return;
+function edPfCambio(){
+  const st = _edPF; if(!st) return;
   const v = i => (parseFloat(document.getElementById(i).value) || 0) / 100;
-  _sp.cfg = { zoom: Math.max(1, v('se-zoom')), x: v('se-x'), y: v('se-y'), osc: v('se-osc') };
-  clearTimeout(_sp.tmr); _sp.tmr = setTimeout(spRegenerar, 70);
+  st.cfg = { zoom: Math.max(1, v('ed-pf-zoom')), x: v('ed-pf-x'), y: v('ed-pf-y'), osc: v('ed-pf-osc') };
+  st.cambioCfg = true;
+  clearTimeout(st.tmr); st.tmr = setTimeout(edPfRegenerar, 70);
 }
-async function spGuardarCfg(){
-  if(!_sp || !_sp.rec || !_spEsAdmin()) return;
-  _sp.rec.cfg = Object.assign({}, _sp.cfg);
-  _pfCache[String(_sp.p.id)] = _sp.rec;
-  const ok = await window._fb.setPartidoFotoCfg(_sp.p.id, _sp.cfg);
-  _spMsg(ok ? '✓ Ajustes guardados' : '⚠ No se pudieron guardar los ajustes', ok);
-}
-async function spElegirFoto(input){
-  const file = input.files && input.files[0]; if(!file || !_sp) return;
-  _spMsg('Procesando foto…');
+async function edPfElegir(input){
+  const st = _edPF; const file = input.files && input.files[0]; if(!file || !st) return;
+  const e = document.getElementById('ed-pf-estado'); if(e) e.textContent = 'Procesando foto…';
   try{
-    const value = await comprimirImagenParaFirestore(file, 700000);
-    const cfg = Object.assign({}, PF_CFG_DEF);
-    const ok = await window._fb.setPartidoFoto(_sp.p.id, value, cfg);
-    if(!ok){ _spMsg('⚠ No se pudo guardar la foto. Revisá tu conexión.', false); return; }
-    const rec = { value, cfg };
-    _pfCache[String(_sp.p.id)] = rec;
-    await _spAplicarRec(rec);
-    _spMsg('✓ Foto guardada');
-    await spRegenerar();
-  }catch(e){ console.error(e); _spMsg('⚠ No se pudo leer la imagen', false); }
+    const valor = await comprimirImagenParaFirestore(file, 700000);
+    if(_edPF !== st) return;
+    st.valor = valor; st.img = await cargarImagenAsync(valor);
+    st.cfg = Object.assign({}, PF_CFG_DEF);      // foto nueva → encuadre desde cero
+    st.cambioFoto = true; st.cambioCfg = false; st.listo = true;
+    edPfUI(); edPfRegenerar();
+  }catch(err){ console.error(err); if(e) e.textContent = '⚠ No se pudo leer la imagen'; }
   input.value = '';
 }
-async function spQuitarFoto(){
-  if(!_sp || !_spEsAdmin()) return;
-  await window._fb.delPartidoFoto(_sp.p.id);
-  _pfCache[String(_sp.p.id)] = null;
-  await _spAplicarRec(null);
-  _spMsg('Foto quitada');
-  await spRegenerar();
+function edPfQuitar(){
+  const st = _edPF; if(!st) return;
+  st.valor = ''; st.img = null; st.cfg = Object.assign({}, PF_CFG_DEF);
+  st.cambioFoto = true; st.cambioCfg = false;
+  const pv = document.getElementById('ed-pf-prev'); if(pv) pv.removeAttribute('src');
+  edPfUI();
+}
+// Se llama desde guardarEdicion(): sube / borra / actualiza la foto según lo que haya cambiado
+function edPfGuardar(sid){
+  const st = _edPF;
+  if(!st || String(st.p.id) !== String(sid) || !(st.cambioFoto || st.cambioCfg) || !window._fb) return;
+  const cfg = Object.assign({}, st.cfg);
+  if(st.cambioFoto && !st.valor){
+    _pfCache[sid] = null;
+    Promise.resolve(window._fb.delPartidoFoto(sid)).then(ok=>{ if(ok===false){ delete _pfCache[sid]; alert('El partido se guardó, pero no se pudo quitar la foto de fondo. Probá de nuevo desde ✏ Editar.'); } });
+  } else if(st.cambioFoto){
+    _pfCache[sid] = { value: st.valor, cfg };
+    Promise.resolve(window._fb.setPartidoFoto(sid, st.valor, cfg)).then(ok=>{ if(!ok){ delete _pfCache[sid]; alert('El partido se guardó, pero la foto de fondo no se pudo subir. Probá de nuevo desde ✏ Editar.'); } });
+  } else if(st.valor){
+    _pfCache[sid] = { value: st.valor, cfg };
+    Promise.resolve(window._fb.setPartidoFotoCfg(sid, cfg)).then(ok=>{ if(!ok){ delete _pfCache[sid]; alert('El partido se guardó, pero no se pudieron guardar los ajustes de la foto.'); } });
+  }
 }
 
 /* Foto elegida al CARGAR un partido (formulario Agregar Partido) */
