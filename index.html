@@ -295,6 +295,34 @@
       }catch(e){ console.warn('FB getAllClubFotos error', e); return {}; }
     },
 
+    // ── FOTO DE FONDO DE RESULTADO: subcolección /lrr/partidofotos/items/<id> ──
+    // Vive fuera de la colección /lrr (los getDocs(collection(db,COL)) no la descargan) y las
+    // reglas /lrr/{document=**} ya la cubren. Un documento por partido: { value: base64, cfg: {zoom,x,y,osc} }
+    async getPartidoFoto(id){
+      try{
+        const snap = await getDoc(doc(db, COL, 'partidofotos', 'items', String(id)));
+        return snap.exists() ? snap.data() : null;
+      }catch(e){ console.warn('FB getPartidoFoto error', id, e); return null; }
+    },
+    async setPartidoFoto(id, base64, cfg){
+      try{
+        await setDoc(doc(db, COL, 'partidofotos', 'items', String(id)), { value: base64, cfg: cfg || {} });
+        return true;
+      }catch(e){ console.error('FB setPartidoFoto error', id, e); return false; }
+    },
+    async setPartidoFotoCfg(id, cfg){
+      try{
+        await setDoc(doc(db, COL, 'partidofotos', 'items', String(id)), { cfg: cfg || {} }, { merge: true });
+        return true;
+      }catch(e){ console.error('FB setPartidoFotoCfg error', id, e); return false; }
+    },
+    async delPartidoFoto(id){
+      try{
+        await deleteDoc(doc(db, COL, 'partidofotos', 'items', String(id)));
+        return true;
+      }catch(e){ console.warn('FB delPartidoFoto error', id, e); return false; }
+    },
+
     // ── FOTO DE FONDO DE ALINEACIÓN: un documento individual por alineación para evitar el límite de 1MB ──
 
     // Guarda la foto de fondo de una alineación: /lrr/alinfoto_<id>
@@ -3104,6 +3132,15 @@ table.posiciones td:nth-child(8){
 .share-box-header span{font-family:'Rajdhani',sans-serif;font-weight:900;font-size:16px;color:var(--dorado);letter-spacing:1.2px;}
 .share-box-close{background:none;border:none;color:rgba(255,255,255,.4);font-size:20px;cursor:pointer;line-height:1;padding:0;}
 .share-box-close:hover{color:var(--dorado);}
+#share-editor{margin:0 16px 6px;border:1px solid rgba(201,162,39,.25);border-radius:var(--r-md);background:var(--negro3);}
+#share-editor summary{cursor:pointer;padding:9px 12px;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:14px;letter-spacing:.6px;color:var(--dorado);}
+#share-editor .se-body{padding:4px 12px 12px;max-height:26vh;overflow:auto;}
+#share-editor .se-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
+#share-editor .se-btn{display:inline-block;background:rgba(201,162,39,.12);border:1px solid rgba(201,162,39,.4);color:var(--dorado);border-radius:8px;padding:7px 12px;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:13px;cursor:pointer;}
+#share-editor .se-sl{display:grid;grid-template-columns:86px 1fr;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,.75);margin:4px 0;}
+#share-editor .se-sl input{width:100%;accent-color:var(--dorado);}
+#se-msg{font-size:12px;margin-top:6px;min-height:14px;}
+#share-modal.con-editor .share-img-preview-wrap img{max-height:44vh;}
 .share-img-preview-wrap{margin:14px 16px 6px;border-radius:var(--r-md);overflow:hidden;border:1px solid rgba(201,162,39,.2);background:var(--negro3);display:flex;align-items:center;justify-content:center;min-height:100px;}
 .share-img-preview-wrap img{width:100%;max-height:72vh;object-fit:contain;display:block;border-radius:var(--r-md);}
 .share-img-loading{font-family:'Rajdhani',sans-serif;font-size:12px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.5px;padding:28px;display:flex;flex-direction:column;align-items:center;gap:8px;}
@@ -3332,6 +3369,22 @@ table.posiciones td:nth-child(8){
       <span id="share-img-contador">1 / 2</span>
       <button type="button" onclick="shareCambiarImagen(1)" aria-label="Imagen siguiente">›</button>
     </div>
+    <details id="share-editor" style="display:none">
+      <summary>📷 Foto de fondo · editar</summary>
+      <div class="se-body">
+        <div class="se-row">
+          <label class="se-btn">📷 <span id="se-foto-txt">Agregar foto de fondo</span><input type="file" accept="image/*" onchange="spElegirFoto(this)" style="display:none"/></label>
+          <button type="button" class="se-btn" id="se-quitar" onclick="spQuitarFoto()" style="display:none">🗑 Quitar</button>
+        </div>
+        <div id="se-ajustes" style="display:none">
+          <label class="se-sl">Zoom<input type="range" id="se-zoom" min="100" max="300" value="100" oninput="spCambio()" onchange="spGuardarCfg()"/></label>
+          <label class="se-sl">Horizontal<input type="range" id="se-x" min="0" max="100" value="50" oninput="spCambio()" onchange="spGuardarCfg()"/></label>
+          <label class="se-sl">Vertical<input type="range" id="se-y" min="0" max="100" value="40" oninput="spCambio()" onchange="spGuardarCfg()"/></label>
+          <label class="se-sl">Oscuridad<input type="range" id="se-osc" min="0" max="100" value="35" oninput="spCambio()" onchange="spGuardarCfg()"/></label>
+        </div>
+        <div id="se-msg"></div>
+      </div>
+    </details>
     <div class="share-redes">
       <button class="share-red-btn whatsapp" onclick="compartirImgEn('whatsapp')">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347"/></svg>
@@ -3540,6 +3593,14 @@ table.posiciones td:nth-child(8){
           <div class="seccion-label">🟥 Expulsiones</div>
           <div class="evento-list" id="p-exp-list"></div>
           <button class="btn-add-evento" onclick="addEventoRow('p-exp-list','exp')">+ Agregar expulsión</button>
+        </div>
+        <div class="form-group" style="margin-top:14px">
+          <label>Foto de fondo para la imagen del resultado <span style="color:var(--gris);font-size:11px">(opcional · después se puede editar o cambiar desde Compartir)</span></label>
+          <div class="upload-area" style="padding:12px">
+            <input type="file" accept="image/*" id="p-foto-file" onchange="pPreviewFotoFondo(this)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%"/>
+            <p style="pointer-events:none;font-size:11px">Hacé clic para subir una foto</p>
+          </div>
+          <div class="preview-wrap" id="p-foto-wrap"><img id="p-foto-preview" style="max-height:110px;border-radius:8px"/><button type="button" class="btn-quitar-img" onclick="pQuitarFotoFondo()">✕ Quitar</button></div>
         </div>
         <br/><br/>
         <button class="btn-primary" onclick="agregarPartido()">+ Agregar Partido</button>
@@ -5378,6 +5439,15 @@ table.posiciones td:nth-child(8){
             </div>
           </div>
           <details style="margin:4px 0 14px"><summary style="cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:12px;letter-spacing:1px;color:var(--gris)">🔠 TAMAÑO DE CADA TEXTO</summary><div id="txt-md" class="form-row" style="flex-wrap:wrap;margin-top:10px"></div></details>
+          <div class="form-group md-solo">
+            <label>Fotos de fondo</label>
+            <select id="promo-md-fotos-modo" onchange="promoFotosModo()">
+              <option value="una">Una sola foto (la de "Foto de fondo")</option>
+              <option value="h">3 fotos en horizontal (una al lado de otra)</option>
+              <option value="v">3 fotos en vertical (una sobre otra)</option>
+            </select>
+            <div id="promo-mf-wrap" style="display:none;margin-top:10px"></div>
+          </div>
           <div class="form-group md-solo">
             <label>Jugador recortado (PNG sin fondo, opcional)</label>
             <input type="file" accept="image/png,image/webp" id="promo-md-recorte-file" onchange="promoRecorteCargar(this)"/>
@@ -7924,7 +7994,7 @@ function partidoHTML(p,mostrarDetalle){
 
   // Botón compartir solo para partidos titulares jugados o en juego
   const shareBtnHTML = (p.estado==='jugado'||p.estado==='en-juego') && !p.esReserva
-    ? `<div class="share-card-row"><button class="btn-share" onclick="abrirShare(()=>generarImagenPartido(data.partidos.find(x=>String(x.id)==='${String(p.id)}')))">
+    ? `<div class="share-card-row"><button class="btn-share" onclick="abrirSharePartido('${String(p.id)}')">
         ${SVG_SHARE} Compartir
       </button></div>`
     : '';
@@ -10855,6 +10925,11 @@ function agregarPartido(){
   }
   if(!d.local||!d.visit){alert('Completá local y visitante');return;}
   data.partidos.push(d);
+  if(_pFotoFondo){
+    const _fv=_pFotoFondo, _fc=Object.assign({},PF_CFG_DEF);
+    _pfCache[String(d.id)]={value:_fv,cfg:_fc};
+    if(window._fb&&window._fb.setPartidoFoto) window._fb.setPartidoFoto(d.id,_fv,_fc).then(ok=>{ if(!ok) alert('El partido se guardó, pero la foto de fondo no se pudo subir. Probá agregarla desde Compartir.'); });
+  }
   recalcularTodo();   // recalcular siempre: puede que haya partidos jugados anteriores
   aplicarTodasLasPenalizaciones();
   saveData(data);
@@ -10865,6 +10940,7 @@ function agregarPartido(){
   document.getElementById('p-es-provincial').checked=false;
   document.getElementById('p-provincial-datos-wrap').style.display='none';
   pQuitarLogoExtra();
+  pQuitarFotoFondo();
   document.getElementById('p-tiene-penales').checked=false;
   document.getElementById('p-penales').value='';
   togglePenalesInput('p');
@@ -11359,6 +11435,8 @@ function eliminar(tipo,id){
   pedirConfirmacion('¿Eliminar este elemento?',function(){
     if(tipo==='partidos'){
       data.partidos=data.partidos.filter(p=>String(p.id)!==sid);
+      if(window._fb&&window._fb.delPartidoFoto) window._fb.delPartidoFoto(sid);
+      delete _pfCache[sid];
       recalcularTodo();
       aplicarTodasLasPenalizaciones();
     }
@@ -14788,7 +14866,378 @@ function logoParaPartido(p){
   if(p.div==='segunda')   return id.logoSegunda||'';
   return '';
 }
-async function generarImagenPartido(p){
+/* ══════════════════════════════════════════════════════════════
+   IMAGEN DE RESULTADO (estilo panel de vidrio) + FOTO DE FONDO POR PARTIDO
+   La foto se guarda aparte (subcolección /lrr/partidofotos/items/<id>) para no
+   engordar el documento de los partidos ni las lecturas de la colección /lrr.
+   ══════════════════════════════════════════════════════════════ */
+const PF_CFG_DEF = { zoom:1, x:0.5, y:0.4, osc:0.35 };
+const _pfCache = {};   // id -> { value, cfg } | null
+
+async function pfCargar(id){
+  id = String(id);
+  if(Object.prototype.hasOwnProperty.call(_pfCache, id)) return _pfCache[id];
+  let r = null;
+  try{ if(window._fb && window._fb.getPartidoFoto) r = await window._fb.getPartidoFoto(id); }catch(e){ r = null; }
+  _pfCache[id] = r;
+  return r;
+}
+
+// Dibuja la foto a pantalla completa (modo cover) con zoom y encuadre editables
+function pfDibujarFoto(ctx, img, W, H, cfg){
+  const iw = img.naturalWidth || img.width || 1, ih = img.naturalHeight || img.height || 1;
+  const sc = Math.max(W/iw, H/ih) * (cfg.zoom || 1);
+  const dw = iw*sc, dh = ih*sc;
+  const fx = (cfg.x==null?0.5:cfg.x), fy = (cfg.y==null?0.5:cfg.y);
+  ctx.drawImage(img, -(dw-W)*fx, -(dh-H)*fy, dw, dh);
+}
+
+// Texto con separación entre letras (para etiquetas chicas); devuelve x final
+function _pfSpaced(ctx, x, y, txt, sp){
+  ctx.textAlign = 'left';
+  for(const ch of String(txt)){ ctx.fillText(ch, x, y); x += ctx.measureText(ch).width + sp; }
+  return x;
+}
+
+async function generarImagenPartido(p, opts){
+  opts = opts || {};
+  // Medidas en píxeles reales del lienzo 1080×1350 (la s() global escala desde un diseño de 700 px)
+  const s = v => Math.round(v);
+  await document.fonts.ready;
+  const id = getIdentidad();
+  const W = CV_W, H = CV_H, CX = W/2;
+
+  // Foto de fondo: si no se pasa por opciones, se busca la guardada para este partido
+  let img = opts.img, cfg = opts.cfg;
+  if(opts.img === undefined){
+    const rec = await pfCargar(p.id);
+    img = (rec && rec.value) ? await cargarImagenAsync(rec.value) : null;
+    cfg = (rec && rec.cfg) || {};
+  }
+  cfg = Object.assign({}, PF_CFG_DEF, cfg || {});
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.textBaseline = 'alphabetic';
+
+  // ── Fondo: foto elegida (con degradé oscuro editable) o el fondo estándar de la web ──
+  if(img){
+    pfDibujarFoto(ctx, img, W, H, cfg);
+    const a0 = Math.min(0.95, 0.10 + 0.45*cfg.osc), a1 = Math.min(0.97, 0.35 + 0.60*cfg.osc);
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, `rgba(0,0,0,${a0})`); g.addColorStop(1, `rgba(0,0,0,${a1})`);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  } else {
+    cvFondoHistoria(ctx, W, H);
+  }
+
+  // ── Datos del partido (arriba) ──
+  const PROVP = cvCatDe(p);
+  const dia = String(p.dia || '').toUpperCase();
+  let yHead;
+  if(PROVP){
+    const logoE = await cargarImagenAsync(logoParaPartido(p));
+    yHead = cvCatBloque(ctx, W, 0, PROVP, { zona: cvZonaDe(p), fecha: p.fecha || '', logoImg: logoE });
+    if(dia){
+      ctx.fillStyle = C.DORADO2; ctx.font = `700 ${s(32)}px "Rajdhani", Arial, sans-serif`;
+      ctx.textBaseline = 'middle'; _pfSpaced(ctx, s(36), yHead + s(36), dia, s(4));
+      ctx.textBaseline = 'alphabetic'; yHead += s(70);
+    } else yHead += s(20);
+  } else {
+    const fechaTxt = (p.fecha && p.fecha !== 'Sin fecha') ? String(p.fecha).toUpperCase() : '';
+    if(fechaTxt){
+      ctx.font = `${s(40)}px "Bebas Neue", Arial, sans-serif`;
+      const tw = ctx.measureText(fechaTxt).width, bx = s(66), bw = tw + s(44);
+      ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(0, s(92), s(60), 1);
+      cvRoundRect(ctx, bx, s(60), bw, s(64), s(32));
+      ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = s(1.6); ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(fechaTxt, bx + bw/2, s(94));
+      ctx.textBaseline = 'alphabetic';
+    }
+    const divNom = p.esReserva ? ('Reserva · ' + (p.div==='segunda' ? 'Segunda División' : 'Primera División'))
+      : p.div==='primera' ? 'Primera División' : p.div==='segunda' ? 'Segunda División' : (p.torneoExtra || 'Extra Liga');
+    let extra = '';
+    if(p.div==='primera' && p.torneo) extra = torneoLabel(p.torneo);
+    else if(p.div==='segunda' && p.faseRes) extra = ({fase1:'1ª Fase', fase2:'2ª Fase', fase3:'3ª Fase'})[p.faseRes] || '';
+    const titulo = [divNom, extra].filter(Boolean).join(' · ').toUpperCase();
+    let ts = 60; const tMax = W - s(36) - s(140);
+    ctx.font = `${s(ts)}px "Bebas Neue", Arial, sans-serif`;
+    while(ts > 34 && ctx.measureText(titulo).width > tMax){ ts--; ctx.font = `${s(ts)}px "Bebas Neue", Arial, sans-serif`; }
+    ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    cvFillTextTrunc(ctx, titulo, s(36), s(196), tMax);
+    if(dia){
+      ctx.fillStyle = C.DORADO; ctx.font = `700 ${s(32)}px "Rajdhani", Arial, sans-serif`;
+      _pfSpaced(ctx, s(36), s(252), dia, s(4));
+    }
+    ctx.textBaseline = 'alphabetic';
+    yHead = s(300);
+    // Logo (arriba a la derecha)
+    const logoSrc = logoParaPartido(p) || id.logo;
+    const LS = s(84), LX = W - s(36) - LS, LY = s(34);
+    const okLogo = logoSrc ? await cvDrawLogo(ctx, logoSrc, LX, LY, LS) : false;
+    if(!okLogo){
+      ctx.beginPath(); ctx.arc(LX+LS/2, LY+LS/2, LS/2, 0, Math.PI*2); ctx.fillStyle = C.DORADO; ctx.fill();
+      ctx.fillStyle = C.NEG; ctx.font = `${s(34)}px "Bebas Neue", Arial, sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(String(id.nombre || 'DM').substr(0,3).toUpperCase(), LX+LS/2, LY+LS/2+s(2));
+      ctx.textBaseline = 'alphabetic';
+    }
+  }
+
+  // ── Datos para el panel ──
+  const golesL = (p.goles||[]).filter(g => g.equipo==='local'),  golesV = (p.goles||[]).filter(g => g.equipo==='visit');
+  const expsL  = (p.expulsiones||[]).filter(e => e.equipo==='local'), expsV = (p.expulsiones||[]).filter(e => e.equipo==='visit');
+  const totalEv = golesL.length + golesV.length + expsL.length + expsV.length;
+  const LH = totalEv > 8 ? s(30) : s(36), EF = totalEv > 8 ? 22 : 25;
+  const PX = s(36), PW = s(650), padT = s(28), padB = s(22), mid = s(72);
+  const textX = s(270), nameMaxW = PW - textX - s(28);
+
+  const fitNombre = (txt) => {
+    const T = String(txt||'').toUpperCase();
+    let size = 50;
+    const set = () => { ctx.font = `${s(size)}px "Bebas Neue", Arial, sans-serif`; };
+    set();
+    while(size > 40 && ctx.measureText(T).width > nameMaxW){ size--; set(); }
+    if(ctx.measureText(T).width <= nameMaxW) return { lines:[T], size };
+    const words = T.split(/\s+/).filter(Boolean);
+    if(words.length >= 2){
+      size = 44; set();
+      let best = null;
+      for(;;){
+        best = null;
+        for(let k=1; k<words.length; k++){
+          const a = words.slice(0,k).join(' '), b = words.slice(k).join(' ');
+          const w = Math.max(ctx.measureText(a).width, ctx.measureText(b).width);
+          if(!best || w < best.w) best = { a, b, w };
+        }
+        if(best.w <= nameMaxW || size <= 32) break;
+        size--; set();
+      }
+      return { lines:[best.a, best.b], size };
+    }
+    return { lines:[T], size:40 };
+  };
+  const medir = (nombre, gs, es) => {
+    const f = fitNombre(nombre);
+    const nameH = f.lines.length * s(f.size) * 1.02;
+    const grp = nameH + s(12) + (gs.length + es.length) * LH;
+    return { f, nameH, grp, h: Math.max(s(170), grp + s(56)) };
+  };
+  const mL = medir(p.local, golesL, expsL), mV = medir(p.visit, golesV, expsV);
+
+  const mres = String(p.resultado || '').match(/(\d+)\s*[-–:]\s*(\d+)/);
+  const scL = mres ? mres[1] : (p.estado==='en-juego' ? '0' : '-');
+  const scV = mres ? mres[2] : (p.estado==='en-juego' ? '0' : '-');
+  const penTxt = (p.estado==='jugado' && p.tienePenales && p.penales) ? ('DEFINIÓ POR PENALES  ·  ' + p.penales) : '';
+  const penH = penTxt ? s(48) : 0;
+  const arbitros = (p.arbitros||[]).map(a => String((a && a.nombre) ? a.nombre : a)).filter(Boolean);
+  const arbH = arbitros.length ? s(84) : 0;
+  const PH = padT + mL.h + mid + mV.h + penH + arbH + padB;
+  const PY = Math.round(yHead + Math.max(s(30), (H - yHead - PH) * 0.38));
+
+  // ── Panel de vidrio ──
+  ctx.save();
+  cvRoundRect(ctx, PX, PY, PW, PH, s(26)); ctx.clip();
+  if('filter' in ctx){
+    const tmp = document.createElement('canvas'); tmp.width = W; tmp.height = H;
+    tmp.getContext('2d').drawImage(canvas, 0, 0);
+    ctx.filter = `blur(${s(26)}px)`; ctx.drawImage(tmp, 0, 0); ctx.filter = 'none';
+  }
+  const gl = ctx.createLinearGradient(0, PY, 0, PY + PH);
+  gl.addColorStop(0, 'rgba(14,20,40,0.30)'); gl.addColorStop(1, 'rgba(14,20,40,0.60)');
+  ctx.fillStyle = gl; ctx.fillRect(PX, PY, PW, PH);
+  ctx.fillStyle = 'rgba(255,255,255,0.065)'; ctx.fillRect(PX, PY, PW, PH);
+  ctx.restore();
+  cvRoundRect(ctx, PX, PY, PW, PH, s(26));
+  ctx.strokeStyle = 'rgba(255,255,255,0.28)'; ctx.lineWidth = s(1.5); ctx.stroke();
+
+  // ── Filas de equipo ──
+  const fila = async (top, m, nombre, score, gs, es) => {
+    const cy = top + m.h/2, ESC = s(100);
+    await cvDrawEscudoCompleto(ctx, nombre, PX + s(28), cy - ESC/2, ESC);
+    ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.font = `${s(score.length > 1 ? 150 : 200)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.fillText(score, PX + s(150), cy + s(6));
+    const y0 = cy - m.grp/2, tx = PX + textX;
+    ctx.font = `${s(m.f.size)}px "Bebas Neue", Arial, sans-serif`;
+    m.f.lines.forEach((ln, i) => cvFillTextTrunc(ctx, ln, tx, y0 + s(m.f.size)*1.02*(i+0.5), nameMaxW));
+    let ey = y0 + m.nameH + s(12) + LH/2;
+    const evMaxW = PW - textX - s(58) - s(24);
+    const evento = (e, rojo) => {
+      ctx.fillStyle = rojo ? '#ff7070' : 'rgba(255,255,255,0.93)';
+      let nx = tx;
+      if(e.min){
+        ctx.font = `700 ${s(EF)}px "DM Sans", Arial, sans-serif`;
+        ctx.fillText(e.min + "'", tx, ey); nx = tx + s(58);
+      }
+      ctx.font = `500 ${s(EF)}px "DM Sans", Arial, sans-serif`;
+      const pre = rojo ? (e.subtipo==='doble' ? '🟨🟨 ' : '🟥 ') : '';
+      cvFillTextTrunc(ctx, pre + e.jugador, nx, ey, evMaxW);
+      ey += LH;
+    };
+    gs.forEach(e => evento(e, false));
+    es.forEach(e => evento(e, true));
+  };
+  await fila(PY + padT, mL, p.local, scL, golesL, expsL);
+  await fila(PY + padT + mL.h + mid, mV, p.visit, scV, golesV, expsV);
+
+  // ── Divisor con estado (FIN / VIVO / VS) ──
+  const ym = PY + padT + mL.h + mid/2, R = s(26);
+  ctx.fillStyle = 'rgba(255,255,255,0.28)';
+  ctx.fillRect(PX + s(40), ym, PW/2 - s(40) - R - s(4), 1);
+  ctx.fillRect(PX + PW/2 + R + s(4), ym, PW/2 - s(40) - R - s(4), 1);
+  const enVivo = p.estado === 'en-juego';
+  ctx.beginPath(); ctx.arc(PX + PW/2, ym, R, 0, Math.PI*2);
+  ctx.fillStyle = enVivo ? 'rgba(192,57,43,0.35)' : 'rgba(255,255,255,0.07)'; ctx.fill();
+  ctx.strokeStyle = enVivo ? '#ff6b6b' : 'rgba(255,255,255,0.8)'; ctx.lineWidth = s(1.6); ctx.stroke();
+  ctx.fillStyle = '#fff'; ctx.font = `700 ${s(enVivo ? 15 : 20)}px "Rajdhani", Arial, sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(p.estado==='jugado' ? 'FIN' : enVivo ? 'VIVO' : 'VS', PX + PW/2, ym + s(1));
+
+  let yb = PY + padT + mL.h + mid + mV.h;
+  if(penTxt){
+    ctx.fillStyle = C.DORADO2; ctx.font = `700 ${s(20)}px "Rajdhani", Arial, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(penTxt, PX + PW/2, yb + penH/2 - s(4));
+    yb += penH;
+  }
+
+  // ── Árbitros (debajo del marcador) ──
+  if(arbitros.length){
+    ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.fillRect(PX + s(40), yb + s(14), PW - s(80), 1);
+    const ay = yb + s(52);
+    ctx.fillStyle = C.DORADO; ctx.font = `700 ${s(19)}px "Rajdhani", Arial, sans-serif`;
+    ctx.textBaseline = 'middle';
+    const xe = _pfSpaced(ctx, PX + s(40), ay, arbitros.length > 1 ? 'ÁRBITROS' : 'ÁRBITRO', s(3));
+    ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.font = `500 ${s(25)}px "DM Sans", Arial, sans-serif`;
+    ctx.textAlign = 'left';
+    cvFillTextTrunc(ctx, arbitros.join('  ·  '), xe + s(22), ay, PX + PW - s(40) - (xe + s(22)));
+  }
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  return canvas;
+}
+
+/* ── Compartir resultado con foto de fondo editable (solo admin edita) ── */
+let _sp = null;   // { p, rec, img, cfg, tok }
+function _spEsAdmin(){ return !!window._fbUser; }
+
+async function _spAplicarRec(rec){
+  _sp.rec = (rec && rec.value) ? rec : null;
+  _sp.img = _sp.rec ? await cargarImagenAsync(_sp.rec.value) : null;
+  _sp.cfg = Object.assign({}, PF_CFG_DEF, (_sp.rec && _sp.rec.cfg) || {});
+  _spSincronizarEditor();
+}
+
+function abrirSharePartido(id){
+  const p = data.partidos.find(x => String(x.id) === String(id));
+  if(!p) return;
+  abrirShareCanvas(async () => {
+    const rec = await pfCargar(p.id);
+    await _spAplicarRec(rec);
+    return generarImagenPartido(p, { img:_sp.img, cfg:_sp.cfg });
+  });
+  _sp = { p, rec:null, img:null, cfg:Object.assign({}, PF_CFG_DEF), tok:0, tmr:null };
+  _spMostrarEditor();
+}
+
+function _spMostrarEditor(){
+  const ed = document.getElementById('share-editor');
+  if(!ed) return;
+  const ok = _spEsAdmin();
+  ed.style.display = ok ? 'block' : 'none';
+  document.getElementById('share-modal').classList.toggle('con-editor', ok);
+  if(ok) ed.open = false;
+}
+function _spOcultarEditor(){
+  const ed = document.getElementById('share-editor');
+  if(ed) ed.style.display = 'none';
+  const m = document.getElementById('share-modal'); if(m) m.classList.remove('con-editor');
+  _sp = null;
+}
+function _spSincronizarEditor(){
+  if(!_sp) return;
+  const c = _sp.cfg, tiene = !!_sp.img;
+  const set = (i, v) => { const el = document.getElementById(i); if(el) el.value = v; };
+  set('se-zoom', Math.round(c.zoom*100)); set('se-x', Math.round(c.x*100));
+  set('se-y', Math.round(c.y*100));       set('se-osc', Math.round(c.osc*100));
+  const aj = document.getElementById('se-ajustes'); if(aj) aj.style.display = tiene ? 'block' : 'none';
+  const q = document.getElementById('se-quitar');   if(q) q.style.display = tiene ? 'inline-block' : 'none';
+  const t = document.getElementById('se-foto-txt'); if(t) t.textContent = tiene ? 'Cambiar foto' : 'Agregar foto de fondo';
+}
+function _spMsg(txt, ok){
+  const el = document.getElementById('se-msg'); if(!el) return;
+  el.textContent = txt || ''; el.style.color = ok === false ? '#ff7070' : 'var(--dorado)';
+}
+
+async function spRegenerar(){
+  if(!_sp) return;
+  const tok = ++_sp.tok;
+  const cv = await generarImagenPartido(_sp.p, { img:_sp.img, cfg:_sp.cfg });
+  if(!_sp || tok !== _sp.tok) return;       // llegó otro cambio más nuevo
+  _shareCanvas = cv; _shareCanvases = null;
+  const el = document.getElementById('share-img-preview');
+  el.src = cv.toDataURL('image/jpeg', 0.85); el.style.display = 'block';
+}
+function spCambio(){
+  if(!_sp) return;
+  const v = i => (parseFloat(document.getElementById(i).value) || 0) / 100;
+  _sp.cfg = { zoom: Math.max(1, v('se-zoom')), x: v('se-x'), y: v('se-y'), osc: v('se-osc') };
+  clearTimeout(_sp.tmr); _sp.tmr = setTimeout(spRegenerar, 70);
+}
+async function spGuardarCfg(){
+  if(!_sp || !_sp.rec || !_spEsAdmin()) return;
+  _sp.rec.cfg = Object.assign({}, _sp.cfg);
+  _pfCache[String(_sp.p.id)] = _sp.rec;
+  const ok = await window._fb.setPartidoFotoCfg(_sp.p.id, _sp.cfg);
+  _spMsg(ok ? '✓ Ajustes guardados' : '⚠ No se pudieron guardar los ajustes', ok);
+}
+async function spElegirFoto(input){
+  const file = input.files && input.files[0]; if(!file || !_sp) return;
+  _spMsg('Procesando foto…');
+  try{
+    const value = await comprimirImagenParaFirestore(file, 700000);
+    const cfg = Object.assign({}, PF_CFG_DEF);
+    const ok = await window._fb.setPartidoFoto(_sp.p.id, value, cfg);
+    if(!ok){ _spMsg('⚠ No se pudo guardar la foto. Revisá tu conexión.', false); return; }
+    const rec = { value, cfg };
+    _pfCache[String(_sp.p.id)] = rec;
+    await _spAplicarRec(rec);
+    _spMsg('✓ Foto guardada');
+    await spRegenerar();
+  }catch(e){ console.error(e); _spMsg('⚠ No se pudo leer la imagen', false); }
+  input.value = '';
+}
+async function spQuitarFoto(){
+  if(!_sp || !_spEsAdmin()) return;
+  await window._fb.delPartidoFoto(_sp.p.id);
+  _pfCache[String(_sp.p.id)] = null;
+  await _spAplicarRec(null);
+  _spMsg('Foto quitada');
+  await spRegenerar();
+}
+
+/* Foto elegida al CARGAR un partido (formulario Agregar Partido) */
+let _pFotoFondo = '';
+async function pPreviewFotoFondo(input){
+  const file = input.files && input.files[0]; if(!file) return;
+  try{
+    _pFotoFondo = await comprimirImagenParaFirestore(file, 700000);
+    const im = document.getElementById('p-foto-preview'); if(im) im.src = _pFotoFondo;
+    const w = document.getElementById('p-foto-wrap'); if(w) w.classList.add('visible');
+  }catch(e){ console.error(e); alert('No se pudo leer la imagen'); }
+}
+function pQuitarFotoFondo(){
+  _pFotoFondo = '';
+  const im = document.getElementById('p-foto-preview'); if(im) im.src = '';
+  const w = document.getElementById('p-foto-wrap'); if(w) w.classList.remove('visible');
+  const f = document.getElementById('p-foto-file'); if(f) f.value = '';
+}
+
+// Diseño anterior del resultado (se conserva por si hay que volver atrás)
+async function generarImagenPartidoClasico(p){
   await document.fonts.ready;
   const id   = getIdentidad();
   const liga = id.nombre || 'DEPORTEMAS';
@@ -16833,6 +17282,7 @@ function promoLimpiarForm(){
   if(typeof promoRadioLimpiar === 'function') promoRadioLimpiar();
   promoQuitarFoto();
   promoQuitarLogoTorneo();
+  if(typeof promoFotosReset === 'function') promoFotosReset();
 }
 
 // Foto de fondo de la imagen de Promoción (misma lógica que la foto de gol/campeón)
@@ -16876,6 +17326,75 @@ function promoQuitarFoto(){
   const p = document.getElementById('promo-foto-preview'); if(p) p.src = '';
   const w = document.getElementById('promo-foto-wrap'); if(w) w.classList.remove('visible');
   const f = document.getElementById('promo-foto-file'); if(f) f.value = '';
+}
+
+// ── Día de partido: 3 fotos de fondo (horizontal = una al lado de otra · vertical = una sobre otra) ──
+let _promoFotos3 = ['', '', ''];
+function promoFotosModo(){
+  const w = document.getElementById('promo-mf-wrap'), m = document.getElementById('promo-md-fotos-modo');
+  if(!w || !m) return;
+  if(!w.dataset.listo){
+    w.dataset.listo = '1';
+    w.innerHTML = [0, 1, 2].map(i => `
+      <div style="border:1px solid var(--borde,#2a2a2a);border-radius:10px;padding:10px;margin-bottom:10px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
+          <strong style="font-family:'Rajdhani',sans-serif;letter-spacing:1px;font-size:12px">FOTO ${i + 1}</strong>
+          <span style="display:flex;gap:6px">
+            <button type="button" class="btn-edit" style="padding:2px 10px" onclick="promoFotoSlotMover(${i}, -1)" title="Mover antes">◀</button>
+            <button type="button" class="btn-edit" style="padding:2px 10px" onclick="promoFotoSlotMover(${i}, 1)" title="Mover después">▶</button>
+          </span>
+        </div>
+        <input type="file" accept="image/*" id="promo-mf-file-${i}" onchange="promoFotoSlotCargar(${i}, this)"/>
+        <div class="preview-wrap" id="promo-mf-wrap-${i}">
+          <img id="promo-mf-prev-${i}" src="" alt="" style="max-height:110px;object-fit:cover"/>
+          <button type="button" class="btn-quitar-img" onclick="promoFotoSlotQuitar(${i})">✕ Quitar</button>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label style="font-size:10px">Zoom</label><input type="range" id="promo-mf-zoom-${i}" min="100" max="300" value="100" style="width:100%"/></div>
+          <div class="form-group"><label style="font-size:10px">Izquierda ⇄ derecha</label><input type="range" id="promo-mf-px-${i}" min="0" max="100" value="50" style="width:100%"/></div>
+          <div class="form-group"><label style="font-size:10px">Arriba ⇅ abajo</label><input type="range" id="promo-mf-py-${i}" min="0" max="100" value="50" style="width:100%"/></div>
+        </div>
+      </div>`).join('') +
+      `<p style="font-size:10px;color:var(--gris);margin-top:-4px;font-family:'Rajdhani',sans-serif">Cada foto se puede reemplazar, quitar, mover de lugar (◀ ▶) y encuadrar con su zoom y posición. Si dejás un espacio vacío se muestra un recuadro oscuro. Si no cargás ninguna, se usa la "Foto de fondo".</p>`;
+  }
+  w.style.display = m.value === 'una' ? 'none' : '';
+}
+function promoFotoSlotCargar(i, input){
+  const file = input.files && input.files[0]; if(!file) return;
+  comprimirABase64(file, 1100, 0.82).then(dataUrl => {
+    _promoFotos3[i] = dataUrl;
+    const im = document.getElementById('promo-mf-prev-' + i); if(im) im.src = dataUrl;
+    const w = document.getElementById('promo-mf-wrap-' + i); if(w) w.classList.add('visible');
+  });
+}
+function promoFotoSlotQuitar(i){
+  _promoFotos3[i] = '';
+  const im = document.getElementById('promo-mf-prev-' + i); if(im) im.src = '';
+  const w = document.getElementById('promo-mf-wrap-' + i); if(w) w.classList.remove('visible');
+  const f = document.getElementById('promo-mf-file-' + i); if(f) f.value = '';
+}
+// Intercambia la foto i con la vecina (junto con su zoom y posición)
+function promoFotoSlotMover(i, dir){
+  const j = i + dir; if(j < 0 || j > 2) return;
+  const g = (id) => document.getElementById(id);
+  [_promoFotos3[i], _promoFotos3[j]] = [_promoFotos3[j], _promoFotos3[i]];
+  [i, j].forEach(k => {
+    const im = g('promo-mf-prev-' + k), w = g('promo-mf-wrap-' + k);
+    if(im) im.src = _promoFotos3[k] || '';
+    if(w) w.classList.toggle('visible', !!_promoFotos3[k]);
+  });
+  ['zoom', 'px', 'py'].forEach(c => {
+    const a = g('promo-mf-' + c + '-' + i), b = g('promo-mf-' + c + '-' + j);
+    if(a && b){ const t = a.value; a.value = b.value; b.value = t; }
+  });
+}
+function promoFotosReset(){
+  [0, 1, 2].forEach(i => {
+    promoFotoSlotQuitar(i);
+    const z = document.getElementById('promo-mf-zoom-' + i), x = document.getElementById('promo-mf-px-' + i), y = document.getElementById('promo-mf-py-' + i);
+    if(z) z.value = 100; if(x) x.value = 50; if(y) y.value = 50;
+  });
+  const m = document.getElementById('promo-md-fotos-modo'); if(m){ m.value = 'una'; promoFotosModo(); }
 }
 
 // Devuelve { pos: [...ordenada...], subtitulo } de la tabla elegida en el formulario
@@ -17169,6 +17688,10 @@ function promoGenerar(){
     p.mdRecorteTam = nv('promo-md-rtam', 46) / 100;
     p.mdRx = nv('promo-md-rx', 50) / 100;
     p.mdRy = nv('promo-md-ry', 86) / 100;
+    const mfModo = (document.getElementById('promo-md-fotos-modo') || {}).value;
+    if(estilo === 'matchday' && (mfModo === 'h' || mfModo === 'v')){
+      p.mdFotos = { modo: mfModo, items: [0, 1, 2].map(i => ({ src: _promoFotos3[i] || '', zoom: nv('promo-mf-zoom-' + i, 100) / 100, px: nv('promo-mf-px-' + i, 50) / 100, py: nv('promo-mf-py-' + i, 50) / 100 })) };
+    }
   }
   abrirShare(() => estilo==='matchday' ? generarImagenPromocionalMatchday(p) : estilo==='afiche' ? generarImagenPromocionalAfiche(p) : estilo==='split' ? generarImagenPromocionalSplit(p) : generarImagenPromocional(p));
 }
@@ -19350,8 +19873,41 @@ async function generarImagenPromocionalMatchday(p){
 
   // ── Fondo: color liso + foto anclada arriba que se funde hacia abajo ──
   ctx.fillStyle = col; ctx.fillRect(0, 0, W, H);
-  const foto = await cargarImagenAsync(p.foto);
-  if(foto){
+  // Collage opcional de 3 fotos: horizontal = una al lado de otra · vertical = una sobre otra
+  const mf = (p.mdFotos && (p.mdFotos.modo === 'h' || p.mdFotos.modo === 'v')) ? p.mdFotos : null;
+  const imgsMf = mf ? await Promise.all(mf.items.map(it => cargarImagenAsync(it.src))) : [];
+  const colage = !!mf && imgsMf.some(Boolean);
+  const foto = colage ? null : await cargarImagenAsync(p.foto);
+  if(colage){
+    const gp = 8, hC = degr ? Math.round(H*(mf.modo === 'v' ? 0.72 : 0.58)) : H;          // con degradé ocupa la parte de arriba; sin degradé, toda la imagen
+    if(!degr){ ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); }
+    const celdas = [0, 1, 2].map(i => {
+      if(mf.modo === 'h'){ const cw = (W - 2*gp)/3; return { x: i*(cw + gp), y: 0, w: cw, h: hC }; }
+      const ch = (hC - 2*gp)/3; return { x: 0, y: i*(ch + gp), w: W, h: ch };
+    });
+    const lim = (v, d) => Math.min(1, Math.max(0, v == null ? d : v));
+    celdas.forEach((c, i) => {
+      const img = imgsMf[i], it = mf.items[i];
+      ctx.save(); ctx.beginPath(); ctx.rect(c.x, c.y, c.w, c.h); ctx.clip();
+      if(img){
+        const iw = img.naturalWidth || img.width || 1, ih = img.naturalHeight || img.height || 1;
+        const zoom = Math.min(3, Math.max(1, it.zoom || 1));
+        const sc = Math.max(c.w/iw, c.h/ih) * zoom, dw = iw*sc, dh = ih*sc;
+        try{ ctx.filter = 'contrast(1.1) saturate(1.1)'; }catch(e){}
+        ctx.drawImage(img, c.x + (c.w - dw)*lim(it.px, 0.5), c.y + (c.h - dh)*lim(it.py, 0.5), dw, dh);
+      } else {
+        ctx.fillStyle = 'rgba(255,255,255,.07)'; ctx.fillRect(c.x, c.y, c.w, c.h);
+      }
+      ctx.restore();
+    });
+    if(degr){
+      ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.globalAlpha = 0.2; ctx.fillStyle = col; ctx.fillRect(0, 0, W, hC); ctx.restore();
+      // el borde inferior del collage se funde al color (sin corte)
+      const fl = mf.modo === 'v' ? 260 : 220, fe = ctx.createLinearGradient(0, hC - fl, 0, hC);
+      fe.addColorStop(0, rgba(0)); fe.addColorStop(1, rgba(1));
+      ctx.fillStyle = fe; ctx.fillRect(0, hC - fl, W, fl + 1);
+    }
+  } else if(foto){
     const iw = foto.naturalWidth || foto.width || 1, ih = foto.naturalHeight || foto.height || 1;
     const zoom = Math.max(1, p.mdZoom || 1), py = Math.min(1, Math.max(0, p.mdPy || 0));
     const hFoto = degr ? H*0.92 : H;                 // con degradé cubre hasta donde ya es sólido; sin degradé, toda la imagen
@@ -19373,7 +19929,7 @@ async function generarImagenPromocionalMatchday(p){
     const fade = ctx.createLinearGradient(0, H*0.36, 0, H*0.86);
     fade.addColorStop(0, rgba(0)); fade.addColorStop(0.55, rgba(0.82)); fade.addColorStop(1, rgba(1));
     ctx.fillStyle = fade; ctx.fillRect(0, H*0.36, W, H*0.64);
-  } else if(foto && velo > 0){
+  } else if((foto || colage) && velo > 0){
     ctx.fillStyle = 'rgba(0,0,0,' + velo + ')'; ctx.fillRect(0, 0, W, H);
   }
   const topv = ctx.createLinearGradient(0, 0, 0, H*0.16);
@@ -23452,6 +24008,7 @@ async function abrirShareCanvas(generadorFn){
   loadEl.style.display = 'flex';
   noteEl.textContent   = '';
   if(navEl) navEl.style.display = 'none';
+  _spOcultarEditor();
 
   document.getElementById('share-modal').classList.add('open');
 
