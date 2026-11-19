@@ -3591,6 +3591,11 @@ table.posiciones td:nth-child(8){
         <br/><br/>
         <button class="btn-primary" onclick="agregarPartido()">+ Agregar Partido</button>
         <button class="btn-danger" style="margin-left:8px" onclick="limpiarTodos('partidos')">🗑 Limpiar todos los partidos</button>
+        <details style="margin-top:22px;border:1px solid rgba(201,162,39,.25);border-radius:10px;padding:10px 14px;background:rgba(255,255,255,.02)">
+          <summary style="cursor:pointer;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:15px;color:var(--dorado)">🖼 Imagen de fecha de Reserva · foto de fondo</summary>
+          <p style="font-size:12px;color:var(--gris);margin:8px 0">Elegí la fecha, cargá la foto de fondo, ajustá el encuadre y descargá la imagen. La foto no se sube al servidor: queda solo mientras no recargues la página (el botón Compartir de la web también la usa).</p>
+          <div class="admin-list" id="lista-reserva-img"></div>
+        </details>
         <div class="admin-list" id="lista-partidos"></div>
       </div>
 
@@ -8114,7 +8119,7 @@ function renderResultados(){
         ? (()=>{
             const key='rv_'+div+'_'+idx;
             window._reservaMapa[key]=arr.map(p=>String(p.id));
-            return `<button class="btn-share" onclick="abrirShare(()=>generarImagenReserva(window._reservaMapa['${key}']))">${SVG_SHARE} Compartir</button><button class="btn-share" onclick="event.stopPropagation();abrirImagenReserva('${key}')" title="Elegir la foto de fondo de la imagen">🖼 Foto</button>`;
+            return `<button class="btn-share" onclick="abrirShare(()=>generarImagenReserva(window._reservaMapa['${key}']))">${SVG_SHARE} Compartir</button>`;
           })()
         : '';
 
@@ -12593,6 +12598,7 @@ function asegurarIds(){
 
 function renderAdminListas(){
   // NO llamar asegurarIds() aquí — solo se llama al abrir el panel
+  renderAdminReservaImagenes();
 
   document.getElementById('lista-partidos').innerHTML=[...data.partidos].reverse().map(p=>{
     const cronos = getCronos();
@@ -14915,6 +14921,29 @@ function pfDibujarFoto(ctx, img, W, H, cfg){
   ctx.drawImage(img, -(dw-W)*fx, -(dh-H)*fy, dw, dh);
 }
 
+// Marca "Presentado por <nombre de la liga>": mismo estilo que el promocional de día de partido
+// (texto chico + nombre grande en Bebas, blanco con sombra, alineado a la derecha). Por defecto abajo a la derecha.
+function cvMarcaPresentado(ctx, W, H, id, o){
+  o = o || {};
+  const k = o.k || 1;
+  const x = (o.x != null) ? o.x : W - 46;
+  const base = (o.yBase != null) ? o.yBase : H - 46;          // línea base del nombre
+  const maxW = o.maxW || Math.round(W * 0.6);
+  const marca = String((id && id.nombre) || 'DEPORTEMAS').toUpperCase();
+  const sp = px => { if('letterSpacing' in ctx) ctx.letterSpacing = px + 'px'; };
+  ctx.save();
+  ctx.textAlign = 'right'; ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = '#ffffff';
+  ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 10;
+  let fs = Math.round(54 * k);
+  ctx.font = fs + 'px "Bebas Neue", Arial, sans-serif'; sp(4);
+  while(fs > Math.round(26 * k) && ctx.measureText(marca).width > maxW){ fs--; ctx.font = fs + 'px "Bebas Neue", Arial, sans-serif'; }
+  ctx.fillText(marca, x, base);
+  ctx.font = '500 ' + Math.round(22 * k) + 'px "DM Sans", Arial, sans-serif'; sp(0.5);
+  ctx.fillText('Presentado por', x, base - Math.round(fs * 0.85) - 6);
+  ctx.restore();
+}
+
 // Texto con separación entre letras (para etiquetas chicas); devuelve x final
 function _pfSpaced(ctx, x, y, txt, sp){
   ctx.textAlign = 'left';
@@ -15233,6 +15262,7 @@ async function generarImagenPartido(p, opts){
     ctx.fillStyle = C.DORADO2; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(txt, PX + PW/2, cy2 + ch/2 + s(1));
   }
+  cvMarcaPresentado(ctx, W, H, id, { maxW: W - 46 - (PX + PW) - s(30) });
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   return canvas;
 }
@@ -22311,8 +22341,27 @@ function cvFillTextTruncCenter(ctx, text, cx, y, maxW){
 
 // ── Generador: Resultados de Reserva ─────────────────────────
 // Formato "resumen de fecha": foto de fondo, píldora de la fecha arriba a la izquierda, logo arriba a la derecha
-// y una grilla de tarjetas de vidrio (escudo · goles · FT · goles · escudo). La foto se elige en 🖼 Foto
+// y una grilla de tarjetas de vidrio (escudo · goles · FT · goles · escudo). La foto se elige en el panel admin (Partidos → 🖼 Imagen de fecha de Reserva)
 // (solo queda en memoria, no se sube al servidor).
+// Admin: fechas de Reserva jugadas, cada una con su botón para armar la imagen (foto de fondo)
+function renderAdminReservaImagenes(){
+  const el = document.getElementById('lista-reserva-img'); if(!el) return;
+  window._reservaMapa = window._reservaMapa || {};
+  const grupos = {}, orden = [];
+  (data.partidos||[]).forEach(p=>{
+    if(!p.esReserva || p.estado !== 'jugado' || (p.div !== 'primera' && p.div !== 'segunda')) return;
+    const k = _rvKey(p);
+    if(!grupos[k]){ grupos[k] = []; orden.push(k); }
+    grupos[k].push(p);
+  });
+  el.innerHTML = orden.reverse().map((k, i)=>{
+    const ps = grupos[k], p0 = ps[0];
+    const mk = 'rva_' + i;
+    window._reservaMapa[mk] = ps.map(x => String(x.id));
+    const tn = p0.div === 'primera' ? ' · ' + torneoLabel(p0.torneoReserva || p0.torneo || 'apertura') : '';
+    return `<div class="admin-list-item"><span><b>${p0.div==='segunda'?'2ª':'1ª'}</b> · Reserva${tn} | ${p0.fecha || 'Sin fecha'} | ${ps.length} partido${ps.length!==1?'s':''}</span><button class="btn-edit" onclick="abrirImagenReserva('${mk}')">🖼 Imagen</button></div>`;
+  }).join('') || '<p class="admin-empty">Todavía no hay partidos de Reserva jugados</p>';
+}
 function _rvKey(p){ return 'rv:' + [p.div||'', p.torneoReserva||p.torneo||'', p.fecha||''].join('|'); }
 function _nombreArchivoReserva(p){
   const limpio = t => String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-+|-+$/g,'').toLowerCase();
@@ -22393,8 +22442,8 @@ async function generarImagenReserva(ids, opts){
   const cols = n >= 4 ? 2 : 1;
   const rows = Math.ceil(n / cols);
   const GAP = s(12);
-  const CW = cols === 2 ? s(352) : s(540);
-  const topMin = s(190), botMin = s(70);
+  const CW = cols === 2 ? s(440) : s(560);
+  const topMin = s(190), botMin = s(140);
   const CH = Math.max(s(74), Math.min(s(128), Math.floor((H - topMin - botMin - (rows-1)*GAP) / rows)));
   const gridW = cols*CW + (cols-1)*GAP, gridH = rows*CH + (rows-1)*GAP;
   const x0 = Math.round((W - gridW) / 2);
@@ -22408,9 +22457,41 @@ async function generarImagenReserva(ids, opts){
     bctx.filter = `blur(${s(26)}px)`; bctx.drawImage(canvas, 0, 0); bctx.filter = 'none';
   }
 
-  const ES = Math.round(CH * 0.42), padE = Math.round(CH * 0.17);
+  const ES = Math.round(CH * 0.36);                    // escudo (deja lugar al nombre debajo)
   const FR = Math.round(CH * 0.14);                    // radio del círculo "FT"
   const fsScore = Math.round(CH * 0.70);
+  const sepX = FR + s(16);                             // del centro al borde interior de cada marcador
+  const colPad = s(10);
+  const digW = Math.round(fsScore * 0.42);             // ancho aprox. de un dígito
+  const colW = Math.min(s(170), Math.max(s(80), CW/2 - sepX - digW - colPad*2));   // columna escudo + nombre
+  const nameLH = Math.round(CH * 0.15);
+  const nameSz0 = Math.round(CH * 0.165), nameSzMin = Math.max(s(12), Math.round(CH * 0.115));
+  // Nombre en hasta 2 líneas: se achica la letra antes de cortar
+  const ajustarNombre = (txt) => {
+    const T = String(txt||'').toUpperCase();
+    for(let sz = nameSz0; sz >= nameSzMin; sz--){
+      ctx.font = `${sz}px "Bebas Neue", Arial, sans-serif`;
+      if(ctx.measureText(T).width <= colW) return { lines:[T], sz };
+      const words = T.split(/\s+/).filter(Boolean);
+      let best = null;
+      for(let k = 1; k < words.length; k++){
+        const a = words.slice(0,k).join(' '), b = words.slice(k).join(' ');
+        const wa = ctx.measureText(a).width, wb = ctx.measureText(b).width;
+        if(wa <= colW && wb <= colW){ const d = Math.abs(wa - wb); if(!best || d < best.d) best = { lines:[a,b], d }; }
+      }
+      if(best) return { lines:best.lines, sz };
+    }
+    return { lines:[T], sz:nameSzMin };
+  };
+  const drawEquipo = async (nombre, colCx, my) => {
+    const nm = ajustarNombre(nombre);
+    const top = my - (ES + s(6) + 2*nameLH) / 2;
+    await cvDrawEscudoCompleto(ctx, nombre, colCx - ES/2, top, ES);
+    ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = `${nm.sz}px "Bebas Neue", Arial, sans-serif`;
+    const off = nm.lines.length === 1 ? nameLH/2 : 0;           // una sola línea: centrada entre las dos
+    nm.lines.forEach((ln, i) => cvFillTextTrunc(ctx, ln, colCx, top + ES + s(6) + off + nameLH*(i+0.5), colW));
+  };
   for(let i = 0; i < n; i++){
     const p = ps[i];
     const r = Math.floor(i / cols), c = i % cols;
@@ -22431,19 +22512,18 @@ async function generarImagenReserva(ids, opts){
     cvRoundRect(ctx, cx0, cy0, CW, CH, s(24));
     ctx.strokeStyle = 'rgba(255,255,255,0.28)'; ctx.lineWidth = s(1.5); ctx.stroke();
 
-    // Escudos
-    await cvDrawEscudoCompleto(ctx, p.local, cx0 + padE, my - ES/2, ES);
-    await cvDrawEscudoCompleto(ctx, p.visit, cx0 + CW - padE - ES, my - ES/2, ES);
+    // Escudos + nombres
+    await drawEquipo(p.local, cx0 + colPad + colW/2, my);
+    await drawEquipo(p.visit, cx0 + CW - colPad - colW/2, my);
 
     // Centro: goles · FT · goles
     const jugado = (p.estado === 'jugado' || p.estado === 'en-juego') && p.resultado;
     const m = jugado ? String(p.resultado).match(/(\d+)\s*[-–:]\s*(\d+)/) : null;
     ctx.textBaseline = 'middle';
     if(m){
-      const sepX = FR + s(18);
       ctx.fillStyle = '#fff';
       // el marcador se achica si es de 2 dígitos para no pisar el escudo
-      const dispW = (CW/2 - padE - ES) - sepX - s(10);
+      const dispW = (CW/2 - sepX) - (colPad + colW) - s(6);
       let fsS = fsScore; ctx.font = `${fsS}px "Bebas Neue", Arial, sans-serif`;
       while(fsS > s(30) && Math.max(ctx.measureText(m[1]).width, ctx.measureText(m[2]).width) > dispW){ fsS--; ctx.font = `${fsS}px "Bebas Neue", Arial, sans-serif`; }
       const yS = my + Math.round(fsS * 0.03);
@@ -22473,6 +22553,7 @@ async function generarImagenReserva(ids, opts){
     }
     ctx.textBaseline = 'alphabetic';
   }
+  cvMarcaPresentado(ctx, W, H, id);
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   return canvas;
 }
