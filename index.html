@@ -310,28 +310,6 @@
         return snap2.exists() ? snap2.data() : null;
       }catch(e){ return null; }
     },
-    async setPartidoFoto(id, base64, cfg){
-      try{
-        await setDoc(doc(db, COL, 'partidofoto_' + String(id)), { value: base64, cfg: cfg || {} });
-        window._fbUltimoError = '';
-        return true;
-      }catch(e){
-        console.error('FB setPartidoFoto error', id, e);
-        window._fbUltimoError = (e && (e.code || e.message)) || String(e);
-        return false;
-      }
-    },
-    async setPartidoFotoCfg(id, cfg){
-      try{
-        await setDoc(doc(db, COL, 'partidofoto_' + String(id)), { cfg: cfg || {} }, { merge: true });
-        window._fbUltimoError = '';
-        return true;
-      }catch(e){
-        console.error('FB setPartidoFotoCfg error', id, e);
-        window._fbUltimoError = (e && (e.code || e.message)) || String(e);
-        return false;
-      }
-    },
     async delPartidoFoto(id){
       id = String(id);
       let ok = true;
@@ -3163,6 +3141,8 @@ table.posiciones td:nth-child(8){
 .pf-ed-preview{margin-top:10px;text-align:center;}
 .pf-ed-preview img{max-width:100%;max-height:340px;border-radius:var(--r-md);border:1px solid rgba(201,162,39,.2);}
 .pf-ed-nota{font-size:11px;color:var(--gris);margin-top:6px;}
+#pf-modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);z-index:2100;align-items:flex-start;justify-content:center;padding-top:3rem;overflow-y:auto;}
+#pf-modal.open{display:flex;}
 .share-img-preview-wrap{margin:14px 16px 6px;border-radius:var(--r-md);overflow:hidden;border:1px solid rgba(201,162,39,.2);background:var(--negro3);display:flex;align-items:center;justify-content:center;min-height:100px;}
 .share-img-preview-wrap img{width:100%;max-height:72vh;object-fit:contain;display:block;border-radius:var(--r-md);}
 .share-img-loading{font-family:'Rajdhani',sans-serif;font-size:12px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.5px;padding:28px;display:flex;flex-direction:column;align-items:center;gap:8px;}
@@ -3601,7 +3581,7 @@ table.posiciones td:nth-child(8){
           <button class="btn-add-evento" onclick="addEventoRow('p-exp-list','exp')">+ Agregar expulsión</button>
         </div>
         <div class="form-group" style="margin-top:14px">
-          <label>Foto de fondo para la imagen del resultado <span style="color:var(--gris);font-size:11px">(opcional · después se puede cambiar o quitar desde ✏ Editar)</span></label>
+          <label>Foto de fondo para la imagen del resultado <span style="color:var(--gris);font-size:11px">(opcional · no se sube al servidor: sirve para descargar la imagen mientras no recargues la página; después se puede cambiar desde 🖼 Imagen)</span></label>
           <div class="upload-area" style="padding:12px">
             <input type="file" accept="image/*" id="p-foto-file" onchange="pPreviewFotoFondo(this)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%"/>
             <p style="pointer-events:none;font-size:11px">Hacé clic para subir una foto</p>
@@ -6244,6 +6224,38 @@ table.posiciones td:nth-child(8){
   <img id="img-lightbox-img" src="" alt=""/>
 </div>
 
+<!-- PANEL IMAGEN DEL RESULTADO (foto solo local, sin subir al servidor) -->
+<div id="pf-modal">
+  <div class="edit-modal-box">
+    <div class="edit-modal-header">
+      <h3 id="pf-modal-title">Imagen del resultado</h3>
+      <button class="admin-close" onclick="pmCerrar()">✕</button>
+    </div>
+    <div class="edit-modal-body">
+      <div class="pf-ed">
+        <div class="pf-ed-estado" id="pm-estado">Cargando…</div>
+        <div class="pf-ed-row">
+          <label class="pf-ed-btn">📷 <span id="pm-txt">Agregar foto de fondo</span><input type="file" accept="image/*" onchange="pmElegir(this)" style="display:none"/></label>
+          <button type="button" class="pf-ed-btn pf-ed-btn-del" id="pm-quitar" onclick="pmQuitar()" style="display:none">✕ Quitar foto</button>
+          <button type="button" class="pf-ed-btn pf-ed-btn-del" id="pm-borrar-srv" onclick="pmBorrarServidor()" style="display:none">🗑 Borrar foto guardada en el servidor</button>
+        </div>
+        <div id="pm-ajustes" style="display:none">
+          <label class="pf-ed-sl">Zoom<input type="range" id="pm-zoom" min="100" max="300" value="100" oninput="pmCambio()"/></label>
+          <label class="pf-ed-sl">Horizontal<input type="range" id="pm-x" min="0" max="100" value="50" oninput="pmCambio()"/></label>
+          <label class="pf-ed-sl">Vertical<input type="range" id="pm-y" min="0" max="100" value="40" oninput="pmCambio()"/></label>
+          <label class="pf-ed-sl">Oscuridad<input type="range" id="pm-osc" min="0" max="100" value="35" oninput="pmCambio()"/></label>
+        </div>
+        <div class="pf-ed-preview"><img id="pm-prev" alt="Vista previa del resultado" style="display:none"/></div>
+        <div class="pf-ed-nota">La foto no se sube al servidor: queda solo en esta sesión. Si recargás la página, hay que elegirla de nuevo. La imagen usa los datos ya guardados.</div>
+      </div>
+    </div>
+    <div class="edit-modal-footer">
+      <button class="btn-danger" onclick="pmCerrar()">Cerrar</button>
+      <button class="btn-primary" onclick="pmDescargar(this)">⬇ Descargar imagen</button>
+    </div>
+  </div>
+</div>
+
 <!-- EDIT MODAL -->
 <div id="edit-modal">
   <div class="edit-modal-box">
@@ -8102,7 +8114,7 @@ function renderResultados(){
         ? (()=>{
             const key='rv_'+div+'_'+idx;
             window._reservaMapa[key]=arr.map(p=>String(p.id));
-            return `<button class="btn-share" onclick="abrirShare(()=>generarImagenReserva(window._reservaMapa['${key}']))">${SVG_SHARE} Compartir</button>`;
+            return `<button class="btn-share" onclick="abrirShare(()=>generarImagenReserva(window._reservaMapa['${key}']))">${SVG_SHARE} Compartir</button><button class="btn-share" onclick="event.stopPropagation();abrirImagenReserva('${key}')" title="Elegir la foto de fondo de la imagen">🖼 Foto</button>`;
           })()
         : '';
 
@@ -10934,7 +10946,7 @@ function agregarPartido(){
   if(_pFotoFondo){
     const _fv=_pFotoFondo, _fc=Object.assign({},PF_CFG_DEF);
     _pfCache[String(d.id)]={value:_fv,cfg:_fc};
-    if(window._fb&&window._fb.setPartidoFoto) window._fb.setPartidoFoto(d.id,_fv,_fc).then(ok=>{ if(!ok) alert('El partido se guardó, pero la foto de fondo no se pudo subir al servidor.'+_pfErrTxt()+'\n\nMientras no recargues la página podés descargar la imagen con el botón ⬇ Imagen de la lista de partidos.'); });
+    _pfSesion.add(String(d.id));   // queda solo en esta sesión: no se sube al servidor
   }
   recalcularTodo();   // recalcular siempre: puede que haya partidos jugados anteriores
   aplicarTodasLasPenalizaciones();
@@ -11622,25 +11634,6 @@ function abrirModalEdicion(tipo,id,objOverride){
       <div class="seccion-label">🟥 Expulsiones</div>
       <div class="evento-list" id="ed-exp-list">${buildEventoRowsHTML(obj.expulsiones||[],'exp','ed-exp-list')}</div>
       <button class="btn-add-evento" onclick="addEventoRow('ed-exp-list','exp')">+ Agregar expulsión</button>
-      </div>
-      <div class="seccion-label">📷 Foto de fondo de la imagen del resultado</div>
-      <div class="pf-ed" id="ed-pf">
-        <div class="pf-ed-estado" id="ed-pf-estado">Cargando foto…</div>
-        <div class="pf-ed-row">
-          <label class="pf-ed-btn">📷 <span id="ed-pf-txt">Agregar foto</span><input type="file" accept="image/*" id="ed-pf-file" onchange="edPfElegir(this)" style="display:none"/></label>
-          <button type="button" class="pf-ed-btn pf-ed-btn-del" id="ed-pf-quitar" onclick="edPfQuitar()" style="display:none">🗑 Quitar foto</button>
-          <button type="button" class="pf-ed-btn" onclick="edPfDescargar(this)">⬇ Descargar imagen</button>
-        </div>
-        <div id="ed-pf-ajustes" style="display:none">
-          <label class="pf-ed-sl">Zoom<input type="range" id="ed-pf-zoom" min="100" max="300" value="100" oninput="edPfCambio()"/></label>
-          <label class="pf-ed-sl">Horizontal<input type="range" id="ed-pf-x" min="0" max="100" value="50" oninput="edPfCambio()"/></label>
-          <label class="pf-ed-sl">Vertical<input type="range" id="ed-pf-y" min="0" max="100" value="40" oninput="edPfCambio()"/></label>
-          <label class="pf-ed-sl">Oscuridad<input type="range" id="ed-pf-osc" min="0" max="100" value="35" oninput="edPfCambio()"/></label>
-        </div>
-        <div class="pf-ed-preview" id="ed-pf-prev-wrap" style="display:none">
-          <img id="ed-pf-prev" alt="Vista previa del resultado"/>
-          <div class="pf-ed-nota">La vista previa y la descarga usan los datos ya guardados del partido (resultado, goles, etc.).</div>
-        </div>
       </div>`;
   } else if(tipo==='posiciones'){
     const esPrimera=obj.div==='primera';
@@ -11804,7 +11797,6 @@ function abrirModalEdicion(tipo,id,objOverride){
   document.getElementById('edit-modal-title').textContent='Editar – '+(obj.nombre||obj.local||obj.equipo||tipo);
   document.getElementById('edit-modal-save').onclick=()=>guardarEdicion(tipo,id);
   document.getElementById('edit-modal').style.display='flex';
-  if(tipo==='partidos') edPfIniciar(obj); else _edPF=null;
 }
 
 function editPreviewEscudo(input){
@@ -11812,7 +11804,7 @@ function editPreviewEscudo(input){
   comprimirABase64(file, 300, 0.85, 'image/png').then(dataUrl=>{_editEscudoB64=dataUrl;const p=document.getElementById('ed-escudo-preview');p.src=_editEscudoB64;p.style.display='block';});
 }
 
-function cerrarModalEdicion(){document.getElementById('edit-modal').style.display='none';_editEscudoB64='';_edPF=null;}
+function cerrarModalEdicion(){document.getElementById('edit-modal').style.display='none';_editEscudoB64='';}
 
 // ============================================================
 // ANIMACIÓN MARCADOR EN VIVO
@@ -12135,7 +12127,6 @@ function guardarEdicion(tipo,id){
     updated.torneoReserva=null;
     if(esReserva){ updated.goles=[]; updated.expulsiones=[]; }
     data.partidos[idx]=updated;
-    edPfGuardar(sid);   // foto de fondo del resultado (subir / quitar / ajustes)
     // Recalcular posiciones y goleadores desde todos los partidos jugados
     recalcularTodo();
     aplicarTodasLasPenalizaciones();
@@ -12624,7 +12615,7 @@ function renderAdminListas(){
     return `<div class="admin-list-item" style="flex-direction:column;align-items:stretch;gap:4px">
       <div style="display:flex;align-items:center;gap:8px">
         <span><b>${p.div==='primera'?'1ª':p.div==='segunda'?'2ª':'Extra Liga'}</b>${p.div==='extraliga'&&p.torneoExtra?' ('+p.torneoExtra+')':''} | ${p.fecha}${p.dia?' | 📅 '+p.dia:''} | <b>${p.local}</b> vs <b>${p.visit}</b> | ${p.hora} | <em>${p.estado}</em>${p.resultado?' | '+p.resultado:''}${p.esPlayoff&&p.tienePenales&&p.penales?' | Penales: '+p.penales:''}${p.esPlayoff?' | <b style="color:var(--dorado)">PLAY OFF</b>':''}</span>
-        <button class="btn-edit" onclick="descargarImagenPartido('${p.id}',this)" title="Descargar la imagen del resultado">⬇ Imagen</button>
+        <button class="btn-edit" onclick="abrirImagenPartido('${p.id}')" title="Armar y descargar la imagen del resultado">🖼 Imagen</button>
         ${btnAcciones('partidos',p.id)}
       </div>
       ${cronoControls}
@@ -14896,18 +14887,21 @@ function logoParaPartido(p){
 }
 /* ══════════════════════════════════════════════════════════════
    IMAGEN DE RESULTADO (estilo panel de vidrio) + FOTO DE FONDO POR PARTIDO
-   La foto se guarda aparte (documento /lrr/partidofoto_<id>) para no
-   engordar el documento de los partidos ni las lecturas de la colección /lrr.
+   La foto NO se sube al servidor: se elige en el panel admin (🖼 Imagen) y queda en memoria
+   durante la sesión. (Las fotos viejas guardadas en /lrr/partidofoto_<id> se siguen leyendo.)
    ══════════════════════════════════════════════════════════════ */
 const PF_CFG_DEF = { zoom:1, x:0.5, y:0.4, osc:0.35 };
-const PF_PEN_ESTILO = 'badge';   // cómo se muestran los penales: 'badge' | 'marcador' | 'divisor' | 'escudo' | 'puntos' | 'cinta'
+const PF_PEN_ESTILO = 'cinta';   // cómo se muestran los penales: 'badge' | 'marcador' | 'divisor' | 'escudo' | 'puntos' | 'cinta'
 const _pfCache = {};   // id -> { value, cfg } | null
+const _pfSesion = new Set();     // ids cuya foto se eligió en esta sesión (no está en el servidor)
+const _pfServidor = new Set();   // ids con una foto vieja guardada en el servidor
 
 async function pfCargar(id){
   id = String(id);
   if(Object.prototype.hasOwnProperty.call(_pfCache, id)) return _pfCache[id];
   let r = null;
   try{ if(window._fb && window._fb.getPartidoFoto) r = await window._fb.getPartidoFoto(id); }catch(e){ r = null; }
+  if(r && r.value) _pfServidor.add(id);
   _pfCache[id] = r;
   return r;
 }
@@ -15229,7 +15223,8 @@ async function generarImagenPartido(p, opts){
   if(cintaH){
     const cy2 = PY + PH + s(18), ch = s(56);
     cvRoundRect(ctx, PX, cy2, PW, ch, ch/2);
-    ctx.fillStyle = 'rgba(201,162,39,0.18)'; ctx.fill();
+    ctx.fillStyle = 'rgba(8,8,8,0.62)'; ctx.fill();          // base oscura: se lee sobre cualquier foto
+    ctx.fillStyle = 'rgba(201,162,39,0.20)'; ctx.fill();
     ctx.strokeStyle = 'rgba(201,162,39,0.7)'; ctx.lineWidth = s(1.5); ctx.stroke();
     const gan = penA === penB ? null : (penA > penB ? p.local : p.visit);
     const txt = (gan ? (String(gan).toUpperCase() + ' GANÓ POR PENALES  ') : 'DEFINIÓ POR PENALES  ') + Math.max(penA,penB) + ' – ' + Math.min(penA,penB);
@@ -15261,96 +15256,15 @@ function abrirSharePartido(id){
   });
   _sp = { p, rec:null, img:null, cfg:Object.assign({}, PF_CFG_DEF) };
 }
-// (la foto de fondo ya no se edita desde Compartir: se hace en el panel admin → ✏ Editar partido)
+// (la foto de fondo ya no se edita desde Compartir: se hace en el panel admin → 🖼 Imagen)
 function _spOcultarEditor(){ _sp = null; }
 
-/* ── Editor de la foto de fondo dentro de ✏ Editar partido (panel admin) ──
-   Los cambios (foto nueva, quitar, ajustes de encuadre) se aplican recién al tocar
-   "Guardar cambios"; "Cancelar" los descarta. */
-let _edPF = null;   // { p, img, cfg, valor, cambioFoto, cambioCfg, listo, tok, tmr }
+/* ── Panel "Imagen del resultado" (botón 🖼 Imagen de cada partido en el panel admin) ──
+   La foto NO se sube al servidor: queda en memoria mientras no se recargue la página y
+   sirve para armar y descargar la imagen. Las fotos subidas antes se siguen leyendo. */
+let _pm = null;   // { p, sid, img, cfg, valor, listo, tok, tmr }
 
-async function edPfIniciar(p){
-  const st = _edPF = { p, img:null, cfg:Object.assign({}, PF_CFG_DEF), valor:'', cambioFoto:false, cambioCfg:false, listo:false, tok:0, tmr:null };
-  edPfUI();
-  const rec = await pfCargar(p.id);
-  if(_edPF !== st) return;                       // se cerró o se abrió otro modal
-  if(!st.cambioFoto){                            // si ya eligió una foto nueva, no pisarla
-    st.valor = (rec && rec.value) ? rec.value : '';
-    st.img   = st.valor ? await cargarImagenAsync(st.valor) : null;
-    if(_edPF !== st) return;
-    st.cfg   = Object.assign({}, PF_CFG_DEF, (rec && rec.cfg) || {});
-  }
-  st.listo = true;
-  edPfUI();
-  edPfRegenerar();
-}
-function edPfUI(){
-  const st = _edPF; if(!st) return;
-  const tiene = !!st.valor;
-  const set = (i, v) => { const el = document.getElementById(i); if(el) el.value = v; };
-  set('ed-pf-zoom', Math.round(st.cfg.zoom*100)); set('ed-pf-x', Math.round(st.cfg.x*100));
-  set('ed-pf-y', Math.round(st.cfg.y*100));       set('ed-pf-osc', Math.round(st.cfg.osc*100));
-  const show = (i, on, d) => { const el = document.getElementById(i); if(el) el.style.display = on ? (d||'block') : 'none'; };
-  show('ed-pf-ajustes', tiene); show('ed-pf-quitar', tiene, 'inline-block'); show('ed-pf-prev-wrap', tiene);
-  const t = document.getElementById('ed-pf-txt'); if(t) t.textContent = tiene ? 'Cambiar foto' : 'Agregar foto';
-  const e = document.getElementById('ed-pf-estado');
-  if(e) e.textContent = !st.listo ? 'Cargando foto…'
-    : (tiene ? (st.cambioFoto ? 'Foto nueva (se guarda al tocar “Guardar cambios”).' : 'Este partido tiene foto de fondo.')
-             : (st.cambioFoto ? 'La foto se va a quitar al tocar “Guardar cambios”.' : 'Este partido no tiene foto de fondo.'));
-}
-async function edPfRegenerar(){
-  const st = _edPF; if(!st || !st.valor || !st.img) return;
-  const tok = ++st.tok;
-  const cv = await generarImagenPartido(st.p, { img:st.img, cfg:st.cfg });
-  if(_edPF !== st || tok !== st.tok) return;     // llegó un cambio más nuevo
-  const el = document.getElementById('ed-pf-prev'); if(el) el.src = cv.toDataURL('image/jpeg', 0.7);
-}
-function edPfCambio(){
-  const st = _edPF; if(!st) return;
-  const v = i => (parseFloat(document.getElementById(i).value) || 0) / 100;
-  st.cfg = { zoom: Math.max(1, v('ed-pf-zoom')), x: v('ed-pf-x'), y: v('ed-pf-y'), osc: v('ed-pf-osc') };
-  st.cambioCfg = true;
-  clearTimeout(st.tmr); st.tmr = setTimeout(edPfRegenerar, 70);
-}
-async function edPfElegir(input){
-  const st = _edPF; const file = input.files && input.files[0]; if(!file || !st) return;
-  const e = document.getElementById('ed-pf-estado'); if(e) e.textContent = 'Procesando foto…';
-  try{
-    const valor = await comprimirImagenParaFirestore(file, 700000);
-    if(_edPF !== st) return;
-    st.valor = valor; st.img = await cargarImagenAsync(valor);
-    st.cfg = Object.assign({}, PF_CFG_DEF);      // foto nueva → encuadre desde cero
-    st.cambioFoto = true; st.cambioCfg = false; st.listo = true;
-    edPfUI(); edPfRegenerar();
-  }catch(err){ console.error(err); if(e) e.textContent = '⚠ No se pudo leer la imagen'; }
-  input.value = '';
-}
-function edPfQuitar(){
-  const st = _edPF; if(!st) return;
-  st.valor = ''; st.img = null; st.cfg = Object.assign({}, PF_CFG_DEF);
-  st.cambioFoto = true; st.cambioCfg = false;
-  const pv = document.getElementById('ed-pf-prev'); if(pv) pv.removeAttribute('src');
-  edPfUI();
-}
-// Texto técnico del último error de Firebase (para saber por qué falló una subida)
 function _pfErrTxt(){ return window._fbUltimoError ? '\n(Detalle técnico: ' + window._fbUltimoError + ')' : ''; }
-
-// Se llama desde guardarEdicion(): sube / borra / actualiza la foto según lo que haya cambiado
-function edPfGuardar(sid){
-  const st = _edPF;
-  if(!st || String(st.p.id) !== String(sid) || !(st.cambioFoto || st.cambioCfg) || !window._fb) return;
-  const cfg = Object.assign({}, st.cfg);
-  if(st.cambioFoto && !st.valor){
-    _pfCache[sid] = null;
-    Promise.resolve(window._fb.delPartidoFoto(sid)).then(ok=>{ if(ok===false) alert('El partido se guardó, pero no se pudo quitar la foto de fondo del servidor.' + _pfErrTxt() + '\nProbá de nuevo desde ✏ Editar.'); });
-  } else if(st.valor){
-    // foto nueva, o solo ajustes de encuadre: se escribe el registro completo
-    _pfCache[sid] = { value: st.valor, cfg };
-    Promise.resolve(window._fb.setPartidoFoto(sid, st.valor, cfg)).then(ok=>{ if(!ok) alert('El partido se guardó, pero la foto de fondo no se pudo subir al servidor.' + _pfErrTxt() + '\n\nMientras no recargues la página podés descargar la imagen con el botón ⬇ Imagen de la lista de partidos.'); });
-  }
-}
-
-/* ── Descargar la imagen del resultado directo desde el panel (sin pasar por Compartir) ── */
 function _descargarCanvas(cv, nombre){
   cv.toBlob(blob=>{
     if(!blob){ alert('No se pudo generar la imagen.'); return; }
@@ -15365,25 +15279,122 @@ function _nombreArchivoPartido(p){
   const limpio = t => String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-+|-+$/g,'').toLowerCase();
   return 'resultado-' + limpio(p.local) + '-vs-' + limpio(p.visit) + '.png';
 }
-// Botón "⬇ Imagen" de la lista de partidos: usa la foto guardada (o la que quedó en memoria)
-async function descargarImagenPartido(id, btn){
-  const p = data.partidos.find(x => String(x.id) === String(id)); if(!p) return;
-  const txt = btn ? btn.textContent : '';
-  if(btn){ btn.disabled = true; btn.textContent = 'Generando…'; }
-  try{
-    const cv = await generarImagenPartido(p);
-    _descargarCanvas(cv, _nombreArchivoPartido(p));
-  }catch(e){ console.error(e); alert('No se pudo generar la imagen.'); }
-  if(btn){ btn.disabled = false; btn.textContent = txt; }
+function _pmGuardarSesion(){
+  const st = _pm; if(!st) return;
+  _pfCache[st.sid] = st.valor ? { value: st.valor, cfg: Object.assign({}, st.cfg) } : null;
+  _pfSesion.add(st.sid);
 }
-// Botón dentro de ✏ Editar: usa la foto que se ve en el editor, aunque todavía no se haya guardado
-async function edPfDescargar(btn){
-  const st = _edPF; if(!st) return;
+// Genera la imagen del panel: del partido, o de la fecha de reserva (st.gen)
+function _pmGenerar(st){
+  const o = { img: st.img || null, cfg: st.cfg };
+  return st.gen ? st.gen(o) : generarImagenPartido(st.p, o);
+}
+// Panel de imagen para una fecha de Reserva (la foto solo vive en memoria, nunca se consulta el servidor)
+async function abrirImagenReserva(key){
+  const ids = window._reservaMapa && window._reservaMapa[key]; if(!ids) return;
+  const ps = ids.map(sid => data.partidos.find(x => String(x.id) === String(sid))).filter(Boolean);
+  if(!ps.length) return;
+  const sid = _rvKey(ps[0]);
+  const st = _pm = { p:ps[0], sid, gen:o => generarImagenReserva(ids, o), archivo:_nombreArchivoReserva(ps[0]),
+                     img:null, cfg:Object.assign({}, PF_CFG_DEF), valor:'', listo:false, tok:0, tmr:null };
+  document.getElementById('pf-modal-title').textContent = 'Imagen – Reserva · ' + (ps[0].fecha || '');
+  document.getElementById('pf-modal').classList.add('open');
+  const rec = _pfCache[sid] || null;
+  st.valor = (rec && rec.value) ? rec.value : '';
+  st.img   = st.valor ? await cargarImagenAsync(st.valor) : null;
+  if(_pm !== st) return;
+  st.cfg   = Object.assign({}, PF_CFG_DEF, (rec && rec.cfg) || {});
+  st.listo = true;
+  pmUI(); pmRegenerar();
+}
+async function abrirImagenPartido(id){
+  const p = data.partidos.find(x => String(x.id) === String(id)); if(!p) return;
+  const sid = String(p.id);
+  const st = _pm = { p, sid, img:null, cfg:Object.assign({}, PF_CFG_DEF), valor:'', listo:false, tok:0, tmr:null };
+  document.getElementById('pf-modal-title').textContent = 'Imagen – ' + p.local + ' vs ' + p.visit;
+  document.getElementById('pf-modal').classList.add('open');
+  pmUI();
+  const rec = await pfCargar(sid);
+  if(_pm !== st) return;                            // se cerró o se abrió otro partido
+  st.valor = (rec && rec.value) ? rec.value : '';
+  st.img   = st.valor ? await cargarImagenAsync(st.valor) : null;
+  if(_pm !== st) return;
+  st.cfg   = Object.assign({}, PF_CFG_DEF, (rec && rec.cfg) || {});
+  st.listo = true;
+  pmUI(); pmRegenerar();
+}
+function pmCerrar(){
+  _pm = null;
+  document.getElementById('pf-modal').classList.remove('open');
+}
+function pmUI(){
+  const st = _pm; if(!st) return;
+  const tiene = !!st.valor;
+  const set = (i, v) => { const el = document.getElementById(i); if(el) el.value = v; };
+  set('pm-zoom', Math.round(st.cfg.zoom*100)); set('pm-x', Math.round(st.cfg.x*100));
+  set('pm-y', Math.round(st.cfg.y*100));       set('pm-osc', Math.round(st.cfg.osc*100));
+  const show = (i, on, d) => { const el = document.getElementById(i); if(el) el.style.display = on ? (d||'block') : 'none'; };
+  show('pm-ajustes', tiene); show('pm-quitar', tiene, 'inline-block');
+  show('pm-borrar-srv', _pfServidor.has(st.sid), 'inline-block');
+  const t = document.getElementById('pm-txt'); if(t) t.textContent = tiene ? 'Cambiar foto' : 'Agregar foto de fondo';
+  const e = document.getElementById('pm-estado');
+  if(e) e.textContent = !st.listo ? 'Cargando…'
+    : !tiene ? 'Sin foto de fondo: se usa el fondo estándar de la web.'
+    : (_pfSesion.has(st.sid) ? 'Foto de esta sesión (no se sube al servidor).' : 'Foto guardada anteriormente en el servidor.');
+}
+async function pmRegenerar(){
+  const st = _pm; if(!st || !st.listo) return;
+  const tok = ++st.tok;
+  const cv = await _pmGenerar(st);
+  if(_pm !== st || tok !== st.tok) return;          // llegó un cambio más nuevo
+  const el = document.getElementById('pm-prev');
+  if(el){ el.src = cv.toDataURL('image/jpeg', 0.7); el.style.display = 'block'; }
+}
+function pmCambio(){
+  const st = _pm; if(!st) return;
+  const v = i => (parseFloat(document.getElementById(i).value) || 0) / 100;
+  st.cfg = { zoom: Math.max(1, v('pm-zoom')), x: v('pm-x'), y: v('pm-y'), osc: v('pm-osc') };
+  if(st.valor) _pmGuardarSesion();
+  clearTimeout(st.tmr); st.tmr = setTimeout(pmRegenerar, 70);
+}
+async function pmElegir(input){
+  const st = _pm; const file = input.files && input.files[0]; if(!file || !st) return;
+  const e = document.getElementById('pm-estado'); if(e) e.textContent = 'Procesando foto…';
+  try{
+    const valor = await comprimirImagenParaFirestore(file, 2500000);   // solo local: sin el límite del servidor
+    if(_pm !== st) return;
+    st.valor = valor; st.img = await cargarImagenAsync(valor);
+    st.cfg = Object.assign({}, PF_CFG_DEF);          // foto nueva → encuadre desde cero
+    st.listo = true;
+    _pmGuardarSesion(); pmUI(); pmRegenerar();
+  }catch(err){ console.error(err); if(e) e.textContent = '⚠ No se pudo leer la imagen'; }
+  input.value = '';
+}
+function pmQuitar(){
+  const st = _pm; if(!st) return;
+  st.valor = ''; st.img = null; st.cfg = Object.assign({}, PF_CFG_DEF);
+  _pmGuardarSesion(); pmUI(); pmRegenerar();
+}
+function pmBorrarServidor(){
+  const st = _pm; if(!st || !window._fb) return;
+  pedirConfirmacion('¿Borrar del servidor la foto guardada de este partido?', async function(){
+    const ok = await window._fb.delPartidoFoto(st.sid);
+    if(!ok){ alert('No se pudo borrar la foto del servidor.' + _pfErrTxt()); return; }
+    _pfServidor.delete(st.sid);
+    if(!_pfSesion.has(st.sid)){                      // la que se veía era la del servidor
+      _pfCache[st.sid] = null;
+      if(_pm === st){ st.valor = ''; st.img = null; st.cfg = Object.assign({}, PF_CFG_DEF); }
+    }
+    if(_pm === st){ pmUI(); pmRegenerar(); }
+  });
+}
+async function pmDescargar(btn){
+  const st = _pm; if(!st) return;
   const txt = btn ? btn.textContent : '';
   if(btn){ btn.disabled = true; btn.textContent = 'Generando…'; }
   try{
-    const cv = await generarImagenPartido(st.p, { img: st.img || null, cfg: st.cfg });
-    _descargarCanvas(cv, _nombreArchivoPartido(st.p));
+    const cv = await _pmGenerar(st);
+    _descargarCanvas(cv, st.archivo || _nombreArchivoPartido(st.p));
   }catch(e){ console.error(e); alert('No se pudo generar la imagen.'); }
   if(btn){ btn.disabled = false; btn.textContent = txt; }
 }
@@ -22298,178 +22309,171 @@ function cvFillTextTruncCenter(ctx, text, cx, y, maxW){
   ctx.fillText(t, cx, y);
 }
 
-// ── Generador: Resultados/Fixture de Reserva ─────────────────
-async function generarImagenReserva(ids){
-  await document.fonts.ready;
-  const id   = getIdentidad();
-  const liga = id.nombre||'DEPORTEMAS';
-  const W    = CV_W;
-  const CX   = W / 2;
+// ── Generador: Resultados de Reserva ─────────────────────────
+// Formato "resumen de fecha": foto de fondo, píldora de la fecha arriba a la izquierda, logo arriba a la derecha
+// y una grilla de tarjetas de vidrio (escudo · goles · FT · goles · escudo). La foto se elige en 🖼 Foto
+// (solo queda en memoria, no se sube al servidor).
+function _rvKey(p){ return 'rv:' + [p.div||'', p.torneoReserva||p.torneo||'', p.fecha||''].join('|'); }
+function _nombreArchivoReserva(p){
+  const limpio = t => String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-+|-+$/g,'').toLowerCase();
+  return 'reserva-' + limpio(p.div) + '-' + (limpio(p.fecha) || 'fecha') + '.png';
+}
 
-  const ps = ids.map(sid=>data.partidos.find(p=>String(p.id)===String(sid))).filter(Boolean);
+async function generarImagenReserva(ids, opts){
+  opts = opts || {};
+  const s = v => Math.round(v);                       // medidas en píxeles reales del lienzo 1080×1350
+  await document.fonts.ready;
+  const id = getIdentidad();
+  const W = CV_W, H = CV_H;
+  const ps = (ids||[]).map(sid=>data.partidos.find(p=>String(p.id)===String(sid))).filter(Boolean);
   if(!ps.length) return null;
+  const p0 = ps[0];
+
+  // Foto de fondo: la de las opciones, o la que quedó en memoria para esta fecha
+  let img = opts.img, cfg = opts.cfg;
+  if(opts.img === undefined){
+    const rec = _pfCache[_rvKey(p0)];
+    img = (rec && rec.value) ? await cargarImagenAsync(rec.value) : null;
+    cfg = (rec && rec.cfg) || {};
+  }
+  cfg = Object.assign({}, PF_CFG_DEF, cfg || {});
 
   const canvas = document.createElement('canvas');
-  canvas.width = W; canvas.height = CV_H;
+  canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
   ctx.textBaseline = 'alphabetic';
 
-  // Fondo
-  const bgGrad = ctx.createLinearGradient(0,0,0,CV_H);
-  bgGrad.addColorStop(0,C.NEG3); bgGrad.addColorStop(1,C.NEG);
-  ctx.fillStyle = bgGrad; ctx.fillRect(0,0,W,CV_H);
-
-  let y = await cvHeader(ctx,W,id,0);
-
-  // Título
-  const divLabel = ps[0].div==='primera' ? 'PRIMERA DIVISIÓN' : 'SEGUNDA DIVISIÓN';
-  const fechaLabel = ps[0].fecha ? ps[0].fecha+'  ·  ' : '';
-  ctx.fillStyle = C.DORADO;
-  ctx.font = `${s(26)}px "Bebas Neue", Arial, sans-serif`;
-  ctx.textAlign = 'center';
-  ctx.fillText('RESERVA', CX, y+s(32));
-  const infoTxtRes = fechaLabel+divLabel;
-  ctx.font = `600 ${s(14)}px "DM Sans", Arial, sans-serif`;
-  const logoImgRes = await cargarImagenAsync(logoParaPartido(ps[0]));
-  if(logoImgRes){
-    const logoH = s(22);
-    const logoW = logoH * (logoImgRes.naturalWidth/logoImgRes.naturalHeight || 1);
-    const textW = ctx.measureText(infoTxtRes).width;
-    const totalW = textW + logoW + s(8);
-    const startX = CX - totalW/2;
-    ctx.drawImage(logoImgRes, startX, y+s(50)-logoH+s(4), logoW, logoH);
-    ctx.fillStyle = 'rgba(201,162,39,0.55)';
-    ctx.textAlign = 'left';
-    ctx.fillText(infoTxtRes, startX + logoW + s(8), y+s(50));
-    ctx.textAlign = 'center';
+  // ── Fondo ──
+  if(img){
+    pfDibujarFoto(ctx, img, W, H, cfg);
+    const a0 = Math.min(0.95, 0.10 + 0.45*cfg.osc), a1 = Math.min(0.97, 0.35 + 0.60*cfg.osc);
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, `rgba(0,0,0,${a0})`); g.addColorStop(1, `rgba(0,0,0,${a1})`);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
   } else {
-    ctx.fillStyle = 'rgba(201,162,39,0.55)';
-    ctx.fillText(infoTxtRes, CX, y+s(50));
+    cvFondoHistoria(ctx, W, H);
   }
 
-  // Divisor dorado
-  const dg=ctx.createLinearGradient(0,0,W,0);
-  dg.addColorStop(0,'transparent'); dg.addColorStop(0.2,C.DORADO);
-  dg.addColorStop(0.8,C.DORADO); dg.addColorStop(1,'transparent');
-  ctx.fillStyle=dg; ctx.fillRect(0,y+s(58),W,1);
-  y += s(62);
+  // ── Cabecera: píldora con la fecha (izquierda) + etiqueta + logo (derecha) ──
+  const fechaTxt = (p0.fecha && p0.fecha !== 'Sin fecha') ? String(p0.fecha).toUpperCase() : '';
+  let xLabel = s(36);
+  if(fechaTxt){
+    ctx.font = `${s(40)}px "Bebas Neue", Arial, sans-serif`;
+    const tw = ctx.measureText(fechaTxt).width, bx = s(66), bw = tw + s(44);
+    ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(0, s(92), s(60), 1);
+    cvRoundRect(ctx, bx, s(60), bw, s(64), s(32));
+    ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = s(1.6); ctx.stroke();
+    ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(fechaTxt, bx + bw/2, s(94));
+    xLabel = bx + bw + s(26);
+  }
+  const torn = p0.div==='primera' ? torneoLabel(p0.torneoReserva || p0.torneo || 'apertura') : '';
+  const etiqueta = ['RESERVA', p0.div==='segunda' ? 'SEGUNDA DIVISIÓN' : 'PRIMERA DIVISIÓN', torn].filter(Boolean).join('  ·  ').toUpperCase();
+  const LS = s(84), LX = W - s(36) - LS, LY = s(34);
+  ctx.fillStyle = 'rgba(255,255,255,0.88)';
+  const lMax = LX - s(20) - xLabel;
+  let lf = 26; ctx.font = `700 ${s(lf)}px "Rajdhani", Arial, sans-serif`;
+  while(lf > 16 && ctx.measureText(etiqueta).width > lMax){ lf--; ctx.font = `700 ${s(lf)}px "Rajdhani", Arial, sans-serif`; }
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  cvFillTextTrunc(ctx, etiqueta, xLabel, s(94), lMax);
+  ctx.textBaseline = 'alphabetic';
+  const logoSrc = logoParaPartido(p0) || id.logo;
+  const okLogo = logoSrc ? await cvDrawLogo(ctx, logoSrc, LX, LY, LS) : false;
+  if(!okLogo){
+    ctx.beginPath(); ctx.arc(LX+LS/2, LY+LS/2, LS/2, 0, Math.PI*2); ctx.fillStyle = C.DORADO; ctx.fill();
+    ctx.fillStyle = C.NEG; ctx.font = `${s(34)}px "Bebas Neue", Arial, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(String(id.nombre || 'DM').substr(0,3).toUpperCase(), LX+LS/2, LY+LS/2+s(2));
+    ctx.textBaseline = 'alphabetic';
+  }
 
-  // Precargar escudos
-  const escudoImgs = {};
-  const equipos = [...new Set(ps.flatMap(p=>[p.local,p.visit]))];
-  await Promise.all(equipos.map(nombre=>new Promise(res=>{
-    const entry=escudos[nombre]||escudos[normalizar(nombre)];
-    const src=entry&&typeof entry==='object'?entry.img:entry;
-    if(!src){res();return;}
-    const img=new Image();
-    img.onload=()=>{escudoImgs[nombre]=img;res();};
-    img.onerror=()=>res();
-    img.src=src;
-  })));
+  // ── Grilla de tarjetas (2 columnas; 1 columna si son pocos partidos) ──
+  const n = ps.length;
+  const cols = n >= 4 ? 2 : 1;
+  const rows = Math.ceil(n / cols);
+  const GAP = s(12);
+  const CW = cols === 2 ? s(352) : s(540);
+  const topMin = s(190), botMin = s(70);
+  const CH = Math.max(s(74), Math.min(s(128), Math.floor((H - topMin - botMin - (rows-1)*GAP) / rows)));
+  const gridW = cols*CW + (cols-1)*GAP, gridH = rows*CH + (rows-1)*GAP;
+  const x0 = Math.round((W - gridW) / 2);
+  const y0 = Math.max(topMin, Math.round((H - gridH) / 2));
 
-  // ── Layout compacto horizontal para resultados ──
-  // Cada fila: [escudo+nombre LOCAL] | [marcador/hora] | [escudo+nombre VISIT]
-  // Todos los tamaños se escalan según el espacio disponible por partido
+  // Fondo desenfocado (una sola vez) para el efecto vidrio de las tarjetas
+  let blurC = null;
+  if('filter' in ctx){
+    blurC = document.createElement('canvas'); blurC.width = W; blurC.height = H;
+    const bctx = blurC.getContext('2d');
+    bctx.filter = `blur(${s(26)}px)`; bctx.drawImage(canvas, 0, 0); bctx.filter = 'none';
+  }
 
-  const disponible = CV_H - y - s(40);
-  const ROW_H = Math.floor(disponible / ps.length);
+  const ES = Math.round(CH * 0.42), padE = Math.round(CH * 0.17);
+  const FR = Math.round(CH * 0.14);                    // radio del círculo "FT"
+  const fsScore = Math.round(CH * 0.70);
+  for(let i = 0; i < n; i++){
+    const p = ps[i];
+    const r = Math.floor(i / cols), c = i % cols;
+    const sola = (cols === 2 && n % 2 === 1 && i === n - 1);       // última tarjeta impar: centrada
+    const cx0 = sola ? Math.round((W - CW) / 2) : x0 + c * (CW + GAP);
+    const cy0 = y0 + r * (CH + GAP);
+    const mx = cx0 + CW/2, my = cy0 + CH/2;
 
-  // Tamaños escalados al ROW_H
-  const ECSZ    = Math.min(s(72), Math.floor(ROW_H * 0.56));  // escudo
-  const NFONT   = Math.max(s(11), Math.round(ECSZ * 0.21));   // fuente nombre
-  const SFONT   = Math.max(s(24), Math.round(ECSZ * 0.48));   // fuente marcador/hora
-  const HFONT   = Math.max(s(11), Math.round(ECSZ * 0.19));   // fuente hora pequeña
+    // Tarjeta de vidrio
+    ctx.save();
+    cvRoundRect(ctx, cx0, cy0, CW, CH, s(24)); ctx.clip();
+    if(blurC) ctx.drawImage(blurC, 0, 0);
+    const gl = ctx.createLinearGradient(0, cy0, 0, cy0 + CH);
+    gl.addColorStop(0, 'rgba(14,20,40,0.30)'); gl.addColorStop(1, 'rgba(14,20,40,0.60)');
+    ctx.fillStyle = gl; ctx.fillRect(cx0, cy0, CW, CH);
+    ctx.fillStyle = 'rgba(255,255,255,0.065)'; ctx.fillRect(cx0, cy0, CW, CH);
+    ctx.restore();
+    cvRoundRect(ctx, cx0, cy0, CW, CH, s(24));
+    ctx.strokeStyle = 'rgba(255,255,255,0.28)'; ctx.lineWidth = s(1.5); ctx.stroke();
 
-  // Columnas X
-  const COL_EC_L = s(50) + ECSZ/2;        // centro escudo local
-  const COL_EC_R = W - s(50) - ECSZ/2;    // centro escudo visitante
+    // Escudos
+    await cvDrawEscudoCompleto(ctx, p.local, cx0 + padE, my - ES/2, ES);
+    await cvDrawEscudoCompleto(ctx, p.visit, cx0 + CW - padE - ES, my - ES/2, ES);
 
-  ps.forEach((p,i)=>{
-    const fy = y + ROW_H/2;  // centro vertical de la fila
-
-    // Fondo alterno
-    ctx.fillStyle = i%2===0 ? 'rgba(201,162,39,0.03)' : 'transparent';
-    ctx.fillRect(0,y,W,ROW_H);
-
-    // Separador (excepto primer fila)
-    if(i>0){
-      const sepG=ctx.createLinearGradient(0,y,W,y);
-      sepG.addColorStop(0,'transparent');
-      sepG.addColorStop(0.1,'rgba(201,162,39,0.15)');
-      sepG.addColorStop(0.9,'rgba(201,162,39,0.15)');
-      sepG.addColorStop(1,'transparent');
-      ctx.fillStyle=sepG; ctx.fillRect(0,y,W,1);
-    }
-
-    // Centro vertical del escudo (un poco arriba del centro de fila para dejar espacio al nombre abajo)
-    const ecTopY = fy - ECSZ * 0.6;
-    const ecBotY = ecTopY + ECSZ;
-
-    // ── ESCUDO LOCAL ──
-    const eImgL = escudoImgs[p.local];
-    if(eImgL){
-      ctx.save(); ctx.beginPath();
-      ctx.arc(COL_EC_L, ecTopY+ECSZ/2, ECSZ/2, 0, Math.PI*2); ctx.clip();
-      cvDrawEscudoImg(ctx,eImgL, COL_EC_L-ECSZ/2, ecTopY, ECSZ); ctx.restore();
-    } else {
-      cvEscudoFallback(ctx, p.local, COL_EC_L-ECSZ/2, ecTopY, ECSZ);
-    }
-    // Nombre local (centrado debajo del escudo)
-    ctx.fillStyle = C.BLANCO;
-    ctx.font = `${NFONT}px "Bebas Neue", Arial, sans-serif`;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-    { const libre=(y+ROW_H)-(ecBotY+s(4))-2; if(libre>=NFONT*2.1) cvFillTextWrap(ctx, p.local.toUpperCase(), COL_EC_L, ecBotY + s(4), COL_EC_L*1.8, NFONT*1.05); else cvFillTextTrunc(ctx, p.local.toUpperCase(), COL_EC_L, ecBotY + s(4), COL_EC_L*1.8); }
-
-    // ── ESCUDO VISITANTE ──
-    const eImgV = escudoImgs[p.visit];
-    if(eImgV){
-      ctx.save(); ctx.beginPath();
-      ctx.arc(COL_EC_R, ecTopY+ECSZ/2, ECSZ/2, 0, Math.PI*2); ctx.clip();
-      cvDrawEscudoImg(ctx,eImgV, COL_EC_R-ECSZ/2, ecTopY, ECSZ); ctx.restore();
-    } else {
-      cvEscudoFallback(ctx, p.visit, COL_EC_R-ECSZ/2, ecTopY, ECSZ);
-    }
-    // Nombre visitante (centrado debajo del escudo)
-    ctx.fillStyle = C.BLANCO;
-    ctx.font = `${NFONT}px "Bebas Neue", Arial, sans-serif`;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-    { const libre=(y+ROW_H)-(ecBotY+s(4))-2; if(libre>=NFONT*2.1) cvFillTextWrap(ctx, p.visit.toUpperCase(), COL_EC_R, ecBotY + s(4), (W-COL_EC_R)*1.8, NFONT*1.05); else cvFillTextTrunc(ctx, p.visit.toUpperCase(), COL_EC_R, ecBotY + s(4), (W-COL_EC_R)*1.8); }
-
-    // ── CENTRO: marcador o información de hora ──
+    // Centro: goles · FT · goles
+    const jugado = (p.estado === 'jugado' || p.estado === 'en-juego') && p.resultado;
+    const m = jugado ? String(p.resultado).match(/(\d+)\s*[-–:]\s*(\d+)/) : null;
     ctx.textBaseline = 'middle';
-    if(p.estado==='jugado' && p.resultado){
-      // Caja de resultado
-      const bW = Math.max(s(100), Math.round(ECSZ*1.3));
-      const bH = Math.max(s(36), Math.round(ECSZ*0.62));
-      cvRoundRect(ctx, CX-bW/2, fy-bH/2-s(4), bW, bH, s(9));
-      const mg=ctx.createLinearGradient(CX-bW/2,0,CX+bW/2,0);
-      mg.addColorStop(0,C.DORADO); mg.addColorStop(1,C.DORADO2);
-      ctx.fillStyle=mg; ctx.fill();
-      ctx.fillStyle=C.NEG;
-      ctx.font=`700 ${SFONT}px "Bebas Neue", Arial, sans-serif`;
-      ctx.textAlign='center';
-      ctx.fillText(p.resultado, CX, fy-s(4));
-    } else {
-      // Partido pendiente o en juego — mostrar hora y día
-      const horaTexto = (p.hora && p.hora!=='--:--') ? p.hora+' hs' : '--:-- hs';
-      const diaTexto  = p.dia||'';
-      ctx.fillStyle = C.DORADO;
-      ctx.font = `${SFONT}px "Bebas Neue", Arial, sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.fillText(horaTexto, CX, fy - (diaTexto?s(6):0));
-      if(diaTexto){
-        ctx.fillStyle='rgba(255,255,255,0.5)';
-        ctx.font=`600 ${HFONT}px "DM Sans", Arial, sans-serif`;
-        ctx.fillText(diaTexto, CX, fy+HFONT+s(2));
+    if(m){
+      const sepX = FR + s(18);
+      ctx.fillStyle = '#fff';
+      // el marcador se achica si es de 2 dígitos para no pisar el escudo
+      const dispW = (CW/2 - padE - ES) - sepX - s(10);
+      let fsS = fsScore; ctx.font = `${fsS}px "Bebas Neue", Arial, sans-serif`;
+      while(fsS > s(30) && Math.max(ctx.measureText(m[1]).width, ctx.measureText(m[2]).width) > dispW){ fsS--; ctx.font = `${fsS}px "Bebas Neue", Arial, sans-serif`; }
+      const yS = my + Math.round(fsS * 0.03);
+      ctx.textAlign = 'right'; ctx.fillText(m[1], mx - sepX, yS);
+      ctx.textAlign = 'left';  ctx.fillText(m[2], mx + sepX, yS);
+      ctx.beginPath(); ctx.arc(mx, my, FR, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(255,255,255,0.06)'; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.65)'; ctx.lineWidth = s(1.4); ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
+      ctx.font = `700 ${Math.max(s(11), Math.round(CH * 0.105))}px "Rajdhani", Arial, sans-serif`;
+      ctx.fillText(p.estado === 'en-juego' ? 'VIVO' : 'FT', mx, my + s(1));
+    } else if(jugado){                                   // resultado que no es "n-n" (p. ej. W.O.)
+      ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
+      ctx.font = `${Math.round(CH * 0.34)}px "Bebas Neue", Arial, sans-serif`;
+      ctx.fillText(String(p.resultado).toUpperCase(), mx, my);
+    } else {                                             // todavía sin jugar: hora y día
+      const hora = (p.hora && p.hora !== '--:--') ? p.hora + ' HS' : 'VS';
+      const dia = p.dia ? String(p.dia).toUpperCase() : '';
+      ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
+      ctx.font = `${Math.round(CH * 0.36)}px "Bebas Neue", Arial, sans-serif`;
+      ctx.fillText(hora, mx, my - (dia ? Math.round(CH*0.08) : 0));
+      if(dia){
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        ctx.font = `700 ${Math.max(s(11), Math.round(CH * 0.11))}px "Rajdhani", Arial, sans-serif`;
+        ctx.fillText(dia, mx, my + Math.round(CH*0.22));
       }
     }
-
-    ctx.textBaseline='alphabetic';
-    y += ROW_H;
-  });
-
-  cvFooter(ctx,W,CV_H-s(40),liga);
-  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+    ctx.textBaseline = 'alphabetic';
+  }
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   return canvas;
 }
 // ── Generador: Torneo ─────────────────────────────────────────
