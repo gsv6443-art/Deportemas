@@ -5827,6 +5827,14 @@ table.posiciones td:nth-child(8){
               <input type="range" id="promo4-md-py" min="0" max="100" value="0" style="width:100%"/>
             </div>
           </div>
+          <details id="camp-aj-det" style="margin:4px 0 14px" ontoggle="if(this.open) promoCampeonPreview()">
+            <summary style="cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:12px;letter-spacing:1px;color:var(--gris)">🔠 TAMAÑO Y UBICACIÓN DE LOS TEXTOS</summary>
+            <div id="camp-prev-wrap" style="display:none;position:sticky;top:0;z-index:5;background:var(--negro2,#141414);padding:8px 0;text-align:center;border-bottom:1px solid rgba(201,162,39,.2)">
+              <img id="camp-prev" alt="Vista previa" style="max-height:34vh;max-width:100%;border-radius:8px;border:1px solid rgba(201,162,39,.25)"/>
+            </div>
+            <div id="camp-aj" style="margin-top:6px"></div>
+            <button type="button" class="btn-edit" onclick="campAjReset()" style="margin-top:10px">↺ Restablecer tamaños y posiciones</button>
+          </details>
           <p style="font-size:10px;color:var(--gris);margin-top:-4px;margin-bottom:14px;font-family:'Rajdhani',sans-serif">
             Estilo "Día de partido": la foto de fondo (la subís abajo, en "Foto de fondo") se funde hacia el color elegido, con la marca "Presentado por" arriba a la derecha, el escudo del club campeón y el logo de la liga sobre un texto gigante (texto principal + segundo renglón), el nombre del club debajo y una línea de datos con la etiqueta, el sello y el texto adicional separados por cuadraditos. Todos los textos se pueden cambiar o dejar vacíos.
           </p>
@@ -17498,6 +17506,7 @@ function promoPreviewLogoTorneo(input){
     const w = document.getElementById('promo-torneo-logo-wrap'); if(w) w.classList.add('visible');
   });
 }
+function _campRefrescar(){ if(typeof promoCampeonPreview === 'function') promoCampeonPreview(); }
 function promoQuitarLogoTorneo(){
   document.getElementById('promo-competicion-logo').value = '';
   const p = document.getElementById('promo-torneo-logo-preview'); if(p) p.src = '';
@@ -17518,6 +17527,7 @@ function promoLimpiarForm(){
   const l3 = document.getElementById('promo3-lado'); if(l3) l3.value = 'izq';
   const defs4 = {'promo4-club':'','promo4-titulo':'CAMPEÓN','promo4-etiqueta':'Y ASCENSO','promo4-tag':'HISTÓRICO','promo4-sello':'B → A','promo4-subtitulo':'ASCIENDE A PRIMERA · 2026','promo4-md-color':'#0f2a1e','promo4-md-degrade':'si','promo4-md-escudos':'color','promo4-md-zoom':'100','promo4-md-py':'0'};
   Object.keys(defs4).forEach(k=>{ const el = document.getElementById(k); if(el) el.value = defs4[k]; });
+  if(typeof campAjReset === 'function') campAjReset(true);
   promoRachaLimpiar();
   promoJugadorLimpiar();
   if(typeof promoRadioLimpiar === 'function') promoRadioLimpiar();
@@ -17560,6 +17570,7 @@ function promoPreviewFoto(input){
     _promoFoto = dataUrl;
     const p = document.getElementById('promo-foto-preview'); if(p) p.src = _promoFoto;
     const w = document.getElementById('promo-foto-wrap'); if(w) w.classList.add('visible');
+    _campRefrescar();
   });
 }
 function promoQuitarFoto(){
@@ -17567,6 +17578,7 @@ function promoQuitarFoto(){
   const p = document.getElementById('promo-foto-preview'); if(p) p.src = '';
   const w = document.getElementById('promo-foto-wrap'); if(w) w.classList.remove('visible');
   const f = document.getElementById('promo-foto-file'); if(f) f.value = '';
+  _campRefrescar();
 }
 
 // ── Día de partido: 3 fotos de fondo (horizontal = una al lado de otra · vertical = una sobre otra) ──
@@ -17714,14 +17726,48 @@ function promoGenerarTabla(){
   abrirShare(() => generarImagenPromocionalTabla(p));
 }
 
-function promoGenerarCampeon(){
+// ── Campeón y ascenso: tamaño y ubicación de cada texto (con vista previa en vivo) ──
+// Posiciones en % del lienzo (vertical = % del alto, horizontal = % del ancho); tamaños en %.
+const CAMP_AJ = [
+  { t:'Texto grande',          k:'g', tam:[40,130], y:[-30,30], x:[-30,30] },
+  { t:'Nombre del club',       k:'n', tam:[50,150], y:[-20,30], x:[-30,30] },
+  { t:'Línea de datos',        k:'d', tam:[50,150], y:[-50,4],  x:[-30,30] },
+  { t:'Marca "Presentado por"', k:'m', tam:[60,150] }
+];
+function campAjInit(){
+  const el = document.getElementById('camp-aj'); if(!el) return;
+  el.innerHTML = CAMP_AJ.map(g => {
+    const sl = (suf, lbl, rng, unit) =>
+      '<div class="form-group"><label style="font-size:10px">' + lbl + ': <span id="camp-aj-' + g.k + '-' + suf + '-v">0</span>' + unit + '</label>' +
+      '<input type="range" id="camp-aj-' + g.k + '-' + suf + '" min="' + rng[0] + '" max="' + rng[1] + '" value="' + (suf === 't' ? 100 : 0) + '" style="width:100%" ' +
+      'oninput="document.getElementById(\'camp-aj-' + g.k + '-' + suf + '-v\').textContent=this.value"/></div>';
+    return '<div style="font-family:\'Rajdhani\',sans-serif;font-size:11px;letter-spacing:1px;color:var(--dorado);margin:10px 0 2px;text-transform:uppercase">' + g.t + '</div>' +
+      '<div class="form-row" style="flex-wrap:wrap">' + sl('t', 'Tamaño', g.tam, '%') +
+      (g.y ? sl('y', 'Posición vertical', g.y, '') : '') + (g.x ? sl('x', 'Posición horizontal', g.x, '') : '') + '</div>';
+  }).join('');
+  campAjReset(true);
+}
+function campAjReset(silencioso){
+  CAMP_AJ.forEach(g => ['t','y','x'].forEach(suf => {
+    const e = document.getElementById('camp-aj-' + g.k + '-' + suf), v = document.getElementById('camp-aj-' + g.k + '-' + suf + '-v');
+    const def = suf === 't' ? 100 : 0;
+    if(e) e.value = def; if(v) v.textContent = def;
+  }));
+  if(!silencioso) promoCampeonPreview();
+}
+function campAjLeer(){
+  const g = (k, suf, def) => { const e = document.getElementById('camp-aj-' + k + '-' + suf); const n = e ? Number(e.value) : NaN; return isNaN(n) ? def : n; };
+  return {
+    txt: { grande: g('g','t',100)/100, club: g('n','t',100)/100, datos: g('d','t',100)/100, marca: g('m','t',100)/100 },
+    pos: { gy: g('g','y',0)/100, gx: g('g','x',0)/100, ny: g('n','y',0)/100, nx: g('n','x',0)/100, dy: g('d','y',0)/100, dx: g('d','x',0)/100 }
+  };
+}
+function promoCampeonArmar(){
   const val = id => (document.getElementById(id)||{value:''}).value.trim();
   const club = val('promo4-club');
-  if(!club){
-    alert('Completá el club campeón.');
-    return;
-  }
-  const p = {
+  if(!club) return null;
+  const aj = campAjLeer();
+  return {
     club,
     titulo:    val('promo4-titulo'),
     etiqueta:  val('promo4-etiqueta'),
@@ -17734,7 +17780,40 @@ function promoGenerarCampeon(){
     mdEscudos: (document.getElementById('promo4-md-escudos') || {}).value || 'color',
     mdZoom:    (Number((document.getElementById('promo4-md-zoom') || {}).value) || 100) / 100,
     mdPy:      (Number((document.getElementById('promo4-md-py') || {}).value) || 0) / 100,
+    txt: aj.txt, pos: aj.pos
   };
+}
+let _campPrevTok = 0, _campPrevTmr = null;
+function promoCampeonPreview(){
+  clearTimeout(_campPrevTmr);
+  _campPrevTmr = setTimeout(async () => {
+    const wrapForm = document.getElementById('promo-campeon-wrap');
+    const img = document.getElementById('camp-prev'), box = document.getElementById('camp-prev-wrap'), det = document.getElementById('camp-aj-det');
+    if(!img || !wrapForm || wrapForm.style.display === 'none' || (det && !det.open)) return;
+    const p = promoCampeonArmar();
+    if(!p){ if(box) box.style.display = 'none'; return; }
+    const tok = ++_campPrevTok;
+    try{
+      const cv = await generarImagenPromoCampeon(p);
+      if(tok !== _campPrevTok) return;                 // llegó un cambio más nuevo
+      img.src = cv.toDataURL('image/jpeg', 0.7);
+      if(box) box.style.display = '';
+    }catch(e){ console.warn('Vista previa campeón:', e); }
+  }, 180);
+}
+function _campInitTodo(){
+  campAjInit();
+  const w = document.getElementById('promo-campeon-wrap');
+  if(w){ w.addEventListener('input', promoCampeonPreview); w.addEventListener('change', promoCampeonPreview); }
+}
+if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _campInitTodo); else _campInitTodo();
+
+function promoGenerarCampeon(){
+  const p = promoCampeonArmar();
+  if(!p){
+    alert('Completá el club campeón.');
+    return;
+  }
   abrirShare(() => generarImagenPromoCampeon(p));
 }
 
@@ -18936,6 +19015,11 @@ async function generarImagenPromoCampeon(p){
   const rgba = (a) => 'rgba(' + cr + ',' + cg + ',' + cb + ',' + a + ')';
   const degr = p.mdDegrade !== 'no';
   const velo = Math.min(0.85, Math.max(0, p.mdVelo == null ? 0.4 : p.mdVelo));
+  // Tamaños (factor) y ubicaciones (desplazamiento en px) ajustables de cada texto
+  const kG = tk(p,'grande'), kN = tk(p,'club'), kD = tk(p,'datos'), kM = tk(p,'marca');
+  const pos = p.pos || {};
+  const dsp = (v, base) => (typeof v === 'number' && isFinite(v)) ? v * base : 0;
+  const oGy = dsp(pos.gy, H); let oGx = dsp(pos.gx, W); const oNy = dsp(pos.ny, H), oNx = dsp(pos.nx, W), oDy = dsp(pos.dy, H), oDx = dsp(pos.dx, W);
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
@@ -18986,7 +19070,7 @@ async function generarImagenPromoCampeon(p){
   ctx.fillStyle = topv; ctx.fillRect(0, 0, W, H*0.16);
 
   // ── Marca arriba a la derecha ("Presentado por …"), en el mismo lugar que el promocional de día de partido ──
-  cvMarcaPresentado(ctx, W, H, id, { yBase: 120 });
+  cvMarcaPresentado(ctx, W, H, id, { k: kM, yBase: 46 + Math.round(22*kM) + Math.round(Math.round(54*kM)*0.85) + 6 });
 
   // ── Texto gigante (blanco, centrado): texto principal + segundo renglón ──
   const lineas = [p.titulo || 'CAMPEÓN', p.etiqueta].map(t => String(t || '').trim().toUpperCase()).filter(Boolean).slice(0, 2);
@@ -18996,12 +19080,16 @@ async function generarImagenPromoCampeon(p){
   ctx.font = fs + 'px ' + ANTON; sp(0);
   const w0 = Math.max(...lineas.map(t => ctx.measureText(t).width));
   if(w0 > maxTW) fs = Math.floor(fs * maxTW / w0);
+  fs = Math.max(24, Math.round(fs * kG));                // tamaño elegido (nunca más ancho que la imagen)
+  ctx.font = fs + 'px ' + ANTON;
+  { const wx = Math.max(...lineas.map(t => ctx.measureText(t).width)); if(wx > W - 40) fs = Math.floor(fs * (W - 40) / wx); }
   ctx.font = fs + 'px ' + ANTON;
   const tw = Math.max(...lineas.map(t => ctx.measureText(t).width));
   const capH = ctx.measureText('H').actualBoundingBoxAscent || fs * 0.72;
   const lineGap = capH * 1.14;
-  const baseFinal = Math.round(H * 0.585);               // base del último renglón
-  const textLeft = (W - tw) / 2;
+  { const maxShift = Math.max(0, (W - tw) / 2 - 20); oGx = Math.max(-maxShift, Math.min(maxShift, oGx)); }   // el texto no se sale de la imagen
+  const baseFinal = Math.round(H * 0.585 + oGy);         // base del último renglón
+  const textLeft = (W - tw) / 2 + oGx;
 
   // ── Fila de insignias (cuadrados redondeados) pegada arriba del texto: club campeón + logo de la liga ──
   const bs = 100, bgap = 6;
@@ -19051,21 +19139,23 @@ async function generarImagenPromoCampeon(p){
   ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
   ctx.font = fs + 'px ' + ANTON; sp(0);
   lineas.forEach((t, k) => {
-    ctx.fillText(t, W/2, baseFinal - (lineas.length - 1 - k) * lineGap);
+    ctx.fillText(t, W/2 + oGx, baseFinal - (lineas.length - 1 - k) * lineGap);
   });
 
   // ── Nombre del club debajo del texto gigante (1 renglón; si no entra, 2) ──
   const nombre = String(p.club || '').toUpperCase().trim();
   if(nombre){
     const maxN = W - 120;
-    let fn = 84, nLines = [nombre];
+    const fnMax = Math.max(20, Math.round(84*kN)), fnMin = Math.max(18, Math.round(44*kN));
+    const fn2Max = Math.max(18, Math.round(68*kN)), fn2Min = Math.max(16, Math.round(34*kN));
+    let fn = fnMax, nLines = [nombre];
     const med = (t) => { ctx.font = fn + 'px ' + ANTON; sp(2); return ctx.measureText(t).width; };
-    while(fn > 44 && med(nombre) > maxN) fn -= 2;
+    while(fn > fnMin && med(nombre) > maxN) fn -= 2;
     if(med(nombre) > maxN){
       const words = nombre.split(/\s+/).filter(Boolean);
       let ok = false;
-      fn = 68;
-      while(fn >= 34 && !ok && words.length > 1){
+      fn = fn2Max;
+      while(fn >= fn2Min && !ok && words.length > 1){
         let best = null;
         for(let k = 1; k < words.length; k++){
           const a = words.slice(0, k).join(' '), b = words.slice(k).join(' ');
@@ -19074,7 +19164,7 @@ async function generarImagenPromoCampeon(p){
         }
         if(best && best.w <= maxN){ nLines = [best.a, best.b]; ok = true; } else fn -= 2;
       }
-      if(!ok){ fn = 44; nLines = [nombre]; }                 // una sola palabra enorme: se trunca
+      if(!ok){ fn = fnMin; nLines = [nombre]; }                 // una sola palabra enorme: se trunca
     }
     ctx.save();
     ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.fillStyle = '#ffffff';
@@ -19084,24 +19174,24 @@ async function generarImagenPromoCampeon(p){
       let t = ln;
       while(ctx.measureText(t).width > maxN && t.length > 1) t = t.slice(0, -1);
       if(t !== ln) t = t.slice(0, -1) + '…';
-      ctx.fillText(t, W/2 + 1, Math.round(baseFinal + 30 + fn * 0.72 + i * fn));
+      ctx.fillText(t, W/2 + 1 + oGx + oNx, Math.round(baseFinal + 30 + fn * 0.72 + i * fn + oNy));
     });
     ctx.restore(); sp(0);
   }
 
   // ── Línea de datos centrada con separadores cuadrados: etiqueta · sello · texto adicional ──
   const segs = [p.tag, p.sello, p.subtitulo].map(t => String(t || '').trim().toUpperCase()).filter(Boolean);
-  const infoY = H - 62;
+  const infoY = H - 62 + oDy;
   if(segs.length){
-    let f = 28, gapS = 30, sq = 11, total = 0, widths = [];
+    let f = Math.max(12, Math.round(28*kD)), gapS = 30, sq = Math.max(7, Math.round(11*kD)), total = 0, widths = [];
     const medir = () => {
       ctx.font = '700 ' + f + 'px ' + SANS; sp(1.2);
       widths = segs.map(t => ctx.measureText(t).width);
       total = widths.reduce((a, b) => a + b, 0) + (segs.length - 1) * (gapS*2 + sq);
     };
     medir();
-    while(f > 14 && total > W - 120){ f -= 1; gapS = Math.max(14, gapS - 1); sq = Math.max(7, Math.round(f*0.4)); medir(); }
-    let x = (W - total) / 2;
+    while(f > 12 && total > W - 120){ f -= 1; gapS = Math.max(14, gapS - 1); sq = Math.max(7, Math.round(f*0.4)); medir(); }
+    let x = (W - total) / 2 + oDx;
     ctx.textAlign = 'left'; ctx.fillStyle = '#ffffff';
     ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 8;
     segs.forEach((t, k) => {
