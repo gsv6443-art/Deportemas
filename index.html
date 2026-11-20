@@ -5781,23 +5781,54 @@ table.posiciones td:nth-child(8){
             <div class="form-group"><label>Texto principal</label>
               <input type="text" id="promo4-titulo" value="CAMPEÓN" placeholder="Ej: CAMPEÓN"/>
             </div>
-            <div class="form-group"><label>Texto dorado (junto al principal)</label>
+            <div class="form-group"><label>Segundo renglón del texto grande</label>
               <input type="text" id="promo4-etiqueta" value="Y ASCENSO" placeholder="Ej: Y ASCENSO"/>
             </div>
           </div>
           <div class="form-row">
-            <div class="form-group"><label>Etiqueta superior</label>
-              <input type="text" id="promo4-tag" value="HISTÓRICO" placeholder="Ej: HISTÓRICO (vacío = no se dibuja)"/>
+            <div class="form-group"><label>Etiqueta (línea de datos)</label>
+              <input type="text" id="promo4-tag" value="HISTÓRICO" placeholder="Ej: HISTÓRICO (vacío = no se muestra)"/>
             </div>
-            <div class="form-group"><label>Sello</label>
-              <input type="text" id="promo4-sello" value="B → A" placeholder="Ej: B → A (vacío = no se dibuja)"/>
+            <div class="form-group"><label>Sello (línea de datos)</label>
+              <input type="text" id="promo4-sello" value="B → A" placeholder="Ej: B → A (vacío = no se muestra)"/>
             </div>
           </div>
-          <div class="form-group"><label>Texto bajo el nombre del club</label>
+          <div class="form-group"><label>Texto adicional (línea de datos)</label>
             <input type="text" id="promo4-subtitulo" value="ASCIENDE A PRIMERA · 2026" placeholder="Ej: ASCIENDE A PRIMERA · 2026"/>
           </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Color de fondo</label>
+              <input type="color" id="promo4-md-color" value="#0f2a1e" style="height:38px;padding:2px"/>
+            </div>
+            <div class="form-group">
+              <label>Mostrar color de fondo</label>
+              <select id="promo4-md-degrade">
+                <option value="si">Sí (la foto se funde al color)</option>
+                <option value="no">No (foto completa con velo oscuro)</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Fondo del escudo</label>
+            <select id="promo4-md-escudos">
+              <option value="color">Color del equipo</option>
+              <option value="blanco">Blanco</option>
+              <option value="oscuro">Oscuro</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Zoom de la foto de fondo</label>
+              <input type="range" id="promo4-md-zoom" min="100" max="240" value="100" style="width:100%"/>
+            </div>
+            <div class="form-group">
+              <label>Posición vertical de la foto</label>
+              <input type="range" id="promo4-md-py" min="0" max="100" value="0" style="width:100%"/>
+            </div>
+          </div>
           <p style="font-size:10px;color:var(--gris);margin-top:-4px;margin-bottom:14px;font-family:'Rajdhani',sans-serif">
-            Estilo portada: foto a pantalla completa (la subís abajo, en "Foto de fondo") con degradé oscuro, logo de la liga arriba, titular grande ("Texto principal" en blanco + "Texto dorado"), etiqueta superior, escudo y nombre del club abajo, y el sello junto al texto bajo el nombre. Si no subís foto queda un fondo oscuro con el logo de marca de agua. Todos los textos se pueden cambiar o dejar vacíos.
+            Estilo "Día de partido": la foto de fondo (la subís abajo, en "Foto de fondo") se funde hacia el color elegido, con la marca "Presentado por" arriba a la derecha, el escudo del club campeón y el logo de la liga sobre un texto gigante (texto principal + segundo renglón), el nombre del club debajo y una línea de datos con la etiqueta, el sello y el texto adicional separados por cuadraditos. Todos los textos se pueden cambiar o dejar vacíos.
           </p>
         </div>
 
@@ -17485,7 +17516,7 @@ function promoLimpiarForm(){
   });
   const t3 = document.getElementById('promo3-tabla'); if(t3 && t3.options.length) t3.selectedIndex = 0;
   const l3 = document.getElementById('promo3-lado'); if(l3) l3.value = 'izq';
-  const defs4 = {'promo4-club':'','promo4-titulo':'CAMPEÓN','promo4-etiqueta':'Y ASCENSO','promo4-tag':'HISTÓRICO','promo4-sello':'B → A','promo4-subtitulo':'ASCIENDE A PRIMERA · 2026'};
+  const defs4 = {'promo4-club':'','promo4-titulo':'CAMPEÓN','promo4-etiqueta':'Y ASCENSO','promo4-tag':'HISTÓRICO','promo4-sello':'B → A','promo4-subtitulo':'ASCIENDE A PRIMERA · 2026','promo4-md-color':'#0f2a1e','promo4-md-degrade':'si','promo4-md-escudos':'color','promo4-md-zoom':'100','promo4-md-py':'0'};
   Object.keys(defs4).forEach(k=>{ const el = document.getElementById(k); if(el) el.value = defs4[k]; });
   promoRachaLimpiar();
   promoJugadorLimpiar();
@@ -17698,6 +17729,11 @@ function promoGenerarCampeon(){
     sello:     val('promo4-sello'),
     subtitulo: val('promo4-subtitulo'),
     foto: _promoFoto || '',
+    mdColor:   (document.getElementById('promo4-md-color') || {}).value || '#0f2a1e',
+    mdDegrade: (document.getElementById('promo4-md-degrade') || {}).value === 'no' ? 'no' : 'si',
+    mdEscudos: (document.getElementById('promo4-md-escudos') || {}).value || 'color',
+    mdZoom:    (Number((document.getElementById('promo4-md-zoom') || {}).value) || 100) / 100,
+    mdPy:      (Number((document.getElementById('promo4-md-py') || {}).value) || 0) / 100,
   };
   abrirShare(() => generarImagenPromoCampeon(p));
 }
@@ -18876,238 +18912,206 @@ async function generarImagenPromocional(p){
    ══════════════════════════════════════════════════════════════ */
 /* ══════════════════════════════════════════════════════════════
    PROMOCIÓN — CAMPEÓN Y ASCENSO (1080×1350)
-   Foto a pantalla completa, banda dorada baja pegada a la barra negra
-   (borde derecho inclinado 16°) con el texto principal derecho +
-   etiqueta negra; barra inferior negra con escudo, nombre y sello.
+   Estética "Día de partido": foto que se funde al color de fondo, marca
+   "Presentado por" arriba a la derecha, insignias (club + liga) sobre un texto
+   gigante en Anton, nombre del club abajo y línea de datos con cuadraditos.
    ══════════════════════════════════════════════════════════════ */
 async function generarImagenPromoCampeon(p){
-  await document.fonts.ready;
-  const id   = getIdentidad();
-  const liga = id.nombre || 'DEPORTEMAS';
-  const W = CV_W, H = CV_H, CX = W/2;
+  try{
+    if(document.head && !document.getElementById('md-fuentes')){
+      const l = document.createElement('link'); l.id = 'md-fuentes'; l.rel = 'stylesheet';
+      l.href = 'https://fonts.googleapis.com/css2?family=Anton&family=DM+Sans:wght@500;700&display=swap';
+      document.head.appendChild(l);
+    }
+    await Promise.all(['100px "Anton"','700 20px "DM Sans"','500 20px "DM Sans"'].map(f => document.fonts.load(f)));
+  }catch(e){}
+  try{ await document.fonts.ready; }catch(e){}
 
+  const ANTON = '"Anton", "Bebas Neue", Impact, "Arial Narrow", sans-serif';
+  const SANS  = '"DM Sans", Arial, sans-serif';
+  const id = getIdentidad();
+  const W = CV_W, H = CV_H;
+  const col = /^#[0-9a-fA-F]{6}$/.test(p.mdColor || '') ? p.mdColor : '#0f2a1e';
+  const cr = parseInt(col.slice(1,3),16), cg = parseInt(col.slice(3,5),16), cb = parseInt(col.slice(5,7),16);
+  const rgba = (a) => 'rgba(' + cr + ',' + cg + ',' + cb + ',' + a + ')';
+  const degr = p.mdDegrade !== 'no';
+  const velo = Math.min(0.85, Math.max(0, p.mdVelo == null ? 0.4 : p.mdVelo));
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
-  ctx.textBaseline = 'alphabetic';
-
-  // Estilo "portada deportiva": foto a sangre, titulares blancos condensados e itálicos,
-  // degradé negro arriba y abajo, logo centrado y línea de color al pie.
-  const IT       = 0.2;                       // inclinación (efecto itálica)
-  const footH    = s(40);
-  const footerTop = H - footH;
-  const FB       = '"Bebas Neue", Arial, sans-serif';
-  const FR       = '"Rajdhani", Arial, sans-serif';
-  const setLS    = v => { if('letterSpacing' in ctx) ctx.letterSpacing = v; };
-  const itTxt    = (txt, x, y, align) => {   // texto inclinado, anclado en la línea base
-    ctx.save(); ctx.translate(x, y); ctx.transform(1, 0, -IT, 1, 0, 0);
-    ctx.textAlign = align || 'center'; ctx.fillText(txt, 0, 0); ctx.restore();
-  };
-  const sombra   = on => {
-    ctx.shadowColor = on ? 'rgba(0,0,0,.6)' : 'transparent';
-    ctx.shadowBlur = on ? 22 : 0; ctx.shadowOffsetY = on ? 4 : 0;
+  const sp = (px) => { if('letterSpacing' in ctx) ctx.letterSpacing = px + 'px'; };
+  const rr = (x, y, w, h, r) => {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
   };
 
-  const [foto, logoImg] = await Promise.all([cargarImagenAsync(p.foto), cvImgAsync(id.logo)]);
-
-  // ── Fondo: foto a pantalla completa (o fondo oscuro con brillo dorado) ──
-  const bg = ctx.createLinearGradient(0, 0, 0, H);
-  bg.addColorStop(0, '#2c2c32'); bg.addColorStop(1, '#0c0c0e');
-  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  // ── Fondo: color liso + foto anclada arriba que se funde hacia abajo (igual que "Día de partido") ──
+  ctx.fillStyle = col; ctx.fillRect(0, 0, W, H);
+  const foto = await cargarImagenAsync(p.foto);
   if(foto){
     const iw = foto.naturalWidth || foto.width || 1, ih = foto.naturalHeight || foto.height || 1;
-    const sc = Math.max(W/iw, H/ih);
+    const zoom = Math.max(1, p.mdZoom || 1), py = Math.min(1, Math.max(0, p.mdPy || 0));
+    const hFoto = degr ? H*0.92 : H;
+    const sc = Math.max(W/iw, hFoto/ih) * zoom;
     const dw = iw*sc, dh = ih*sc;
-    ctx.drawImage(foto, (W-dw)/2, (H-dh)*0.3, dw, dh);   // leve sesgo hacia arriba para no cortar caras
+    ctx.save();
+    try{ ctx.filter = 'contrast(1.1) saturate(1.1)'; }catch(e){}
+    ctx.drawImage(foto, (W-dw)/2, (hFoto - dh)*py, dw, dh);
+    ctx.restore();
+    if(degr){ ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.globalAlpha = 0.2;
+    ctx.fillStyle = col; ctx.fillRect(0, 0, W, H); ctx.restore(); }
   } else {
-    const rg = ctx.createRadialGradient(CX, H*0.45, 40, CX, H*0.45, 700);
-    rg.addColorStop(0, 'rgba(201,162,39,0.28)'); rg.addColorStop(1, 'rgba(201,162,39,0)');
-    ctx.fillStyle = rg; ctx.fillRect(0, 0, W, H);
-    if(logoImg){
-      const WS = 640;
-      ctx.save(); ctx.globalAlpha = 0.07;
-      ctx.beginPath(); ctx.arc(CX, H*0.45, WS/2, 0, Math.PI*2); ctx.clip();
-      cvDrawEscudoImg(ctx, logoImg, CX-WS/2, H*0.45-WS/2, WS); ctx.restore();
-    } else {
-      ctx.fillStyle = 'rgba(255,255,255,.10)'; ctx.font = `260px ${FR}`;
-      ctx.textAlign = 'center'; ctx.fillText('⚽', CX, H*0.48);
-    }
+    const gl = ctx.createRadialGradient(W*0.72, H*0.22, 30, W*0.72, H*0.22, W*0.9);
+    gl.addColorStop(0, 'rgba(255,255,255,.14)'); gl.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = gl; ctx.fillRect(0, 0, W, H);
+    // sin foto: escudo del club como marca de agua
+    ctx.save(); ctx.globalAlpha = 0.10;
+    await cvDrawEscudoCompleto(ctx, p.club, W/2 - 330, H*0.02, 660);
+    ctx.restore();
   }
-  ctx.fillStyle = 'rgba(0,0,0,.12)'; ctx.fillRect(0, 0, W, H);
-
-  // ── Textos (se miden primero para ubicar los degradés) ──────────
-  const titulo   = (p.titulo || 'CAMPEÓN').toUpperCase();
-  const etiqueta = (p.etiqueta || '').toUpperCase();
-  const tag      = (p.tag || '').toUpperCase();
-  const sello    = (p.sello || '').trim();
-  const sub      = (p.subtitulo || '').toUpperCase();
-  const nombre   = (p.club || '').toUpperCase();
-
-  // Titular superior: "CAMPEÓN" (blanco) + "Y ASCENSO" (dorado), en 1 línea si entra o en 2
-  const maxHW = 930, gapH = 30;
-  const fH = sz => { ctx.font = `400 ${sz}px ${FB}`; setLS('2px'); };
-  let hSize = 0, hDos = false;
-  for(let sz = 150; sz >= 84; sz -= 4){
-    fH(sz);
-    const w = ctx.measureText(titulo).width + (etiqueta ? gapH + ctx.measureText(etiqueta).width : 0);
-    if(w <= maxHW){ hSize = sz; break; }
+  if(degr){
+    const fade = ctx.createLinearGradient(0, H*0.36, 0, H*0.86);
+    fade.addColorStop(0, rgba(0)); fade.addColorStop(0.55, rgba(0.82)); fade.addColorStop(1, rgba(1));
+    ctx.fillStyle = fade; ctx.fillRect(0, H*0.36, W, H*0.64);
+  } else if(foto && velo > 0){
+    ctx.fillStyle = 'rgba(0,0,0,' + velo + ')'; ctx.fillRect(0, 0, W, H);
   }
-  if(!hSize){
-    hDos = true;
-    for(let sz = 140; sz >= 56; sz -= 4){
-      fH(sz);
-      if(Math.max(ctx.measureText(titulo).width, etiqueta ? ctx.measureText(etiqueta).width : 0) <= maxHW){ hSize = sz; break; }
-    }
-    if(!hSize) hSize = 56;
-  }
-  const lockCY   = 98;                      // centro del logo/nombre de la liga
-  const hTop     = 176;
-  const hBase1   = hTop + hSize*0.74;
-  const hPitch   = Math.round(hSize*0.9);
-  const hBottom  = (hDos && etiqueta) ? hBase1 + hPitch : hBase1;
-  const tagH     = 48;
-  const tagCY    = hBottom + 22 + tagH/2;
-  const topEnd   = tag ? tagCY + tagH/2 : hBottom;
+  const topv = ctx.createLinearGradient(0, 0, 0, H*0.16);
+  topv.addColorStop(0, 'rgba(0,0,0,.35)'); topv.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = topv; ctx.fillRect(0, 0, W, H*0.16);
 
-  // Bloque inferior: sello + bajada, nombre del club y escudo
-  const barY     = footerTop - 8;           // línea de color al pie
-  const rowH     = 58;
-  const hayFila  = !!(sello || sub);
-  const rowTop   = hayFila ? barY - 30 - rowH : barY - 26;
-  const nameMaxW = 960;
-  const fN = sz => { ctx.font = `400 ${sz}px ${FB}`; setLS('2px'); };
-  let nLines = [nombre], nSize = 0;
-  for(let sz = 128; sz >= 72; sz -= 4){ fN(sz); if(ctx.measureText(nombre).width <= nameMaxW){ nSize = sz; break; } }
-  if(!nSize){
-    const words = nombre.split(/\s+/).filter(Boolean);
-    for(let sz = 112; sz >= 48 && !nSize && words.length > 1; sz -= 2){
-      fN(sz);
-      let best = null;
-      for(let k = 1; k < words.length; k++){
-        const a = words.slice(0, k).join(' '), b = words.slice(k).join(' ');
-        const w = Math.max(ctx.measureText(a).width, ctx.measureText(b).width);
-        if(!best || w < best.w) best = { a, b, w };
+  // ── Marca arriba a la derecha ("Presentado por …"), en el mismo lugar que el promocional de día de partido ──
+  cvMarcaPresentado(ctx, W, H, id, { yBase: 120 });
+
+  // ── Texto gigante (blanco, centrado): texto principal + segundo renglón ──
+  const lineas = [p.titulo || 'CAMPEÓN', p.etiqueta].map(t => String(t || '').trim().toUpperCase()).filter(Boolean).slice(0, 2);
+  if(!lineas.length) lineas.push('CAMPEÓN');
+  const maxTW = W * 0.78;
+  let fs = 360;
+  ctx.font = fs + 'px ' + ANTON; sp(0);
+  const w0 = Math.max(...lineas.map(t => ctx.measureText(t).width));
+  if(w0 > maxTW) fs = Math.floor(fs * maxTW / w0);
+  ctx.font = fs + 'px ' + ANTON;
+  const tw = Math.max(...lineas.map(t => ctx.measureText(t).width));
+  const capH = ctx.measureText('H').actualBoundingBoxAscent || fs * 0.72;
+  const lineGap = capH * 1.14;
+  const baseFinal = Math.round(H * 0.585);               // base del último renglón
+  const textLeft = (W - tw) / 2;
+
+  // ── Fila de insignias (cuadrados redondeados) pegada arriba del texto: club campeón + logo de la liga ──
+  const bs = 100, bgap = 6;
+  const topText = baseFinal - capH - (lineas.length - 1) * lineGap;
+  const acento = /[ÁÉÍÓÚÜÑ]/.test(lineas[0]) ? fs * 0.17 : 0;   // deja lugar a las tildes
+  const rowY = topText - 26 - acento - bs;
+  const colorDe = (img) => {
+    try{
+      const c = document.createElement('canvas'); c.width = c.height = 24;
+      const g = c.getContext('2d'); g.drawImage(img, 0, 0, 24, 24);
+      const d = g.getImageData(0, 0, 24, 24).data;
+      let r = 0, gg = 0, b = 0, wt = 0;
+      for(let i = 0; i < d.length; i += 4){
+        const a = d[i+3] / 255; if(a < 0.6) continue;
+        const mx = Math.max(d[i], d[i+1], d[i+2]), mn = Math.min(d[i], d[i+1], d[i+2]);
+        const sat = (mx - mn) / 255, w = a * (0.12 + sat*sat*3);
+        r += d[i]*w; gg += d[i+1]*w; b += d[i+2]*w; wt += w;
       }
-      if(best && best.w <= nameMaxW){ nLines = [best.a, best.b]; nSize = sz; }
-    }
-    if(!nSize) nSize = 48;                 // una sola palabra enorme: se trunca como último recurso
-  }
-  const nPitch   = Math.round(nSize*0.9);
-  const nBaseLast = rowTop - 30;
-  const nTop     = nBaseLast - (nLines.length-1)*nPitch - nSize*0.72;
-  const shSize   = Math.max(110, Math.min(210, nTop - 22 - (topEnd + 30)));
-  const shY      = nTop - 22 - shSize;
-
-  // ── Degradés: oscurecen arriba y abajo para que el texto se lea sobre cualquier foto ──
-  const gTopH = topEnd + 150;
-  const gT = ctx.createLinearGradient(0, 0, 0, gTopH);
-  gT.addColorStop(0, 'rgba(0,0,0,.88)'); gT.addColorStop(0.55, 'rgba(0,0,0,.55)'); gT.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = gT; ctx.fillRect(0, 0, W, gTopH);
-  const gBy = shY - 120;
-  const gB = ctx.createLinearGradient(0, gBy, 0, footerTop);
-  gB.addColorStop(0, 'rgba(0,0,0,0)'); gB.addColorStop(0.45, 'rgba(0,0,0,.72)'); gB.addColorStop(1, 'rgba(0,0,0,.95)');
-  ctx.fillStyle = gB; ctx.fillRect(0, gBy, W, footerTop - gBy);
-
-  // ── Logo + nombre de la liga (arriba, centrado) ─────────────────
-  {
-    const nameFont = `400 44px ${FB}`;
-    ctx.font = nameFont; setLS('5px');
-    const lw = ctx.measureText(liga.toUpperCase()).width;
-    const logoSz = 74, g1 = 22;
-    const sepW = logoImg ? 2 + g1*2 : 0;
-    const totalW = (logoImg ? logoSz + g1 : 0) + (logoImg ? 2 + g1 : 0) + lw;
-    let x = CX - totalW/2;
-    if(logoImg){
-      ctx.save(); ctx.beginPath(); ctx.arc(x+logoSz/2, lockCY, logoSz/2, 0, Math.PI*2); ctx.clip();
-      cvDrawEscudoImg(ctx, logoImg, x, lockCY-logoSz/2, logoSz); ctx.restore();
-      ctx.lineWidth = 2.5; ctx.strokeStyle = C.DORADO;
-      ctx.beginPath(); ctx.arc(x+logoSz/2, lockCY, logoSz/2+1, 0, Math.PI*2); ctx.stroke();
-      x += logoSz + g1;
-      ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.fillRect(x, lockCY-26, 2, 52);
-      x += 2 + g1;
-    }
-    sombra(true);
-    ctx.fillStyle = '#ffffff'; ctx.font = nameFont; setLS('5px');
-    itTxt(liga.toUpperCase(), x, lockCY + 15, 'left');
-    sombra(false); setLS('0px');
+      if(!wt) return '#1c1c1c';
+      return 'rgb(' + Math.round(r/wt*0.82) + ',' + Math.round(gg/wt*0.82) + ',' + Math.round(b/wt*0.82) + ')';
+    }catch(e){ return '#1c1c1c'; }
+  };
+  const dibujarBadge = async (nombre, x) => {
+    const img = await cvDrawEscudoPromise(nombre, bs);
+    let fill = '#ffffff';
+    if(p.mdEscudos === 'oscuro') fill = 'rgba(0,0,0,.55)';
+    else if(p.mdEscudos !== 'blanco' && img) fill = colorDe(img);
+    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 14;
+    rr(x, rowY, bs, bs, 24); ctx.fillStyle = fill; ctx.fill(); ctx.restore();
+    const pad = 15, inner = bs - pad*2;
+    if(!img){ cvEscudoFallback(ctx, nombre, x + pad, rowY + pad, inner); return; }
+    const iw = img.naturalWidth || img.width || 1, ih = img.naturalHeight || img.height || 1;
+    const sc = Math.min(inner/iw, inner/ih);
+    ctx.drawImage(img, x + (bs - iw*sc)/2, rowY + (bs - ih*sc)/2, iw*sc, ih*sc);
+  };
+  let bx = textLeft;
+  await dibujarBadge(p.club, bx); bx += bs + bgap;
+  const logo = await cargarImagenAsync(id.logo);
+  if(logo){
+    const cs = 80, cy = rowY + (bs - cs)/2;
+    ctx.save(); ctx.beginPath(); ctx.arc(bx + cs/2, cy + cs/2, cs/2, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fill(); ctx.clip();
+    cvDrawEscudoImg(ctx, logo, bx + 8, cy + 8, cs - 16); ctx.restore();
   }
 
-  // ── Titular: CAMPEÓN (blanco) + Y ASCENSO (dorado) ──────────────
-  sombra(true);
-  fH(hSize);
-  if(!hDos){
-    const tw = ctx.measureText(titulo).width;
-    const ew = etiqueta ? ctx.measureText(etiqueta).width : 0;
-    const total = tw + (etiqueta ? gapH + ew : 0);
-    let x = CX - total/2 + hSize*IT*0.35;
-    ctx.fillStyle = '#ffffff'; itTxt(titulo, x, hBase1, 'left');
-    if(etiqueta){ ctx.fillStyle = C.DORADO2; itTxt(etiqueta, x + tw + gapH, hBase1, 'left'); }
-  } else {
-    ctx.fillStyle = '#ffffff'; itTxt(titulo, CX, hBase1, 'center');
-    if(etiqueta){ ctx.fillStyle = C.DORADO2; itTxt(etiqueta, CX, hBase1 + hPitch, 'center'); }
-  }
-  sombra(false); setLS('0px');
-
-  // ── Etiqueta superior (HISTÓRICO): paralelogramo dorado bajo el titular ──
-  if(tag){
-    ctx.font = `700 28px ${FR}`; setLS('6px');
-    const bw = ctx.measureText(tag).width + 56;
-    ctx.save(); ctx.translate(CX, tagCY); ctx.transform(1, 0, -0.25, 1, 0, 0);
-    ctx.fillStyle = C.DORADO; ctx.fillRect(-bw/2, -tagH/2, bw, tagH); ctx.restore();
-    ctx.fillStyle = C.NEG; ctx.textAlign = 'center';
-    ctx.fillText(tag, CX + 3, tagCY + 10);
-    setLS('0px');
-  }
-
-  // ── Escudo del club campeón ─────────────────────────────────────
-  ctx.save();
-  ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 26; ctx.shadowOffsetY = 6;
-  await cvDrawEscudoCompleto(ctx, p.club, CX - shSize/2, shY, shSize);
-  ctx.restore();
-
-  // ── Nombre del club (titular grande, blanco, itálico) ───────────
-  sombra(true);
-  ctx.fillStyle = '#ffffff'; fN(nSize);
-  nLines.forEach((ln, i) => {
-    let t = ln;
-    while(ctx.measureText(t).width > nameMaxW && t.length > 1) t = t.slice(0, -1);
-    if(t !== ln) t = t.slice(0, -1) + '…';
-    itTxt(t, CX + nSize*IT*0.35, nBaseLast - (nLines.length-1-i)*nPitch, 'center');
+  // Texto gigante
+  ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.font = fs + 'px ' + ANTON; sp(0);
+  lineas.forEach((t, k) => {
+    ctx.fillText(t, W/2, baseFinal - (lineas.length - 1 - k) * lineGap);
   });
-  sombra(false); setLS('0px');
 
-  // ── Bajada: sello (B → A) + texto, en una fila centrada ─────────
-  if(hayFila){
-    const cy = rowTop + rowH/2;
-    let selloW = 0;
-    ctx.font = `400 46px ${FB}`; setLS('3px');
-    if(sello) selloW = ctx.measureText(sello).width + 50;
-    const gapS = sello && sub ? 24 : 0;
-    let sSize = 50;
-    const fS = sz => { ctx.font = `400 ${sz}px ${FB}`; setLS('3px'); };
-    fS(sSize);
-    const maxSubW = 960 - selloW - gapS;
-    while(sub && ctx.measureText(sub).width > maxSubW && sSize > 30){ sSize -= 2; fS(sSize); }
-    const subW = sub ? ctx.measureText(sub).width : 0;
-    let x = CX - (selloW + gapS + subW)/2;
-    if(sello){
-      ctx.save(); ctx.translate(x + selloW/2, cy); ctx.transform(1, 0, -IT, 1, 0, 0);
-      ctx.fillStyle = C.DORADO; ctx.fillRect(-selloW/2, -rowH/2+4, selloW, rowH-8); ctx.restore();
-      ctx.font = `400 46px ${FB}`; setLS('3px');
-      ctx.fillStyle = C.NEG; itTxt(sello, x + selloW/2 + 1, cy + 16, 'center');
-      x += selloW + gapS;
+  // ── Nombre del club debajo del texto gigante (1 renglón; si no entra, 2) ──
+  const nombre = String(p.club || '').toUpperCase().trim();
+  if(nombre){
+    const maxN = W - 120;
+    let fn = 84, nLines = [nombre];
+    const med = (t) => { ctx.font = fn + 'px ' + ANTON; sp(2); return ctx.measureText(t).width; };
+    while(fn > 44 && med(nombre) > maxN) fn -= 2;
+    if(med(nombre) > maxN){
+      const words = nombre.split(/\s+/).filter(Boolean);
+      let ok = false;
+      fn = 68;
+      while(fn >= 34 && !ok && words.length > 1){
+        let best = null;
+        for(let k = 1; k < words.length; k++){
+          const a = words.slice(0, k).join(' '), b = words.slice(k).join(' ');
+          const w = Math.max(med(a), med(b));
+          if(!best || w < best.w) best = { a, b, w };
+        }
+        if(best && best.w <= maxN){ nLines = [best.a, best.b]; ok = true; } else fn -= 2;
+      }
+      if(!ok){ fn = 44; nLines = [nombre]; }                 // una sola palabra enorme: se trunca
     }
-    if(sub){
-      sombra(true); fS(sSize);
-      ctx.fillStyle = '#ffffff'; itTxt(sub, x, cy + sSize*0.34, 'left');
-      sombra(false);
-    }
-    setLS('0px');
+    ctx.save();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 14;
+    ctx.font = fn + 'px ' + ANTON; sp(2);
+    nLines.forEach((ln, i) => {
+      let t = ln;
+      while(ctx.measureText(t).width > maxN && t.length > 1) t = t.slice(0, -1);
+      if(t !== ln) t = t.slice(0, -1) + '…';
+      ctx.fillText(t, W/2 + 1, Math.round(baseFinal + 30 + fn * 0.72 + i * fn));
+    });
+    ctx.restore(); sp(0);
   }
 
-  // ── Línea de color al pie + footer ──────────────────────────────
-  ctx.fillStyle = C.DORADO; ctx.fillRect(0, barY, W, 8);
-  cvFooter(ctx, W, footerTop, liga);
+  // ── Línea de datos centrada con separadores cuadrados: etiqueta · sello · texto adicional ──
+  const segs = [p.tag, p.sello, p.subtitulo].map(t => String(t || '').trim().toUpperCase()).filter(Boolean);
+  const infoY = H - 62;
+  if(segs.length){
+    let f = 28, gapS = 30, sq = 11, total = 0, widths = [];
+    const medir = () => {
+      ctx.font = '700 ' + f + 'px ' + SANS; sp(1.2);
+      widths = segs.map(t => ctx.measureText(t).width);
+      total = widths.reduce((a, b) => a + b, 0) + (segs.length - 1) * (gapS*2 + sq);
+    };
+    medir();
+    while(f > 14 && total > W - 120){ f -= 1; gapS = Math.max(14, gapS - 1); sq = Math.max(7, Math.round(f*0.4)); medir(); }
+    let x = (W - total) / 2;
+    ctx.textAlign = 'left'; ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 8;
+    segs.forEach((t, k) => {
+      ctx.fillText(t, x, infoY); x += widths[k];
+      if(k < segs.length - 1){
+        x += gapS; ctx.fillRect(x, infoY - f*0.52 - sq/2 + 2, sq, sq); x += sq + gapS;
+      }
+    });
+    ctx.shadowBlur = 0; sp(0);
+  }
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   return canvas;
 }
