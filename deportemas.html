@@ -5817,6 +5817,14 @@ table.posiciones td:nth-child(8){
               <option value="oscuro">Oscuro</option>
             </select>
           </div>
+          <div class="form-group">
+            <label>Tipografía del nombre del club</label>
+            <select id="promo4-fuente-club">
+              <option value="dm">Elegante (DM Sans, con espaciado)</option>
+              <option value="bebas">Condensada fina (Bebas Neue)</option>
+              <option value="anton">Igual que el título (Anton)</option>
+            </select>
+          </div>
           <div class="form-row">
             <div class="form-group">
               <label>Zoom de la foto de fondo</label>
@@ -17525,7 +17533,7 @@ function promoLimpiarForm(){
   });
   const t3 = document.getElementById('promo3-tabla'); if(t3 && t3.options.length) t3.selectedIndex = 0;
   const l3 = document.getElementById('promo3-lado'); if(l3) l3.value = 'izq';
-  const defs4 = {'promo4-club':'','promo4-titulo':'CAMPEÓN','promo4-etiqueta':'Y ASCENSO','promo4-tag':'HISTÓRICO','promo4-sello':'B → A','promo4-subtitulo':'ASCIENDE A PRIMERA · 2026','promo4-md-color':'#0f2a1e','promo4-md-degrade':'si','promo4-md-escudos':'color','promo4-md-zoom':'100','promo4-md-py':'0'};
+  const defs4 = {'promo4-club':'','promo4-titulo':'CAMPEÓN','promo4-etiqueta':'Y ASCENSO','promo4-tag':'HISTÓRICO','promo4-sello':'B → A','promo4-subtitulo':'ASCIENDE A PRIMERA · 2026','promo4-md-color':'#0f2a1e','promo4-md-degrade':'si','promo4-md-escudos':'color','promo4-fuente-club':'dm','promo4-md-zoom':'100','promo4-md-py':'0'};
   Object.keys(defs4).forEach(k=>{ const el = document.getElementById(k); if(el) el.value = defs4[k]; });
   if(typeof campAjReset === 'function') campAjReset(true);
   promoRachaLimpiar();
@@ -17778,6 +17786,7 @@ function promoCampeonArmar(){
     mdColor:   (document.getElementById('promo4-md-color') || {}).value || '#0f2a1e',
     mdDegrade: (document.getElementById('promo4-md-degrade') || {}).value === 'no' ? 'no' : 'si',
     mdEscudos: (document.getElementById('promo4-md-escudos') || {}).value || 'color',
+    mdFuenteClub: (document.getElementById('promo4-fuente-club') || {}).value || 'dm',
     mdZoom:    (Number((document.getElementById('promo4-md-zoom') || {}).value) || 100) / 100,
     mdPy:      (Number((document.getElementById('promo4-md-py') || {}).value) || 0) / 100,
     txt: aj.txt, pos: aj.pos
@@ -19145,11 +19154,18 @@ async function generarImagenPromoCampeon(p){
   // ── Nombre del club debajo del texto gigante (1 renglón; si no entra, 2) ──
   const nombre = String(p.club || '').toUpperCase().trim();
   if(nombre){
+    // Tipografía propia para el club, distinta del título: así se lee como un dato aparte y no como un renglón más
+    const FUENTES = {
+      dm:    { fam: SANS,                        w: '700 ', max: 54, min: 28, max2: 44, min2: 24, ls: 6, gap: 50, lh: 1.22 },
+      bebas: { fam: '"Bebas Neue", ' + ANTON,    w: '',     max: 92, min: 46, max2: 72, min2: 36, ls: 5, gap: 36, lh: 1.02 },
+      anton: { fam: ANTON,                       w: '',     max: 84, min: 44, max2: 68, min2: 34, ls: 2, gap: 30, lh: 1.0 }
+    };
+    const F = FUENTES[p.mdFuenteClub] || FUENTES.dm;
     const maxN = W - 120;
-    const fnMax = Math.max(20, Math.round(84*kN)), fnMin = Math.max(18, Math.round(44*kN));
-    const fn2Max = Math.max(18, Math.round(68*kN)), fn2Min = Math.max(16, Math.round(34*kN));
+    const fnMax = Math.max(20, Math.round(F.max*kN)), fnMin = Math.max(16, Math.round(F.min*kN));
+    const fn2Max = Math.max(18, Math.round(F.max2*kN)), fn2Min = Math.max(14, Math.round(F.min2*kN));
     let fn = fnMax, nLines = [nombre];
-    const med = (t) => { ctx.font = fn + 'px ' + ANTON; sp(2); return ctx.measureText(t).width; };
+    const med = (t) => { ctx.font = F.w + fn + 'px ' + F.fam; sp(F.ls); return ctx.measureText(t).width; };
     while(fn > fnMin && med(nombre) > maxN) fn -= 2;
     if(med(nombre) > maxN){
       const words = nombre.split(/\s+/).filter(Boolean);
@@ -19169,12 +19185,12 @@ async function generarImagenPromoCampeon(p){
     ctx.save();
     ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.fillStyle = '#ffffff';
     ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 14;
-    ctx.font = fn + 'px ' + ANTON; sp(2);
+    ctx.font = F.w + fn + 'px ' + F.fam; sp(F.ls);
     nLines.forEach((ln, i) => {
       let t = ln;
       while(ctx.measureText(t).width > maxN && t.length > 1) t = t.slice(0, -1);
       if(t !== ln) t = t.slice(0, -1) + '…';
-      ctx.fillText(t, W/2 + 1 + oGx + oNx, Math.round(baseFinal + 30 + fn * 0.72 + i * fn + oNy));
+      ctx.fillText(t, W/2 + F.ls/2 + oGx + oNx, Math.round(baseFinal + F.gap + fn * 0.72 + i * fn * F.lh + oNy));
     });
     ctx.restore(); sp(0);
   }
