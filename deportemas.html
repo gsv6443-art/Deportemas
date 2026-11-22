@@ -3587,6 +3587,7 @@ table.posiciones td:nth-child(8){
             <p style="pointer-events:none;font-size:11px">Hacé clic para subir una foto</p>
           </div>
           <div class="preview-wrap" id="p-foto-wrap"><img id="p-foto-preview" style="max-height:110px;border-radius:8px"/><button type="button" class="btn-quitar-img" onclick="pQuitarFotoFondo()">✕ Quitar</button></div>
+          <input type="text" id="p-foto-credito" maxlength="60" placeholder="@fotografo (crédito de la foto, opcional)" style="margin-top:8px"/>
         </div>
         <br/><br/>
         <button class="btn-primary" onclick="agregarPartido()">+ Agregar Partido</button>
@@ -5088,6 +5089,11 @@ table.posiciones td:nth-child(8){
         </div>
 
         <div class="form-group">
+          <label>Crédito de la foto (opcional)</label>
+          <input type="text" id="alin-foto-credito" maxlength="60" placeholder="@fotografo"/>
+        </div>
+
+        <div class="form-group">
           <label>Foto del panel derecho (opcional) <span style="color:var(--gris);font-size:10px">— si no cargás una, se usa un fondo de estadio</span></label>
           <div class="upload-area">
             <input type="file" accept="image/*" id="alin-foto2-file" onchange="alinPreviewFoto2(this)"/>
@@ -5905,6 +5911,14 @@ table.posiciones td:nth-child(8){
           </div>
         </div>
 
+        <div class="form-group" id="promo-credito-wrap">
+          <label>Crédito de la foto (opcional)</label>
+          <input type="text" id="promo-credito" maxlength="60" placeholder="@fotografo" oninput="_campRefrescar()"/>
+          <p style="font-size:10px;color:var(--gris);margin-top:4px;font-family:'Rajdhani',sans-serif">
+            Si la imagen lleva foto, el @ del fotógrafo aparece como "FOTO: @usuario", en vertical sobre el borde derecho. Podés escribir más de uno (ej: @uno / @dos).
+          </p>
+        </div>
+
         <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
           <button class="btn-primary" onclick="promoGenerar()">🖼️ Generar</button>
           <button class="btn-edit" onclick="promoLimpiarForm()">Limpiar</button>
@@ -6251,6 +6265,9 @@ table.posiciones td:nth-child(8){
           <label class="pf-ed-btn">📷 <span id="pm-txt">Agregar foto de fondo</span><input type="file" accept="image/*" onchange="pmElegir(this)" style="display:none"/></label>
           <button type="button" class="pf-ed-btn pf-ed-btn-del" id="pm-quitar" onclick="pmQuitar()" style="display:none">✕ Quitar foto</button>
           <button type="button" class="pf-ed-btn pf-ed-btn-del" id="pm-borrar-srv" onclick="pmBorrarServidor()" style="display:none">🗑 Borrar foto guardada en el servidor</button>
+        </div>
+        <div id="pm-credito-wrap" style="display:none;margin-bottom:8px">
+          <label class="pf-ed-sl" style="margin:0">Fotógrafo<input type="text" id="pm-credito" maxlength="60" placeholder="@usuario (crédito, opcional)" oninput="pmCreditoCambio()" style="width:100%"/></label>
         </div>
         <div id="pm-ajustes" style="display:none">
           <label class="pf-ed-sl">Zoom<input type="range" id="pm-zoom" min="100" max="300" value="100" oninput="pmCambio()"/></label>
@@ -10958,7 +10975,7 @@ function agregarPartido(){
   data.partidos.push(d);
   if(_pFotoFondo){
     const _fv=_pFotoFondo, _fc=Object.assign({},PF_CFG_DEF);
-    _pfCache[String(d.id)]={value:_fv,cfg:_fc};
+    _pfCache[String(d.id)]={value:_fv,cfg:_fc,credito:((document.getElementById('p-foto-credito')||{}).value||'').trim()};
     _pfSesion.add(String(d.id));   // queda solo en esta sesión: no se sube al servidor
   }
   recalcularTodo();   // recalcular siempre: puede que haya partidos jugados anteriores
@@ -14952,6 +14969,37 @@ function cvMarcaPresentado(ctx, W, H, id, o){
   ctx.restore();
 }
 
+// Crédito de la foto: "FOTO: @usuario" en vertical sobre el borde derecho (casi nunca pisa el contenido).
+// No dibuja nada si no hay crédito. Llamar solo cuando la imagen usa una foto.
+function cvCreditoFoto(ctx, W, H, credito, o){
+  let t = String(credito || '').trim();
+  if(!t) return;
+  if(/^[A-Za-z0-9._]+$/.test(t)) t = '@' + t;               // "usuario" -> "@usuario"
+  o = o || {};
+  const yBottom = (o.yBottom != null) ? o.yBottom : H - 60;  // dónde empieza el texto (abajo) y sube
+  const x = (o.x != null) ? o.x : W - 12;
+  const maxLen = o.maxLen || 460;
+  const fam = '"Rajdhani", Arial, sans-serif';
+  const txt = 'FOTO: ' + t;
+  ctx.save();
+  if('letterSpacing' in ctx) ctx.letterSpacing = '1.5px';
+  let fs = 20; ctx.font = '700 ' + fs + 'px ' + fam;
+  while(fs > 13 && ctx.measureText(txt).width > maxLen){ fs--; ctx.font = '700 ' + fs + 'px ' + fam; }
+  const w = ctx.measureText(txt).width;
+  ctx.translate(x, yBottom); ctx.rotate(-Math.PI / 2);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  // fondo suave para que se lea sobre cualquier foto
+  const r = 7, bx = -10, by = -fs - 3, bw = w + 20, bh = fs + 9;
+  ctx.beginPath();
+  ctx.moveTo(bx + r, by); ctx.arcTo(bx + bw, by, bx + bw, by + bh, r); ctx.arcTo(bx + bw, by + bh, bx, by + bh, r);
+  ctx.arcTo(bx, by + bh, bx, by, r); ctx.arcTo(bx, by, bx + bw, by, r); ctx.closePath();
+  ctx.fillStyle = 'rgba(0,0,0,.38)'; ctx.fill();
+  ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 6;
+  ctx.fillStyle = 'rgba(255,255,255,.95)';
+  ctx.fillText(txt, 0, 0);
+  ctx.restore();
+}
+
 // Texto con separación entre letras (para etiquetas chicas); devuelve x final
 function _pfSpaced(ctx, x, y, txt, sp){
   ctx.textAlign = 'left';
@@ -14968,11 +15016,12 @@ async function generarImagenPartido(p, opts){
   const W = CV_W, H = CV_H, CX = W/2;
 
   // Foto de fondo: si no se pasa por opciones, se busca la guardada para este partido
-  let img = opts.img, cfg = opts.cfg;
+  let img = opts.img, cfg = opts.cfg, credito = opts.credito;
   if(opts.img === undefined){
     const rec = await pfCargar(p.id);
     img = (rec && rec.value) ? await cargarImagenAsync(rec.value) : null;
     cfg = (rec && rec.cfg) || {};
+    credito = (rec && rec.credito) || '';
   }
   cfg = Object.assign({}, PF_CFG_DEF, cfg || {});
 
@@ -15271,6 +15320,7 @@ async function generarImagenPartido(p, opts){
     ctx.fillText(txt, PX + PW/2, cy2 + ch/2 + s(1));
   }
   cvMarcaPresentado(ctx, W, H, id, { maxW: W - 46 - (PX + PW) - s(30) });
+  if(img) cvCreditoFoto(ctx, W, H, credito, { yBottom: H - 60 });
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   return canvas;
 }
@@ -15282,6 +15332,7 @@ async function _spAplicarRec(rec){
   _sp.rec = (rec && rec.value) ? rec : null;
   _sp.img = _sp.rec ? await cargarImagenAsync(_sp.rec.value) : null;
   _sp.cfg = Object.assign({}, PF_CFG_DEF, (_sp.rec && _sp.rec.cfg) || {});
+  _sp.credito = (_sp.rec && _sp.rec.credito) || '';
 }
 
 function abrirSharePartido(id){
@@ -15290,7 +15341,7 @@ function abrirSharePartido(id){
   abrirShareCanvas(async () => {
     const rec = await pfCargar(p.id);
     await _spAplicarRec(rec);
-    return generarImagenPartido(p, { img:_sp.img, cfg:_sp.cfg });
+    return generarImagenPartido(p, { img:_sp.img, cfg:_sp.cfg, credito:_sp.credito });
   });
   _sp = { p, rec:null, img:null, cfg:Object.assign({}, PF_CFG_DEF) };
 }
@@ -15300,7 +15351,7 @@ function _spOcultarEditor(){ _sp = null; }
 /* ── Panel "Imagen del resultado" (botón 🖼 Imagen de cada partido en el panel admin) ──
    La foto NO se sube al servidor: queda en memoria mientras no se recargue la página y
    sirve para armar y descargar la imagen. Las fotos subidas antes se siguen leyendo. */
-let _pm = null;   // { p, sid, img, cfg, valor, listo, tok, tmr }
+let _pm = null;   // { p, sid, img, cfg, valor, credito, listo, tok, tmr }
 
 function _pfErrTxt(){ return window._fbUltimoError ? '\n(Detalle técnico: ' + window._fbUltimoError + ')' : ''; }
 function _descargarCanvas(cv, nombre){
@@ -15319,12 +15370,12 @@ function _nombreArchivoPartido(p){
 }
 function _pmGuardarSesion(){
   const st = _pm; if(!st) return;
-  _pfCache[st.sid] = st.valor ? { value: st.valor, cfg: Object.assign({}, st.cfg) } : null;
+  _pfCache[st.sid] = st.valor ? { value: st.valor, cfg: Object.assign({}, st.cfg), credito: st.credito || '' } : null;
   _pfSesion.add(st.sid);
 }
 // Genera la imagen del panel: del partido, o de la fecha de reserva (st.gen)
 function _pmGenerar(st){
-  const o = { img: st.img || null, cfg: st.cfg };
+  const o = { img: st.img || null, cfg: st.cfg, credito: st.credito || '' };
   return st.gen ? st.gen(o) : generarImagenPartido(st.p, o);
 }
 // Panel de imagen para una fecha de Reserva (la foto solo vive en memoria, nunca se consulta el servidor)
@@ -15334,11 +15385,12 @@ async function abrirImagenReserva(key){
   if(!ps.length) return;
   const sid = _rvKey(ps[0]);
   const st = _pm = { p:ps[0], sid, gen:o => generarImagenReserva(ids, o), archivo:_nombreArchivoReserva(ps[0]),
-                     img:null, cfg:Object.assign({}, PF_CFG_DEF), valor:'', listo:false, tok:0, tmr:null };
+                     img:null, cfg:Object.assign({}, PF_CFG_DEF), valor:'', credito:'', listo:false, tok:0, tmr:null };
   document.getElementById('pf-modal-title').textContent = 'Imagen – Reserva · ' + (ps[0].fecha || '');
   document.getElementById('pf-modal').classList.add('open');
   const rec = _pfCache[sid] || null;
   st.valor = (rec && rec.value) ? rec.value : '';
+  st.credito = (rec && rec.credito) || '';
   st.img   = st.valor ? await cargarImagenAsync(st.valor) : null;
   if(_pm !== st) return;
   st.cfg   = Object.assign({}, PF_CFG_DEF, (rec && rec.cfg) || {});
@@ -15348,13 +15400,14 @@ async function abrirImagenReserva(key){
 async function abrirImagenPartido(id){
   const p = data.partidos.find(x => String(x.id) === String(id)); if(!p) return;
   const sid = String(p.id);
-  const st = _pm = { p, sid, img:null, cfg:Object.assign({}, PF_CFG_DEF), valor:'', listo:false, tok:0, tmr:null };
+  const st = _pm = { p, sid, img:null, cfg:Object.assign({}, PF_CFG_DEF), valor:'', credito:'', listo:false, tok:0, tmr:null };
   document.getElementById('pf-modal-title').textContent = 'Imagen – ' + p.local + ' vs ' + p.visit;
   document.getElementById('pf-modal').classList.add('open');
   pmUI();
   const rec = await pfCargar(sid);
   if(_pm !== st) return;                            // se cerró o se abrió otro partido
   st.valor = (rec && rec.value) ? rec.value : '';
+  st.credito = (rec && rec.credito) || '';
   st.img   = st.valor ? await cargarImagenAsync(st.valor) : null;
   if(_pm !== st) return;
   st.cfg   = Object.assign({}, PF_CFG_DEF, (rec && rec.cfg) || {});
@@ -15374,6 +15427,8 @@ function pmUI(){
   const show = (i, on, d) => { const el = document.getElementById(i); if(el) el.style.display = on ? (d||'block') : 'none'; };
   show('pm-ajustes', tiene); show('pm-quitar', tiene, 'inline-block');
   show('pm-borrar-srv', _pfServidor.has(st.sid), 'inline-block');
+  show('pm-credito-wrap', tiene);
+  { const ci = document.getElementById('pm-credito'); if(ci && document.activeElement !== ci) ci.value = st.credito || ''; }
   const t = document.getElementById('pm-txt'); if(t) t.textContent = tiene ? 'Cambiar foto' : 'Agregar foto de fondo';
   const e = document.getElementById('pm-estado');
   if(e) e.textContent = !st.listo ? 'Cargando…'
@@ -15387,6 +15442,12 @@ async function pmRegenerar(){
   if(_pm !== st || tok !== st.tok) return;          // llegó un cambio más nuevo
   const el = document.getElementById('pm-prev');
   if(el){ el.src = cv.toDataURL('image/jpeg', 0.7); el.style.display = 'block'; }
+}
+function pmCreditoCambio(){
+  const st = _pm; if(!st) return;
+  st.credito = (document.getElementById('pm-credito') || {value:''}).value.trim();
+  if(st.valor) _pmGuardarSesion();
+  clearTimeout(st.tmr); st.tmr = setTimeout(pmRegenerar, 250);
 }
 function pmCambio(){
   const st = _pm; if(!st) return;
@@ -15410,7 +15471,7 @@ async function pmElegir(input){
 }
 function pmQuitar(){
   const st = _pm; if(!st) return;
-  st.valor = ''; st.img = null; st.cfg = Object.assign({}, PF_CFG_DEF);
+  st.valor = ''; st.img = null; st.cfg = Object.assign({}, PF_CFG_DEF); st.credito = '';
   _pmGuardarSesion(); pmUI(); pmRegenerar();
 }
 function pmBorrarServidor(){
@@ -15452,6 +15513,7 @@ function pQuitarFotoFondo(){
   const im = document.getElementById('p-foto-preview'); if(im) im.src = '';
   const w = document.getElementById('p-foto-wrap'); if(w) w.classList.remove('visible');
   const f = document.getElementById('p-foto-file'); if(f) f.value = '';
+  const fc = document.getElementById('p-foto-credito'); if(fc) fc.value = '';
 }
 
 // Diseño anterior del resultado (se conserva por si hay que volver atrás)
@@ -16905,6 +16967,7 @@ async function generarImagenPromoRadio(p){
     }
   }
   ctx.textAlign = 'left';
+  if(p.foto) cvCreditoFoto(ctx, W, H, _promoCredito(), { yBottom: H - 110 });
   return canvas;
 }
 
@@ -17336,6 +17399,7 @@ async function generarImagenPromoRadioMatchday(p){
     }
   }
   ctx.textAlign = 'left';
+  if(p.foto) cvCreditoFoto(ctx, W, H, _promoCredito(), { yBottom: H - 110 });
   return canvas;
 }
 
@@ -17497,6 +17561,7 @@ function promoLimpiarForm(){
   const defs4 = {'promo4-club':'','promo4-titulo':'CAMPEÓN','promo4-etiqueta':'Y ASCENSO','promo4-tag':'HISTÓRICO','promo4-sello':'B → A','promo4-subtitulo':'ASCIENDE A PRIMERA · 2026'};
   Object.keys(defs4).forEach(k=>{ const el = document.getElementById(k); if(el) el.value = defs4[k]; });
   if(typeof campAjReset === 'function') campAjReset(true);
+  { const pc = document.getElementById('promo-credito'); if(pc) pc.value = ''; }
   promoRachaLimpiar();
   promoJugadorLimpiar();
   if(typeof promoRadioLimpiar === 'function') promoRadioLimpiar();
@@ -17533,6 +17598,7 @@ function promoQuitarRecorte(){
   const f = document.getElementById('promo-md-recorte-file'); if(f) f.value = '';
 }
 let _promoFoto = '';
+function _promoCredito(){ const e = document.getElementById('promo-credito'); return e ? e.value.trim() : ''; }
 function promoPreviewFoto(input){
   const file = input.files[0]; if(!file) return;
   comprimirABase64(file, 1100, 0.82).then(dataUrl=>{
@@ -18943,6 +19009,7 @@ async function generarImagenPromocional(p){
 
   cvFooter(ctx, W, footerTopFull, liga);
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  if(p.foto) cvCreditoFoto(ctx, W, H, _promoCredito(), { yBottom: H - 70 });
   return canvas;
 }
 
@@ -19210,6 +19277,7 @@ async function generarImagenPromoCampeon(p){
   ctx.fillStyle = C.DORADO; ctx.fillRect(0, barY, W, 8);
   cvFooter(ctx, W, footerTop, liga);
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  if(p.foto) cvCreditoFoto(ctx, W, H, _promoCredito(), { yBottom: H - 70 });
   return canvas;
 }
 
@@ -19362,6 +19430,7 @@ async function generarImagenPromoRacha(p){
   }
 
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  if(p.foto) cvCreditoFoto(ctx, W, H, _promoCredito(), { yBottom: H - 70 });
   return canvas;
 }
 
@@ -19525,6 +19594,7 @@ async function generarImagenPromoJugador(p){
   }
 
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  if(p.foto) cvCreditoFoto(ctx, W, H, _promoCredito(), { yBottom: H - 70 });
   return canvas;
 }
 
@@ -19788,6 +19858,7 @@ async function generarImagenPromoJugadoresMulti(p){
   }
   dibujarCabecera();
   ctx.textAlign = 'left';
+  if((p.jugadores || []).some(j => j && j.foto)) cvCreditoFoto(ctx, W, H, _promoCredito(), { yBottom: H - 70 });
   return canvas;
 }
 
@@ -20093,6 +20164,7 @@ async function generarImagenPromocionalTabla(p){
 
   cvFooter(ctx, W, footerTop, liga);
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  if(p.foto) cvCreditoFoto(ctx, W, H, _promoCredito(), { yBottom: H - 70 });
   return canvas;
 }
 
@@ -20427,6 +20499,7 @@ async function generarImagenPromocionalMatchday(p){
     ctx.fillText(sub, W/2, infoY - 50);
     sp(0);
   }
+  if((foto || mf)) cvCreditoFoto(ctx, W, H, _promoCredito(), { yBottom: H - 70 });
   return canvas;
 }
 
@@ -20621,6 +20694,7 @@ async function generarImagenPromocionalAfiche(p){
     });
     ctx.shadowBlur = 0; sp(0);
   }
+  if(p.foto) cvCreditoFoto(ctx, W, H, _promoCredito(), { yBottom: H - 70 });
   return canvas;
 }
 
@@ -20886,6 +20960,7 @@ async function generarImagenPromocionalSplit(p){
 
   cvFooter(ctx, W, footerTop, liga);
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  if(p.foto) cvCreditoFoto(ctx, W, H, _promoCredito(), { yBottom: H - 70 });
   return canvas;
 }
 
@@ -22480,11 +22555,12 @@ async function generarImagenReserva(ids, opts){
   const p0 = ps[0];
 
   // Foto de fondo: la de las opciones, o la que quedó en memoria para esta fecha
-  let img = opts.img, cfg = opts.cfg;
+  let img = opts.img, cfg = opts.cfg, credito = opts.credito;
   if(opts.img === undefined){
     const rec = _pfCache[_rvKey(p0)];
     img = (rec && rec.value) ? await cargarImagenAsync(rec.value) : null;
     cfg = (rec && rec.cfg) || {};
+    credito = (rec && rec.credito) || '';
   }
   cfg = Object.assign({}, PF_CFG_DEF, cfg || {});
 
@@ -22660,6 +22736,7 @@ async function generarImagenReserva(ids, opts){
     ctx.textBaseline = 'alphabetic';
   }
   cvMarcaPresentado(ctx, W, H, id);
+  if(img) cvCreditoFoto(ctx, W, H, credito, { yBottom: H - 60 });
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   return canvas;
 }
@@ -25784,6 +25861,7 @@ function alinLimpiarForm(){
   document.getElementById('alin-dt').value='';
   document.getElementById('alin-hora').value='';
   document.getElementById('alin-sede').value='';
+  { const fc = document.getElementById('alin-foto-credito'); if(fc) fc.value=''; }
   document.getElementById('alin-formacion').value='4-3-3';
   alinRenderSlots([]);
   document.querySelectorAll('#alin-suplentes-container .alin-sup-num').forEach(e=>e.value='');
@@ -25817,6 +25895,7 @@ function guardarAlineacion(){
     fecha: document.getElementById('alin-fecha').value.trim(),
     hora: document.getElementById('alin-hora').value.trim(),
     sede: document.getElementById('alin-sede').value.trim(),
+    fotoCredito: ((document.getElementById('alin-foto-credito')||{}).value || '').trim(),
     torneo: (document.getElementById('alin-torneo')||{}).value || 'liga',
     txt: txtLeer('txt-alin', TXT_ALIN),
     mdColor: (document.getElementById('alin-md-color')||{}).value || '#0f2a1e',
@@ -25874,6 +25953,7 @@ function editarAlineacion(id){
   document.getElementById('alin-dt').value = a.dt||'';
   document.getElementById('alin-hora').value = a.hora||'';
   document.getElementById('alin-sede').value = a.sede||'';
+  { const fc = document.getElementById('alin-foto-credito'); if(fc) fc.value = a.fotoCredito || ''; }
   document.getElementById('alin-formacion').value = a.formacion||'4-3-3';
   alinRenderSlots(a.titulares||[]);
   const supNumInputs = document.querySelectorAll('#alin-suplentes-container .alin-sup-num');
@@ -26244,6 +26324,7 @@ async function generarImagenAlineacionDesde(id){
   }
 
   ctx.textAlign = 'left';
+  if((fotoImg || foto2Img)) cvCreditoFoto(ctx, W, H, a.fotoCredito, { yBottom: H - 70 });
   return canvas;
 }
 
@@ -26570,6 +26651,7 @@ async function generarImagenAlineacionMatchday(id){
     ctx.fillText(sub, ax, subY); sp(0);
   }
   ctx.textAlign = 'left';
+  if(foto) cvCreditoFoto(ctx, W, H, a.fotoCredito, { yBottom: H - 70 });
   return canvas;
 }
 
