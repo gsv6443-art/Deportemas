@@ -5714,6 +5714,59 @@ table.posiciones td:nth-child(8){
             <div class="form-group"><label style="font-size:10px">Ancho del texto gigante: <span id="promo6-ancho-val">100</span>%</label>
               <input type="range" id="promo6-ancho" min="40" max="104" value="100" oninput="document.getElementById('promo6-ancho-val').textContent=this.value"/></div>
           </div>
+          <details id="jug-deco-det" style="margin:4px 0 14px" ontoggle="if(this.open) promoJugPreview()">
+            <summary style="cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:12px;letter-spacing:1px;color:var(--gris)">✨ DETALLES ESTILO SERIE A (frase detrás del jugador, círculos, líneas…)</summary>
+            <div id="jug-prev-wrap" style="display:none;position:sticky;top:0;z-index:5;background:var(--negro2,#141414);padding:8px 0;text-align:center;border-bottom:1px solid rgba(201,162,39,.2)">
+              <img id="jug-prev" alt="Vista previa" style="max-height:34vh;max-width:100%;border-radius:8px;border:1px solid rgba(201,162,39,.25)"/>
+            </div>
+            <div class="form-group" style="margin-top:8px"><label style="display:flex;align-items:center;gap:8px;text-transform:none">
+              <input type="checkbox" id="promo6-enc" checked style="width:auto"/> Mostrar el encabezado chico (nombre · subtítulo) arriba</label>
+            </div>
+            <p style="font-size:10px;color:var(--gris);margin:0 0 4px;font-family:'Rajdhani',sans-serif">Cada detalle es independiente: usá uno, varios o ninguno. Si usás detalles, las estadísticas pasan a ser opcionales.</p>
+            <div style="font-family:'Rajdhani',sans-serif;font-size:11px;letter-spacing:1px;color:var(--dorado);margin:14px 0 4px;text-transform:uppercase">1 · Jugador recortado y frase gigante</div>
+            <div class="form-group"><label>Jugador recortado (PNG sin fondo, opcional)</label>
+              <input type="file" accept="image/png,image/webp" id="promo6-recorte-file" onchange="jugRecorteCargar(this)"/>
+              <div class="preview-wrap" id="promo6-recorte-wrap">
+                <img id="promo6-recorte-preview" src="" alt="" style="max-height:120px;object-fit:contain"/>
+                <button type="button" class="btn-quitar-img" onclick="jugRecorteQuitar()">✕ Quitar</button>
+              </div>
+              <p style="font-size:10px;color:var(--gris);margin-top:4px;font-family:'Rajdhani',sans-serif">Con el recorte, la frase queda detrás del jugador. Sin foto de fondo se usa el color de abajo.</p>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label style="font-size:10px">Color de fondo (sin foto de fondo)</label><input type="color" id="promo6-bgcolor" value="#0b1630" style="height:36px;padding:2px"/></div>
+              <div class="form-group"><label style="font-size:10px">Frase</label>
+                <select id="promo6-frase-z"><option value="detras">Detrás del jugador</option><option value="delante">Delante del jugador</option></select></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label style="font-size:10px">Tamaño del recorte: <span id="promo6-rec-tam-val">80</span>%</label><input type="range" id="promo6-rec-tam" min="40" max="140" value="80" oninput="document.getElementById('promo6-rec-tam-val').textContent=this.value"/></div><div class="form-group"><label style="font-size:10px">Recorte horizontal: <span id="promo6-rec-x-val">50</span>%</label><input type="range" id="promo6-rec-x" min="0" max="100" value="50" oninput="document.getElementById('promo6-rec-x-val').textContent=this.value"/></div><div class="form-group"><label style="font-size:10px">Recorte vertical (base): <span id="promo6-rec-y-val">100</span>%</label><input type="range" id="promo6-rec-y" min="60" max="130" value="100" oninput="document.getElementById('promo6-rec-y-val').textContent=this.value"/></div>
+            </div>
+            <div class="form-group"><label>Frase gigante (opcional)</label>
+              <input type="text" id="promo6-frase" maxlength="40" placeholder="Ej: BRACE   ·   WHAT A / GOAL   (usá / para separar renglones, hasta 3)"/>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label style="font-size:10px">Alineación de la frase</label>
+                <select id="promo6-frase-al"><option value="centro">Centrada</option><option value="izq">A la izquierda</option><option value="der">A la derecha</option></select></div>
+              <div class="form-group"><label style="font-size:10px">Altura de la frase: <span id="promo6-frase-y-val">15</span>%</label><input type="range" id="promo6-frase-y" min="0" max="80" value="15" oninput="document.getElementById('promo6-frase-y-val').textContent=this.value"/></div><div class="form-group"><label style="font-size:10px">Tamaño de la frase: <span id="promo6-frase-tam-val">100</span>%</label><input type="range" id="promo6-frase-tam" min="40" max="150" value="100" oninput="document.getElementById('promo6-frase-tam-val').textContent=this.value"/></div>
+            </div>
+            <div style="font-family:'Rajdhani',sans-serif;font-size:11px;letter-spacing:1px;color:var(--dorado);margin:14px 0 4px;text-transform:uppercase">2 · Círculos con cifras (minutos, goles…)</div>
+            <div class="form-row">
+              <div class="form-group"><label style="font-size:10px">Disposición</label>
+                <select id="promo6-circ-modo"><option value="">Ninguno</option><option value="lados">A los lados (como BRACE)</option><option value="columna">En columna con líneas (como GOAL / ASSIST)</option></select></div>
+              <div class="form-group"><label style="font-size:10px">Cifra 1 (izq. / arriba)</label><input type="text" id="promo6-circ-a" maxlength="8" placeholder="47’"/></div>
+              <div class="form-group"><label style="font-size:10px">Cifra 2 (der. / abajo)</label><input type="text" id="promo6-circ-b" maxlength="8" placeholder="79’"/></div>
+            </div>
+            <div class="form-group"><label style="font-size:10px">Altura de los círculos: <span id="promo6-circ-y-val">0</span>% (0 = automática)</label><input type="range" id="promo6-circ-y" min="0" max="100" value="0" oninput="document.getElementById('promo6-circ-y-val').textContent=this.value"/></div><div style="font-family:'Rajdhani',sans-serif;font-size:11px;letter-spacing:1px;color:var(--dorado);margin:14px 0 4px;text-transform:uppercase">3 · Línea con cifras en los extremos (como WHAT A GOAL)</div>
+            <div class="form-row">
+              <div class="form-group"><label style="font-size:10px">Cifra izquierda</label><input type="text" id="promo6-lin-a" maxlength="8" placeholder="1"/></div>
+              <div class="form-group"><label style="font-size:10px">Cifra derecha</label><input type="text" id="promo6-lin-b" maxlength="8" placeholder="0"/></div>
+            </div>
+            <div class="form-group"><label style="font-size:10px">Altura de la línea: <span id="promo6-lin-y-val">0</span>% (0 = automática)</label><input type="range" id="promo6-lin-y" min="0" max="100" value="0" oninput="document.getElementById('promo6-lin-y-val').textContent=this.value"/></div><div style="font-family:'Rajdhani',sans-serif;font-size:11px;letter-spacing:1px;color:var(--dorado);margin:14px 0 4px;text-transform:uppercase">4 · Título espaciado entre líneas (como LEGEND)</div>
+            <div class="form-group"><label style="font-size:10px">Título</label><input type="text" id="promo6-tit" maxlength="24" placeholder="Ej: LEGEND, MVP, CAPITÁN"/></div>
+            <div class="form-row">
+              <div class="form-group"><label style="font-size:10px">Altura del título: <span id="promo6-tit-y-val">0</span>% (0 = automática)</label><input type="range" id="promo6-tit-y" min="0" max="100" value="0" oninput="document.getElementById('promo6-tit-y-val').textContent=this.value"/></div><div class="form-group"><label style="font-size:10px">Posición horizontal del título: <span id="promo6-tit-x-val">50</span>%</label><input type="range" id="promo6-tit-x" min="10" max="90" value="50" oninput="document.getElementById('promo6-tit-x-val').textContent=this.value"/></div>
+            </div>
+            <button type="button" class="btn-edit" onclick="jugDecoReset()" style="margin-top:10px">↺ Quitar todos los detalles</button>
+          </details>
           <details style="margin:4px 0 14px"><summary style="cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:12px;letter-spacing:1px;color:var(--gris)">🔠 TAMAÑO DE CADA TEXTO</summary><div id="txt-jug" class="form-row" style="flex-wrap:wrap;margin-top:10px"></div></details>
 
           <div class="form-row">
@@ -17539,7 +17592,7 @@ function promoPreviewLogoTorneo(input){
     const w = document.getElementById('promo-torneo-logo-wrap'); if(w) w.classList.add('visible');
   });
 }
-function _campRefrescar(){ if(typeof promoCampeonPreview === 'function') promoCampeonPreview(); }
+function _campRefrescar(){ if(typeof promoCampeonPreview === 'function') promoCampeonPreview(); if(typeof promoJugPreview === 'function') promoJugPreview(); }
 function promoQuitarLogoTorneo(){
   document.getElementById('promo-competicion-logo').value = '';
   const p = document.getElementById('promo-torneo-logo-preview'); if(p) p.src = '';
@@ -17835,6 +17888,8 @@ function _campInitTodo(){
   campAjInit();
   const w = document.getElementById('promo-campeon-wrap');
   if(w){ w.addEventListener('input', promoCampeonPreview); w.addEventListener('change', promoCampeonPreview); }
+  const wj = document.getElementById('promo-jugador-wrap');
+  if(wj){ wj.addEventListener('input', promoJugPreview); wj.addEventListener('change', promoJugPreview); }
 }
 if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _campInitTodo); else _campInitTodo();
 
@@ -17934,6 +17989,7 @@ function promoJugadorLimpiar(){
   [['promo6-alto','100'],['promo6-ancho','100']].forEach(([i,v])=>{ const r=document.getElementById(i), l=document.getElementById(i+'-val'); if(r) r.value=v; if(l) l.textContent=v; });
   const ps=document.getElementById('promo6-pos'); if(ps) ps.value='izq';
   const py2=document.getElementById('promo6-posy'); if(py2) py2.value='arriba';
+  if(typeof jugDecoReset === 'function') jugDecoReset(true);
   const es=document.getElementById('promo6-escudo'); if(es) es.checked=false;
 }
 
@@ -17949,19 +18005,57 @@ function promoJugadorAutocompletar(){
   if(gv && gv.value==='') gv.value=regs.reduce((s,g)=>s+(+g.goles||0),0);
 }
 
-function promoGenerarJugador(){
-  if(pjmCant() > 1){ promoGenerarJugadorMulti(); return; }
+// ── Jugador destacado: armado de los datos (compartido por "Generar" y la vista previa) ──
+let _jugRecorte = '';
+function jugRecorteCargar(input){
+  const f = input.files && input.files[0]; if(!f) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    const im = new Image();
+    im.onload = () => {
+      // se conserva el PNG (con transparencia); solo se reduce el tamaño
+      const sc = Math.min(1, 1300 / Math.max(im.width, im.height));
+      const cv = document.createElement('canvas');
+      cv.width = Math.max(1, Math.round(im.width*sc)); cv.height = Math.max(1, Math.round(im.height*sc));
+      cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height);
+      _jugRecorte = cv.toDataURL('image/png');
+      const pv = document.getElementById('promo6-recorte-preview'); if(pv) pv.src = _jugRecorte;
+      const w = document.getElementById('promo6-recorte-wrap'); if(w) w.classList.add('visible');
+      promoJugPreview();
+    };
+    im.src = rd.result;
+  };
+  rd.readAsDataURL(f);
+}
+function jugRecorteQuitar(){
+  _jugRecorte = '';
+  const pv = document.getElementById('promo6-recorte-preview'); if(pv) pv.src = '';
+  const w = document.getElementById('promo6-recorte-wrap'); if(w) w.classList.remove('visible');
+  const f = document.getElementById('promo6-recorte-file'); if(f) f.value = '';
+  promoJugPreview();
+}
+const JUG_DECO_DEF = { 'promo6-rec-tam':'80','promo6-rec-x':'50','promo6-rec-y':'100','promo6-frase-y':'15','promo6-frase-tam':'100','promo6-circ-y':'0','promo6-lin-y':'0','promo6-tit-y':'0','promo6-tit-x':'50' };
+function jugDecoReset(silencioso){
+  jugRecorteQuitar();
+  ['promo6-frase','promo6-circ-a','promo6-circ-b','promo6-lin-a','promo6-lin-b','promo6-tit'].forEach(i => { const e = document.getElementById(i); if(e) e.value = ''; });
+  [['promo6-frase-z','detras'],['promo6-frase-al','centro'],['promo6-circ-modo',''],['promo6-bgcolor','#0b1630']].forEach(([i,v]) => { const e = document.getElementById(i); if(e) e.value = v; });
+  Object.keys(JUG_DECO_DEF).forEach(i => { const e = document.getElementById(i), l = document.getElementById(i + '-val'); if(e) e.value = JUG_DECO_DEF[i]; if(l) l.textContent = JUG_DECO_DEF[i]; });
+  const en = document.getElementById('promo6-enc'); if(en) en.checked = true;
+  if(!silencioso) promoJugPreview();
+}
+function promoJugArmar(validar){
   const val = id => (document.getElementById(id)||{value:''}).value.trim();
+  const num = (id,def) => { const x=Number(val(id)); return isNaN(x)||val(id)==='' ? def : x; };
   const nombre = val('promo6-nombre');
-  if(!nombre){ alert('Completá el nombre del jugador.'); return; }
   const stats=[];
   for(let i=1;i<=4;i++){
     const v=val('promo6-sv'+i);
     if(v==='') continue;
     stats.push({ valor:v, etiqueta:val('promo6-sl'+i).toUpperCase() });
   }
-  if(!stats.length){ alert('Cargá al menos una estadística (valor).'); return; }
-  const num = (id,def) => { const x=Number(val(id)); return isNaN(x)||val(id)==='' ? def : x; };
+  const enc = !!((document.getElementById('promo6-enc')||{checked:true}).checked);
+  const frase = val('promo6-frase').split('/').map(t=>t.trim()).filter(Boolean).slice(0,3);
+  const circModo = ['lados','columna'].includes(val('promo6-circ-modo')) ? val('promo6-circ-modo') : '';
   const p={
     nombre: nombre.toUpperCase(), equipo: val('promo6-equipo'),
     sub: (val('promo6-sub')||'ESTADÍSTICAS DE LA TEMPORADA').toUpperCase(),
@@ -17972,9 +18066,51 @@ function promoGenerarJugador(){
     pos: val('promo6-pos')==='der' ? 'der' : 'izq',
     posy: ['centro','abajo'].includes(val('promo6-posy')) ? val('promo6-posy') : 'arriba',
     escudo: !!(document.getElementById('promo6-escudo')||{}).checked,
-    zoom: num('promo6-zoom',100)/100, px: num('promo6-px',50)/100, py: num('promo6-py',25)/100
+    zoom: num('promo6-zoom',100)/100, px: num('promo6-px',50)/100, py: num('promo6-py',25)/100,
+    // detalles estilo Serie A
+    enc, frase,
+    fraseAl: ['izq','der'].includes(val('promo6-frase-al')) ? val('promo6-frase-al') : 'centro',
+    fraseY: num('promo6-frase-y',15)/100, fraseTam: num('promo6-frase-tam',100)/100,
+    fraseZ: val('promo6-frase-z')==='delante' ? 'delante' : 'detras',
+    recorte: _jugRecorte||'', recTam: num('promo6-rec-tam',80)/100, recX: num('promo6-rec-x',50)/100, recY: num('promo6-rec-y',100)/100,
+    bgColor: val('promo6-bgcolor') || '#0b1630',
+    circModo, circA: val('promo6-circ-a'), circB: val('promo6-circ-b'), circY: num('promo6-circ-y',0)/100,
+    linA: val('promo6-lin-a'), linB: val('promo6-lin-b'), linY: num('promo6-lin-y',0)/100,
+    tit: val('promo6-tit').toUpperCase(), titY: num('promo6-tit-y',0)/100, titX: num('promo6-tit-x',50)/100
   };
+  const hayDeco = !!(frase.length || circModo || p.linA || p.linB || p.tit || p.recorte);
+  if(validar){
+    if(!nombre && (enc || stats.length)){ alert('Completá el nombre del jugador.'); return null; }
+    if(!stats.length && !hayDeco){ alert('Cargá al menos una estadística o algún detalle (frase, círculos, línea o título).'); return null; }
+  } else if(!nombre && !stats.length && !hayDeco){
+    return null;
+  }
+  return p;
+}
+function promoGenerarJugador(){
+  if(pjmCant() > 1){ promoGenerarJugadorMulti(); return; }
+  const p = promoJugArmar(true);
+  if(!p) return;
   abrirShare(() => generarImagenPromoJugador(p));
+}
+// Vista previa en vivo (solo con 1 jugador y el bloque de detalles abierto)
+let _jugPrevTok = 0, _jugPrevTmr = null;
+function promoJugPreview(){
+  clearTimeout(_jugPrevTmr);
+  _jugPrevTmr = setTimeout(async () => {
+    const wrap = document.getElementById('promo-jugador-wrap');
+    const img = document.getElementById('jug-prev'), box = document.getElementById('jug-prev-wrap'), det = document.getElementById('jug-deco-det');
+    if(!img || !wrap || wrap.style.display === 'none' || (det && !det.open) || pjmCant() > 1) return;
+    const p = promoJugArmar(false);
+    if(!p){ if(box) box.style.display = 'none'; return; }
+    const tok = ++_jugPrevTok;
+    try{
+      const cv = await generarImagenPromoJugador(p);
+      if(tok !== _jugPrevTok) return;                  // llegó un cambio más nuevo
+      img.src = cv.toDataURL('image/jpeg', 0.7);
+      if(box) box.style.display = '';
+    }catch(e){ console.warn('Vista previa jugador:', e); }
+  }, 200);
 }
 
 function promoGenerar(){
@@ -19437,6 +19573,14 @@ async function generarImagenPromoRacha(p){
 async function generarImagenPromoJugador(p){
   // Réplica del formato "Serie A": foto a pantalla completa, título chico centrado arriba,
   // logo de la liga arriba a la derecha y hasta 4 cajas de estadísticas a la izquierda.
+  try{
+    if(document.head && !document.getElementById('md-fuentes')){
+      const l = document.createElement('link'); l.id = 'md-fuentes'; l.rel = 'stylesheet';
+      l.href = 'https://fonts.googleapis.com/css2?family=Anton&family=DM+Sans:wght@500;700&display=swap';
+      document.head.appendChild(l);
+    }
+    await Promise.all(['100px "Anton"','500 20px "DM Sans"','700 20px "DM Sans"'].map(f => document.fonts.load(f)));
+  }catch(e){}
   await document.fonts.ready;
   const id   = getIdentidad();
   const W = CV_W, H = CV_H, CX = W/2;
@@ -19446,6 +19590,8 @@ async function generarImagenPromoJugador(p){
   ctx.textBaseline = 'alphabetic';
   const FB = '"Bebas Neue", Arial, sans-serif';
   const FR = '"Rajdhani", Arial, sans-serif';
+  const ANTON = '"Anton", "Bebas Neue", Impact, "Arial Narrow", sans-serif';
+  const SANS  = '"DM Sans", Arial, sans-serif';
   const setLS = v => { if('letterSpacing' in ctx) ctx.letterSpacing = v; };
   const rr = (x, y, w, h, r) => {
     ctx.beginPath();
@@ -19455,18 +19601,21 @@ async function generarImagenPromoJugador(p){
     ctx.lineTo(x, y+r); ctx.arcTo(x, y, x+r, y, r); ctx.closePath();
   };
 
-  const [foto, logoImg] = await Promise.all([cargarImagenAsync(p.foto), cvImgAsync(id.logo)]);
+  const [foto, logoImg, rec] = await Promise.all([cargarImagenAsync(p.foto), cvImgAsync(id.logo), cargarImagenAsync(p.recorte)]);
 
   // ── Fondo: foto del jugador a pantalla completa (con zoom y encuadre) ──
   const bg = ctx.createLinearGradient(0, 0, 0, H);
   bg.addColorStop(0, '#1c1c20'); bg.addColorStop(1, '#09090b');
-  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  if(!foto && rec){                      // con recorte y sin foto de fondo: color liso
+    ctx.fillStyle = /^#[0-9a-fA-F]{6}$/.test(p.bgColor || '') ? p.bgColor : '#0b1630';
+  } else ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
   if(foto){
     const iw = foto.naturalWidth || foto.width || 1, ih = foto.naturalHeight || foto.height || 1;
     const sc = Math.max(W/iw, H/ih) * (p.zoom || 1);
     const dw = iw*sc, dh = ih*sc;
     ctx.drawImage(foto, (W-dw)*p.px, (H-dh)*p.py, dw, dh);
-  } else if(logoImg){
+  } else if(logoImg && !rec){
     const WS = 600;
     ctx.save(); ctx.globalAlpha = 0.07;
     ctx.beginPath(); ctx.arc(CX+120, H*0.45, WS/2, 0, Math.PI*2); ctx.clip();
@@ -19477,8 +19626,52 @@ async function generarImagenPromoJugador(p){
   gT.addColorStop(0, 'rgba(0,0,0,.50)'); gT.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = gT; ctx.fillRect(0, 0, W, 200);
 
+  // ── Frase gigante + jugador recortado (la frase va detrás del jugador) ──
+  const frase = Array.isArray(p.frase) ? p.frase.filter(Boolean) : [];
+  let fb = null;                                            // caja de la frase: { top, bottom, cx }
+  let pintarFrase = () => {};
+  if(frase.length){
+    const lines = frase.map(t => String(t).toUpperCase());
+    const alin = (p.fraseAl === 'izq' || p.fraseAl === 'der') ? p.fraseAl : 'centro';
+    const margen = 62;
+    const maxW0 = alin === 'centro' ? W - 2*margen : Math.round(W * 0.48);
+    ctx.font = `400 200px ${ANTON}`; setLS('0px');
+    const w200 = Math.max(...lines.map(t => ctx.measureText(t).width)) || 1;
+    let fsF = Math.min(440, Math.floor(200 * maxW0 / w200));
+    fsF = Math.max(30, Math.min(Math.floor(fsF * (p.fraseTam || 1)), Math.floor(200 * (W - 2*margen) / w200)));   // nunca más ancha que la imagen
+    ctx.font = `400 ${fsF}px ${ANTON}`;
+    const capF = ctx.measureText('H').actualBoundingBoxAscent || fsF * 0.72;
+    const pitch = capF * 1.11;
+    const wMax = Math.max(...lines.map(t => ctx.measureText(t).width));
+    const top = H * Math.min(0.9, Math.max(0, p.fraseY == null ? 0.15 : p.fraseY));
+    const xT = alin === 'centro' ? CX : (alin === 'izq' ? margen : W - margen);
+    fb = { top, bottom: top + capF + (lines.length - 1) * pitch,
+           cx: alin === 'centro' ? CX : (alin === 'izq' ? margen + wMax/2 : W - margen - wMax/2) };
+    pintarFrase = () => {
+      ctx.save();
+      ctx.font = `400 ${fsF}px ${ANTON}`; setLS('0px');
+      ctx.textAlign = alin === 'centro' ? 'center' : (alin === 'izq' ? 'left' : 'right');
+      ctx.textBaseline = 'alphabetic'; ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = 'rgba(0,0,0,.25)'; ctx.shadowBlur = 14;
+      lines.forEach((t, i) => ctx.fillText(t, xT, top + capF + i * pitch));
+      ctx.restore();
+    };
+  }
+  if(frase.length && p.fraseZ !== 'delante') pintarFrase();
+  if(rec){
+    const rw0 = rec.naturalWidth || rec.width || 1, rh0 = rec.naturalHeight || rec.height || 1;
+    const hh = H * Math.min(1.4, Math.max(0.3, p.recTam || 0.8));
+    const ww = rw0 * hh / rh0;
+    const cxR = W * Math.min(1, Math.max(0, p.recX == null ? 0.5 : p.recX));
+    const baseR = H * Math.min(1.3, Math.max(0.6, p.recY == null ? 1 : p.recY));
+    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 24;
+    ctx.drawImage(rec, cxR - ww/2, baseR - hh, ww, hh);
+    ctx.restore();
+  }
+  if(frase.length && p.fraseZ === 'delante') pintarFrase();
+
   // ── Título centrado arriba: "NOMBRE · ESTADÍSTICAS DE LA TEMPORADA" ──
-  {
+  if(p.enc !== false && p.nombre){
     const txt = (p.nombre + '  ·  ' + p.sub).toUpperCase();
     let fs = Math.round(21*tk(p,'enc')), ls = 6;
     ctx.font = `500 ${fs}px ${FR}`; setLS(ls + 'px');
@@ -19527,13 +19720,83 @@ async function generarImagenPromoJugador(p){
     ctx.shadowBlur = 0;
   }
 
+  // ── Detalles estilo Serie A: título espaciado entre líneas, línea con cifras y círculos ──
+  if(p.tit){
+    const t = String(p.tit).toUpperCase();
+    const yT = H * (p.titY > 0 ? Math.min(1, p.titY) : 0.236);
+    const cxT = W * Math.min(0.95, Math.max(0.05, p.titX == null ? 0.5 : p.titX));
+    const fsT = 46, lsT = 22;
+    ctx.save();
+    ctx.font = `400 ${fsT}px ${FB}`; setLS(lsT + 'px');
+    const tw = Math.max(10, ctx.measureText(t).width - lsT);    // el espaciado suma uno de más al final
+    const x0 = cxT - tw/2, x1 = cxT + tw/2;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = 'rgba(0,0,0,.4)'; ctx.shadowBlur = 8;
+    ctx.fillText(t, x0, yT + 2);
+    setLS('0px'); ctx.shadowBlur = 0;
+    const gapL = 34, largo = 300;
+    ctx.fillStyle = 'rgba(255,255,255,.9)';
+    const lxA = Math.max(0, x0 - gapL - largo), lxB = x0 - gapL;
+    if(lxB > lxA) ctx.fillRect(lxA, yT - 0.6, lxB - lxA, 1.4);
+    const rxA = x1 + gapL, rxB = Math.min(W, x1 + gapL + largo);
+    if(rxB > rxA) ctx.fillRect(rxA, yT - 0.6, rxB - rxA, 1.4);
+    ctx.restore();
+  }
+  if(p.linA || p.linB){
+    const yL = H * (p.linY > 0 ? Math.min(1, p.linY) : 0);
+    const y = p.linY > 0 ? yL : (fb ? fb.top - 44 : H * 0.17);
+    ctx.save();
+    ctx.font = `500 26px ${SANS}`; setLS('0px');
+    ctx.textBaseline = 'middle'; ctx.textAlign = 'center'; ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = 'rgba(0,0,0,.4)'; ctx.shadowBlur = 8;
+    if(p.linA) ctx.fillText(p.linA, W * 0.155, y + 1);
+    if(p.linB) ctx.fillText(p.linB, W * (1 - 0.155), y + 1);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.fillRect(W * 0.215, y - 0.6, W * 0.57, 1.4);
+    ctx.restore();
+  }
+  if(p.circModo === 'lados' || p.circModo === 'columna'){
+    const dC = 112, rC = dC/2;
+    const circulo = (cx, cy, txt) => {
+      ctx.save();
+      ctx.beginPath(); ctx.arc(cx, cy, rC, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(8,8,10,.25)'; ctx.fill();
+      ctx.lineWidth = 1.6; ctx.strokeStyle = 'rgba(255,255,255,.88)'; ctx.stroke();
+      if(txt){
+        let fsC = 40; ctx.font = `500 ${fsC}px ${SANS}`; setLS('0px');
+        while(fsC > 16 && ctx.measureText(txt).width > dC - 26){ fsC--; ctx.font = `500 ${fsC}px ${SANS}`; }
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#ffffff';
+        ctx.shadowColor = 'rgba(0,0,0,.4)'; ctx.shadowBlur = 8;
+        ctx.fillText(txt, cx, cy + 2);
+      }
+      ctx.restore();
+    };
+    if(p.circModo === 'lados'){
+      const yC = p.circY > 0 ? H * Math.min(1, p.circY) : (fb ? fb.bottom + 105 : H * 0.485);
+      if(p.circA) circulo(63 + rC, yC, p.circA);
+      if(p.circB) circulo(W - 63 - rC, yC, p.circB);
+    } else {
+      const yMid = p.circY > 0 ? H * Math.min(1, p.circY) : H * 0.5;
+      const box = fb || { top: yMid - 150, bottom: yMid + 150, cx: CX };
+      const g = 40;
+      const Lt = Math.max(40, Math.min(250, box.top - g - 2*rC - 140));
+      const Lb = Math.max(40, Math.min(250, H - 40 - (box.bottom + g) - 2*rC - 30));
+      ctx.save(); ctx.fillStyle = 'rgba(255,255,255,.85)';
+      ctx.fillRect(box.cx - 0.7, box.top - g - Lt, 1.4, Lt);
+      ctx.fillRect(box.cx - 0.7, box.bottom + g, 1.4, Lb);
+      ctx.restore();
+      if(p.circA) circulo(box.cx, box.top - g - Lt - rC, p.circA);
+      if(p.circB) circulo(box.cx, box.bottom + g + Lb + rC, p.circB);
+    }
+  }
+
   // ── Cajas de estadísticas: borde fino blanco, fondo oscuro translúcido ──
   //    lado (izq/der) y altura (arriba/centro/abajo) configurables
   const n = Math.min(4, p.stats.length);
   const bw = 188, bh = 188, step = 211;
   const bx = (p.pos === 'der') ? (W - 108 - bw) : 108;
   const totalH = n*step - (step - bh);
-  const conEscudo = !!(p.escudo && p.equipo);
+  const conEscudo = !!(p.escudo && p.equipo) && n > 0;
   const topMin = conEscudo ? 214 : 130;
   const botLim = (p.giga ? gigaTop - 34 : H - 60);
   let by0 = 190;
@@ -19594,7 +19857,7 @@ async function generarImagenPromoJugador(p){
   }
 
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-  if(p.foto) cvCreditoFoto(ctx, W, H, _promoCredito(), { yBottom: H - 70 });
+  if(p.foto || p.recorte) cvCreditoFoto(ctx, W, H, _promoCredito(), { yBottom: H - 70 });
   return canvas;
 }
 
