@@ -5727,6 +5727,24 @@ table.posiciones td:nth-child(8){
               <input type="checkbox" id="promo6-enc" checked style="width:auto"/> Mostrar el encabezado chico (nombre · subtítulo) arriba</label>
             </div>
             <p style="font-size:10px;color:var(--gris);margin:0 0 4px;font-family:'Rajdhani',sans-serif">Cada detalle es independiente: usá uno, varios o ninguno. Si usás detalles, las estadísticas pasan a ser opcionales.</p>
+            <div style="font-family:'Rajdhani',sans-serif;font-size:11px;letter-spacing:1px;color:var(--dorado);margin:14px 0 4px;text-transform:uppercase">0 · Filtros de la foto de fondo</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
+              <button type="button" class="btn-edit" onclick="jugFiltroPreset('bn')">Blanco y negro</button>
+              <button type="button" class="btn-edit" onclick="jugFiltroPreset('desenfoque')">Desenfocada</button>
+              <button type="button" class="btn-edit" onclick="jugFiltroPreset('sepia')">Sepia</button>
+              <button type="button" class="btn-edit" onclick="jugFiltroPreset('oscura')">Oscura</button>
+              <button type="button" class="btn-edit" onclick="jugFiltroPreset('ninguno')">Sin filtros</button>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label style="font-size:10px">Desenfoque: <span id="promo6-f-blur-val">0</span> px</label><input type="range" id="promo6-f-blur" min="0" max="30" value="0" oninput="document.getElementById('promo6-f-blur-val').textContent=this.value"/></div><div class="form-group"><label style="font-size:10px">Blanco y negro: <span id="promo6-f-gris-val">0</span>%</label><input type="range" id="promo6-f-gris" min="0" max="100" value="0" oninput="document.getElementById('promo6-f-gris-val').textContent=this.value"/></div><div class="form-group"><label style="font-size:10px">Sepia: <span id="promo6-f-sepia-val">0</span>%</label><input type="range" id="promo6-f-sepia" min="0" max="100" value="0" oninput="document.getElementById('promo6-f-sepia-val').textContent=this.value"/></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label style="font-size:10px">Brillo: <span id="promo6-f-brillo-val">100</span>%</label><input type="range" id="promo6-f-brillo" min="40" max="160" value="100" oninput="document.getElementById('promo6-f-brillo-val').textContent=this.value"/></div><div class="form-group"><label style="font-size:10px">Contraste: <span id="promo6-f-contraste-val">100</span>%</label><input type="range" id="promo6-f-contraste" min="40" max="160" value="100" oninput="document.getElementById('promo6-f-contraste-val').textContent=this.value"/></div><div class="form-group"><label style="font-size:10px">Saturación: <span id="promo6-f-sat-val">100</span>%</label><input type="range" id="promo6-f-sat" min="0" max="200" value="100" oninput="document.getElementById('promo6-f-sat-val').textContent=this.value"/></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label style="font-size:10px">Matiz (cambio de color): <span id="promo6-f-matiz-val">0</span>°</label><input type="range" id="promo6-f-matiz" min="-180" max="180" value="0" oninput="document.getElementById('promo6-f-matiz-val').textContent=this.value"/></div><div class="form-group"><label style="font-size:10px">Viñeta (bordes oscuros): <span id="promo6-f-vineta-val">0</span>%</label><input type="range" id="promo6-f-vineta" min="0" max="100" value="0" oninput="document.getElementById('promo6-f-vineta-val').textContent=this.value"/></div>
+            </div>
+            <p style="font-size:10px;color:var(--gris);margin:0 0 4px;font-family:'Rajdhani',sans-serif">Los filtros se aplican solo a la foto de fondo, no al jugador recortado.</p>
             <div style="font-family:'Rajdhani',sans-serif;font-size:11px;letter-spacing:1px;color:var(--dorado);margin:14px 0 4px;text-transform:uppercase">1 · Jugador recortado y frase gigante</div>
             <div class="form-group"><label>Jugador recortado (PNG sin fondo, opcional)</label>
               <input type="file" accept="image/png,image/webp" id="promo6-recorte-file" onchange="jugRecorteCargar(this)"/>
@@ -5738,8 +5756,6 @@ table.posiciones td:nth-child(8){
             </div>
             <div class="form-row">
               <div class="form-group"><label style="font-size:10px">Color de fondo (sin foto de fondo)</label><input type="color" id="promo6-bgcolor" value="#0b1630" style="height:36px;padding:2px"/></div>
-              <div class="form-group"><label style="font-size:10px">Frase</label>
-                <select id="promo6-frase-z"><option value="detras">Detrás del jugador</option><option value="delante">Delante del jugador</option></select></div>
             </div>
             
             <div class="form-group"><label>Frase gigante (opcional)</label>
@@ -5748,6 +5764,7 @@ table.posiciones td:nth-child(8){
             <div class="form-row">
               <div class="form-group"><label style="font-size:10px">Alineación de la frase</label>
                 <select id="promo6-frase-al"><option value="centro">Centrada</option><option value="izq">A la izquierda</option><option value="der">A la derecha</option></select></div>
+              <div class="form-group"><label style="font-size:10px">Iluminación de la frase (menos = más oscura, más de 100 = con brillo): <span id="promo6-frase-luz-val">100</span>%</label><input type="range" id="promo6-frase-luz" min="0" max="200" value="100" oninput="document.getElementById('promo6-frase-luz-val').textContent=this.value"/></div>
               
             </div>
             <div style="font-family:'Rajdhani',sans-serif;font-size:11px;letter-spacing:1px;color:var(--dorado);margin:14px 0 4px;text-transform:uppercase">2 · Círculos con cifras (minutos, goles…)</div>
@@ -5775,6 +5792,8 @@ table.posiciones td:nth-child(8){
                 <input type="range" id="jug-aj-x" min="-100" max="100" step="0.5" value="0" oninput="jugAjCambio()"/></div>
               <div class="form-group"><label style="font-size:10px">Posición vertical: <span id="jug-aj-y-val">0</span></label>
                 <input type="range" id="jug-aj-y" min="-100" max="100" step="0.5" value="0" oninput="jugAjCambio()"/></div>
+              <div class="form-group" id="jug-aj-z-g"><label style="font-size:10px">Capa</label>
+                <select id="jug-aj-z" onchange="jugAjCambio()"><option value="frente">Delante del jugador recortado</option><option value="atras">Detrás del jugador recortado</option></select></div>
               <div style="display:flex;gap:8px;flex-wrap:wrap">
                 <button type="button" class="btn-edit" onclick="jugAjReset(false)">↺ Restablecer este elemento</button>
                 <button type="button" class="btn-edit" onclick="jugAjReset(true)">↺ Restablecer todos</button>
@@ -15068,6 +15087,71 @@ function cvCreditoFoto(ctx, W, H, credito, o){
   ctx.restore();
 }
 
+// ── Filtros para la foto de fondo (desenfoque, blanco y negro, sepia, brillo, contraste, saturación, matiz) ──
+function cvFiltroActivo(f){
+  if(!f) return false;
+  return (f.blur || 0) > 0 || (f.gris || 0) > 0 || (f.sepia || 0) > 0 || (f.matiz || 0) !== 0 ||
+         (f.brillo != null && f.brillo !== 100) || (f.contraste != null && f.contraste !== 100) || (f.sat != null && f.sat !== 100);
+}
+function cvFiltroCss(f){
+  const a = [];
+  if(f.brillo != null && f.brillo !== 100) a.push('brightness(' + f.brillo + '%)');
+  if(f.contraste != null && f.contraste !== 100) a.push('contrast(' + f.contraste + '%)');
+  if(f.sat != null && f.sat !== 100) a.push('saturate(' + f.sat + '%)');
+  if(f.matiz) a.push('hue-rotate(' + f.matiz + 'deg)');
+  if(f.gris > 0) a.push('grayscale(' + f.gris + '%)');
+  if(f.sepia > 0) a.push('sepia(' + f.sepia + '%)');
+  if(f.blur > 0) a.push('blur(' + f.blur + 'px)');
+  return a.join(' ');
+}
+// Dibuja la foto aplicando los filtros. Usa ctx.filter si el navegador lo tiene; si no, procesa los píxeles a mano.
+function cvDibujarFotoFiltrada(ctx, img, dx, dy, dw, dh, f){
+  if(!cvFiltroActivo(f)){ ctx.drawImage(img, dx, dy, dw, dh); return; }
+  const blur = Math.max(0, f.blur || 0);
+  const m = blur * 2;                                   // se agranda un poco para que el desenfoque no deje bordes transparentes
+  const X = dx - m, Y = dy - m, Wd = dw + 2*m, Hd = dh + 2*m;
+  if(typeof ctx.filter === 'string'){
+    ctx.save(); ctx.filter = cvFiltroCss(f); ctx.drawImage(img, X, Y, Wd, Hd); ctx.restore(); return;
+  }
+  // Alternativa para navegadores sin ctx.filter
+  const tw = Math.max(1, Math.round(Math.min(Wd, 1080))), th = Math.max(1, Math.round(Hd * tw / Wd));
+  const t = document.createElement('canvas'); t.width = tw; t.height = th;
+  const tc = t.getContext('2d'); tc.drawImage(img, 0, 0, tw, th);
+  const d = tc.getImageData(0, 0, tw, th), px = d.data;
+  const br = (f.brillo != null ? f.brillo : 100) / 100, co = (f.contraste != null ? f.contraste : 100) / 100, sa = (f.sat != null ? f.sat : 100) / 100;
+  const gr = Math.min(1, (f.gris || 0) / 100), se = Math.min(1, (f.sepia || 0) / 100);
+  const ang = (f.matiz || 0) * Math.PI / 180, cs = Math.cos(ang), sn = Math.sin(ang);
+  const hr = [0.213 + cs*0.787 - sn*0.213, 0.715 - cs*0.715 - sn*0.715, 0.072 - cs*0.072 + sn*0.928,
+              0.213 - cs*0.213 + sn*0.143, 0.715 + cs*0.285 + sn*0.140, 0.072 - cs*0.072 - sn*0.283,
+              0.213 - cs*0.213 - sn*0.787, 0.715 - cs*0.715 + sn*0.715, 0.072 + cs*0.928 + sn*0.072];
+  const cl = v => v < 0 ? 0 : (v > 255 ? 255 : v);
+  for(let i = 0; i < px.length; i += 4){
+    let r = px[i]*br, g = px[i+1]*br, b = px[i+2]*br;
+    r = (r - 128)*co + 128; g = (g - 128)*co + 128; b = (b - 128)*co + 128;
+    let l = 0.2126*r + 0.7152*g + 0.0722*b;
+    r = l + (r - l)*sa; g = l + (g - l)*sa; b = l + (b - l)*sa;
+    if(f.matiz){ const r2 = hr[0]*r + hr[1]*g + hr[2]*b, g2 = hr[3]*r + hr[4]*g + hr[5]*b, b2 = hr[6]*r + hr[7]*g + hr[8]*b; r = r2; g = g2; b = b2; }
+    if(gr > 0){ l = 0.2126*r + 0.7152*g + 0.0722*b; r = r + (l - r)*gr; g = g + (l - g)*gr; b = b + (l - b)*gr; }
+    if(se > 0){
+      const r2 = 0.393*r + 0.769*g + 0.189*b, g2 = 0.349*r + 0.686*g + 0.168*b, b2 = 0.272*r + 0.534*g + 0.131*b;
+      r = r + (r2 - r)*se; g = g + (g2 - g)*se; b = b + (b2 - b)*se;
+    }
+    px[i] = cl(r); px[i+1] = cl(g); px[i+2] = cl(b);
+  }
+  tc.putImageData(d, 0, 0);
+  let fuente = t;
+  if(blur > 0){                                          // desenfoque: se achica y se vuelve a agrandar
+    const k = 1 / (1 + blur * 0.45);
+    const sw = Math.max(2, Math.round(tw * k)), sh = Math.max(2, Math.round(th * k));
+    const c1 = document.createElement('canvas'); c1.width = sw; c1.height = sh;
+    const x1 = c1.getContext('2d'); x1.imageSmoothingEnabled = true; x1.drawImage(t, 0, 0, sw, sh);
+    const c2 = document.createElement('canvas'); c2.width = Math.max(2, Math.round(sw*1.8)); c2.height = Math.max(2, Math.round(sh*1.8));
+    const x2 = c2.getContext('2d'); x2.imageSmoothingEnabled = true; x2.drawImage(c1, 0, 0, c2.width, c2.height);
+    fuente = c2;
+  }
+  ctx.drawImage(fuente, X, Y, Wd, Hd);
+}
+
 // Texto con separación entre letras (para etiquetas chicas); devuelve x final
 function _pfSpaced(ctx, x, y, txt, sp){
   ctx.textAlign = 'left';
@@ -18062,7 +18146,7 @@ const JUG_AJ_EL = [
 let _jugAj = {};            // clave -> { t: tamaño en %, x: desplazamiento horizontal en % del ancho, y: vertical en % del alto }
 let _jugAjSel = 'frase';
 let _jugBoxes = {};         // clave -> { x, y, w, h } en píxeles del lienzo (lo informa el generador)
-const _jugAjV = (k) => Object.assign({ t:100, x:0, y:0 }, _jugAj[k] || {});
+const _jugAjV = (k) => Object.assign({ t:100, x:0, y:0, z: (k === 'frase' ? 'atras' : 'frente') }, _jugAj[k] || {});
 function jugAjInit(){
   const sel = document.getElementById('jug-aj-el'); if(!sel) return;
   sel.innerHTML = JUG_AJ_EL.map(([k,n]) => '<option value="' + k + '">' + n + '</option>').join('');
@@ -18087,6 +18171,7 @@ function jugAjCargar(){
   const a = _jugAjV(_jugAjSel);
   const set = (i, v) => { const e = document.getElementById(i), l = document.getElementById(i + '-val'); if(e) e.value = v; if(l) l.textContent = v; };
   set('jug-aj-t', a.t); set('jug-aj-x', a.x); set('jug-aj-y', a.y);
+  { const z = document.getElementById('jug-aj-z'); if(z) z.value = a.z; const zg = document.getElementById('jug-aj-z-g'); if(zg) zg.style.display = (_jugAjSel === 'rec') ? 'none' : ''; }
   const g = document.getElementById('jug-aj-t-g'); if(g) g.style.display = def[2] ? '' : 'none';
   const lb = document.getElementById('jug-aj-t-lbl'); if(lb) lb.textContent = def[3];
 }
@@ -18094,7 +18179,8 @@ function jugAjCambio(){
   const num = i => { const e = document.getElementById(i); const n = e ? Number(e.value) : NaN; return isNaN(n) ? 0 : n; };
   const t = num('jug-aj-t') || 100, x = num('jug-aj-x'), y = num('jug-aj-y');
   ['t','x','y'].forEach(c => { const l = document.getElementById('jug-aj-' + c + '-val'); if(l) l.textContent = ({t, x, y})[c]; });
-  _jugAj[_jugAjSel] = { t, x, y };
+  const zs = document.getElementById('jug-aj-z');
+  _jugAj[_jugAjSel] = { t, x, y, z: (zs && zs.value === 'atras') ? 'atras' : 'frente' };
   promoJugPreview();
 }
 function jugAjReset(todos){
@@ -18138,16 +18224,27 @@ function jugPrevMove(e){
   const d = _jugDrag; if(!d) return;
   const cl = v => Math.max(-100, Math.min(100, Math.round(v * 10) / 10));
   const a = _jugAjV(d.k);
-  _jugAj[d.k] = { t: a.t, x: cl(d.x0 + (e.clientX - d.sx) / d.w * 100), y: cl(d.y0 + (e.clientY - d.sy) / d.h * 100) };
+  _jugAj[d.k] = { t: a.t, z: a.z, x: cl(d.x0 + (e.clientX - d.sx) / d.w * 100), y: cl(d.y0 + (e.clientY - d.sy) / d.h * 100) };
   if(d.k === _jugAjSel) jugAjCargar();
   promoJugPreview(true);
 }
 function jugPrevUp(){ _jugDrag = null; }
-const JUG_DECO_DEF = {};
+const JUG_DECO_DEF = { 'promo6-frase-luz':'100','promo6-f-blur':'0','promo6-f-gris':'0','promo6-f-sepia':'0','promo6-f-brillo':'100','promo6-f-contraste':'100','promo6-f-sat':'100','promo6-f-matiz':'0','promo6-f-vineta':'0' };
+function jugSetSl(i, v){ const e = document.getElementById(i), l = document.getElementById(i + '-val'); if(e) e.value = v; if(l) l.textContent = v; }
+function jugFiltroPreset(nombre){
+  const F = ['promo6-f-blur','promo6-f-gris','promo6-f-sepia','promo6-f-brillo','promo6-f-contraste','promo6-f-sat','promo6-f-matiz','promo6-f-vineta'];
+  F.forEach(i => jugSetSl(i, JUG_DECO_DEF[i]));
+  const P = { bn:{ 'promo6-f-gris':100, 'promo6-f-contraste':115 }, desenfoque:{ 'promo6-f-blur':12, 'promo6-f-brillo':90 },
+              sepia:{ 'promo6-f-sepia':100, 'promo6-f-contraste':105 }, oscura:{ 'promo6-f-brillo':60, 'promo6-f-contraste':120, 'promo6-f-vineta':40 }, ninguno:{} };
+  const o = P[nombre] || {};
+  Object.keys(o).forEach(i => jugSetSl(i, o[i]));
+  promoJugPreview();
+}
 function jugDecoReset(silencioso){
   jugRecorteQuitar();
   ['promo6-frase','promo6-circ-a','promo6-circ-b','promo6-lin-a','promo6-lin-b','promo6-tit'].forEach(i => { const e = document.getElementById(i); if(e) e.value = ''; });
-  [['promo6-frase-z','detras'],['promo6-frase-al','centro'],['promo6-circ-modo',''],['promo6-bgcolor','#0b1630']].forEach(([i,v]) => { const e = document.getElementById(i); if(e) e.value = v; });
+  [['promo6-frase-al','centro'],['promo6-circ-modo',''],['promo6-bgcolor','#0b1630']].forEach(([i,v]) => { const e = document.getElementById(i); if(e) e.value = v; });
+  Object.keys(JUG_DECO_DEF).forEach(i => jugSetSl(i, JUG_DECO_DEF[i]));
   _jugAj = {}; jugAjCargar();
   const en = document.getElementById('promo6-enc'); if(en) en.checked = true;
   if(!silencioso) promoJugPreview();
@@ -18179,7 +18276,8 @@ function promoJugArmar(validar){
     // detalles estilo Serie A
     enc, frase,
     fraseAl: ['izq','der'].includes(val('promo6-frase-al')) ? val('promo6-frase-al') : 'centro',
-    fraseZ: val('promo6-frase-z')==='delante' ? 'delante' : 'detras',
+    fraseLuz: num('promo6-frase-luz',100)/100,
+    filtro: { blur: num('promo6-f-blur',0), gris: num('promo6-f-gris',0), sepia: num('promo6-f-sepia',0), brillo: num('promo6-f-brillo',100), contraste: num('promo6-f-contraste',100), sat: num('promo6-f-sat',100), matiz: num('promo6-f-matiz',0), vineta: num('promo6-f-vineta',0) },
     recorte: _jugRecorte||'',
     bgColor: val('promo6-bgcolor') || '#0b1630',
     circModo, circA: val('promo6-circ-a'), circB: val('promo6-circ-b'),
@@ -19702,7 +19800,8 @@ async function generarImagenPromoJugador(p){
   const kE = ajx('enc'), kL = ajx('logo'), kGi = ajx('giga'), kSt = ajx('stats');
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
-  const ctx = canvas.getContext('2d');
+  let ctx = canvas.getContext('2d');
+  const base = ctx;                       // lienzo final; los elementos se dibujan en capas (detrás / delante del recorte)
   ctx.textBaseline = 'alphabetic';
   const FB = '"Bebas Neue", Arial, sans-serif';
   const FR = '"Rajdhani", Arial, sans-serif';
@@ -19730,7 +19829,12 @@ async function generarImagenPromoJugador(p){
     const iw = foto.naturalWidth || foto.width || 1, ih = foto.naturalHeight || foto.height || 1;
     const sc = Math.max(W/iw, H/ih) * (p.zoom || 1);
     const dw = iw*sc, dh = ih*sc;
-    ctx.drawImage(foto, (W-dw)*p.px, (H-dh)*p.py, dw, dh);
+    cvDibujarFotoFiltrada(ctx, foto, (W-dw)*p.px, (H-dh)*p.py, dw, dh, p.filtro);
+    if(p.filtro && p.filtro.vineta > 0){
+      const vg = ctx.createRadialGradient(CX, H*0.5, H*0.28, CX, H*0.5, H*0.86);
+      vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,' + (0.9 * p.filtro.vineta / 100) + ')');
+      ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+    }
   } else if(logoImg && !rec){
     const WS = 600;
     ctx.save(); ctx.globalAlpha = 0.07;
@@ -19741,6 +19845,12 @@ async function generarImagenPromoJugador(p){
   const gT = ctx.createLinearGradient(0, 0, 0, 200);
   gT.addColorStop(0, 'rgba(0,0,0,.50)'); gT.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = gT; ctx.fillRect(0, 0, W, 200);
+
+  // ── Capas: cada elemento va detrás o delante del jugador recortado (se elige por elemento) ──
+  const mkCapa = () => { const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); x.textBaseline = 'alphabetic'; return { c, x }; };
+  const capaB = mkCapa(), capaF = mkCapa();
+  const zDe = (k) => { const a = AJ[k] || {}; if(a.z === 'atras' || a.z === 'frente') return a.z; return k === 'frase' ? 'atras' : 'frente'; };
+  const enCapa = (k) => { ctx = (zDe(k) === 'atras') ? capaB.x : capaF.x; };
 
   // ── Frase gigante + jugador recortado (la frase va detrás del jugador) ──
   const kFr = ajx('frase'), kRe = ajx('rec');
@@ -19769,28 +19879,41 @@ async function generarImagenPromoJugador(p){
       ctx.save();
       ctx.font = `400 ${fsF}px ${ANTON}`; setLS('0px');
       ctx.textAlign = alin === 'centro' ? 'center' : (alin === 'izq' ? 'left' : 'right');
-      ctx.textBaseline = 'alphabetic'; ctx.fillStyle = '#ffffff';
-      ctx.shadowColor = 'rgba(0,0,0,.25)'; ctx.shadowBlur = 14;
-      lines.forEach((t, i) => ctx.fillText(t, xT, top + capF + i * pitch));
+      ctx.textBaseline = 'alphabetic';
+      // iluminación: menos de 100% oscurece el color; más de 100% lo mantiene blanco y le suma un halo de luz
+      const luz = (typeof p.fraseLuz === 'number' && isFinite(p.fraseLuz)) ? Math.max(0, Math.min(2, p.fraseLuz)) : 1;
+      const v = Math.round(255 * Math.min(1, luz));
+      ctx.fillStyle = 'rgb(' + v + ',' + v + ',' + v + ')';
+      const escribir = () => lines.forEach((t, i) => ctx.fillText(t, xT, top + capF + i * pitch));
+      if(luz > 1){
+        const g = luz - 1;
+        ctx.shadowColor = 'rgba(255,255,255,' + (0.35 + 0.6*g) + ')'; ctx.shadowBlur = 24 + 100*g; escribir();
+        ctx.shadowBlur = 10 + 40*g; escribir();
+      } else {
+        ctx.shadowColor = 'rgba(0,0,0,.25)'; ctx.shadowBlur = 14; escribir();
+      }
       ctx.restore();
     };
   }
-  if(frase.length && p.fraseZ !== 'delante') pintarFrase();
+  if(frase.length){ enCapa('frase'); pintarFrase(); }
+  let dibujarRec = () => {};
   if(rec){
     const rw0 = rec.naturalWidth || rec.width || 1, rh0 = rec.naturalHeight || rec.height || 1;
     const hh = H * 0.8 * kRe.k;
     const ww = rw0 * hh / rh0;
     const cxR = W * 0.5 + kRe.dx;
     const baseR = H + kRe.dy;
-    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 24;
-    ctx.drawImage(rec, cxR - ww/2, baseR - hh, ww, hh);
-    ctx.restore();
+    dibujarRec = () => {                                    // se dibuja al final, entre la capa de atrás y la de adelante
+      base.save(); base.shadowColor = 'rgba(0,0,0,.35)'; base.shadowBlur = 24;
+      base.drawImage(rec, cxR - ww/2, baseR - hh, ww, hh);
+      base.restore();
+    };
     reg('rec', cxR - ww/2, baseR - hh, ww, hh);
   }
-  if(frase.length && p.fraseZ === 'delante') pintarFrase();
 
   // ── Título centrado arriba: "NOMBRE · ESTADÍSTICAS DE LA TEMPORADA" ──
   if(p.enc !== false && p.nombre){
+    enCapa('enc');
     const txt = (p.nombre + '  ·  ' + p.sub).toUpperCase();
     let fs = Math.round(21*tk(p,'enc')*kE.k), ls = 6;
     ctx.font = `500 ${fs}px ${FR}`; setLS(ls + 'px');
@@ -19807,6 +19930,7 @@ async function generarImagenPromoJugador(p){
 
   // ── Logo de la liga (arriba a la derecha), completo y sin recortar ──
   if(logoImg){
+    enCapa('logo');
     const bs = Math.round(76 * kL.k), bxL = W - 37 - bs + kL.dx, byL = 32 + kL.dy;
     reg('logo', bxL, byL, bs, bs);
     const iw = logoImg.naturalWidth || logoImg.width || 1, ih = logoImg.naturalHeight || logoImg.height || 1;
@@ -19818,6 +19942,7 @@ async function generarImagenPromoJugador(p){
   // ── Texto gigante abajo (opcional), ancho completo y condensado ──
   let gigaTop = H;   // y de la parte de arriba del texto (para no pisarlo con las estadísticas)
   if(p.giga){
+    enCapa('giga');
     const gt = String(p.giga).toUpperCase();
     const maxGW = W - 90;
     ctx.font = `400 100px ${FB}`; setLS('0px');
@@ -19844,6 +19969,7 @@ async function generarImagenPromoJugador(p){
 
   // ── Detalles estilo Serie A: título espaciado entre líneas, línea con cifras y círculos ──
   if(p.tit){
+    enCapa('tit');
     const kT = ajx('tit'), kTL = ajx('titlin');
     const t = String(p.tit).toUpperCase();
     const yT = H * 0.236 + kT.dy;
@@ -19858,6 +19984,7 @@ async function generarImagenPromoJugador(p){
     ctx.fillText(t, x0, yT + 2);
     setLS('0px'); ctx.shadowBlur = 0;
     reg('tit', x0, yT - fsT * 0.6, tw, fsT * 1.2);
+    ctx.restore(); enCapa('titlin'); ctx.save();            // las líneas del título tienen su propia capa
     const gapL = Math.round(34 * kT.k), largo = Math.round(300 * kTL.k), yLin = yT + kTL.dy;
     ctx.fillStyle = 'rgba(255,255,255,.9)';
     const lxB = x0 - gapL, lxA = Math.max(0, lxB - largo);
@@ -19872,21 +19999,25 @@ async function generarImagenPromoJugador(p){
     const yL = (fb ? fb.top - 44 : H * 0.17) + kLi.dy;
     const lenL = W * 0.57 * kLi.k, cxL = CX + kLi.dx;
     const xA = cxL - lenL/2, xB = cxL + lenL/2;
+    enCapa('lin');
     ctx.save();
     ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.fillRect(xA, yL - 0.7, lenL, 1.4);
     reg('lin', xA, yL - 10, lenL, 20);
-    ctx.textBaseline = 'middle'; ctx.textAlign = 'center'; ctx.fillStyle = '#ffffff';
-    ctx.shadowColor = 'rgba(0,0,0,.4)'; ctx.shadowBlur = 8;
+    ctx.restore();
     const numero = (txt, kk, cx, clave) => {
+      enCapa(clave);
+      ctx.save();
+      ctx.textBaseline = 'middle'; ctx.textAlign = 'center'; ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = 'rgba(0,0,0,.4)'; ctx.shadowBlur = 8;
       const fsN = Math.max(10, Math.round(26 * kk.k));
       ctx.font = `500 ${fsN}px ${SANS}`; setLS('0px');
       const wN = ctx.measureText(txt).width;
       ctx.fillText(txt, cx + kk.dx, yL + kk.dy + 1);
+      ctx.restore();
       reg(clave, cx + kk.dx - wN/2 - 6, yL + kk.dy - fsN * 0.7, wN + 12, fsN * 1.4);
     };
     if(p.linA) numero(p.linA, kA, xA - 65, 'lina');
     if(p.linB) numero(p.linB, kB, xB + 65, 'linb');
-    ctx.restore();
   }
   if(p.circModo === 'lados' || p.circModo === 'columna'){
     const k1 = ajx('circ1'), k2 = ajx('circ2');
@@ -19917,17 +20048,16 @@ async function generarImagenPromoJugador(p){
       const Lb = Math.max(40, Math.min(250, H - 40 - (caja.bottom + g) - 112 - 30));
       c1 = { cx: caja.cx + k1.dx, cy: caja.top - g - Lt - 56 + k1.dy, r: r1 };
       c2 = { cx: caja.cx + k2.dx, cy: caja.bottom + g + Lb + 56 + k2.dy, r: r2 };
-      ctx.save(); ctx.fillStyle = 'rgba(255,255,255,.85)';
-      if(p.circA && caja.top - g > c1.cy + r1) ctx.fillRect(c1.cx - 0.7, c1.cy + r1, 1.4, caja.top - g - (c1.cy + r1));
-      if(p.circB && c2.cy - r2 > caja.bottom + g) ctx.fillRect(c2.cx - 0.7, caja.bottom + g, 1.4, c2.cy - r2 - (caja.bottom + g));
-      ctx.restore();
+      if(p.circA && caja.top - g > c1.cy + r1){ enCapa('circ1'); ctx.save(); ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fillRect(c1.cx - 0.7, c1.cy + r1, 1.4, caja.top - g - (c1.cy + r1)); ctx.restore(); }
+      if(p.circB && c2.cy - r2 > caja.bottom + g){ enCapa('circ2'); ctx.save(); ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fillRect(c2.cx - 0.7, caja.bottom + g, 1.4, c2.cy - r2 - (caja.bottom + g)); ctx.restore(); }
     }
-    if(p.circA){ circulo(c1.cx, c1.cy, c1.r, p.circA); reg('circ1', c1.cx - c1.r, c1.cy - c1.r, 2*c1.r, 2*c1.r); }
-    if(p.circB){ circulo(c2.cx, c2.cy, c2.r, p.circB); reg('circ2', c2.cx - c2.r, c2.cy - c2.r, 2*c2.r, 2*c2.r); }
+    if(p.circA){ enCapa('circ1'); circulo(c1.cx, c1.cy, c1.r, p.circA); reg('circ1', c1.cx - c1.r, c1.cy - c1.r, 2*c1.r, 2*c1.r); }
+    if(p.circB){ enCapa('circ2'); circulo(c2.cx, c2.cy, c2.r, p.circB); reg('circ2', c2.cx - c2.r, c2.cy - c2.r, 2*c2.r, 2*c2.r); }
   }
 
   // ── Cajas de estadísticas: borde fino blanco, fondo oscuro translúcido ──
   //    lado (izq/der) y altura (arriba/centro/abajo) configurables
+  enCapa('stats');
   const n = Math.min(4, p.stats.length);
   const bw = Math.round(188*kSt.k), bh = Math.round(188*kSt.k), step = Math.round(211*kSt.k);
   const bx = ((p.pos === 'der') ? (W - 108 - bw) : 108) + kSt.dx;
@@ -19994,6 +20124,12 @@ async function generarImagenPromoJugador(p){
     }
   }
 
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  // ── Composición: fondo → elementos de atrás → jugador recortado → elementos de adelante ──
+  ctx = base;
+  base.drawImage(capaB.c, 0, 0);
+  dibujarRec();
+  base.drawImage(capaF.c, 0, 0);
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   if(p.foto || p.recorte) cvCreditoFoto(ctx, W, H, _promoCredito(), { yBottom: H - 70 });
   return canvas;
