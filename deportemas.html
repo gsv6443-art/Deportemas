@@ -5717,7 +5717,11 @@ table.posiciones td:nth-child(8){
           <details id="jug-deco-det" style="margin:4px 0 14px" ontoggle="if(this.open) promoJugPreview()">
             <summary style="cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:12px;letter-spacing:1px;color:var(--gris)">✨ DETALLES ESTILO SERIE A (frase detrás del jugador, círculos, líneas…)</summary>
             <div id="jug-prev-wrap" style="display:none;position:sticky;top:0;z-index:5;background:var(--negro2,#141414);padding:8px 0;text-align:center;border-bottom:1px solid rgba(201,162,39,.2)">
-              <img id="jug-prev" alt="Vista previa" style="max-height:34vh;max-width:100%;border-radius:8px;border:1px solid rgba(201,162,39,.25)"/>
+              <div id="jug-prev-stage" style="position:relative;display:inline-block;line-height:0;touch-action:none;cursor:grab">
+                <img id="jug-prev" alt="Vista previa" draggable="false" style="max-height:34vh;max-width:100%;border-radius:8px;border:1px solid rgba(201,162,39,.25);user-select:none"/>
+                <div id="jug-sel" style="position:absolute;border:2px dashed #e8c75a;border-radius:4px;pointer-events:none;display:none"></div>
+              </div>
+              <div style="font-size:10px;color:var(--gris);font-family:'Rajdhani',sans-serif;line-height:1.3;margin-top:4px">Tocá un elemento y arrastralo para moverlo</div>
             </div>
             <div class="form-group" style="margin-top:8px"><label style="display:flex;align-items:center;gap:8px;text-transform:none">
               <input type="checkbox" id="promo6-enc" checked style="width:auto"/> Mostrar el encabezado chico (nombre · subtítulo) arriba</label>
@@ -5737,16 +5741,14 @@ table.posiciones td:nth-child(8){
               <div class="form-group"><label style="font-size:10px">Frase</label>
                 <select id="promo6-frase-z"><option value="detras">Detrás del jugador</option><option value="delante">Delante del jugador</option></select></div>
             </div>
-            <div class="form-row">
-              <div class="form-group"><label style="font-size:10px">Tamaño del recorte: <span id="promo6-rec-tam-val">80</span>%</label><input type="range" id="promo6-rec-tam" min="40" max="140" value="80" oninput="document.getElementById('promo6-rec-tam-val').textContent=this.value"/></div><div class="form-group"><label style="font-size:10px">Recorte horizontal: <span id="promo6-rec-x-val">50</span>%</label><input type="range" id="promo6-rec-x" min="0" max="100" value="50" oninput="document.getElementById('promo6-rec-x-val').textContent=this.value"/></div><div class="form-group"><label style="font-size:10px">Recorte vertical (base): <span id="promo6-rec-y-val">100</span>%</label><input type="range" id="promo6-rec-y" min="60" max="130" value="100" oninput="document.getElementById('promo6-rec-y-val').textContent=this.value"/></div>
-            </div>
+            
             <div class="form-group"><label>Frase gigante (opcional)</label>
               <input type="text" id="promo6-frase" maxlength="40" placeholder="Ej: BRACE   ·   WHAT A / GOAL   (usá / para separar renglones, hasta 3)"/>
             </div>
             <div class="form-row">
               <div class="form-group"><label style="font-size:10px">Alineación de la frase</label>
                 <select id="promo6-frase-al"><option value="centro">Centrada</option><option value="izq">A la izquierda</option><option value="der">A la derecha</option></select></div>
-              <div class="form-group"><label style="font-size:10px">Altura de la frase: <span id="promo6-frase-y-val">15</span>%</label><input type="range" id="promo6-frase-y" min="0" max="80" value="15" oninput="document.getElementById('promo6-frase-y-val').textContent=this.value"/></div><div class="form-group"><label style="font-size:10px">Tamaño de la frase: <span id="promo6-frase-tam-val">100</span>%</label><input type="range" id="promo6-frase-tam" min="40" max="150" value="100" oninput="document.getElementById('promo6-frase-tam-val').textContent=this.value"/></div>
+              
             </div>
             <div style="font-family:'Rajdhani',sans-serif;font-size:11px;letter-spacing:1px;color:var(--dorado);margin:14px 0 4px;text-transform:uppercase">2 · Círculos con cifras (minutos, goles…)</div>
             <div class="form-row">
@@ -5755,15 +5757,28 @@ table.posiciones td:nth-child(8){
               <div class="form-group"><label style="font-size:10px">Cifra 1 (izq. / arriba)</label><input type="text" id="promo6-circ-a" maxlength="8" placeholder="47’"/></div>
               <div class="form-group"><label style="font-size:10px">Cifra 2 (der. / abajo)</label><input type="text" id="promo6-circ-b" maxlength="8" placeholder="79’"/></div>
             </div>
-            <div class="form-group"><label style="font-size:10px">Altura de los círculos: <span id="promo6-circ-y-val">0</span>% (0 = automática)</label><input type="range" id="promo6-circ-y" min="0" max="100" value="0" oninput="document.getElementById('promo6-circ-y-val').textContent=this.value"/></div><div style="font-family:'Rajdhani',sans-serif;font-size:11px;letter-spacing:1px;color:var(--dorado);margin:14px 0 4px;text-transform:uppercase">3 · Línea con cifras en los extremos (como WHAT A GOAL)</div>
+            <div style="font-family:'Rajdhani',sans-serif;font-size:11px;letter-spacing:1px;color:var(--dorado);margin:14px 0 4px;text-transform:uppercase">3 · Línea con cifras en los extremos (como WHAT A GOAL)</div>
             <div class="form-row">
               <div class="form-group"><label style="font-size:10px">Cifra izquierda</label><input type="text" id="promo6-lin-a" maxlength="8" placeholder="1"/></div>
               <div class="form-group"><label style="font-size:10px">Cifra derecha</label><input type="text" id="promo6-lin-b" maxlength="8" placeholder="0"/></div>
             </div>
-            <div class="form-group"><label style="font-size:10px">Altura de la línea: <span id="promo6-lin-y-val">0</span>% (0 = automática)</label><input type="range" id="promo6-lin-y" min="0" max="100" value="0" oninput="document.getElementById('promo6-lin-y-val').textContent=this.value"/></div><div style="font-family:'Rajdhani',sans-serif;font-size:11px;letter-spacing:1px;color:var(--dorado);margin:14px 0 4px;text-transform:uppercase">4 · Título espaciado entre líneas (como LEGEND)</div>
+            <div style="font-family:'Rajdhani',sans-serif;font-size:11px;letter-spacing:1px;color:var(--dorado);margin:14px 0 4px;text-transform:uppercase">4 · Título espaciado entre líneas (como LEGEND)</div>
             <div class="form-group"><label style="font-size:10px">Título</label><input type="text" id="promo6-tit" maxlength="24" placeholder="Ej: LEGEND, MVP, CAPITÁN"/></div>
-            <div class="form-row">
-              <div class="form-group"><label style="font-size:10px">Altura del título: <span id="promo6-tit-y-val">0</span>% (0 = automática)</label><input type="range" id="promo6-tit-y" min="0" max="100" value="0" oninput="document.getElementById('promo6-tit-y-val').textContent=this.value"/></div><div class="form-group"><label style="font-size:10px">Posición horizontal del título: <span id="promo6-tit-x-val">50</span>%</label><input type="range" id="promo6-tit-x" min="10" max="90" value="50" oninput="document.getElementById('promo6-tit-x-val').textContent=this.value"/></div>
+            
+            <div style="margin-top:16px;padding:10px;border:1px solid rgba(201,162,39,.35);border-radius:10px;background:rgba(201,162,39,.05)">
+              <div style="font-family:'Rajdhani',sans-serif;font-size:12px;letter-spacing:1px;color:var(--dorado);margin-bottom:6px">🎛 AJUSTAR TAMAÑO Y UBICACIÓN DE CADA ELEMENTO</div>
+              <p style="font-size:10px;color:var(--gris);margin:0 0 8px;font-family:'Rajdhani',sans-serif">Tocá un elemento en la vista previa para seleccionarlo y arrastralo para moverlo, o elegilo acá. Cada uno tiene su tamaño y su posición.</p>
+              <div class="form-group"><label style="font-size:10px">Elemento</label><select id="jug-aj-el" onchange="jugAjSeleccionar(this.value)"></select></div>
+              <div class="form-group" id="jug-aj-t-g"><label style="font-size:10px"><span id="jug-aj-t-lbl">Tamaño</span>: <span id="jug-aj-t-val">100</span>%</label>
+                <input type="range" id="jug-aj-t" min="20" max="300" step="1" value="100" oninput="jugAjCambio()"/></div>
+              <div class="form-group"><label style="font-size:10px">Posición horizontal: <span id="jug-aj-x-val">0</span></label>
+                <input type="range" id="jug-aj-x" min="-100" max="100" step="0.5" value="0" oninput="jugAjCambio()"/></div>
+              <div class="form-group"><label style="font-size:10px">Posición vertical: <span id="jug-aj-y-val">0</span></label>
+                <input type="range" id="jug-aj-y" min="-100" max="100" step="0.5" value="0" oninput="jugAjCambio()"/></div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button type="button" class="btn-edit" onclick="jugAjReset(false)">↺ Restablecer este elemento</button>
+                <button type="button" class="btn-edit" onclick="jugAjReset(true)">↺ Restablecer todos</button>
+              </div>
             </div>
             <button type="button" class="btn-edit" onclick="jugDecoReset()" style="margin-top:10px">↺ Quitar todos los detalles</button>
           </details>
@@ -17889,7 +17904,8 @@ function _campInitTodo(){
   const w = document.getElementById('promo-campeon-wrap');
   if(w){ w.addEventListener('input', promoCampeonPreview); w.addEventListener('change', promoCampeonPreview); }
   const wj = document.getElementById('promo-jugador-wrap');
-  if(wj){ wj.addEventListener('input', promoJugPreview); wj.addEventListener('change', promoJugPreview); }
+  if(wj){ wj.addEventListener('input', () => promoJugPreview()); wj.addEventListener('change', () => promoJugPreview()); }
+  jugAjInit();
 }
 if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _campInitTodo); else _campInitTodo();
 
@@ -18034,12 +18050,105 @@ function jugRecorteQuitar(){
   const f = document.getElementById('promo6-recorte-file'); if(f) f.value = '';
   promoJugPreview();
 }
-const JUG_DECO_DEF = { 'promo6-rec-tam':'80','promo6-rec-x':'50','promo6-rec-y':'100','promo6-frase-y':'15','promo6-frase-tam':'100','promo6-circ-y':'0','promo6-lin-y':'0','promo6-tit-y':'0','promo6-tit-x':'50' };
+// Elementos que se pueden ajustar uno por uno: [clave, nombre, tiene tamaño, etiqueta del tamaño]
+const JUG_AJ_EL = [
+  ['frase','Frase gigante',true,'Tamaño'], ['rec','Jugador recortado',true,'Tamaño'],
+  ['enc','Encabezado (nombre · subtítulo)',true,'Tamaño'], ['logo','Logo de la liga',true,'Tamaño'],
+  ['giga','Texto gigante de abajo',false,'Tamaño'], ['stats','Cajas de estadísticas',true,'Tamaño'],
+  ['circ1','Círculo 1',true,'Tamaño'], ['circ2','Círculo 2',true,'Tamaño'],
+  ['lin','Línea con cifras',true,'Largo'], ['lina','Cifra izquierda de la línea',true,'Tamaño'], ['linb','Cifra derecha de la línea',true,'Tamaño'],
+  ['tit','Título espaciado',true,'Tamaño'], ['titlin','Líneas del título',true,'Largo']
+];
+let _jugAj = {};            // clave -> { t: tamaño en %, x: desplazamiento horizontal en % del ancho, y: vertical en % del alto }
+let _jugAjSel = 'frase';
+let _jugBoxes = {};         // clave -> { x, y, w, h } en píxeles del lienzo (lo informa el generador)
+const _jugAjV = (k) => Object.assign({ t:100, x:0, y:0 }, _jugAj[k] || {});
+function jugAjInit(){
+  const sel = document.getElementById('jug-aj-el'); if(!sel) return;
+  sel.innerHTML = JUG_AJ_EL.map(([k,n]) => '<option value="' + k + '">' + n + '</option>').join('');
+  jugAjSeleccionar(_jugAjSel);
+  const st = document.getElementById('jug-prev-stage');
+  if(st && !st._jugBound){
+    st._jugBound = true;
+    st.addEventListener('pointerdown', jugPrevDown);
+    st.addEventListener('pointermove', jugPrevMove);
+    st.addEventListener('pointerup', jugPrevUp);
+    st.addEventListener('pointercancel', jugPrevUp);
+  }
+}
+function jugAjSeleccionar(k){
+  if(!JUG_AJ_EL.some(e => e[0] === k)) return;
+  _jugAjSel = k;
+  const sel = document.getElementById('jug-aj-el'); if(sel) sel.value = k;
+  jugAjCargar(); jugSelMarcar();
+}
+function jugAjCargar(){
+  const def = JUG_AJ_EL.find(e => e[0] === _jugAjSel) || JUG_AJ_EL[0];
+  const a = _jugAjV(_jugAjSel);
+  const set = (i, v) => { const e = document.getElementById(i), l = document.getElementById(i + '-val'); if(e) e.value = v; if(l) l.textContent = v; };
+  set('jug-aj-t', a.t); set('jug-aj-x', a.x); set('jug-aj-y', a.y);
+  const g = document.getElementById('jug-aj-t-g'); if(g) g.style.display = def[2] ? '' : 'none';
+  const lb = document.getElementById('jug-aj-t-lbl'); if(lb) lb.textContent = def[3];
+}
+function jugAjCambio(){
+  const num = i => { const e = document.getElementById(i); const n = e ? Number(e.value) : NaN; return isNaN(n) ? 0 : n; };
+  const t = num('jug-aj-t') || 100, x = num('jug-aj-x'), y = num('jug-aj-y');
+  ['t','x','y'].forEach(c => { const l = document.getElementById('jug-aj-' + c + '-val'); if(l) l.textContent = ({t, x, y})[c]; });
+  _jugAj[_jugAjSel] = { t, x, y };
+  promoJugPreview();
+}
+function jugAjReset(todos){
+  if(todos) _jugAj = {}; else delete _jugAj[_jugAjSel];
+  jugAjCargar(); promoJugPreview();
+}
+// Selección y arrastre sobre la vista previa
+function jugPrevHit(px, py, boxes){          // elemento más chico que contiene el punto (coordenadas del lienzo)
+  let best = null, area = Infinity;
+  for(const k in boxes){
+    const b = boxes[k];
+    if(b && px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h){
+      const a = b.w * b.h; if(a < area){ area = a; best = k; }
+    }
+  }
+  return best;
+}
+function jugSelMarcar(){
+  const el = document.getElementById('jug-sel'); if(!el) return;
+  const b = _jugBoxes[_jugAjSel];
+  if(!b){ el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  el.style.left = (b.x / CV_W * 100) + '%'; el.style.top = (b.y / CV_H * 100) + '%';
+  el.style.width = (b.w / CV_W * 100) + '%'; el.style.height = (b.h / CV_H * 100) + '%';
+}
+let _jugDrag = null;
+function jugPrevDown(e){
+  try{
+    const img = document.getElementById('jug-prev'); if(!img) return;
+    const r = img.getBoundingClientRect(); if(!r.width || !r.height) return;
+    const k = jugPrevHit((e.clientX - r.left) / r.width * CV_W, (e.clientY - r.top) / r.height * CV_H, _jugBoxes);
+    if(!k) return;
+    jugAjSeleccionar(k);
+    const a = _jugAjV(k);
+    _jugDrag = { k, sx: e.clientX, sy: e.clientY, x0: a.x, y0: a.y, w: r.width, h: r.height };
+    if(e.currentTarget && e.currentTarget.setPointerCapture) e.currentTarget.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  }catch(err){ console.warn(err); }
+}
+function jugPrevMove(e){
+  const d = _jugDrag; if(!d) return;
+  const cl = v => Math.max(-100, Math.min(100, Math.round(v * 10) / 10));
+  const a = _jugAjV(d.k);
+  _jugAj[d.k] = { t: a.t, x: cl(d.x0 + (e.clientX - d.sx) / d.w * 100), y: cl(d.y0 + (e.clientY - d.sy) / d.h * 100) };
+  if(d.k === _jugAjSel) jugAjCargar();
+  promoJugPreview(true);
+}
+function jugPrevUp(){ _jugDrag = null; }
+const JUG_DECO_DEF = {};
 function jugDecoReset(silencioso){
   jugRecorteQuitar();
   ['promo6-frase','promo6-circ-a','promo6-circ-b','promo6-lin-a','promo6-lin-b','promo6-tit'].forEach(i => { const e = document.getElementById(i); if(e) e.value = ''; });
   [['promo6-frase-z','detras'],['promo6-frase-al','centro'],['promo6-circ-modo',''],['promo6-bgcolor','#0b1630']].forEach(([i,v]) => { const e = document.getElementById(i); if(e) e.value = v; });
-  Object.keys(JUG_DECO_DEF).forEach(i => { const e = document.getElementById(i), l = document.getElementById(i + '-val'); if(e) e.value = JUG_DECO_DEF[i]; if(l) l.textContent = JUG_DECO_DEF[i]; });
+  _jugAj = {}; jugAjCargar();
   const en = document.getElementById('promo6-enc'); if(en) en.checked = true;
   if(!silencioso) promoJugPreview();
 }
@@ -18070,13 +18179,13 @@ function promoJugArmar(validar){
     // detalles estilo Serie A
     enc, frase,
     fraseAl: ['izq','der'].includes(val('promo6-frase-al')) ? val('promo6-frase-al') : 'centro',
-    fraseY: num('promo6-frase-y',15)/100, fraseTam: num('promo6-frase-tam',100)/100,
     fraseZ: val('promo6-frase-z')==='delante' ? 'delante' : 'detras',
-    recorte: _jugRecorte||'', recTam: num('promo6-rec-tam',80)/100, recX: num('promo6-rec-x',50)/100, recY: num('promo6-rec-y',100)/100,
+    recorte: _jugRecorte||'',
     bgColor: val('promo6-bgcolor') || '#0b1630',
-    circModo, circA: val('promo6-circ-a'), circB: val('promo6-circ-b'), circY: num('promo6-circ-y',0)/100,
-    linA: val('promo6-lin-a'), linB: val('promo6-lin-b'), linY: num('promo6-lin-y',0)/100,
-    tit: val('promo6-tit').toUpperCase(), titY: num('promo6-tit-y',0)/100, titX: num('promo6-tit-x',50)/100
+    circModo, circA: val('promo6-circ-a'), circB: val('promo6-circ-b'),
+    linA: val('promo6-lin-a'), linB: val('promo6-lin-b'),
+    tit: val('promo6-tit').toUpperCase(),
+    aj: JSON.parse(JSON.stringify(_jugAj)), boxes: {}
   };
   const hayDeco = !!(frase.length || circModo || p.linA || p.linB || p.tit || p.recorte);
   if(validar){
@@ -18095,7 +18204,7 @@ function promoGenerarJugador(){
 }
 // Vista previa en vivo (solo con 1 jugador y el bloque de detalles abierto)
 let _jugPrevTok = 0, _jugPrevTmr = null;
-function promoJugPreview(){
+function promoJugPreview(rapido){
   clearTimeout(_jugPrevTmr);
   _jugPrevTmr = setTimeout(async () => {
     const wrap = document.getElementById('promo-jugador-wrap');
@@ -18108,9 +18217,11 @@ function promoJugPreview(){
       const cv = await generarImagenPromoJugador(p);
       if(tok !== _jugPrevTok) return;                  // llegó un cambio más nuevo
       img.src = cv.toDataURL('image/jpeg', 0.7);
+      _jugBoxes = p.boxes || {};
+      jugSelMarcar();
       if(box) box.style.display = '';
     }catch(e){ console.warn('Vista previa jugador:', e); }
-  }, 200);
+  }, rapido ? 40 : 200);
 }
 
 function promoGenerar(){
@@ -19584,6 +19695,11 @@ async function generarImagenPromoJugador(p){
   await document.fonts.ready;
   const id   = getIdentidad();
   const W = CV_W, H = CV_H, CX = W/2;
+  // Ajuste de cada elemento: tamaño (factor) y desplazamiento (px). Las cajas se informan para poder seleccionarlos en la vista previa.
+  const AJ = p.aj || {};
+  const ajx = (k) => { const a = AJ[k] || {}; return { k: (typeof a.t === 'number' && a.t > 0) ? a.t / 100 : 1, dx: (a.x || 0) / 100 * W, dy: (a.y || 0) / 100 * H }; };
+  const reg = (k, x, y, w, h) => { if(p.boxes) p.boxes[k] = { x, y, w, h }; };
+  const kE = ajx('enc'), kL = ajx('logo'), kGi = ajx('giga'), kSt = ajx('stats');
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
@@ -19627,6 +19743,7 @@ async function generarImagenPromoJugador(p){
   ctx.fillStyle = gT; ctx.fillRect(0, 0, W, 200);
 
   // ── Frase gigante + jugador recortado (la frase va detrás del jugador) ──
+  const kFr = ajx('frase'), kRe = ajx('rec');
   const frase = Array.isArray(p.frase) ? p.frase.filter(Boolean) : [];
   let fb = null;                                            // caja de la frase: { top, bottom, cx }
   let pintarFrase = () => {};
@@ -19638,15 +19755,16 @@ async function generarImagenPromoJugador(p){
     ctx.font = `400 200px ${ANTON}`; setLS('0px');
     const w200 = Math.max(...lines.map(t => ctx.measureText(t).width)) || 1;
     let fsF = Math.min(440, Math.floor(200 * maxW0 / w200));
-    fsF = Math.max(30, Math.min(Math.floor(fsF * (p.fraseTam || 1)), Math.floor(200 * (W - 2*margen) / w200)));   // nunca más ancha que la imagen
+    fsF = Math.max(30, Math.min(Math.floor(fsF * kFr.k), Math.floor(200 * (W - 2*margen) / w200)));   // nunca más ancha que la imagen
     ctx.font = `400 ${fsF}px ${ANTON}`;
     const capF = ctx.measureText('H').actualBoundingBoxAscent || fsF * 0.72;
     const pitch = capF * 1.11;
     const wMax = Math.max(...lines.map(t => ctx.measureText(t).width));
-    const top = H * Math.min(0.9, Math.max(0, p.fraseY == null ? 0.15 : p.fraseY));
-    const xT = alin === 'centro' ? CX : (alin === 'izq' ? margen : W - margen);
-    fb = { top, bottom: top + capF + (lines.length - 1) * pitch,
-           cx: alin === 'centro' ? CX : (alin === 'izq' ? margen + wMax/2 : W - margen - wMax/2) };
+    const top = H * 0.15 + kFr.dy;
+    const xT = (alin === 'centro' ? CX : (alin === 'izq' ? margen : W - margen)) + kFr.dx;
+    const left = alin === 'centro' ? xT - wMax/2 : (alin === 'izq' ? xT : xT - wMax);
+    fb = { top, bottom: top + capF + (lines.length - 1) * pitch, cx: left + wMax/2 };
+    reg('frase', left, top, wMax, fb.bottom - top);
     pintarFrase = () => {
       ctx.save();
       ctx.font = `400 ${fsF}px ${ANTON}`; setLS('0px');
@@ -19660,20 +19778,21 @@ async function generarImagenPromoJugador(p){
   if(frase.length && p.fraseZ !== 'delante') pintarFrase();
   if(rec){
     const rw0 = rec.naturalWidth || rec.width || 1, rh0 = rec.naturalHeight || rec.height || 1;
-    const hh = H * Math.min(1.4, Math.max(0.3, p.recTam || 0.8));
+    const hh = H * 0.8 * kRe.k;
     const ww = rw0 * hh / rh0;
-    const cxR = W * Math.min(1, Math.max(0, p.recX == null ? 0.5 : p.recX));
-    const baseR = H * Math.min(1.3, Math.max(0.6, p.recY == null ? 1 : p.recY));
+    const cxR = W * 0.5 + kRe.dx;
+    const baseR = H + kRe.dy;
     ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 24;
     ctx.drawImage(rec, cxR - ww/2, baseR - hh, ww, hh);
     ctx.restore();
+    reg('rec', cxR - ww/2, baseR - hh, ww, hh);
   }
   if(frase.length && p.fraseZ === 'delante') pintarFrase();
 
   // ── Título centrado arriba: "NOMBRE · ESTADÍSTICAS DE LA TEMPORADA" ──
   if(p.enc !== false && p.nombre){
     const txt = (p.nombre + '  ·  ' + p.sub).toUpperCase();
-    let fs = Math.round(21*tk(p,'enc')), ls = 6;
+    let fs = Math.round(21*tk(p,'enc')*kE.k), ls = 6;
     ctx.font = `500 ${fs}px ${FR}`; setLS(ls + 'px');
     while(fs > 12 && ctx.measureText(txt).width > 780){
       fs--; ls = Math.max(3, ls - 0.25);
@@ -19681,13 +19800,15 @@ async function generarImagenPromoJugador(p){
     }
     ctx.textAlign = 'center'; ctx.fillStyle = '#ffffff';
     ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 1;
-    ctx.fillText(txt, CX + ls/2, 86);
+    ctx.fillText(txt, CX + ls/2 + kE.dx, 86 + kE.dy);
+    { const wE = ctx.measureText(txt).width; reg('enc', CX + kE.dx - wE/2, 86 + kE.dy - fs, wE, fs * 1.4); }
     ctx.shadowBlur = 0; ctx.shadowOffsetY = 0; setLS('0px');
   }
 
   // ── Logo de la liga (arriba a la derecha), completo y sin recortar ──
   if(logoImg){
-    const bxL = W - 37 - 76, byL = 32, bs = 76;
+    const bs = Math.round(76 * kL.k), bxL = W - 37 - bs + kL.dx, byL = 32 + kL.dy;
+    reg('logo', bxL, byL, bs, bs);
     const iw = logoImg.naturalWidth || logoImg.width || 1, ih = logoImg.naturalHeight || logoImg.height || 1;
     const sc = Math.min(bs/iw, bs/ih);
     const dw = iw*sc, dh = ih*sc;
@@ -19704,7 +19825,7 @@ async function generarImagenPromoJugador(p){
     const gfs = Math.min(460, Math.floor(100 * maxGW / w100));
     const gSY = Math.max(0.3, Math.min(1.8, p.gigaAlto || 1));    // escala vertical (alto)
     const gSX = Math.max(0.3, Math.min(1.04, p.gigaAncho || 1)); // escala horizontal (ancho)
-    const gBase = H - 44;
+    const gBase = H - 44 + kGi.dy;
     const gCap = (ctx.measureText('H').actualBoundingBoxAscent || 70) * gfs / 100 * gSY;
     gigaTop = gBase - gCap;
     // sombra inferior leve para que el blanco se lea sobre cualquier foto
@@ -19714,7 +19835,8 @@ async function generarImagenPromoJugador(p){
     ctx.font = `400 ${gfs}px ${FB}`; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
     ctx.fillStyle = '#ffffff';
     ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 18;
-    ctx.save(); ctx.translate(CX, gBase); ctx.scale(gSX, gSY);
+    { const wG = ctx.measureText(gt).width * gSX; reg('giga', CX + kGi.dx - wG/2, gigaTop, wG, gBase - gigaTop); }
+    ctx.save(); ctx.translate(CX + kGi.dx, gBase); ctx.scale(gSX, gSY);
     ctx.fillText(gt, 0, 0);
     ctx.restore();
     ctx.shadowBlur = 0;
@@ -19722,10 +19844,11 @@ async function generarImagenPromoJugador(p){
 
   // ── Detalles estilo Serie A: título espaciado entre líneas, línea con cifras y círculos ──
   if(p.tit){
+    const kT = ajx('tit'), kTL = ajx('titlin');
     const t = String(p.tit).toUpperCase();
-    const yT = H * (p.titY > 0 ? Math.min(1, p.titY) : 0.236);
-    const cxT = W * Math.min(0.95, Math.max(0.05, p.titX == null ? 0.5 : p.titX));
-    const fsT = 46, lsT = 22;
+    const yT = H * 0.236 + kT.dy;
+    const cxT = W * 0.5 + kT.dx;
+    const fsT = Math.max(12, Math.round(46 * kT.k)), lsT = Math.round(22 * kT.k);
     ctx.save();
     ctx.font = `400 ${fsT}px ${FB}`; setLS(lsT + 'px');
     const tw = Math.max(10, ctx.measureText(t).width - lsT);    // el espaciado suma uno de más al final
@@ -19734,67 +19857,80 @@ async function generarImagenPromoJugador(p){
     ctx.shadowColor = 'rgba(0,0,0,.4)'; ctx.shadowBlur = 8;
     ctx.fillText(t, x0, yT + 2);
     setLS('0px'); ctx.shadowBlur = 0;
-    const gapL = 34, largo = 300;
+    reg('tit', x0, yT - fsT * 0.6, tw, fsT * 1.2);
+    const gapL = Math.round(34 * kT.k), largo = Math.round(300 * kTL.k), yLin = yT + kTL.dy;
     ctx.fillStyle = 'rgba(255,255,255,.9)';
-    const lxA = Math.max(0, x0 - gapL - largo), lxB = x0 - gapL;
-    if(lxB > lxA) ctx.fillRect(lxA, yT - 0.6, lxB - lxA, 1.4);
-    const rxA = x1 + gapL, rxB = Math.min(W, x1 + gapL + largo);
-    if(rxB > rxA) ctx.fillRect(rxA, yT - 0.6, rxB - rxA, 1.4);
+    const lxB = x0 - gapL, lxA = Math.max(0, lxB - largo);
+    if(lxB > lxA) ctx.fillRect(lxA, yLin - 0.6, lxB - lxA, 1.4);
+    const rxA = x1 + gapL, rxB = Math.min(W, rxA + largo);
+    if(rxB > rxA) ctx.fillRect(rxA, yLin - 0.6, rxB - rxA, 1.4);
+    reg('titlin', Math.min(lxA, rxA), yLin - 10, Math.max(rxB, lxB) - Math.min(lxA, rxA), 20);
     ctx.restore();
   }
   if(p.linA || p.linB){
-    const yL = H * (p.linY > 0 ? Math.min(1, p.linY) : 0);
-    const y = p.linY > 0 ? yL : (fb ? fb.top - 44 : H * 0.17);
+    const kLi = ajx('lin'), kA = ajx('lina'), kB = ajx('linb');
+    const yL = (fb ? fb.top - 44 : H * 0.17) + kLi.dy;
+    const lenL = W * 0.57 * kLi.k, cxL = CX + kLi.dx;
+    const xA = cxL - lenL/2, xB = cxL + lenL/2;
     ctx.save();
-    ctx.font = `500 26px ${SANS}`; setLS('0px');
+    ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.fillRect(xA, yL - 0.7, lenL, 1.4);
+    reg('lin', xA, yL - 10, lenL, 20);
     ctx.textBaseline = 'middle'; ctx.textAlign = 'center'; ctx.fillStyle = '#ffffff';
     ctx.shadowColor = 'rgba(0,0,0,.4)'; ctx.shadowBlur = 8;
-    if(p.linA) ctx.fillText(p.linA, W * 0.155, y + 1);
-    if(p.linB) ctx.fillText(p.linB, W * (1 - 0.155), y + 1);
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.fillRect(W * 0.215, y - 0.6, W * 0.57, 1.4);
+    const numero = (txt, kk, cx, clave) => {
+      const fsN = Math.max(10, Math.round(26 * kk.k));
+      ctx.font = `500 ${fsN}px ${SANS}`; setLS('0px');
+      const wN = ctx.measureText(txt).width;
+      ctx.fillText(txt, cx + kk.dx, yL + kk.dy + 1);
+      reg(clave, cx + kk.dx - wN/2 - 6, yL + kk.dy - fsN * 0.7, wN + 12, fsN * 1.4);
+    };
+    if(p.linA) numero(p.linA, kA, xA - 65, 'lina');
+    if(p.linB) numero(p.linB, kB, xB + 65, 'linb');
     ctx.restore();
   }
   if(p.circModo === 'lados' || p.circModo === 'columna'){
-    const dC = 112, rC = dC/2;
-    const circulo = (cx, cy, txt) => {
+    const k1 = ajx('circ1'), k2 = ajx('circ2');
+    const r1 = 56 * k1.k, r2 = 56 * k2.k;
+    const circulo = (cx, cy, r, txt) => {
       ctx.save();
-      ctx.beginPath(); ctx.arc(cx, cy, rC, 0, Math.PI*2);
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2);
       ctx.fillStyle = 'rgba(8,8,10,.25)'; ctx.fill();
       ctx.lineWidth = 1.6; ctx.strokeStyle = 'rgba(255,255,255,.88)'; ctx.stroke();
       if(txt){
-        let fsC = 40; ctx.font = `500 ${fsC}px ${SANS}`; setLS('0px');
-        while(fsC > 16 && ctx.measureText(txt).width > dC - 26){ fsC--; ctx.font = `500 ${fsC}px ${SANS}`; }
+        let fsC = Math.round(40 * r / 56); ctx.font = `500 ${fsC}px ${SANS}`; setLS('0px');
+        while(fsC > 10 && ctx.measureText(txt).width > 2*r - 26){ fsC--; ctx.font = `500 ${fsC}px ${SANS}`; }
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#ffffff';
         ctx.shadowColor = 'rgba(0,0,0,.4)'; ctx.shadowBlur = 8;
         ctx.fillText(txt, cx, cy + 2);
       }
       ctx.restore();
     };
+    let c1, c2;
     if(p.circModo === 'lados'){
-      const yC = p.circY > 0 ? H * Math.min(1, p.circY) : (fb ? fb.bottom + 105 : H * 0.485);
-      if(p.circA) circulo(63 + rC, yC, p.circA);
-      if(p.circB) circulo(W - 63 - rC, yC, p.circB);
+      const yC = fb ? fb.bottom + 105 : H * 0.485;
+      c1 = { cx: 63 + 56 + k1.dx, cy: yC + k1.dy, r: r1 };
+      c2 = { cx: W - 63 - 56 + k2.dx, cy: yC + k2.dy, r: r2 };
     } else {
-      const yMid = p.circY > 0 ? H * Math.min(1, p.circY) : H * 0.5;
-      const box = fb || { top: yMid - 150, bottom: yMid + 150, cx: CX };
+      const caja = fb || { top: H*0.5 - 150, bottom: H*0.5 + 150, cx: CX };
       const g = 40;
-      const Lt = Math.max(40, Math.min(250, box.top - g - 2*rC - 140));
-      const Lb = Math.max(40, Math.min(250, H - 40 - (box.bottom + g) - 2*rC - 30));
+      const Lt = Math.max(40, Math.min(250, caja.top - g - 112 - 140));
+      const Lb = Math.max(40, Math.min(250, H - 40 - (caja.bottom + g) - 112 - 30));
+      c1 = { cx: caja.cx + k1.dx, cy: caja.top - g - Lt - 56 + k1.dy, r: r1 };
+      c2 = { cx: caja.cx + k2.dx, cy: caja.bottom + g + Lb + 56 + k2.dy, r: r2 };
       ctx.save(); ctx.fillStyle = 'rgba(255,255,255,.85)';
-      ctx.fillRect(box.cx - 0.7, box.top - g - Lt, 1.4, Lt);
-      ctx.fillRect(box.cx - 0.7, box.bottom + g, 1.4, Lb);
+      if(p.circA && caja.top - g > c1.cy + r1) ctx.fillRect(c1.cx - 0.7, c1.cy + r1, 1.4, caja.top - g - (c1.cy + r1));
+      if(p.circB && c2.cy - r2 > caja.bottom + g) ctx.fillRect(c2.cx - 0.7, caja.bottom + g, 1.4, c2.cy - r2 - (caja.bottom + g));
       ctx.restore();
-      if(p.circA) circulo(box.cx, box.top - g - Lt - rC, p.circA);
-      if(p.circB) circulo(box.cx, box.bottom + g + Lb + rC, p.circB);
     }
+    if(p.circA){ circulo(c1.cx, c1.cy, c1.r, p.circA); reg('circ1', c1.cx - c1.r, c1.cy - c1.r, 2*c1.r, 2*c1.r); }
+    if(p.circB){ circulo(c2.cx, c2.cy, c2.r, p.circB); reg('circ2', c2.cx - c2.r, c2.cy - c2.r, 2*c2.r, 2*c2.r); }
   }
 
   // ── Cajas de estadísticas: borde fino blanco, fondo oscuro translúcido ──
   //    lado (izq/der) y altura (arriba/centro/abajo) configurables
   const n = Math.min(4, p.stats.length);
-  const bw = 188, bh = 188, step = 211;
-  const bx = (p.pos === 'der') ? (W - 108 - bw) : 108;
+  const bw = Math.round(188*kSt.k), bh = Math.round(188*kSt.k), step = Math.round(211*kSt.k);
+  const bx = ((p.pos === 'der') ? (W - 108 - bw) : 108) + kSt.dx;
   const totalH = n*step - (step - bh);
   const conEscudo = !!(p.escudo && p.equipo) && n > 0;
   const topMin = conEscudo ? 214 : 130;
@@ -19804,6 +19940,8 @@ async function generarImagenPromoJugador(p){
   else if(p.posy === 'centro') by0 = (Math.max(topMin, 190) + (botLim - totalH)) / 2;
   by0 = Math.max(topMin, Math.min(by0, botLim - totalH));
   if(p.posy === 'arriba' || !p.posy) by0 = Math.max(by0, topMin);
+  by0 += kSt.dy;
+  if(n > 0) reg('stats', bx, by0, bw, totalH);
 
   // Escudo del equipo sobre la columna de estadísticas (opcional)
   if(conEscudo){
@@ -19824,18 +19962,18 @@ async function generarImagenPromoJugador(p){
   for(let i = 0; i < n; i++){
     const st = p.stats[i];
     const y = by0 + i*step;
-    rr(bx, y, bw, bh, 28);
+    rr(bx, y, bw, bh, Math.round(28*kSt.k));
     ctx.fillStyle = 'rgba(8,8,10,.55)'; ctx.fill();
     ctx.lineWidth = 1.6; ctx.strokeStyle = 'rgba(255,255,255,.72)'; ctx.stroke();
 
     // Número grande, blanco, condensado
     ctx.textAlign = 'center';
-    let ns = Math.round(158*tk(p,'num'));
+    let ns = Math.round(158*tk(p,'num')*kSt.k);
     ctx.font = `400 ${ns}px ${FB}`; setLS('0px');
     while(ns > 48 && ctx.measureText(st.valor).width > bw - 36){ ns -= 4; ctx.font = `400 ${ns}px ${FB}`; }
     ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.lineJoin = 'round';
     // el número se centra en el espacio que deja la etiqueta (no la pisa aunque cambie el tamaño)
-    const efs = Math.round(20*tk(p,'eti'));
+    const efs = Math.round(20*tk(p,'eti')*kSt.k);
     const areaTop = y + 16, areaBot = y + bh - 18 - efs*0.72 - 8;
     while(ns > 40 && ns*0.7 > (areaBot - areaTop)){ ns -= 4; ctx.font = `400 ${ns}px ${FB}`; }
     const baseN = areaBot - ((areaBot - areaTop) - ns*0.7) / 2;
@@ -19844,7 +19982,7 @@ async function generarImagenPromoJugador(p){
 
     // Etiqueta chica con mucho espaciado de letras, blanca
     if(st.etiqueta){
-      let fs = Math.round(20*tk(p,'eti')), ls = 5;
+      let fs = Math.round(20*tk(p,'eti')*kSt.k), ls = 5;
       ctx.font = `500 ${fs}px ${FR}`; setLS(ls + 'px');
       while(fs > 12 && ctx.measureText(st.etiqueta).width > bw - 28){
         fs--; ls = Math.max(2, ls - 0.35);
@@ -20441,7 +20579,7 @@ async function generarImagenPromocionalTabla(p){
 // ── Tamaño de cada texto (sliders reutilizables) ─────────────────
 //   items: [clave, etiqueta, clase, mín%, máx%]
 const TXT_MD  = [['equipos','Nombres de los equipos','md-solo',60,150],['sub','Torneo · sede','af-solo',60,150],['datos','Línea de datos (fecha y hora)','',60,150],['marca','Marca "Presentado por"','',60,150]];
-const TXT_JUG = [['enc','Encabezado (nombre · estadísticas)','',60,160],['num','Números de las cajas','',60,130],['eti','Etiquetas de las cajas','',60,150]];
+const TXT_JUG = [['num','Números de las cajas','',60,130],['eti','Etiquetas de las cajas','',60,150]];
 const TXT_ALIN = [['nombres','Nombres del once','',70,115],['numeros','Números','',60,130],['info','Fecha, horario y sede','',60,140],['supl','Suplentes','',60,130],['dt','DT','',60,140]];
 // Tamaños propios del diseño "Día de partido" de Alineaciones (se guardan en a.txtMd)
 const TXT_ALIN_MD = [['titulo','Texto gigante','',50,150],['escudos','Escudos','',60,150],['marca','Marca "Presentado por"','',60,150],['nombres','Nombres del once','',60,140],['numeros','Números','',60,140],['supl','Suplentes','',60,140],['dt','DT','',60,150],['info','Fecha y horario','',60,150],['sub','Torneo · sede','',60,150]];
