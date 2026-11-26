@@ -5767,6 +5767,35 @@ table.posiciones td:nth-child(8){
               <div class="form-group"><label style="font-size:10px">Iluminación de la frase (menos = más oscura, más de 100 = con brillo): <span id="promo6-frase-luz-val">100</span>%</label><input type="range" id="promo6-frase-luz" min="0" max="200" value="100" oninput="document.getElementById('promo6-frase-luz-val').textContent=this.value"/></div>
               
             </div>
+            <div style="font-family:'Rajdhani',sans-serif;font-size:11px;letter-spacing:1px;color:var(--dorado);margin:14px 0 4px;text-transform:uppercase">Efectos de la frase (se combinan)</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
+              <button type="button" class="btn-edit" onclick="jugFxPreset('desvanecer')">Desvanecer</button>
+              <button type="button" class="btn-edit" onclick="jugFxPreset('pixelado')">Pixelado progresivo</button>
+              <button type="button" class="btn-edit" onclick="jugFxPreset('contorno')">Solo contorno</button>
+              <button type="button" class="btn-edit" onclick="jugFxPreset('glitch')">Glitch</button>
+              <button type="button" class="btn-edit" onclick="jugFxPreset('estela')">Estela</button>
+              <button type="button" class="btn-edit" onclick="jugFxPreset('ninguno')">Sin efectos</button>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label style="font-size:10px">Desvanecer</label>
+                <select id="promo6-fx-fade"><option value="">Ninguno</option><option value="abajo">Se apaga hacia abajo</option><option value="arriba">Se apaga hacia arriba</option><option value="der">Se apaga hacia la derecha</option><option value="izq">Se apaga hacia la izquierda</option></select></div>
+              <div class="form-group"><label style="font-size:10px">Intensidad del desvanecido: <span id="promo6-fx-fade-int-val">100</span>%</label><input type="range" id="promo6-fx-fade-int" min="0" max="100" value="100" oninput="document.getElementById('promo6-fx-fade-int-val').textContent=this.value"/></div><div class="form-group"><label style="font-size:10px">Alcance (cuánto de la frase): <span id="promo6-fx-fade-alc-val">80</span>%</label><input type="range" id="promo6-fx-fade-alc" min="20" max="100" value="80" oninput="document.getElementById('promo6-fx-fade-alc-val').textContent=this.value"/></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label style="font-size:10px">Pixelar</label>
+                <select id="promo6-fx-pix-modo"><option value="">Ninguno</option><option value="todo">Toda la frase</option><option value="abajo">Progresivo: más pixelada abajo</option><option value="arriba">Progresivo: más pixelada arriba</option><option value="der">Progresivo: más pixelada a la derecha</option><option value="izq">Progresivo: más pixelada a la izquierda</option></select></div>
+              <div class="form-group"><label style="font-size:10px">Tamaño del píxel: <span id="promo6-fx-pix-val">16</span> px</label><input type="range" id="promo6-fx-pix" min="4" max="60" value="16" oninput="document.getElementById('promo6-fx-pix-val').textContent=this.value"/></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label style="font-size:10px">Desenfoque: <span id="promo6-fx-blur-val">0</span> px</label><input type="range" id="promo6-fx-blur" min="0" max="40" value="0" oninput="document.getElementById('promo6-fx-blur-val').textContent=this.value"/></div><div class="form-group"><label style="font-size:10px">Aberración de color: <span id="promo6-fx-aber-val">0</span> px</label><input type="range" id="promo6-fx-aber" min="0" max="40" value="0" oninput="document.getElementById('promo6-fx-aber-val').textContent=this.value"/></div><div class="form-group"><label style="font-size:10px">Estela (copias hacia arriba): <span id="promo6-fx-estela-val">0</span></label><input type="range" id="promo6-fx-estela" min="0" max="10" value="0" oninput="document.getElementById('promo6-fx-estela-val').textContent=this.value"/></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label style="font-size:10px">Rayas horizontales</label>
+                <select id="promo6-fx-rayas"><option value="">Sin rayas</option><option value="finas">Finas</option><option value="medias">Medias</option><option value="gruesas">Gruesas</option></select></div>
+              <div class="form-group"><label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:10px;margin-top:18px">
+                <input type="checkbox" id="promo6-fx-contorno" style="width:auto"/> Solo contorno (hueca)</label></div>
+              <div class="form-group"><label style="font-size:10px">Grosor del contorno: <span id="promo6-fx-grosor-val">6</span> px</label><input type="range" id="promo6-fx-grosor" min="2" max="16" value="6" oninput="document.getElementById('promo6-fx-grosor-val').textContent=this.value"/></div>
+            </div>
             <div style="font-family:'Rajdhani',sans-serif;font-size:11px;letter-spacing:1px;color:var(--dorado);margin:14px 0 4px;text-transform:uppercase">2 · Círculos con cifras (minutos, goles…)</div>
             <div class="form-row">
               <div class="form-group"><label style="font-size:10px">Disposición</label>
@@ -15152,6 +15181,102 @@ function cvDibujarFotoFiltrada(ctx, img, dx, dy, dw, dh, f){
   ctx.drawImage(fuente, X, Y, Wd, Hd);
 }
 
+// ── Efectos para la frase de fondo: pixelar, desenfocar, rayas, aberración de color, estela y desvanecer ──
+function cvReducirCanvas(src, tw, th){                    // achica de a pasos (promedia mejor que de una sola vez)
+  let c = src;
+  while(c.width / 2 > tw && c.height / 2 > th){
+    const n = document.createElement('canvas'); n.width = Math.ceil(c.width / 2); n.height = Math.ceil(c.height / 2);
+    const x = n.getContext('2d'); x.imageSmoothingEnabled = true; x.drawImage(c, 0, 0, n.width, n.height); c = n;
+  }
+  const f = document.createElement('canvas'); f.width = Math.max(1, tw); f.height = Math.max(1, th);
+  const fx = f.getContext('2d'); fx.imageSmoothingEnabled = true; fx.drawImage(c, 0, 0, f.width, f.height);
+  return f;
+}
+function cvPixelarCanvas(src, size){
+  const s = Math.max(1, Math.round(size));
+  if(s <= 1) return src;
+  const sw = Math.max(1, Math.ceil(src.width / s)), sh = Math.max(1, Math.ceil(src.height / s));
+  const small = cvReducirCanvas(src, sw, sh);
+  const out = document.createElement('canvas'); out.width = src.width; out.height = src.height;
+  const o = out.getContext('2d'); o.imageSmoothingEnabled = false;
+  o.drawImage(small, 0, 0, sw, sh, 0, 0, sw * s, sh * s);
+  return out;
+}
+function cvDesenfocarCanvas(src, px){
+  const out = document.createElement('canvas'); out.width = src.width; out.height = src.height;
+  const o = out.getContext('2d');
+  if(typeof o.filter === 'string'){ o.filter = 'blur(' + px + 'px)'; o.drawImage(src, 0, 0); o.filter = 'none'; return out; }
+  const k = 1 / (1 + px * 0.45);                           // alternativa: achicar y volver a agrandar
+  const small = cvReducirCanvas(src, Math.max(2, Math.round(src.width * k)), Math.max(2, Math.round(src.height * k)));
+  o.imageSmoothingEnabled = true; o.drawImage(small, 0, 0, out.width, out.height);
+  return out;
+}
+function cvEfectoFrase(T, fx, box){
+  if(!fx || !box) return T;
+  const W = T.width, H = T.height;
+  const nuevo = () => { const c = document.createElement('canvas'); c.width = W; c.height = H; return c; };
+  let R = T;
+  // 1) pixelar: toda la frase, o progresivo (cada vez más pixelada hacia un lado)
+  if(fx.pixModo && fx.pix > 1){
+    if(fx.pixModo === 'todo'){ R = cvPixelarCanvas(R, fx.pix); }
+    else {
+      const N = 8, out = nuevo(), o = out.getContext('2d');
+      const horiz = (fx.pixModo === 'der' || fx.pixModo === 'izq');
+      const inv = (fx.pixModo === 'arriba' || fx.pixModo === 'izq');
+      const a0 = horiz ? box.left : box.top, a1 = horiz ? box.right : box.bottom, len = Math.max(1, a1 - a0);
+      for(let i = 0; i < N; i++){
+        const t = (i + 0.5) / N, k = inv ? 1 - t : t;
+        const P = cvPixelarCanvas(T, 1 + (fx.pix - 1) * k);
+        const s0 = i === 0 ? -1e5 : a0 + len * i / N, s1 = i === N - 1 ? 1e5 : a0 + len * (i + 1) / N;
+        o.save(); o.beginPath();
+        if(horiz) o.rect(s0, -1e5, s1 - s0, 2e5); else o.rect(-1e5, s0, 2e5, s1 - s0);
+        o.clip(); o.drawImage(P, 0, 0); o.restore();
+      }
+      R = out;
+    }
+  }
+  // 2) desenfoque
+  if(fx.blur > 0) R = cvDesenfocarCanvas(R, fx.blur);
+  // 3) rayas horizontales (se "recortan" franjas del texto)
+  if(fx.rayas){
+    const per = ({ finas: 6, medias: 12, gruesas: 22 })[fx.rayas] || 12;
+    const out = nuevo(), o = out.getContext('2d'); o.drawImage(R, 0, 0);
+    o.globalCompositeOperation = 'destination-out';
+    for(let y = box.top - per; y < box.bottom + per; y += per) o.fillRect(0, y + per * 0.55, W, per * 0.45);
+    R = out;
+  }
+  // 4) aberración de color: bordes celestes y rojos corridos hacia los lados
+  if(fx.aber > 0){
+    const out = nuevo(), o = out.getContext('2d'), d = fx.aber;
+    const teñir = (col) => { const c = nuevo(), x = c.getContext('2d'); x.drawImage(R, 0, 0); x.globalCompositeOperation = 'source-in'; x.fillStyle = col; x.fillRect(0, 0, W, H); return c; };
+    o.globalAlpha = 0.9; o.drawImage(teñir('#00e5ff'), -d, 0); o.drawImage(teñir('#ff2a55'), d, 0);
+    o.globalAlpha = 1; o.drawImage(R, 0, 0);
+    R = out;
+  }
+  // 5) estela: copias que se apagan hacia arriba
+  if(fx.estela > 0){
+    const n = Math.min(10, Math.round(fx.estela)), paso = Math.max(8, Math.min(30, (box.bottom - box.top) * 0.07));
+    const out = nuevo(), o = out.getContext('2d');
+    for(let i = n; i >= 1; i--){ o.globalAlpha = 0.32 * (1 - (i - 1) / n); o.drawImage(R, 0, -i * paso); }
+    o.globalAlpha = 1; o.drawImage(R, 0, 0);
+    R = out;
+  }
+  // 6) desvanecer: el texto se apaga hacia un lado
+  if(fx.fade){
+    const alc = Math.max(0.2, Math.min(1, fx.fadeAlc == null ? 1 : fx.fadeAlc)), it = Math.max(0, Math.min(1, fx.fadeInt == null ? 1 : fx.fadeInt));
+    let x0 = 0, y0 = box.top, x1 = 0, y1 = box.bottom;
+    if(fx.fade === 'arriba'){ y0 = box.bottom; y1 = box.top; }
+    else if(fx.fade === 'der'){ x0 = box.left; x1 = box.right; y0 = 0; y1 = 0; }
+    else if(fx.fade === 'izq'){ x0 = box.right; x1 = box.left; y0 = 0; y1 = 0; }
+    const g = document.createElement('canvas').getContext('2d').createLinearGradient(x0, y0, x1, y1);
+    g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(Math.max(0, 1 - alc), 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,' + (1 - it) + ')');
+    const out = nuevo(), o = out.getContext('2d'); o.drawImage(R, 0, 0);
+    o.globalCompositeOperation = 'destination-in'; o.fillStyle = g; o.fillRect(0, 0, W, H);
+    R = out;
+  }
+  return R;
+}
+
 // Texto con separación entre letras (para etiquetas chicas); devuelve x final
 function _pfSpaced(ctx, x, y, txt, sp){
   ctx.textAlign = 'left';
@@ -18229,8 +18354,25 @@ function jugPrevMove(e){
   promoJugPreview(true);
 }
 function jugPrevUp(){ _jugDrag = null; }
-const JUG_DECO_DEF = { 'promo6-frase-luz':'100','promo6-f-blur':'0','promo6-f-gris':'0','promo6-f-sepia':'0','promo6-f-brillo':'100','promo6-f-contraste':'100','promo6-f-sat':'100','promo6-f-matiz':'0','promo6-f-vineta':'0' };
+const JUG_DECO_DEF = { 'promo6-fx-fade-int':'100','promo6-fx-fade-alc':'80','promo6-fx-pix':'16','promo6-fx-blur':'0','promo6-fx-aber':'0','promo6-fx-estela':'0','promo6-fx-grosor':'6','promo6-frase-luz':'100','promo6-f-blur':'0','promo6-f-gris':'0','promo6-f-sepia':'0','promo6-f-brillo':'100','promo6-f-contraste':'100','promo6-f-sat':'100','promo6-f-matiz':'0','promo6-f-vineta':'0' };
 function jugSetSl(i, v){ const e = document.getElementById(i), l = document.getElementById(i + '-val'); if(e) e.value = v; if(l) l.textContent = v; }
+// Efectos de la frase: valores por defecto y combinaciones rápidas
+const JUG_FX_SELECTS = { 'promo6-fx-fade':'', 'promo6-fx-pix-modo':'', 'promo6-fx-rayas':'' };
+function jugFxLimpiar(){
+  Object.keys(JUG_FX_SELECTS).forEach(i => { const e = document.getElementById(i); if(e) e.value = JUG_FX_SELECTS[i]; });
+  const c = document.getElementById('promo6-fx-contorno'); if(c) c.checked = false;
+  ['promo6-fx-fade-int','promo6-fx-fade-alc','promo6-fx-pix','promo6-fx-blur','promo6-fx-aber','promo6-fx-estela','promo6-fx-grosor'].forEach(i => jugSetSl(i, JUG_DECO_DEF[i]));
+}
+function jugFxPreset(nombre){
+  jugFxLimpiar();
+  const sel = (i, v) => { const e = document.getElementById(i); if(e) e.value = v; };
+  if(nombre === 'desvanecer'){ sel('promo6-fx-fade','abajo'); jugSetSl('promo6-fx-fade-int', 100); jugSetSl('promo6-fx-fade-alc', 70); }
+  else if(nombre === 'pixelado'){ sel('promo6-fx-pix-modo','abajo'); jugSetSl('promo6-fx-pix', 24); }
+  else if(nombre === 'contorno'){ const c = document.getElementById('promo6-fx-contorno'); if(c) c.checked = true; jugSetSl('promo6-fx-grosor', 6); }
+  else if(nombre === 'glitch'){ jugSetSl('promo6-fx-aber', 12); sel('promo6-fx-rayas','finas'); }
+  else if(nombre === 'estela'){ jugSetSl('promo6-fx-estela', 5); }
+  promoJugPreview();
+}
 function jugFiltroPreset(nombre){
   const F = ['promo6-f-blur','promo6-f-gris','promo6-f-sepia','promo6-f-brillo','promo6-f-contraste','promo6-f-sat','promo6-f-matiz','promo6-f-vineta'];
   F.forEach(i => jugSetSl(i, JUG_DECO_DEF[i]));
@@ -18245,6 +18387,7 @@ function jugDecoReset(silencioso){
   ['promo6-frase','promo6-circ-a','promo6-circ-b','promo6-lin-a','promo6-lin-b','promo6-tit'].forEach(i => { const e = document.getElementById(i); if(e) e.value = ''; });
   [['promo6-frase-al','centro'],['promo6-circ-modo',''],['promo6-bgcolor','#0b1630']].forEach(([i,v]) => { const e = document.getElementById(i); if(e) e.value = v; });
   Object.keys(JUG_DECO_DEF).forEach(i => jugSetSl(i, JUG_DECO_DEF[i]));
+  jugFxLimpiar();
   _jugAj = {}; jugAjCargar();
   const en = document.getElementById('promo6-enc'); if(en) en.checked = true;
   if(!silencioso) promoJugPreview();
@@ -18277,6 +18420,14 @@ function promoJugArmar(validar){
     enc, frase,
     fraseAl: ['izq','der'].includes(val('promo6-frase-al')) ? val('promo6-frase-al') : 'centro',
     fraseLuz: num('promo6-frase-luz',100)/100,
+    fraseFx: {
+      fade: ['abajo','arriba','der','izq'].includes(val('promo6-fx-fade')) ? val('promo6-fx-fade') : '',
+      fadeInt: num('promo6-fx-fade-int',100)/100, fadeAlc: num('promo6-fx-fade-alc',80)/100,
+      pixModo: ['todo','abajo','arriba','der','izq'].includes(val('promo6-fx-pix-modo')) ? val('promo6-fx-pix-modo') : '',
+      pix: num('promo6-fx-pix',16), blur: num('promo6-fx-blur',0), aber: num('promo6-fx-aber',0), estela: num('promo6-fx-estela',0),
+      rayas: ['finas','medias','gruesas'].includes(val('promo6-fx-rayas')) ? val('promo6-fx-rayas') : '',
+      contorno: !!(document.getElementById('promo6-fx-contorno')||{}).checked, grosor: num('promo6-fx-grosor',6)
+    },
     filtro: { blur: num('promo6-f-blur',0), gris: num('promo6-f-gris',0), sepia: num('promo6-f-sepia',0), brillo: num('promo6-f-brillo',100), contraste: num('promo6-f-contraste',100), sat: num('promo6-f-sat',100), matiz: num('promo6-f-matiz',0), vineta: num('promo6-f-vineta',0) },
     recorte: _jugRecorte||'',
     bgColor: val('promo6-bgcolor') || '#0b1630',
@@ -19873,26 +20024,33 @@ async function generarImagenPromoJugador(p){
     const top = H * 0.15 + kFr.dy;
     const xT = (alin === 'centro' ? CX : (alin === 'izq' ? margen : W - margen)) + kFr.dx;
     const left = alin === 'centro' ? xT - wMax/2 : (alin === 'izq' ? xT : xT - wMax);
-    fb = { top, bottom: top + capF + (lines.length - 1) * pitch, cx: left + wMax/2 };
+    fb = { top, bottom: top + capF + (lines.length - 1) * pitch, cx: left + wMax/2, left, right: left + wMax };
     reg('frase', left, top, wMax, fb.bottom - top);
     pintarFrase = () => {
-      ctx.save();
-      ctx.font = `400 ${fsF}px ${ANTON}`; setLS('0px');
-      ctx.textAlign = alin === 'centro' ? 'center' : (alin === 'izq' ? 'left' : 'right');
-      ctx.textBaseline = 'alphabetic';
+      const dest = ctx;                                       // capa elegida para la frase
+      const T = document.createElement('canvas'); T.width = W; T.height = H;
+      const tx = T.getContext('2d');
+      tx.font = `400 ${fsF}px ${ANTON}`; if('letterSpacing' in tx) tx.letterSpacing = '0px';
+      tx.textAlign = alin === 'centro' ? 'center' : (alin === 'izq' ? 'left' : 'right');
+      tx.textBaseline = 'alphabetic'; tx.lineJoin = 'round';
+      const fx = p.fraseFx || {};
       // iluminación: menos de 100% oscurece el color; más de 100% lo mantiene blanco y le suma un halo de luz
       const luz = (typeof p.fraseLuz === 'number' && isFinite(p.fraseLuz)) ? Math.max(0, Math.min(2, p.fraseLuz)) : 1;
       const v = Math.round(255 * Math.min(1, luz));
-      ctx.fillStyle = 'rgb(' + v + ',' + v + ',' + v + ')';
-      const escribir = () => lines.forEach((t, i) => ctx.fillText(t, xT, top + capF + i * pitch));
+      const color = 'rgb(' + v + ',' + v + ',' + v + ')';
+      tx.fillStyle = color; tx.strokeStyle = color; tx.lineWidth = Math.max(1, fx.grosor || 6);
+      const escribir = () => lines.forEach((t, i) => {
+        const yy = top + capF + i * pitch;
+        if(fx.contorno) tx.strokeText(t, xT, yy); else tx.fillText(t, xT, yy);
+      });
       if(luz > 1){
         const g = luz - 1;
-        ctx.shadowColor = 'rgba(255,255,255,' + (0.35 + 0.6*g) + ')'; ctx.shadowBlur = 24 + 100*g; escribir();
-        ctx.shadowBlur = 10 + 40*g; escribir();
+        tx.shadowColor = 'rgba(255,255,255,' + (0.35 + 0.6*g) + ')'; tx.shadowBlur = 24 + 100*g; escribir();
+        tx.shadowBlur = 10 + 40*g; escribir();
       } else {
-        ctx.shadowColor = 'rgba(0,0,0,.25)'; ctx.shadowBlur = 14; escribir();
+        tx.shadowColor = 'rgba(0,0,0,.25)'; tx.shadowBlur = 14; escribir();
       }
-      ctx.restore();
+      dest.drawImage(cvEfectoFrase(T, fx, fb), 0, 0);        // pixelar, desenfocar, rayas, aberración, estela y desvanecer
     };
   }
   if(frase.length){ enCapa('frase'); pintarFrase(); }
