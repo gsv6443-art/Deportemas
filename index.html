@@ -5546,6 +5546,19 @@ table.posiciones td:nth-child(8){
               <input type="color" id="promoR-color" value="#0f2a1e" oninput="_radialEstilo()" style="height:38px;padding:2px"/>
             </div>
           </div>
+          <div class="form-row">
+            <div class="form-group"><label>Título y subtítulo</label>
+              <select id="promoR-enc-t" onchange="_radialEstilo()">
+                <option value="">Según el estilo</option><option value="orig">Original</option><option value="dia">Día de partido</option>
+              </select></div>
+            <div class="form-group"><label>Logo de la página</label>
+              <select id="promoR-enc-l" onchange="_radialEstilo()">
+                <option value="">Según el estilo</option><option value="orig">Original (logo en círculo)</option><option value="dia">Día de partido (“Presentado por”)</option>
+              </select></div>
+          </div>
+          <div class="form-group"><label style="display:flex;align-items:center;gap:8px;text-transform:none">
+            <input type="checkbox" id="promoR-nombres" checked onchange="_radialEstilo()" style="width:auto"/> Mostrar los nombres de los equipos</label>
+          </div>
           <div class="form-group"><label>División</label>
             <select id="promoR-div" onchange="_radialClubes()">
               <option value="primera">Primera</option>
@@ -5587,6 +5600,16 @@ table.posiciones td:nth-child(8){
             <div class="form-group" id="promoA-color-g" style="display:none"><label>Color de fondo</label>
               <input type="color" id="promoA-color" value="#0f2a1e" oninput="_alboGuardar()" style="height:38px;padding:2px"/>
             </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Título y subtítulo</label>
+              <select id="promoA-enc-t" onchange="_alboGuardar()">
+                <option value="">Según el estilo</option><option value="orig">Original</option><option value="dia">Día de partido</option>
+              </select></div>
+            <div class="form-group"><label>Logo de la página</label>
+              <select id="promoA-enc-l" onchange="_alboGuardar()">
+                <option value="">Según el estilo</option><option value="orig">Original (logo en círculo)</option><option value="dia">Día de partido (“Presentado por”)</option>
+              </select></div>
           </div>
           <div class="form-group"><label>Título</label>
             <input type="text" id="promoA-titulo" placeholder="Vacío = nombre de la liga" oninput="_alboGuardar()"/>
@@ -15096,8 +15119,8 @@ function cvMarcaPresentado(ctx, W, H, id, o){
   const sp = px => { if('letterSpacing' in ctx) ctx.letterSpacing = px + 'px'; };
   ctx.save();
   ctx.textAlign = 'right'; ctx.textBaseline = 'alphabetic';
-  ctx.fillStyle = '#ffffff';
-  ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 10;
+  ctx.fillStyle = o.color || '#ffffff';
+  if(o.sombra !== false){ ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 10; }
   let fs = Math.round(54 * k);
   ctx.font = fs + 'px "Bebas Neue", Arial, sans-serif'; sp(4);
   while(fs > Math.round(26 * k) && ctx.measureText(marca).width > maxW){ fs--; ctx.font = fs + 'px "Bebas Neue", Arial, sans-serif'; }
@@ -18580,7 +18603,7 @@ function _alboEstado(){
     c: f.querySelector('.albo-c').value.trim()
   }));
   const nm = document.getElementById('promoA-nombres');
-  return { titulo: g('promoA-titulo').trim(), sub: g('promoA-sub').trim(), tam: g('promoA-tam') || 'm', nombres: !!(nm && nm.checked), vista: g('promoA-vista') || 'grilla', sub2: g('promoA-sub2').trim(), estilo: g('promoA-estilo') === 'dia' ? 'dia' : '', color: g('promoA-color') || '#0f2a1e', filas };
+  return { titulo: g('promoA-titulo').trim(), sub: g('promoA-sub').trim(), tam: g('promoA-tam') || 'm', nombres: !!(nm && nm.checked), vista: g('promoA-vista') || 'grilla', sub2: g('promoA-sub2').trim(), estilo: g('promoA-estilo') === 'dia' ? 'dia' : '', color: g('promoA-color') || '#0f2a1e', encT: g('promoA-enc-t'), encL: g('promoA-enc-l'), filas };
 }
 function _alboGuardar(){
   try{ localStorage.setItem(ALBO_KEY, JSON.stringify(_alboEstado())); }catch(e){}
@@ -18661,6 +18684,7 @@ function promoAlboInit(){
   set('promoA-titulo', s.titulo || ''); set('promoA-sub', s.sub || ''); set('promoA-tam', s.tam || 'm');
   set('promoA-sub2', s.sub2 || ''); set('promoA-vista', s.vista || 'grilla'); _alboVista();
   set('promoA-estilo', s.estilo || ''); set('promoA-color', s.color || '#0f2a1e'); _alboEstiloUI();
+  set('promoA-enc-t', s.encT || ''); set('promoA-enc-l', s.encL || '');
   (s.filas || []).forEach(f => lista.appendChild(_alboFila(f.l, f.c)));
   lista.dataset.listo = '1';
   _alboResumen();
@@ -18672,10 +18696,10 @@ function promoGenerarAlbo(){
   _alboGuardar();
   if(e.vista === 'ranking'){
     if(!filas.some(f => f.c)){ alert('Cargá al menos un club campeón.'); return; }
-    abrirShare(() => generarImagenRanking({ titulo: e.titulo, sub: e.sub2, nombres: e.nombres, filas, estilo: e.estilo, color: e.color }));
+    abrirShare(() => generarImagenRanking({ titulo: e.titulo, sub: e.sub2, nombres: e.nombres, filas, estilo: e.estilo, color: e.color, encTitulo: e.encT, encLogo: e.encL }));
     return;
   }
-  abrirShare(() => generarImagenAlbo({ titulo: e.titulo, sub: e.sub, tam: e.tam, nombres: e.nombres, filas, estilo: e.estilo, color: e.color }));
+  abrirShare(() => generarImagenAlbo({ titulo: e.titulo, sub: e.sub, tam: e.tam, nombres: e.nombres, filas, estilo: e.estilo, color: e.color, encTitulo: e.encT, encLogo: e.encL }));
 }
 
 
@@ -18688,7 +18712,9 @@ function _radialDiseno(){
 function _radialEstilo(){
   const e = document.getElementById('promoR-estilo'), c = document.getElementById('promoR-color'), g = document.getElementById('promoR-color-g');
   if(g) g.style.display = (e && e.value === 'dia') ? '' : 'none';
-  try{ if(e && c) localStorage.setItem('dm_equipos_estilo', JSON.stringify({ estilo: e.value, color: c.value })); }catch(err){}
+  const gv = id => (document.getElementById(id) || {}).value || '';
+  const nm = document.getElementById('promoR-nombres');
+  try{ if(e && c) localStorage.setItem('dm_equipos_estilo', JSON.stringify({ estilo: e.value, color: c.value, encT: gv('promoR-enc-t'), encL: gv('promoR-enc-l'), nombres: nm ? !!nm.checked : true })); }catch(err){}
 }
 function _radialClubes(){
   const cont = document.getElementById('promoR-clubes'); if(!cont) return;
@@ -18698,6 +18724,9 @@ function _radialClubes(){
       const o = JSON.parse(localStorage.getItem('dm_equipos_estilo') || '{}');
       if(o.estilo === 'dia') se.value = 'dia';
       const ce = document.getElementById('promoR-color'); if(ce && /^#[0-9a-fA-F]{6}$/.test(o.color || '')) ce.value = o.color;
+      const st = (i, v) => { const el = document.getElementById(i); if(el) el.value = v || ''; };
+      st('promoR-enc-t', o.encT); st('promoR-enc-l', o.encL);
+      const nm2 = document.getElementById('promoR-nombres'); if(nm2) nm2.checked = o.nombres !== false;
     }catch(err){}
     se.dataset.listo = '1'; _radialEstilo();
   }
@@ -18731,7 +18760,7 @@ function promoGenerarRadial(){
   const clubes = [...document.querySelectorAll('#promoR-clubes input:checked')].map(i => i.value);
   if(clubes.length < 3){ alert('Elegí al menos 3 clubes.'); return; }
   const g = id => (document.getElementById(id) || {}).value || '';
-  abrirShare(() => generarImagenEquipos({ titulo: g('promoR-titulo').trim(), sub: g('promoR-sub').trim(), clubes, diseno: g('promoR-diseno') || 'cuadro', estilo: g('promoR-estilo') === 'dia' ? 'dia' : '', color: g('promoR-color') || '#0f2a1e' }));
+  abrirShare(() => generarImagenEquipos({ titulo: g('promoR-titulo').trim(), sub: g('promoR-sub').trim(), clubes, diseno: g('promoR-diseno') || 'cuadro', estilo: g('promoR-estilo') === 'dia' ? 'dia' : '', color: g('promoR-color') || '#0f2a1e', encTitulo: g('promoR-enc-t'), encLogo: g('promoR-enc-l'), nombres: !!(document.getElementById('promoR-nombres') || { checked: true }).checked }));
 }
 
 // "INDEPENDIENTE RÍO III" → "Independiente Río III" (solo si viene todo en mayúsculas); respeta siglas, números romanos y (T)/(HDO)
@@ -18773,15 +18802,20 @@ async function generarImagenRadial(cfg){
   const ctx = cv.getContext('2d'); ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);
 
-  // Encabezado (sin línea, como la referencia)
-  const ls = 78, lx = W - M - ls;
-  let fs = 60; ctx.font = `700 ${fs}px ${FS}`;
-  while(fs > 30 && ctx.measureText(titulo).width > lx - M - 24){ fs -= 2; ctx.font = `700 ${fs}px ${FS}`; }
-  ctx.fillStyle = INK; ctx.textAlign = 'left'; ctx.fillText(titulo, M, 98);
-  if(sub){ ctx.font = `400 30px ${FS}`; ctx.fillText(sub, M, 142); }
-  if(logoImg){
-    ctx.save(); ctx.beginPath(); ctx.arc(lx + ls/2, 62 + ls/2 - 12, ls/2, 0, Math.PI*2); ctx.clip();
-    cvDrawEscudoImg(ctx, logoImg, lx, 62 - 12, ls); ctx.restore();
+  if(_encEsDia(cfg)){
+    await _diaFuentes();
+    _encabezado(ctx, { W, H, M, id, logoImg, titulo, sub, enc: _encResolver(cfg), tema: 'claro', linea: false });
+  } else {
+    // Encabezado (sin línea, como la referencia)
+    const ls = 78, lx = W - M - ls;
+    let fs = 60; ctx.font = `700 ${fs}px ${FS}`;
+    while(fs > 30 && ctx.measureText(titulo).width > lx - M - 24){ fs -= 2; ctx.font = `700 ${fs}px ${FS}`; }
+    ctx.fillStyle = INK; ctx.textAlign = 'left'; ctx.fillText(titulo, M, 98);
+    if(sub){ ctx.font = `400 30px ${FS}`; ctx.fillText(sub, M, 142); }
+    if(logoImg){
+      ctx.save(); ctx.beginPath(); ctx.arc(lx + ls/2, 62 + ls/2 - 12, ls/2, 0, Math.PI*2); ctx.clip();
+      cvDrawEscudoImg(ctx, logoImg, lx, 62 - 12, ls); ctx.restore();
+    }
   }
 
   // Geometría
@@ -18820,6 +18854,7 @@ async function generarImagenRadial(cfg){
 
     // Nombre a lo largo del rayo, del lado izquierdo de la marcha, terminando cerca del escudo.
     // En la mitad izquierda se da vuelta para que se lea derecho.
+    if(cfg.nombres !== false){
     const volt = ux < -0.001;
     ctx.save();
     ctx.translate(CX + ux*(r2 - 8), CY + uy*(r2 - 8));
@@ -18828,6 +18863,7 @@ async function generarImagenRadial(cfg){
     if(volt){ ctx.textAlign = 'left'; ctx.fillText(rotulo, 0, nf * 0.72 + 4); }
     else    { ctx.textAlign = 'right'; ctx.fillText(rotulo, 0, -4); }
     ctx.restore();
+    }
 
     // Escudo suelto al final del rayo
     const cx = CX + ux * RC, cy = CY + uy * RC;
@@ -18851,14 +18887,19 @@ async function _equiposBase(cfg, reservaDer){
   const ctx = cv.getContext('2d'); ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);
   const titulo = cfg.titulo || id.nombre || 'DEPORTEMAS', sub = cfg.sub || '';
-  const ls = 78, lx = W - M - ls;
-  let fs = 60; ctx.font = `700 ${fs}px ${FS}`;
-  while(fs > 30 && ctx.measureText(titulo).width > lx - M - 24 - (reservaDer || 0)){ fs -= 2; ctx.font = `700 ${fs}px ${FS}`; }
-  ctx.fillStyle = INK; ctx.textAlign = 'left'; ctx.fillText(titulo, M, 98);
-  if(sub){ ctx.font = `400 30px ${FS}`; ctx.fillText(sub, M, 142); }
-  if(logoImg){
-    ctx.save(); ctx.beginPath(); ctx.arc(lx + ls/2, 62 + ls/2 - 12, ls/2, 0, Math.PI*2); ctx.clip();
-    cvDrawEscudoImg(ctx, logoImg, lx, 62 - 12, ls); ctx.restore();
+  if(_encEsDia(cfg)){
+    await _diaFuentes();
+    _encabezado(ctx, { W, H, M, id, logoImg, titulo, sub, enc: _encResolver(cfg), tema: 'claro', linea: false, reservaDer });
+  } else {
+    const ls = 78, lx = W - M - ls;
+    let fs = 60; ctx.font = `700 ${fs}px ${FS}`;
+    while(fs > 30 && ctx.measureText(titulo).width > lx - M - 24 - (reservaDer || 0)){ fs -= 2; ctx.font = `700 ${fs}px ${FS}`; }
+    ctx.fillStyle = INK; ctx.textAlign = 'left'; ctx.fillText(titulo, M, 98);
+    if(sub){ ctx.font = `400 30px ${FS}`; ctx.fillText(sub, M, 142); }
+    if(logoImg){
+      ctx.save(); ctx.beginPath(); ctx.arc(lx + ls/2, 62 + ls/2 - 12, ls/2, 0, Math.PI*2); ctx.clip();
+      cvDrawEscudoImg(ctx, logoImg, lx, 62 - 12, ls); ctx.restore();
+    }
   }
   ctx.font = `600 20px ${FS}`; ctx.fillStyle = 'rgba(42,42,42,0.55)';
   ctx.textAlign = 'right'; ctx.fillText('deportemas.pages.dev', W - M, H - 44);
@@ -18880,11 +18921,12 @@ async function generarImagenCuadro(cfg){
   const B = await _equiposBase(cfg, 0);
   const { ctx, W, H, M, FS, INK, clubes, colores } = B;
   const n = clubes.length, cols = n <= 9 ? 3 : n <= 16 ? 4 : 5, rows = Math.ceil(n / cols);
+  const conN = cfg.nombres !== false;                           // mostrar los nombres de los equipos
   B.copa(W / 2, 292, 190);
   ctx.fillStyle = INK; ctx.fillRect(M, 420, W - 2*M, 2);
   const top = 446, bot = H - 96;
   const cellH = Math.min((bot - top) / rows, 230);
-  const crest = Math.round(Math.min(104, cellH - 84, (W - 2*M) / cols * 0.62));
+  const crest = Math.round(Math.min(conN ? 104 : 128, cellH - (conN ? 84 : 48), (W - 2*M) / cols * (conN ? 0.62 : 0.72)));
   const stepX = (W - 2*M - crest) / (cols - 1);
   const y0 = top + Math.max(0, ((bot - top) - rows * cellH) / 2) * 0.5;
   let nsz = 20;
@@ -18894,9 +18936,11 @@ async function generarImagenCuadro(cfg){
     const cx = M + crest/2 + stepX * (i % cols), y = Math.round(y0 + cellH * Math.floor(i / cols) + 8);
     await cvDrawEscudoCompleto(ctx, c, Math.round(cx - crest/2), y, crest);
     ctx.fillStyle = colores[c]; ctx.fillRect(Math.round(cx - 20), y + crest + 12, 40, 4);
-    const nn = _alboNombre(ctx, _alboTitulo(c), nsz, stepX - 14, 700, FS);
-    ctx.font = `700 ${nn.s}px ${FS}`; ctx.fillStyle = INK; ctx.textAlign = 'center';
-    nn.lineas.forEach((l, q) => ctx.fillText(l, Math.round(cx), Math.round(y + crest + 42 + q * nn.s * 1.15)));
+    if(conN){
+      const nn = _alboNombre(ctx, _alboTitulo(c), nsz, stepX - 14, 700, FS);
+      ctx.font = `700 ${nn.s}px ${FS}`; ctx.fillStyle = INK; ctx.textAlign = 'center';
+      nn.lineas.forEach((l, q) => ctx.fillText(l, Math.round(cx), Math.round(y + crest + 42 + q * nn.s * 1.15)));
+    }
   }
   return B.cv;
 }
@@ -18920,10 +18964,12 @@ async function generarImagenCartelera(cfg){
     ctx.fillStyle = 'rgba(42,42,42,0.45)'; ctx.font = `700 22px ${FS}`; ctx.textAlign = 'left';
     ctx.fillText(String(i + 1).padStart(2, '0'), Math.round(x0 + 20), Math.round(y0 + rowH/2 + 8));
     await cvDrawEscudoCompleto(ctx, c, Math.round(x0 + 62), Math.round(y0 + (rowH - crest) / 2), crest);
-    const nn = _alboNombre(ctx, _alboTitulo(c), nsz, wNom, 700, FS);
-    ctx.font = `700 ${nn.s}px ${FS}`; ctx.fillStyle = INK; ctx.textAlign = 'left';
-    nn.lineas.forEach((l, q) => ctx.fillText(l, Math.round(x0 + 62 + crest + 18),
-      Math.round(y0 + rowH/2 + nn.s * 0.35 - (nn.lineas.length - 1) * nn.s * 0.58 + q * nn.s * 1.15)));
+    if(cfg.nombres !== false){
+      const nn = _alboNombre(ctx, _alboTitulo(c), nsz, wNom, 700, FS);
+      ctx.font = `700 ${nn.s}px ${FS}`; ctx.fillStyle = INK; ctx.textAlign = 'left';
+      nn.lineas.forEach((l, q) => ctx.fillText(l, Math.round(x0 + 62 + crest + 18),
+        Math.round(y0 + rowH/2 + nn.s * 0.35 - (nn.lineas.length - 1) * nn.s * 0.58 + q * nn.s * 1.15)));
+    }
     ctx.fillStyle = 'rgba(42,42,42,0.15)'; ctx.fillRect(Math.round(x0), Math.round(y0 + rowH - 1), Math.round(colW), 1);
   }
   return B.cv;
@@ -18935,7 +18981,7 @@ async function generarImagenRonda(cfg){
   const { ctx, W, FS, INK, BG, clubes, colores } = B;
   const n = clubes.length, CX = W / 2, CY = 720, R = 430;
   const arco = 2 * Math.PI * R / n;
-  const crest = Math.round(Math.min(92, arco * 0.56));
+  const crest = cfg.nombres === false ? Math.round(Math.min(124, arco * 0.74)) : Math.round(Math.min(92, arco * 0.56));
   ctx.strokeStyle = 'rgba(42,42,42,0.16)'; ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.arc(CX, CY, R, 0, Math.PI*2); ctx.stroke();
   B.copa(CX, CY, 250);
@@ -18949,6 +18995,7 @@ async function generarImagenRonda(cfg){
     ctx.beginPath(); ctx.arc(cx, cy, crest/2 + 9, 0, Math.PI*2);
     ctx.fillStyle = BG; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = colores[c]; ctx.stroke();
     await cvDrawEscudoCompleto(ctx, c, Math.round(cx - crest/2 + 4), Math.round(cy - crest/2 + 4), crest - 8);
+    if(cfg.nombres === false) continue;                           // sin nombres: solo los escudos
     const lado = Math.abs(Math.cos(th)) > 0.55;
     const nn = _alboNombre(ctx, _alboTitulo(c), nsz, lado ? wLado : wNom, 700, FS);
     ctx.font = `700 ${nn.s}px ${FS}`; ctx.fillStyle = INK; ctx.textAlign = 'center';
@@ -19038,6 +19085,7 @@ async function _alboColorEscudo(nombre){
 async function generarImagenRanking(cfg){
   if(cfg.estilo === 'dia') return generarImagenRankingDia(cfg);
   await document.fonts.ready;
+  if(_encEsDia(cfg)) await _diaFuentes();
   const id = getIdentidad();
   const W = CV_W, H = CV_H, M = 70;
   const FS = '"Helvetica Neue", Helvetica, Arial, sans-serif';
@@ -19090,16 +19138,19 @@ async function generarImagenRanking(cfg){
     ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);
 
     // Encabezado: título en negrita + subtítulo, logo a la derecha, línea fina
-    const ls = 78, lx = W - M - ls;
-    let fs = 60; ctx.font = `700 ${fs}px ${FS}`;
-    while(fs > 30 && ctx.measureText(titulo).width > lx - M - 24){ fs -= 2; ctx.font = `700 ${fs}px ${FS}`; }
-    ctx.fillStyle = INK; ctx.textAlign = 'left'; ctx.fillText(titulo, M, 98);
-    ctx.font = `400 30px ${FS}`; ctx.fillText(sub, M, 142);
-    if(logoImg){
-      ctx.save(); ctx.beginPath(); ctx.arc(lx + ls/2, 62 + ls/2 - 12, ls/2, 0, Math.PI*2); ctx.clip();
-      cvDrawEscudoImg(ctx, logoImg, lx, 62 - 12, ls); ctx.restore();
+    if(_encEsDia(cfg)) _encabezado(ctx, { W, H, M, id, logoImg, titulo, sub, enc: _encResolver(cfg), tema: 'claro', linea: true });
+    else {
+      const ls = 78, lx = W - M - ls;
+      let fs = 60; ctx.font = `700 ${fs}px ${FS}`;
+      while(fs > 30 && ctx.measureText(titulo).width > lx - M - 24){ fs -= 2; ctx.font = `700 ${fs}px ${FS}`; }
+      ctx.fillStyle = INK; ctx.textAlign = 'left'; ctx.fillText(titulo, M, 98);
+      ctx.font = `400 30px ${FS}`; ctx.fillText(sub, M, 142);
+      if(logoImg){
+        ctx.save(); ctx.beginPath(); ctx.arc(lx + ls/2, 62 + ls/2 - 12, ls/2, 0, Math.PI*2); ctx.clip();
+        cvDrawEscudoImg(ctx, logoImg, lx, 62 - 12, ls); ctx.restore();
+      }
+      ctx.fillStyle = INK; ctx.fillRect(M, 166, W - 2*M, 2);
     }
-    ctx.fillStyle = INK; ctx.fillRect(M, 166, W - 2*M, 2);
 
     // Filas: número (color del escudo) · escudo · copas
     let y = top0;
@@ -19138,6 +19189,7 @@ async function generarImagenRanking(cfg){
 async function generarImagenAlbo(cfg){
   if(cfg.estilo === 'dia') return generarImagenAlboDia(cfg);
   await document.fonts.ready;
+  if(_encEsDia(cfg)) await _diaFuentes();
   const id = getIdentidad();
   const W = CV_W, H = CV_H, M = 70;
   const FS = '"Helvetica Neue", Helvetica, Arial, sans-serif';
@@ -19164,16 +19216,19 @@ async function generarImagenAlbo(cfg){
     ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);
 
     // Encabezado: título en negrita + subtítulo, logo a la derecha, línea fina
-    const ls = 78, lx = W - M - ls;
-    let fs = 60; ctx.font = `700 ${fs}px ${FS}`;
-    while(fs > 30 && ctx.measureText(titulo).width > lx - M - 24){ fs -= 2; ctx.font = `700 ${fs}px ${FS}`; }
-    ctx.fillStyle = INK; ctx.textAlign = 'left'; ctx.fillText(titulo, M, 98);
-    ctx.font = `400 30px ${FS}`; ctx.fillText(sub, M, 142);
-    if(logoImg){
-      ctx.save(); ctx.beginPath(); ctx.arc(lx + ls/2, 62 + ls/2 - 12, ls/2, 0, Math.PI*2); ctx.clip();
-      cvDrawEscudoImg(ctx, logoImg, lx, 62 - 12, ls); ctx.restore();
+    if(_encEsDia(cfg)) _encabezado(ctx, { W, H, M, id, logoImg, titulo, sub, enc: _encResolver(cfg), tema: 'claro', linea: true });
+    else {
+      const ls = 78, lx = W - M - ls;
+      let fs = 60; ctx.font = `700 ${fs}px ${FS}`;
+      while(fs > 30 && ctx.measureText(titulo).width > lx - M - 24){ fs -= 2; ctx.font = `700 ${fs}px ${FS}`; }
+      ctx.fillStyle = INK; ctx.textAlign = 'left'; ctx.fillText(titulo, M, 98);
+      ctx.font = `400 30px ${FS}`; ctx.fillText(sub, M, 142);
+      if(logoImg){
+        ctx.save(); ctx.beginPath(); ctx.arc(lx + ls/2, 62 + ls/2 - 12, ls/2, 0, Math.PI*2); ctx.clip();
+        cvDrawEscudoImg(ctx, logoImg, lx, 62 - 12, ls); ctx.restore();
+      }
+      ctx.fillStyle = INK; ctx.fillRect(M, 166, W - 2*M, 2);
     }
-    ctx.fillStyle = INK; ctx.fillRect(M, 166, W - 2*M, 2);
 
     // Grilla: escudo suelto + año debajo (o "x" si no hubo campeón)
     const parte = items.slice(p*porPag, (p+1)*porPag);
@@ -19232,6 +19287,58 @@ async function generarImagenAlbo(cfg){
 // ═══════════════════════════════════════════════════════════════
 const _DIA_ANTON = '"Anton", "Bebas Neue", Impact, "Arial Narrow", sans-serif';
 const _DIA_SANS  = '"DM Sans", Arial, sans-serif';
+// ── Encabezado compartido de las imágenes del albo y la presentación de equipos ──
+// Título + subtítulo: estilo original (Helvetica) o "Día de partido" (Anton).  Logo: círculo original o "Presentado por …".
+// Se elige por separado (cfg.encTitulo / cfg.encLogo = 'orig' | 'dia'); si no se elige, sigue el estilo de la imagen.
+function _encResolver(cfg){
+  const dia = cfg.estilo === 'dia';
+  const t = (cfg.encTitulo === 'dia' || cfg.encTitulo === 'orig') ? cfg.encTitulo : (dia ? 'dia' : 'orig');
+  const l = (cfg.encLogo === 'dia' || cfg.encLogo === 'orig') ? cfg.encLogo : (dia ? 'dia' : 'orig');
+  return { t, l };
+}
+function _encEsDia(cfg){ const e = _encResolver(cfg); return e.t === 'dia' || e.l === 'dia'; }
+function _encabezado(ctx, o){
+  const W = o.W, H = o.H, M = o.M, id = o.id, logoImg = o.logoImg, titulo = o.titulo, sub = o.sub;
+  const e = o.enc || { t: 'orig', l: 'orig' };
+  const oscuro = o.tema === 'oscuro';
+  const INK = oscuro ? '#ffffff' : '#2a2a2a';
+  const FSO = '"Helvetica Neue", Helvetica, Arial, sans-serif';
+  const ls = 78, lx = W - M - ls;
+  if(e.l === 'dia'){
+    const kM = 0.8;
+    cvMarcaPresentado(ctx, W, H, id, { k: kM, x: W - M, maxW: 300, color: INK, sombra: oscuro, yBase: 46 + Math.round(22*kM) + Math.round(Math.round(54*kM)*0.85) + 6 });
+  } else if(logoImg){
+    ctx.save(); ctx.beginPath(); ctx.arc(lx + ls/2, 62 + ls/2 - 12, ls/2, 0, Math.PI*2); ctx.clip();
+    cvDrawEscudoImg(ctx, logoImg, lx, 62 - 12, ls); ctx.restore();
+  }
+  const maxT = W - 2*M - (e.l === 'dia' ? 330 : ls + 24) - (o.reservaDer || 0);
+  ctx.textAlign = 'left';
+  if(e.t === 'dia'){
+    const T = String(titulo || '').toUpperCase();
+    let fs = 74; ctx.font = `400 ${fs}px ${_DIA_ANTON}`;
+    while(fs > 34 && ctx.measureText(T).width > maxT){ fs -= 2; ctx.font = `400 ${fs}px ${_DIA_ANTON}`; }
+    ctx.fillStyle = INK;
+    if(oscuro){ ctx.shadowColor = 'rgba(0,0,0,.3)'; ctx.shadowBlur = 10; }
+    ctx.fillText(T, M, 112); ctx.shadowBlur = 0;
+    if(sub){
+      let sf = 24; ctx.font = `500 ${sf}px ${_DIA_SANS}`; if('letterSpacing' in ctx) ctx.letterSpacing = '5px';
+      const S = String(sub).toUpperCase();
+      while(sf > 14 && ctx.measureText(S).width > W - 2*M){ sf--; ctx.font = `500 ${sf}px ${_DIA_SANS}`; }
+      ctx.fillStyle = oscuro ? 'rgba(255,255,255,.82)' : 'rgba(42,42,42,.8)'; ctx.fillText(S, M, 154);
+      if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+    }
+  } else {
+    let fs = 60; ctx.font = `700 ${fs}px ${FSO}`;
+    while(fs > 30 && ctx.measureText(titulo).width > maxT){ fs -= 2; ctx.font = `700 ${fs}px ${FSO}`; }
+    ctx.fillStyle = INK; ctx.fillText(titulo, M, 98);
+    if(sub){ ctx.font = `400 30px ${FSO}`; ctx.fillText(sub, M, 142); }
+  }
+  if(o.linea){
+    if(e.t === 'dia'){ ctx.fillStyle = oscuro ? 'rgba(255,255,255,.22)' : 'rgba(42,42,42,.28)'; ctx.fillRect(M, 178, W - 2*M, 1.5); }
+    else { ctx.fillStyle = INK; ctx.fillRect(M, 166, W - 2*M, 2); }
+  }
+}
+
 async function _diaFuentes(){
   try{
     if(document.head && !document.getElementById('md-fuentes')){
@@ -19265,7 +19372,7 @@ async function _diaBadge(ctx, nombre, x, y, size, color){
   await cvDrawEscudoCompleto(ctx, nombre, Math.round(x + pad), Math.round(y + pad), size - pad * 2);
 }
 // Lienzo con fondo, encabezado ("Presentado por" arriba a la derecha) y pie
-function _diaPagina(cfg, id, titulo, sub, pag, total, reservaDer){
+function _diaPagina(cfg, id, titulo, sub, pag, total, reservaDer, logoImg){
   const W = CV_W, H = CV_H, M = 70;
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const ctx = cv.getContext('2d'); ctx.textBaseline = 'alphabetic';
@@ -19276,22 +19383,7 @@ function _diaPagina(cfg, id, titulo, sub, pag, total, reservaDer){
   const bt = ctx.createLinearGradient(0, H*0.5, 0, H);
   bt.addColorStop(0, 'rgba(0,0,0,0)'); bt.addColorStop(1, 'rgba(0,0,0,.30)');
   ctx.fillStyle = bt; ctx.fillRect(0, H*0.5, W, H*0.5);
-  const kM = 0.8;
-  cvMarcaPresentado(ctx, W, H, id, { k: kM, x: W - M, maxW: 300, yBase: 46 + Math.round(22*kM) + Math.round(Math.round(54*kM)*0.85) + 6 });
-  const T = String(titulo || '').toUpperCase();
-  const maxT = W - 2*M - 320 - (reservaDer || 0);
-  let fs = 74; ctx.font = `400 ${fs}px ${_DIA_ANTON}`;
-  while(fs > 34 && ctx.measureText(T).width > maxT){ fs -= 2; ctx.font = `400 ${fs}px ${_DIA_ANTON}`; }
-  ctx.fillStyle = '#ffffff'; ctx.textAlign = 'left';
-  ctx.shadowColor = 'rgba(0,0,0,.3)'; ctx.shadowBlur = 10; ctx.fillText(T, M, 112); ctx.shadowBlur = 0;
-  if(sub){
-    let sf = 24; ctx.font = `500 ${sf}px ${_DIA_SANS}`; if('letterSpacing' in ctx) ctx.letterSpacing = '5px';
-    const S = String(sub).toUpperCase();
-    while(sf > 14 && ctx.measureText(S).width > W - 2*M){ sf--; ctx.font = `500 ${sf}px ${_DIA_SANS}`; }
-    ctx.fillStyle = 'rgba(255,255,255,.82)'; ctx.fillText(S, M, 154);
-    if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
-  }
-  ctx.fillStyle = 'rgba(255,255,255,.22)'; ctx.fillRect(M, 178, W - 2*M, 1.5);
+  _encabezado(ctx, { W, H, M, id, logoImg, titulo, sub, enc: _encResolver(cfg), tema: 'oscuro', linea: true, reservaDer });
   ctx.font = `500 20px ${_DIA_SANS}`; ctx.fillStyle = 'rgba(255,255,255,.55)';
   ctx.textAlign = 'right'; ctx.fillText('deportemas.pages.dev', W - M, H - 44);
   if(total > 1){ ctx.textAlign = 'left'; ctx.font = `700 20px ${_DIA_SANS}`; ctx.fillStyle = '#ffffff'; ctx.fillText(pag + ' / ' + total, M, H - 44); }
@@ -19302,6 +19394,7 @@ function _diaPagina(cfg, id, titulo, sub, pag, total, reservaDer){
 async function generarImagenAlboDia(cfg){
   await _diaFuentes();
   const id = getIdentidad();
+  const logoImg = await cvImgAsync(id.logo);
   const W = CV_W, H = CV_H, M = 70;
   const items = cfg.filas.slice().reverse();                  // la más nueva primero
   const [cols, rows] = _alboGrid(cfg.tam, cfg.nombres);
@@ -19322,7 +19415,7 @@ async function generarImagenAlboDia(cfg){
   for(const it of items){ if(it.c && !colores[it.c]) colores[it.c] = _diaColorBadge(await _alboColorEscudo(it.c)); }
   const out = [];
   for(let p = 0; p < paginas; p++){
-    const B = _diaPagina(cfg, id, titulo, sub, p + 1, paginas);
+    const B = _diaPagina(cfg, id, titulo, sub, p + 1, paginas, 0, logoImg);
     const ctx = B.ctx;
     const parte = items.slice(p*porPag, (p+1)*porPag);
     let nsz = 15;
@@ -19379,6 +19472,7 @@ async function generarImagenRankingDia(cfg){
   await _diaFuentes();
   const id = getIdentidad();
   const W = CV_W, H = CV_H, M = 70;
+  const logoImg = await cvImgAsync(id.logo);
   const titulo = cfg.titulo || id.nombre || 'DEPORTEMAS';
   const sub = cfg.sub || 'Títulos por club';
   const mapa = new Map();
@@ -19414,7 +19508,7 @@ async function generarImagenRankingDia(cfg){
   if(act.length) paginas.push(act);
   const out = [];
   for(let p = 0; p < paginas.length; p++){
-    const B = _diaPagina(cfg, id, titulo, sub, p + 1, paginas.length);
+    const B = _diaPagina(cfg, id, titulo, sub, p + 1, paginas.length, 0, logoImg);
     const ctx = B.ctx;
     let nsz = Math.round(15 * k);
     if(cfg.nombres) clubes.forEach(q => { nsz = Math.min(nsz, _alboNombre(ctx, String(q.n).toUpperCase(), nsz, m.crest + 40 * k, 700, _DIA_SANS).s); });
@@ -19446,7 +19540,8 @@ async function generarImagenRankingDia(cfg){
 async function _diaEquiposBase(cfg, reservaDer){
   await _diaFuentes();
   const id = getIdentidad();
-  const B = _diaPagina(cfg, id, cfg.titulo || id.nombre || 'DEPORTEMAS', cfg.sub || '', 1, 1, reservaDer);
+  const logoImg = await cvImgAsync(id.logo);
+  const B = _diaPagina(cfg, id, cfg.titulo || id.nombre || 'DEPORTEMAS', cfg.sub || '', 1, 1, reservaDer, logoImg);
   const clubes = cfg.clubes.slice().sort((a, b) => _alboTitulo(a).localeCompare(_alboTitulo(b), 'es'));
   const colores = {}, claros = {};
   for(const c of clubes){ const rgb = await _alboColorEscudo(c); colores[c] = _diaColorBadge(rgb); claros[c] = _diaClaro(rgb, 0.3); }
@@ -19462,11 +19557,12 @@ async function generarImagenCuadroDia(cfg){
   const B = await _diaEquiposBase(cfg, 0);
   const { ctx, W, H, M, clubes, colores } = B;
   const n = clubes.length, cols = n <= 9 ? 3 : n <= 16 ? 4 : 5, rows = Math.ceil(n / cols);
+  const conN = cfg.nombres !== false;                           // mostrar los nombres de los equipos
   B.copa(W / 2, 292, 190);
   ctx.fillStyle = 'rgba(255,255,255,.22)'; ctx.fillRect(M, 420, W - 2*M, 1.5);
   const top = 446, bot = H - 96;
   const cellH = Math.min((bot - top) / rows, 230);
-  const crest = Math.round(Math.min(104, cellH - 84, (W - 2*M) / cols * 0.62));
+  const crest = Math.round(Math.min(conN ? 104 : 128, cellH - (conN ? 84 : 48), (W - 2*M) / cols * (conN ? 0.62 : 0.72)));
   const stepX = (W - 2*M - crest) / (cols - 1);
   const y0 = top + Math.max(0, ((bot - top) - rows * cellH) / 2) * 0.5;
   let nsz = 20;
@@ -19475,9 +19571,11 @@ async function generarImagenCuadroDia(cfg){
     const c = clubes[i];
     const cx = M + crest/2 + stepX * (i % cols), y = Math.round(y0 + cellH * Math.floor(i / cols) + 8);
     await _diaBadge(ctx, c, Math.round(cx - crest/2), y, crest, colores[c]);
-    const nn = _alboNombre(ctx, _alboTitulo(c).toUpperCase(), nsz, stepX - 14, 700, _DIA_SANS);
-    ctx.font = `700 ${nn.s}px ${_DIA_SANS}`; ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center';
-    nn.lineas.forEach((l, q) => ctx.fillText(l, Math.round(cx), Math.round(y + crest + 30 + q * nn.s * 1.15)));
+    if(conN){
+      const nn = _alboNombre(ctx, _alboTitulo(c).toUpperCase(), nsz, stepX - 14, 700, _DIA_SANS);
+      ctx.font = `700 ${nn.s}px ${_DIA_SANS}`; ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center';
+      nn.lineas.forEach((l, q) => ctx.fillText(l, Math.round(cx), Math.round(y + crest + 30 + q * nn.s * 1.15)));
+    }
   }
   return B.cv;
 }
@@ -19500,10 +19598,12 @@ async function generarImagenCarteleraDia(cfg){
     ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.font = `400 26px ${_DIA_ANTON}`; ctx.textAlign = 'left';
     ctx.fillText(String(i + 1).padStart(2, '0'), Math.round(x0 + 18), Math.round(y0 + rowH/2 + 10));
     await _diaBadge(ctx, c, Math.round(x0 + 62), Math.round(y0 + (rowH - crest) / 2), crest, colores[c]);
-    const nn = _alboNombre(ctx, _alboTitulo(c).toUpperCase(), nsz, wNom, 400, _DIA_ANTON);
-    ctx.font = `400 ${nn.s}px ${_DIA_ANTON}`; ctx.fillStyle = '#ffffff'; ctx.textAlign = 'left';
-    nn.lineas.forEach((l, q) => ctx.fillText(l, Math.round(x0 + 62 + crest + 18),
-      Math.round(y0 + rowH/2 + nn.s * 0.36 - (nn.lineas.length - 1) * nn.s * 0.55 + q * nn.s * 1.1)));
+    if(cfg.nombres !== false){
+      const nn = _alboNombre(ctx, _alboTitulo(c).toUpperCase(), nsz, wNom, 400, _DIA_ANTON);
+      ctx.font = `400 ${nn.s}px ${_DIA_ANTON}`; ctx.fillStyle = '#ffffff'; ctx.textAlign = 'left';
+      nn.lineas.forEach((l, q) => ctx.fillText(l, Math.round(x0 + 62 + crest + 18),
+        Math.round(y0 + rowH/2 + nn.s * 0.36 - (nn.lineas.length - 1) * nn.s * 0.55 + q * nn.s * 1.1)));
+    }
   }
   return B.cv;
 }
@@ -19512,7 +19612,7 @@ async function generarImagenRondaDia(cfg){
   const { ctx, W, clubes, colores } = B;
   const n = clubes.length, CX = W / 2, CY = 720, R = 430;
   const arco = 2 * Math.PI * R / n;
-  const crest = Math.round(Math.min(92, arco * 0.56));
+  const crest = cfg.nombres === false ? Math.round(Math.min(124, arco * 0.74)) : Math.round(Math.min(92, arco * 0.56));
   ctx.strokeStyle = 'rgba(255,255,255,.18)'; ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.arc(CX, CY, R, 0, Math.PI*2); ctx.stroke();
   B.copa(CX, CY, 250);
@@ -19523,6 +19623,7 @@ async function generarImagenRondaDia(cfg){
     const c = clubes[i], th = -Math.PI/2 + (2 * Math.PI / n) * (i + 0.5);
     const cx = CX + Math.cos(th) * R, cy = CY + Math.sin(th) * R;
     await _diaBadge(ctx, c, Math.round(cx - crest/2), Math.round(cy - crest/2), crest, colores[c]);
+    if(cfg.nombres === false) continue;                           // sin nombres: solo los escudos
     const lado = Math.abs(Math.cos(th)) > 0.55;
     const nn = _alboNombre(ctx, _alboTitulo(c).toUpperCase(), nsz, lado ? wLado : wNom, 700, _DIA_SANS);
     ctx.font = `700 ${nn.s}px ${_DIA_SANS}`; ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center';
@@ -19560,6 +19661,7 @@ async function generarImagenRadialDia(cfg){
     ctx.moveTo(CX + ux*r1 + nx*w1, CY + uy*r1 + ny*w1); ctx.lineTo(CX + ux*r2 + nx*w2, CY + uy*r2 + ny*w2);
     ctx.lineTo(CX + ux*r2 - nx*w2, CY + uy*r2 - ny*w2); ctx.lineTo(CX + ux*r1 - nx*w1, CY + uy*r1 - ny*w1);
     ctx.closePath(); ctx.fillStyle = claros[nombre]; ctx.fill();
+    if(cfg.nombres !== false){
     const volt = ux < -0.001;
     ctx.save();
     ctx.translate(CX + ux*(r2 - 8), CY + uy*(r2 - 8));
@@ -19568,6 +19670,7 @@ async function generarImagenRadialDia(cfg){
     if(volt){ ctx.textAlign = 'left'; ctx.fillText(rotulo, 0, nf * 0.72 + 4); }
     else    { ctx.textAlign = 'right'; ctx.fillText(rotulo, 0, -4); }
     ctx.restore();
+    }
     await _diaBadge(ctx, nombre, Math.round(CX + ux*RC - crest/2), Math.round(CY + uy*RC - crest/2), crest, colores[nombre]);
   }
   return B.cv;
